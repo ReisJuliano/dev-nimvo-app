@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Tenant\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\User;
+use App\Models\Tenant\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -19,11 +20,11 @@ class LoginController extends Controller
         return Inertia::render('Auth/Login');
     }
 
-    public function store(LoginRequest $request)
+    public function store(LoginRequest $request): RedirectResponse
     {
         $credentials = $request->validated();
 
-        Log::info('Login attempt', [
+        Log::info('Tenant login attempt', [
             'username' => $credentials['username'],
             'tenant' => tenant('id'),
         ]);
@@ -34,7 +35,10 @@ class LoginController extends Controller
             ->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            Log::info('Auth failed', ['username' => $credentials['username']]);
+            Log::info('Tenant auth failed', [
+                'username' => $credentials['username'],
+                'tenant' => tenant('id'),
+            ]);
 
             return back()->withErrors([
                 'username' => 'Usuario ou senha incorretos.',
@@ -44,7 +48,10 @@ class LoginController extends Controller
         Auth::login($user, (bool) ($credentials['remember'] ?? false));
         $request->session()->regenerate();
 
-        Log::info('Auth success', ['user_id' => $user->id]);
+        Log::info('Tenant auth success', [
+            'tenant' => tenant('id'),
+            'user_id' => $user->id,
+        ]);
 
         if ($user->must_change_password) {
             return redirect()->route('password.change.show');
@@ -53,7 +60,7 @@ class LoginController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    public function destroy(Request $request)
+    public function destroy(Request $request): RedirectResponse
     {
         Auth::logout();
         $request->session()->invalidate();

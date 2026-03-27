@@ -1,6 +1,8 @@
 <?php
 namespace App\Models;
 
+use App\Models\Central\Client;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
@@ -13,5 +15,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public static function getCustomColumns(): array
     {
         return ['id', 'name', 'email'];
+    }
+
+    public function client(): HasOne
+    {
+        return $this->hasOne(Client::class);
     }
 }

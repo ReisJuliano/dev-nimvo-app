@@ -9,7 +9,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function() {
             \Illuminate\Support\Facades\Route::middleware('web')
-                ->group(base_path('routes/web.php'));
+                ->group(base_path('routes/central.php'));
         }
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -17,10 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
         $middleware->alias([
-            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
-        ]);
-        $middleware->validateCsrfTokens(except: [
-            '*',
+            'password.changed' => \App\Http\Middleware\Tenant\EnsurePasswordIsChanged::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

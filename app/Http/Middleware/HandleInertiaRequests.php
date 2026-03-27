@@ -14,6 +14,8 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $tenant = tenant();
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -24,6 +26,11 @@ class HandleInertiaRequests extends Middleware
                     'role'     => $request->user()->role,
                 ] : null,
             ],
+            'tenant' => $tenant ? [
+                'id' => $tenant->getTenantKey(),
+                'name' => $tenant->name,
+                'email' => $tenant->email,
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],

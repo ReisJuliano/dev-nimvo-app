@@ -17,8 +17,10 @@ return [
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
     'central_domains' => [
+        'localhost',
+        '127.0.0.1',
         'app.nimvo.com.br',
-	'186.202.209.239',
+        '186.202.209.239',
     ],
 
     /**
@@ -39,20 +41,20 @@ return [
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
      */
     'database' => [
-        'central_connection' => env('DB_CONNECTION', 'central'),
+        'central_connection' => env('CENTRAL_DB_CONNECTION', 'central'),
 
         /**
          * Connection used as a "template" for the dynamically created tenant database connection.
          * Note: don't name your template connection tenant. That name is reserved by package.
          */
-        'template_tenant_connection' => null,
+        'template_tenant_connection' => env('TENANT_DB_TEMPLATE_CONNECTION', 'central'),
 
         /**
          * Tenant database names are created like this:
          * prefix + tenant_id + suffix.
          */
-        'prefix' => 'tenant',
-        'suffix' => '',
+        'prefix' => env('TENANT_DB_PREFIX', 'nimvo_tenant_'),
+        'suffix' => env('TENANT_DB_SUFFIX', ''),
 
         /**
          * TenantDatabaseManagers are classes that handle the creation & deletion of tenant databases.
@@ -194,7 +196,7 @@ return [
      * Parameters used by the tenants:seed command.
      */
     'seeder_parameters' => [
-        '--class' => 'DatabaseSeeder', // root seeder class
+        '--class' => 'TenantDatabaseSeeder',
         // '--force' => true, // This needs to be true to seed tenant databases in production
     ],
 ];
