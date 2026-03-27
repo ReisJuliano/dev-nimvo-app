@@ -8,6 +8,8 @@ use Stancl\Tenancy\Database\Models\Tenant;
 return [
     'tenant_model' => \App\Models\Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
+    'dev_single_database' => (bool) env('TENANT_DEV_SINGLE_DATABASE', false),
+    'dev_single_database_connection' => env('TENANT_DEV_DB_CONNECTION', 'tenant_dev'),
 
     'domain_model' => Domain::class,
 
@@ -16,12 +18,12 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => [
-        'localhost',
-        '127.0.0.1',
+    'central_domains' => array_values(array_filter([
+        env('TENANT_DEV_SINGLE_DATABASE', false) ? null : 'localhost',
+        env('TENANT_DEV_SINGLE_DATABASE', false) ? null : '127.0.0.1',
         'app.nimvo.com.br',
         '186.202.209.239',
-    ],
+    ])),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
@@ -29,13 +31,15 @@ return [
      *
      * To configure their behavior, see the config keys below.
      */
-    'bootstrappers' => [
-        Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
+    'bootstrappers' => array_values(array_filter([
+        env('TENANT_DEV_SINGLE_DATABASE', false)
+            ? null
+            : Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\CacheTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper::class,
         Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
         // Stancl\Tenancy\Bootstrappers\RedisTenancyBootstrapper::class, // Note: phpredis is needed
-    ],
+    ])),
 
     /**
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.

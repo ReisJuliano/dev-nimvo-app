@@ -52,6 +52,18 @@ return [
             ]) : [],
         ],
 
+        'tenant_dev' => [
+            'driver' => env('TENANT_DEV_DB_DRIVER', 'sqlite'),
+            'url' => env('TENANT_DEV_DB_URL'),
+            'database' => env('TENANT_DEV_DB_DATABASE', database_path('tenant-dev.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('TENANT_DEV_DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+            'transaction_mode' => 'DEFERRED',
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

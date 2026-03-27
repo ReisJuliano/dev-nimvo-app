@@ -2,11 +2,14 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\Tenant\Concerns\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SaleItem extends Model
 {
+    use UsesTenantConnection;
+
     protected $fillable = ['sale_id', 'product_id', 'quantity', 'unit_cost', 'unit_price', 'total', 'profit'];
 
     protected $casts = [

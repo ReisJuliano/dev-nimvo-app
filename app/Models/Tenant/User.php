@@ -2,12 +2,14 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\Tenant\Concerns\UsesTenantConnection;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use Notifiable;
+    use UsesTenantConnection;
 
     protected $fillable = [
         'name',

@@ -2,11 +2,14 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\Tenant\Concerns\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
+    use UsesTenantConnection;
+
     protected $fillable = ['name', 'phone', 'credit_limit', 'active'];
 
     protected $casts = [
