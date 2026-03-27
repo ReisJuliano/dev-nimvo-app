@@ -1,0 +1,163 @@
+.cash-register-page,
+.cash-register-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.cash-register-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 24px;
+    background: #fffdfa;
+    box-shadow: 0 18px 45px rgba(148, 163, 184, 0.12);
+    padding: 1.25rem;
+}
+
+.cash-register-card.open {
+    max-width: 520px;
+}
+
+.cash-register-status-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.2rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #0f766e, #0f9a8c);
+    color: white;
+}
+
+.cash-register-status-hero h2 {
+    margin: 0.4rem 0;
+    font-size: 2rem;
+}
+
+.cash-register-form,
+.cash-register-actions-grid {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 1rem;
+}
+
+.cash-register-actions-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cash-register-actions-grid form {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: #f8fafc;
+}
+
+.cash-register-form label,
+.cash-register-actions-grid label {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.cash-register-form input,
+.cash-register-form textarea,
+.cash-register-actions-grid input {
+    width: 100%;
+    border: 1px solid #d6dce6;
+    border-radius: 14px;
+    padding: 0.85rem 0.95rem;
+    background: white;
+}
+
+.cash-register-primary-button,
+.cash-register-danger-button,
+.cash-register-actions-grid button,
+.cash-register-history-table button {
+    border: 0;
+    border-radius: 14px;
+    padding: 0.9rem 1.05rem;
+    cursor: pointer;
+}
+
+.cash-register-primary-button {
+    background: #0f766e;
+    color: white;
+}
+
+.cash-register-danger-button {
+    background: #b91c1c;
+    color: white;
+}
+
+.cash-register-payments {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    margin-top: 1rem;
+}
+
+.cash-register-payments article,
+.cash-register-movement-row {
+    border-radius: 18px;
+    background: #f8fafc;
+    padding: 0.95rem 1rem;
+}
+
+.cash-register-movement-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.cash-register-movement-row div {
+    display: grid;
+}
+
+.cash-register-movements-list,
+.cash-register-history-table {
+    margin-top: 1rem;
+}
+
+.cash-register-history-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cash-register-history-table th,
+.cash-register-history-table td {
+    padding: 0.95rem;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+.cash-register-empty,
+.cash-register-report-box {
+    border-radius: 18px;
+    background: #f8fafc;
+    padding: 1rem;
+    color: #64748b;
+}
+
+.cash-register-report-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    z-index: 60;
+}
+
+.cash-register-report-card {
+    width: min(720px, 100%);
+    border-radius: 24px;
+    background: white;
+    padding: 1.2rem;
+    display: grid;
+    gap: 1rem;
+}
+
+@media (max-width: 920px) {
+    .cash-register-actions-grid,
+    .cash-register-status-hero {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+}

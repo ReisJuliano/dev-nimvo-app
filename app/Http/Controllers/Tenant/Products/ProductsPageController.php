@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Controllers\Tenant\Products;
+
+use App\Http\Controllers\Controller;
+use App\Models\Tenant\Category;
+use App\Models\Tenant\Product;
+use App\Models\Tenant\Supplier;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ProductsPageController extends Controller
+{
+    public function __invoke(): Response
+    {
+        $products = Product::query()
+            ->with(['category:id,name', 'supplier:id,name'])
+            ->where('active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $product) => [
+                'id' => $product->id,
+                'code' => $product->code,
+                'barcode' => $product->barcode,
+                'name' => $product->name,
+                'description' => $product->description,
+                'unit' => $product->unit,
+                'cost_price' => (float) $product->cost_price,
+                'sale_price' => (float) $product->sale_price,
+                'stock_quantity' => (float) $product->stock_quantity,
+                'min_stock' => (float) $product->min_stock,
+                'category_id' => $product->category_id,
+                'supplier_id' => $product->supplier_id,
+                'category_name' => $product->category?->name,
+                'supplier_name' => $product->supplier?->name,
+            ]);
+
+        return Inertia::render('Products/Index', [
+            'products' => $products,
+            'categories' => Category::query()
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'suppliers' => Supplier::query()
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']),
+        ]);
+    }
+}

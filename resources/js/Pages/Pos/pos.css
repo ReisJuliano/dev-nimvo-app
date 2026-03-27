@@ -1,0 +1,213 @@
+.pos-page {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+}
+
+.pos-card {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 24px;
+    background: #fffdfa;
+    box-shadow: 0 18px 45px rgba(148, 163, 184, 0.12);
+    padding: 1.25rem;
+}
+
+.pos-card.checkout {
+    display: grid;
+    gap: 1rem;
+}
+
+.pos-card-header h2 {
+    margin: 0;
+    color: #0f172a;
+}
+
+.pos-card-header p {
+    margin: 0.4rem 0 0;
+    color: #64748b;
+}
+
+.pos-search-grid,
+.pos-checkout-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.pos-search-grid {
+    grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.pos-checkout-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pos-search-grid input,
+.pos-search-grid select,
+.pos-checkout-grid input,
+.pos-checkout-grid textarea,
+.pos-checkout-grid select,
+.pos-cart-actions input,
+.pos-mixed-form input,
+.pos-mixed-form select,
+.pos-mixed-item input {
+    width: 100%;
+    border: 1px solid #d6dce6;
+    border-radius: 14px;
+    padding: 0.8rem 0.95rem;
+    background: white;
+}
+
+.pos-checkout-grid label {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.pos-checkout-grid .span-2 {
+    grid-column: 1 / -1;
+}
+
+.pos-product-results,
+.pos-cart-list,
+.pos-mixed-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.pos-product-card,
+.pos-cart-row,
+.pos-mixed-item {
+    display: grid;
+    gap: 0.75rem;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 18px;
+    padding: 0.95rem 1rem;
+    background: white;
+}
+
+.pos-product-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pos-product-card span,
+.pos-product-card small,
+.pos-cart-row span {
+    color: #64748b;
+}
+
+.pos-cart-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pos-cart-actions {
+    display: grid;
+    grid-template-columns: 90px auto auto auto;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.pos-cart-actions button,
+.pos-inline-button,
+.pos-mixed-form button {
+    border: 0;
+    border-radius: 12px;
+    padding: 0.75rem 0.95rem;
+    background: #e2e8f0;
+    cursor: pointer;
+}
+
+.pos-inline-button {
+    margin-top: 0.45rem;
+    justify-self: start;
+}
+
+.pos-credit-card,
+.pos-total-panel,
+.pos-empty-state,
+.pos-mixed-box {
+    border-radius: 18px;
+    background: #f8fafc;
+    padding: 1rem;
+}
+
+.pos-mixed-form {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) 150px auto;
+}
+
+.pos-mixed-item {
+    grid-template-columns: minmax(0, 1fr) 120px;
+}
+
+.pos-total-panel {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.pos-total-panel div {
+    display: flex;
+    justify-content: space-between;
+}
+
+.pos-finalize-button {
+    border: 0;
+    border-radius: 16px;
+    padding: 1rem 1.15rem;
+    background: linear-gradient(135deg, #0f766e, #0f9a8c);
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.pos-quick-customer {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    z-index: 60;
+}
+
+.pos-quick-customer-card {
+    width: min(420px, 100%);
+    border-radius: 24px;
+    background: white;
+    padding: 1.2rem;
+    display: grid;
+    gap: 0.85rem;
+}
+
+.pos-quick-customer-card input {
+    width: 100%;
+    border: 1px solid #d6dce6;
+    border-radius: 14px;
+    padding: 0.85rem 0.95rem;
+}
+
+.pos-quick-customer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+@media (max-width: 1080px) {
+    .pos-page {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .pos-search-grid,
+    .pos-checkout-grid,
+    .pos-mixed-form,
+    .pos-cart-row,
+    .pos-cart-actions {
+        grid-template-columns: 1fr;
+    }
+}

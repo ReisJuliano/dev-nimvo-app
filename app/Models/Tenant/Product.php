@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Models\Tenant;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Product extends Model
+{
+    protected $fillable = [
+        'code',
+        'barcode',
+        'name',
+        'description',
+        'category_id',
+        'supplier_id',
+        'unit',
+        'cost_price',
+        'sale_price',
+        'stock_quantity',
+        'min_stock',
+        'active',
+    ];
+
+    protected $casts = [
+        'active' => 'boolean',
+        'cost_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'stock_quantity' => 'decimal:3',
+        'min_stock' => 'decimal:3',
+    ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function saleItems(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+}
