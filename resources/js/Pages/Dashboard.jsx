@@ -1,13 +1,46 @@
+import { usePage } from '@inertiajs/react'
+import DashboardFlashMessage from '@/Components/Dashboard/DashboardFlashMessage'
+import DashboardHero from '@/Components/Dashboard/DashboardHero'
+import DashboardSummaryCard from '@/Components/Dashboard/DashboardSummaryCard'
 import AppLayout from '@/Layouts/AppLayout'
 
-export default function Dashboard({ auth }) {
+const summaryCards = [
+    {
+        label: 'Status',
+        value: 'Online',
+        helpText: 'Fluxo de autenticacao e dashboard configurados para navegar corretamente.',
+    },
+    {
+        label: 'Arquitetura',
+        value: 'Modular',
+        helpText: 'Layout, autenticacao e blocos do painel foram divididos em componentes menores.',
+    },
+    {
+        label: 'Proximo passo',
+        value: 'Escalar',
+        helpText: 'A base agora esta preparada para expandir cadastros, relatorios e modulos do PDV.',
+    },
+]
+
+export default function Dashboard() {
+    const { auth, flash } = usePage().props
+
     return (
-        <AppLayout title="Início">
-            <div style={{ padding: '8px 0' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '8px' }}>
-                    Bem-vindo, {auth?.user?.name}! 👋
-                </h2>
-                <p style={{ color: '#64748b' }}>Seu sistema está funcionando perfeitamente.</p>
+        <AppLayout title="Dashboard">
+            <div className="dashboard-grid">
+                <DashboardFlashMessage message={flash?.success} />
+                <DashboardHero userName={auth?.user?.name || 'Usuario'} />
+
+                <section className="dashboard-summary">
+                    {summaryCards.map((card) => (
+                        <DashboardSummaryCard
+                            key={card.label}
+                            label={card.label}
+                            value={card.value}
+                            helpText={card.helpText}
+                        />
+                    ))}
+                </section>
             </div>
         </AppLayout>
     )
