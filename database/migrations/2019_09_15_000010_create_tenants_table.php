@@ -15,6 +15,10 @@ class CreateTenantsTable extends Migration
      */
     public function up(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::create('tenants', function (Blueprint $table) {
             $table->string('id')->primary();
 
@@ -32,6 +36,10 @@ class CreateTenantsTable extends Migration
      */
     public function down(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::dropIfExists('tenants');
     }
 }

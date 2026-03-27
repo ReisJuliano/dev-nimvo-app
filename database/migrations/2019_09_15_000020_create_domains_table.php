@@ -15,6 +15,10 @@ class CreateDomainsTable extends Migration
      */
     public function up(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::create('domains', function (Blueprint $table) {
             $table->increments('id');
             $table->string('domain', 255)->unique();
@@ -32,6 +36,10 @@ class CreateDomainsTable extends Migration
      */
     public function down(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::dropIfExists('domains');
     }
 }

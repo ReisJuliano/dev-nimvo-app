@@ -10,8 +10,8 @@ class HomeController extends Controller
     public function __invoke(): View
     {
         return view('central.home', [
-            'centralDatabase' => config('database.connections.central.database'),
-            'centralDomains' => config('tenancy.central_domains'),
+            'centralDatabase' => config('database.connections.'.config('database.default').'.database'),
+            'centralDomains' => [],
         ]);
     }
 }

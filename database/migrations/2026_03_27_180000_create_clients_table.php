@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::create('clients', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->unique();
@@ -28,6 +32,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::dropIfExists('clients');
     }
 };

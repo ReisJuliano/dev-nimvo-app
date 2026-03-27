@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::table('tenants', function (Blueprint $table) {
             $table->string('name')->nullable()->after('id');
             $table->string('email')->nullable()->after('name');
@@ -14,6 +18,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (config('tenancy.dev_single_database')) {
+            return;
+        }
+
         Schema::table('tenants', function (Blueprint $table) {
             $table->dropColumn(['name', 'email']);
         });

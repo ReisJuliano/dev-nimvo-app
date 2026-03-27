@@ -8,8 +8,8 @@ use Stancl\Tenancy\Database\Models\Tenant;
 return [
     'tenant_model' => \App\Models\Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
-    'dev_single_database' => (bool) env('TENANT_DEV_SINGLE_DATABASE', false),
-    'dev_single_database_connection' => env('TENANT_DEV_DB_CONNECTION', 'tenant_dev'),
+    'dev_single_database' => (bool) env('TENANT_DEV_SINGLE_DATABASE', true),
+    'dev_single_database_connection' => env('DB_CONNECTION', 'mariadb'),
 
     'domain_model' => Domain::class,
 
@@ -18,12 +18,7 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => array_values(array_filter([
-        env('TENANT_DEV_SINGLE_DATABASE', false) ? null : 'localhost',
-        env('TENANT_DEV_SINGLE_DATABASE', false) ? null : '127.0.0.1',
-        'app.nimvo.com.br',
-        '186.202.209.239',
-    ])),
+    'central_domains' => [],
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
@@ -31,33 +26,25 @@ return [
      *
      * To configure their behavior, see the config keys below.
      */
-    'bootstrappers' => array_values(array_filter([
-        env('TENANT_DEV_SINGLE_DATABASE', false)
-            ? null
-            : Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
-        Stancl\Tenancy\Bootstrappers\CacheTenancyBootstrapper::class,
-        Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper::class,
-        Stancl\Tenancy\Bootstrappers\QueueTenancyBootstrapper::class,
-        // Stancl\Tenancy\Bootstrappers\RedisTenancyBootstrapper::class, // Note: phpredis is needed
-    ])),
+    'bootstrappers' => [],
 
     /**
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
      */
     'database' => [
-        'central_connection' => env('CENTRAL_DB_CONNECTION', 'central'),
+        'central_connection' => env('DB_CONNECTION', 'mariadb'),
 
         /**
          * Connection used as a "template" for the dynamically created tenant database connection.
          * Note: don't name your template connection tenant. That name is reserved by package.
          */
-        'template_tenant_connection' => env('TENANT_DB_TEMPLATE_CONNECTION', 'central'),
+        'template_tenant_connection' => env('DB_CONNECTION', 'mariadb'),
 
         /**
          * Tenant database names are created like this:
          * prefix + tenant_id + suffix.
          */
-        'prefix' => env('TENANT_DB_PREFIX', 'nimvo_tenant_'),
+        'prefix' => env('TENANT_DB_PREFIX', 'nimvo_'),
         'suffix' => env('TENANT_DB_SUFFIX', ''),
 
         /**
@@ -133,7 +120,7 @@ return [
          * edge cases, it can cause issues (like using Passport with Vapor - see #196), so
          * you may want to disable this if you are experiencing these edge case issues.
          */
-        'suffix_storage_path' => true,
+        'suffix_storage_path' => false,
 
         /**
          * By default, asset() calls are made multi-tenant too. You can use global_asset() and mix()
@@ -185,7 +172,7 @@ return [
      * enabled. But it may be useful to disable them if you use external
      * storage (e.g. S3 / Dropbox) or have a custom asset controller.
      */
-    'routes' => true,
+    'routes' => false,
 
     /**
      * Parameters used by the tenants:migrate command.

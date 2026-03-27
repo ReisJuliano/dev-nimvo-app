@@ -13,14 +13,8 @@ use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
 use Illuminate\Support\Facades\Route;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
-Route::middleware([
-    'web',
-    InitializeTenancyByDomain::class,
-    PreventAccessFromCentralDomains::class,
-])->group(function () {
+Route::middleware('web')->group(function () {
     Route::get('/', function () {
         return auth()->check()
             ? redirect()->route('dashboard')

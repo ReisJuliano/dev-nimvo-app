@@ -9,7 +9,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function() {
             \Illuminate\Support\Facades\Route::middleware('web')
-                ->group(base_path('routes/central.php'));
+                ->group(base_path('routes/tenant.php'));
         }
     )
     ->withMiddleware(function (Middleware $middleware): void {
