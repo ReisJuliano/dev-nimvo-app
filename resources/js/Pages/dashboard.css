@@ -6,27 +6,37 @@
 .dashboard-hero-card,
 .dashboard-panel,
 .dashboard-metric-card {
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--app-border);
     border-radius: 24px;
-    background: #fffdfa;
-    box-shadow: 0 18px 50px rgba(148, 163, 184, 0.12);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow);
 }
 
 .dashboard-hero-card {
     padding: 1.75rem;
-    background: linear-gradient(135deg, #14342b, #24695a 55%, #f4c95d 160%);
-    color: #f8fafc;
+    background:
+        radial-gradient(circle at top right, rgba(26, 86, 219, 0.24), transparent 26%),
+        linear-gradient(135deg, #101b2c, #15253a 55%, #13233a 100%);
+    color: var(--app-text-primary);
+}
+
+.dashboard-hero-card span {
+    color: #d7e5ff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .dashboard-hero-card h1 {
-    margin: 0;
+    margin: 0.85rem 0 0;
     font-size: 2rem;
 }
 
 .dashboard-hero-card p {
     margin: 0.75rem 0 0;
     max-width: 48rem;
-    color: rgba(248, 250, 252, 0.82);
+    color: var(--app-text-secondary);
 }
 
 .dashboard-metrics-grid {
@@ -39,14 +49,17 @@
     padding: 1.25rem;
     display: grid;
     gap: 0.45rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+        var(--app-surface);
 }
 
 .dashboard-metric-card.tone-success {
-    background: linear-gradient(180deg, #ffffff, #ecfdf5);
+    border-color: rgba(5, 150, 105, 0.28);
 }
 
 .dashboard-metric-card.tone-warning {
-    background: linear-gradient(180deg, #ffffff, #fffbeb);
+    border-color: rgba(217, 119, 6, 0.28);
 }
 
 .dashboard-metric-title,
@@ -55,7 +68,7 @@
 .dashboard-sale-row span,
 .dashboard-sale-row small,
 .dashboard-ranking-row small {
-    color: #64748b;
+    color: var(--app-text-muted);
 }
 
 .dashboard-metric-title {
@@ -66,7 +79,7 @@
 
 .dashboard-metric-value {
     font-size: 1.75rem;
-    color: #0f172a;
+    color: var(--app-text-primary);
 }
 
 .dashboard-content-grid {
@@ -94,7 +107,7 @@
 .dashboard-panel-header h2 {
     margin: 0;
     font-size: 1.05rem;
-    color: #0f172a;
+    color: var(--app-text-primary);
 }
 
 .dashboard-sales-list,
@@ -109,10 +122,15 @@
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 1rem;
     align-items: center;
-    border: 1px solid rgba(148, 163, 184, 0.18);
+    border: 1px solid var(--app-border);
     border-radius: 18px;
     padding: 0.9rem 1rem;
-    background: #ffffff;
+    background: var(--app-bg-elevated);
+}
+
+.dashboard-sale-row strong,
+.dashboard-ranking-row strong {
+    color: var(--app-text-primary);
 }
 
 .dashboard-ranking-row {
@@ -125,14 +143,15 @@
 }
 
 .dashboard-ranking-row.warning {
-    background: #fffdf4;
+    border-color: rgba(217, 119, 6, 0.28);
+    background: rgba(217, 119, 6, 0.08);
 }
 
 .dashboard-empty-state {
     border-radius: 18px;
     padding: 1.2rem;
-    background: #f8fafc;
-    color: #64748b;
+    background: var(--app-bg-elevated);
+    color: var(--app-text-muted);
     text-align: center;
 }
 

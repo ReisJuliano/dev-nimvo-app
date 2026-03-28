@@ -10,10 +10,10 @@ export default function Dashboard({ summary, recentSales, topProducts, lowStockI
             <div className="dashboard-page">
                 <section className="dashboard-hero-card">
                     <span>Visao geral da operacao</span>
-                    <h1>Painel de desempenho</h1>
+                    <h1>Painel principal</h1>
                     <p>
-                        Acompanhe o resultado do dia, a saúde do estoque e os movimentos mais recentes
-                        do sistema em uma visão direta para operação e gestão.
+                        Acompanhe o resultado do dia, a saude do estoque e os movimentos mais recentes em
+                        uma leitura rapida para operacao e gestao.
                     </p>
                 </section>
 

@@ -6,7 +6,7 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
             <div className="cash-register-section-header">
                 <div>
                     <h2>Historico de caixas</h2>
-                    <p>Consultas rapidas de aberturas e fechamentos anteriores</p>
+                    <p>Consultas rapidas de aberturas, fechamentos e conferencia anterior.</p>
                 </div>
             </div>
 

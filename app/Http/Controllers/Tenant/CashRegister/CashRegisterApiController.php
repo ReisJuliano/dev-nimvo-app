@@ -39,7 +39,7 @@ class CashRegisterApiController extends Controller
 
     public function movement(RegisterCashMovementRequest $request, CashRegister $cashRegister): JsonResponse
     {
-        abort_unless($cashRegister->status === 'open', 404);
+        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) auth()->id(), 404);
 
         $movement = $cashRegister->movements()->create([
             'user_id' => auth()->id(),
@@ -60,7 +60,7 @@ class CashRegisterApiController extends Controller
         CashRegister $cashRegister,
         CashRegisterReportService $reportService,
     ): JsonResponse {
-        abort_unless($cashRegister->status === 'open', 404);
+        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) auth()->id(), 404);
 
         $cashRegister->update([
             'status' => 'closed',

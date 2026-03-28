@@ -22,6 +22,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false)
     const [quickCustomerForm, setQuickCustomerForm] = useState({ name: '', phone: '' })
     const [submitting, setSubmitting] = useState(false)
+    const [feedback, setFeedback] = useState(null)
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -59,7 +60,30 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         }
     }, [cart, discount])
 
+    const mixedTotal = useMemo(
+        () => mixedPayments.reduce((accumulator, payment) => accumulator + Number(payment.amount || 0), 0),
+        [mixedPayments],
+    )
+
+    const mixedRemaining = useMemo(() => Math.max(0, totals.total - mixedTotal), [mixedTotal, totals.total])
+
+    function showFeedback(type, text) {
+        setFeedback({ type, text })
+    }
+
+    function resetSale() {
+        setCart([])
+        setSelectedCustomer('')
+        setDiscount('0')
+        setNotes('')
+        setPaymentMethod('cash')
+        setMixedPayments([])
+        setMixedDraft({ method: 'cash', amount: '' })
+        setCreditStatus(null)
+    }
+
     function handleAddProduct(product) {
+        setFeedback(null)
         setCart((current) => {
             const existing = current.find((item) => item.id === product.id)
 
@@ -75,7 +99,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
     function handleQuantityChange(productId, value) {
         const qty = Math.max(0.001, Number(value || 0.001))
-
         setCart((current) => current.map((item) => (item.id === productId ? { ...item, qty } : item)))
     }
 
@@ -83,15 +106,34 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setCart((current) => current.filter((item) => item.id !== productId))
     }
 
+    function handlePaymentMethodChange(value) {
+        setPaymentMethod(value)
+        setFeedback(null)
+
+        if (value !== 'mixed') {
+            setMixedPayments([])
+            setMixedDraft({ method: value === 'credit' ? 'credit' : 'cash', amount: '' })
+        }
+    }
+
     function handleMixedDraftChange(field, value) {
         setMixedDraft((current) => ({ ...current, [field]: value }))
     }
 
     function handleAddMixedPayment() {
-        if (!mixedDraft.amount) {
+        const amount = Number(mixedDraft.amount || 0)
+
+        if (amount <= 0) {
+            showFeedback('error', 'Informe um valor valido para adicionar ao pagamento misto.')
             return
         }
 
+        if (amount > mixedRemaining + 0.001) {
+            showFeedback('error', 'A soma das parcelas nao pode ultrapassar o total da venda.')
+            return
+        }
+
+        setFeedback(null)
         setMixedPayments((current) => [...current, { method: mixedDraft.method, amount: mixedDraft.amount }])
         setMixedDraft((current) => ({ ...current, amount: '' }))
     }
@@ -104,8 +146,13 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         )
     }
 
+    function handleRemoveMixedPayment(index) {
+        setMixedPayments((current) => current.filter((_, currentIndex) => currentIndex !== index))
+    }
+
     async function handleQuickCustomerSubmit(event) {
         event.preventDefault()
+        setFeedback(null)
 
         const response = await apiRequest('/api/pdv/customers/quick', {
             method: 'post',
@@ -116,14 +163,49 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setSelectedCustomer(String(response.customer.id))
         setQuickCustomerForm({ name: '', phone: '' })
         setQuickCustomerOpen(false)
+        showFeedback('success', 'Cliente cadastrado e selecionado para esta venda.')
     }
 
     async function handleFinalize() {
         if (!cart.length) {
+            showFeedback('error', 'Adicione ao menos um produto antes de finalizar a venda.')
             return
         }
 
+        if (!cashRegister) {
+            showFeedback('error', 'Abra o caixa antes de tentar finalizar a venda.')
+            return
+        }
+
+        if (paymentMethod === 'credit' && !selectedCustomer) {
+            showFeedback('error', 'Selecione um cliente para registrar a venda no fiado.')
+            return
+        }
+
+        if (paymentMethod === 'mixed') {
+            if (mixedPayments.length < 2) {
+                showFeedback('error', 'Adicione pelo menos duas parcelas para o pagamento misto.')
+                return
+            }
+
+            if (mixedPayments.some((payment) => Number(payment.amount || 0) <= 0)) {
+                showFeedback('error', 'Revise os valores do pagamento misto antes de finalizar.')
+                return
+            }
+
+            if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
+                showFeedback('error', 'Selecione um cliente para usar fiado no pagamento misto.')
+                return
+            }
+
+            if (Math.abs(mixedTotal - totals.total) > 0.009) {
+                showFeedback('error', 'A soma das parcelas precisa bater exatamente com o total da venda.')
+                return
+            }
+        }
+
         setSubmitting(true)
+        setFeedback(null)
 
         try {
             const payments =
@@ -145,15 +227,10 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 },
             })
 
-            window.alert(`Venda ${response.sale.sale_number} finalizada com sucesso.`)
-            setCart([])
-            setDiscount('0')
-            setNotes('')
-            setPaymentMethod('cash')
-            setMixedPayments([])
-            setMixedDraft({ method: 'cash', amount: '' })
+            resetSale()
+            showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.`)
         } catch (error) {
-            window.alert(error.message)
+            showFeedback('error', error.message)
         } finally {
             setSubmitting(false)
         }
@@ -163,6 +240,8 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         <AppLayout title="PDV">
             <div className="pos-page">
                 <div className="pos-column">
+                    {feedback ? <div className={`pos-feedback ${feedback.type}`}>{feedback.text}</div> : null}
+
                     <ProductSearchPanel
                         categories={categories}
                         selectedCategory={selectedCategory}
@@ -185,11 +264,13 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     notes={notes}
                     onNotesChange={setNotes}
                     paymentMethod={paymentMethod}
-                    onPaymentChange={setPaymentMethod}
+                    onPaymentChange={handlePaymentMethodChange}
                     mixedPayments={mixedPayments}
                     mixedDraft={mixedDraft}
+                    mixedRemaining={mixedRemaining}
                     onMixedDraftChange={handleMixedDraftChange}
                     onMixedPaymentChange={handleMixedPaymentChange}
+                    onMixedPaymentRemove={handleRemoveMixedPayment}
                     onAddMixedPayment={handleAddMixedPayment}
                     onQuickCustomer={() => setQuickCustomerOpen(true)}
                     creditStatus={creditStatus}

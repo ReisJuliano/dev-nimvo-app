@@ -3,9 +3,10 @@
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\CashRegister;
+use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
-use Illuminate\Support\Arr;
+use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -47,12 +48,18 @@ class PosService
 
             $payments = collect($payload['payments'])->map(function (array $payment) {
                 return [
-                    'method' => $payment['method'],
+                    'method' => PaymentMethod::normalize($payment['method'] ?? null),
                     'amount' => $payment['amount'] ?? null,
                 ];
             });
 
-            $resolvedPayments = $payments->values()->map(function (array $payment, int $index) use ($payments, $total) {
+            if ($payments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::MIXED)) {
+                throw ValidationException::withMessages([
+                    'payments' => 'O pagamento misto deve ser detalhado em parcelas.',
+                ]);
+            }
+
+            $resolvedPayments = $payments->values()->map(function (array $payment) use ($payments, $total) {
                 if ($payments->count() === 1 && $payment['amount'] === null) {
                     return ['method' => $payment['method'], 'amount' => $total];
                 }
@@ -66,6 +73,12 @@ class PosService
                 return ['method' => $payment['method'], 'amount' => (float) $payment['amount']];
             });
 
+            if ($resolvedPayments->count() > 1 && $resolvedPayments->pluck('method')->unique()->count() < 2) {
+                throw ValidationException::withMessages([
+                    'payments' => 'Use ao menos duas formas para registrar pagamento misto.',
+                ]);
+            }
+
             $paymentsTotal = round($resolvedPayments->sum('amount'), 2);
             if (round($paymentsTotal, 2) !== round($total, 2)) {
                 throw ValidationException::withMessages([
@@ -74,11 +87,43 @@ class PosService
             }
 
             $paymentMethods = $resolvedPayments->pluck('method')->unique()->values();
-            $paymentMethod = $paymentMethods->count() === 1 ? $paymentMethods->first() : 'mixed';
+            $paymentMethod = $paymentMethods->count() === 1 ? $paymentMethods->first() : PaymentMethod::MIXED;
+
+            $customerId = $payload['customer_id'] ?? null;
+            $hasCredit = $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT);
+
+            if ($hasCredit && ! $customerId) {
+                throw ValidationException::withMessages([
+                    'customer_id' => 'Selecione um cliente para venda no fiado.',
+                ]);
+            }
+
+            if ($hasCredit && $customerId) {
+                /** @var Customer $customer */
+                $customer = Customer::query()->findOrFail($customerId);
+                $creditAmount = (float) $resolvedPayments
+                    ->where('method', PaymentMethod::CREDIT)
+                    ->sum('amount');
+
+                $openCredit = (float) $customer->sales()
+                    ->where('status', 'finalized')
+                    ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
+                    ->join('sale_payments', 'sale_payments.sale_id', '=', 'sales.id')
+                    ->where('sale_payments.payment_method', PaymentMethod::CREDIT)
+                    ->sum('sale_payments.amount');
+
+                $availableCredit = max(0, (float) $customer->credit_limit - $openCredit);
+
+                if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
+                    throw ValidationException::withMessages([
+                        'payments' => 'O valor em fiado ultrapassa o limite disponivel deste cliente.',
+                    ]);
+                }
+            }
 
             $sale = Sale::query()->create([
                 'sale_number' => $this->nextSaleNumber(),
-                'customer_id' => $payload['customer_id'] ?? null,
+                'customer_id' => $customerId,
                 'user_id' => $userId,
                 'cash_register_id' => $cashRegister->id,
                 'subtotal' => $subtotal,

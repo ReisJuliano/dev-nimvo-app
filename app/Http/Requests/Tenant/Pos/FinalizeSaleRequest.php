@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Tenant\Pos;
 
+use App\Support\Tenant\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class FinalizeSaleRequest extends FormRequest
 {
@@ -21,7 +23,7 @@ class FinalizeSaleRequest extends FormRequest
             'items.*.id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
             'payments' => ['required', 'array', 'min:1'],
-            'payments.*.method' => ['required', 'string', 'max:50'],
+            'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::all())],
             'payments.*.amount' => ['nullable', 'numeric', 'gt:0'],
         ];
     }

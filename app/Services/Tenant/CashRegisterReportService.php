@@ -3,6 +3,7 @@
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\CashRegister;
+use App\Support\Tenant\PaymentMethod;
 
 class CashRegisterReportService
 {
@@ -20,6 +21,7 @@ class CashRegisterReportService
             ->groupBy('payment_method')
             ->map(fn ($group, $method) => [
                 'payment_method' => $method,
+                'label' => PaymentMethod::label($method),
                 'qtd' => $group->count(),
                 'total' => (float) $group->sum('amount'),
             ])
@@ -36,7 +38,7 @@ class CashRegisterReportService
 
         $totalWithdrawals = (float) $cashRegister->movements->where('type', 'withdrawal')->sum('amount');
         $totalSupplies = (float) $cashRegister->movements->where('type', 'supply')->sum('amount');
-        $cashSales = (float) $payments->where('payment_method', 'cash')->sum('total');
+        $cashSales = (float) $payments->where('payment_method', PaymentMethod::CASH)->sum('total');
         $expectedCash = (float) $cashRegister->opening_amount + $totalSupplies + $cashSales - $totalWithdrawals;
         $difference = (float) ($cashRegister->closing_amount ?? 0) - $expectedCash;
 
@@ -56,6 +58,7 @@ class CashRegisterReportService
             'sales_count' => $sales->count(),
             'total_withdrawals' => $totalWithdrawals,
             'total_supplies' => $totalSupplies,
+            'cash_sales' => $cashSales,
             'expected_cash' => $expectedCash,
             'difference' => $difference,
         ];

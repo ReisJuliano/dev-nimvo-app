@@ -4,11 +4,16 @@
     grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
 }
 
+.pos-column {
+    display: grid;
+    gap: 1rem;
+}
+
 .pos-card {
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--app-border);
     border-radius: 24px;
-    background: #fffdfa;
-    box-shadow: 0 18px 45px rgba(148, 163, 184, 0.12);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow);
     padding: 1.25rem;
 }
 
@@ -17,14 +22,58 @@
     gap: 1rem;
 }
 
+.pos-feedback {
+    border: 1px solid;
+    border-radius: 18px;
+    padding: 0.95rem 1rem;
+    font-weight: 600;
+}
+
+.pos-feedback.success {
+    background: rgba(5, 150, 105, 0.14);
+    border-color: rgba(5, 150, 105, 0.34);
+    color: #86efac;
+}
+
+.pos-feedback.error {
+    background: rgba(220, 38, 38, 0.14);
+    border-color: rgba(220, 38, 38, 0.34);
+    color: #fca5a5;
+}
+
+.pos-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
 .pos-card-header h2 {
     margin: 0;
-    color: #0f172a;
+    color: var(--app-text-primary);
 }
 
 .pos-card-header p {
     margin: 0.4rem 0 0;
-    color: #64748b;
+    color: var(--app-text-secondary);
+}
+
+.pos-register-chip {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 150px;
+    padding: 0.8rem 0.95rem;
+    border-radius: 16px;
+    background: var(--app-bg-elevated);
+    text-align: right;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.pos-register-chip span {
+    color: var(--app-text-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
 .pos-search-grid,
@@ -50,17 +99,20 @@
 .pos-cart-actions input,
 .pos-mixed-form input,
 .pos-mixed-form select,
-.pos-mixed-item input {
+.pos-mixed-item input,
+.pos-quick-customer-card input {
     width: 100%;
-    border: 1px solid #d6dce6;
+    border: 1px solid var(--app-border-strong);
     border-radius: 14px;
     padding: 0.8rem 0.95rem;
-    background: white;
+    background: var(--app-bg-elevated);
+    color: var(--app-text-primary);
 }
 
 .pos-checkout-grid label {
     display: grid;
     gap: 0.45rem;
+    color: var(--app-text-secondary);
 }
 
 .pos-checkout-grid .span-2 {
@@ -81,22 +133,33 @@
     display: grid;
     gap: 0.75rem;
     align-items: center;
-    border: 1px solid rgba(148, 163, 184, 0.18);
+    border: 1px solid var(--app-border);
     border-radius: 18px;
     padding: 0.95rem 1rem;
-    background: white;
+    background: var(--app-bg-elevated);
 }
 
 .pos-product-card {
     grid-template-columns: minmax(0, 1fr) auto;
     text-align: left;
     cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.pos-product-card:hover {
+    border-color: rgba(26, 86, 219, 0.45);
+    transform: translateY(-1px);
 }
 
 .pos-product-card span,
 .pos-product-card small,
 .pos-cart-row span {
-    color: #64748b;
+    color: var(--app-text-muted);
+}
+
+.pos-product-card strong,
+.pos-cart-row strong {
+    color: var(--app-text-primary);
 }
 
 .pos-cart-row {
@@ -112,12 +175,23 @@
 
 .pos-cart-actions button,
 .pos-inline-button,
-.pos-mixed-form button {
+.pos-mixed-form button,
+.pos-mixed-item button,
+.pos-finalize-button {
     border: 0;
     border-radius: 12px;
     padding: 0.75rem 0.95rem;
-    background: #e2e8f0;
     cursor: pointer;
+    transition: var(--app-transition);
+    font-weight: 700;
+}
+
+.pos-cart-actions button,
+.pos-inline-button,
+.pos-mixed-form button,
+.pos-mixed-item button {
+    background: var(--app-bg);
+    color: var(--app-text-secondary);
 }
 
 .pos-inline-button {
@@ -130,8 +204,9 @@
 .pos-empty-state,
 .pos-mixed-box {
     border-radius: 18px;
-    background: #f8fafc;
+    background: var(--app-bg-elevated);
     padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .pos-mixed-form {
@@ -141,7 +216,25 @@
 }
 
 .pos-mixed-item {
-    grid-template-columns: minmax(0, 1fr) 120px;
+    grid-template-columns: minmax(0, 1fr) 120px auto;
+}
+
+.pos-mixed-summary,
+.pos-credit-card {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.pos-mixed-summary span,
+.pos-credit-card span {
+    color: var(--app-text-muted);
+    font-size: 0.85rem;
+}
+
+.pos-mixed-summary strong,
+.pos-credit-card strong {
+    color: var(--app-text-primary);
 }
 
 .pos-total-panel {
@@ -152,42 +245,59 @@
 .pos-total-panel div {
     display: flex;
     justify-content: space-between;
+    color: var(--app-text-secondary);
+}
+
+.pos-total-row {
+    padding-top: 0.4rem;
+    margin-top: 0.2rem;
+    border-top: 1px solid var(--app-border);
+}
+
+.pos-total-row strong {
+    color: var(--app-text-primary);
 }
 
 .pos-finalize-button {
-    border: 0;
     border-radius: 16px;
     padding: 1rem 1.15rem;
-    background: linear-gradient(135deg, #0f766e, #0f9a8c);
+    background: var(--app-primary);
     color: white;
-    font-weight: 800;
-    cursor: pointer;
+}
+
+.pos-finalize-button:hover {
+    background: var(--app-primary-dark);
+}
+
+.pos-finalize-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .pos-quick-customer {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(4, 8, 18, 0.68);
     display: grid;
     place-items: center;
     padding: 1rem;
     z-index: 60;
+    backdrop-filter: blur(6px);
 }
 
 .pos-quick-customer-card {
     width: min(420px, 100%);
     border-radius: 24px;
-    background: white;
+    background: var(--app-surface);
     padding: 1.2rem;
     display: grid;
     gap: 0.85rem;
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow-lg);
 }
 
-.pos-quick-customer-card input {
-    width: 100%;
-    border: 1px solid #d6dce6;
-    border-radius: 14px;
-    padding: 0.85rem 0.95rem;
+.pos-quick-customer-card h2 {
+    color: var(--app-text-primary);
 }
 
 .pos-quick-customer-actions {
@@ -203,11 +313,17 @@
 }
 
 @media (max-width: 720px) {
+    .pos-card-header,
     .pos-search-grid,
     .pos-checkout-grid,
     .pos-mixed-form,
     .pos-cart-row,
     .pos-cart-actions {
+        display: grid;
         grid-template-columns: 1fr;
+    }
+
+    .pos-register-chip {
+        text-align: left;
     }
 }

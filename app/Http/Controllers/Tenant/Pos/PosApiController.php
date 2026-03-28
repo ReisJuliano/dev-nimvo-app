@@ -7,6 +7,7 @@ use App\Http\Requests\Tenant\Pos\FinalizeSaleRequest;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Services\Tenant\PosService;
+use App\Support\Tenant\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -49,11 +50,11 @@ class PosApiController extends Controller
     {
         $openCredit = (float) $customer->sales()
             ->where('status', 'finalized')
-            ->whereHas('payments', fn ($query) => $query->where('payment_method', 'credit'))
+            ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
             ->with('payments')
             ->get()
             ->flatMap->payments
-            ->where('payment_method', 'credit')
+            ->where('payment_method', PaymentMethod::CREDIT)
             ->sum('amount');
 
         $available = max(0, (float) $customer->credit_limit - $openCredit);

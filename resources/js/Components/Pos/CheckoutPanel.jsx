@@ -9,6 +9,8 @@ const paymentOptions = [
     { value: 'mixed', label: 'Misto' },
 ]
 
+const paymentLabels = Object.fromEntries(paymentOptions.map((option) => [option.value, option.label]))
+
 export default function CheckoutPanel({
     customers,
     selectedCustomer,
@@ -21,8 +23,10 @@ export default function CheckoutPanel({
     onPaymentChange,
     mixedPayments,
     mixedDraft,
+    mixedRemaining,
     onMixedDraftChange,
     onMixedPaymentChange,
+    onMixedPaymentRemove,
     onAddMixedPayment,
     onQuickCustomer,
     creditStatus,
@@ -38,6 +42,12 @@ export default function CheckoutPanel({
                     <h2>Fechamento</h2>
                     <p>{cashRegister ? 'Caixa aberto para vender' : 'Abra o caixa para liberar vendas'}</p>
                 </div>
+                {cashRegister ? (
+                    <div className="pos-register-chip">
+                        <span>Caixa ativo</span>
+                        <strong>{formatMoney(cashRegister.opening_amount)}</strong>
+                    </div>
+                ) : null}
             </div>
 
             <div className="pos-checkout-grid">
@@ -80,14 +90,28 @@ export default function CheckoutPanel({
 
             {creditStatus && selectedCustomer ? (
                 <div className="pos-credit-card">
-                    Limite: <strong>{formatMoney(creditStatus.credit_limit)}</strong> | Em aberto:{' '}
-                    <strong>{formatMoney(creditStatus.open_credit)}</strong> | Disponivel:{' '}
-                    <strong>{formatMoney(creditStatus.available_credit)}</strong>
+                    <div>
+                        <span>Limite</span>
+                        <strong>{formatMoney(creditStatus.credit_limit)}</strong>
+                    </div>
+                    <div>
+                        <span>Em aberto</span>
+                        <strong>{formatMoney(creditStatus.open_credit)}</strong>
+                    </div>
+                    <div>
+                        <span>Disponivel</span>
+                        <strong>{formatMoney(creditStatus.available_credit)}</strong>
+                    </div>
                 </div>
             ) : null}
 
             {paymentMethod === 'mixed' ? (
                 <div className="pos-mixed-box">
+                    <div className="pos-mixed-summary">
+                        <span>Pagamento misto em andamento</span>
+                        <strong>Restante {formatMoney(mixedRemaining)}</strong>
+                    </div>
+
                     <div className="pos-mixed-form">
                         <select
                             value={mixedDraft.method}
@@ -114,17 +138,24 @@ export default function CheckoutPanel({
                     </div>
 
                     <div className="pos-mixed-list">
-                        {mixedPayments.map((payment, index) => (
-                            <div key={`${payment.method}-${index}`} className="pos-mixed-item">
-                                <span>{payment.method}</span>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={payment.amount}
-                                    onChange={(event) => onMixedPaymentChange(index, event.target.value)}
-                                />
-                            </div>
-                        ))}
+                        {mixedPayments.length ? (
+                            mixedPayments.map((payment, index) => (
+                                <div key={`${payment.method}-${index}`} className="pos-mixed-item">
+                                    <span>{paymentLabels[payment.method] ?? payment.method}</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={payment.amount}
+                                        onChange={(event) => onMixedPaymentChange(index, event.target.value)}
+                                    />
+                                    <button type="button" onClick={() => onMixedPaymentRemove(index)}>
+                                        Remover
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="pos-empty-state">Adicione as parcelas para distribuir o recebimento.</div>
+                        )}
                     </div>
                 </div>
             ) : null}
@@ -138,14 +169,14 @@ export default function CheckoutPanel({
                     <span>Desconto</span>
                     <strong>{formatMoney(totals.discount)}</strong>
                 </div>
-                <div>
+                <div className="pos-total-row">
                     <span>Total</span>
                     <strong>{formatMoney(totals.total)}</strong>
                 </div>
             </div>
 
             <button className="pos-finalize-button" disabled={disabled} onClick={onFinalize}>
-                Finalizar venda
+                {disabled && !cashRegister ? 'Abra o caixa para vender' : 'Finalizar venda'}
             </button>
         </section>
     )

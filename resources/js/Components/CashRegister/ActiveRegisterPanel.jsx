@@ -1,14 +1,24 @@
 import { formatDateTime, formatMoney } from '@/lib/format'
 
 export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
-    const { cashRegister, payments, movements, total_sales, sales_count, expected_cash } = report
+    const {
+        cashRegister,
+        payments,
+        movements,
+        total_sales,
+        sales_count,
+        expected_cash,
+        total_withdrawals,
+        total_supplies,
+        cash_sales,
+    } = report
 
     return (
         <div className="cash-register-grid">
             <section className="cash-register-card status">
                 <div className="cash-register-status-hero">
                     <div>
-                        <span>Caixa em andamento</span>
+                        <span>Caixa aberto</span>
                         <h2>{formatMoney(total_sales)}</h2>
                         <p>{sales_count} venda(s) associadas a este caixa</p>
                     </div>
@@ -19,19 +29,48 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
                     </div>
                 </div>
 
+                <div className="cash-register-summary-grid">
+                    <article>
+                        <span>Abertura</span>
+                        <strong>{formatMoney(cashRegister.opening_amount)}</strong>
+                    </article>
+                    <article>
+                        <span>Dinheiro vendido</span>
+                        <strong>{formatMoney(cash_sales)}</strong>
+                    </article>
+                    <article>
+                        <span>Suprimentos</span>
+                        <strong>{formatMoney(total_supplies)}</strong>
+                    </article>
+                    <article>
+                        <span>Sangrias</span>
+                        <strong>{formatMoney(total_withdrawals)}</strong>
+                    </article>
+                </div>
+
                 <div className="cash-register-payments">
-                    {payments.map((payment) => (
-                        <article key={payment.payment_method}>
-                            <span>{payment.payment_method}</span>
-                            <strong>{formatMoney(payment.total)}</strong>
-                            <small>{payment.qtd} registro(s)</small>
-                        </article>
-                    ))}
+                    {payments.length ? (
+                        payments.map((payment) => (
+                            <article key={payment.payment_method}>
+                                <span>{payment.label}</span>
+                                <strong>{formatMoney(payment.total)}</strong>
+                                <small>{payment.qtd} lancamento(s)</small>
+                            </article>
+                        ))
+                    ) : (
+                        <div className="cash-register-empty">Nenhuma venda registrada neste caixa.</div>
+                    )}
                 </div>
             </section>
 
             <section className="cash-register-card">
-                <h2>Movimentacoes</h2>
+                <div className="cash-register-section-header">
+                    <div>
+                        <h2>Movimentacoes</h2>
+                        <p>Registre retirada e reforco de caixa conforme a operacao.</p>
+                    </div>
+                </div>
+
                 <div className="cash-register-actions-grid">
                     <form onSubmit={(event) => onMovement(event, 'withdrawal')}>
                         <strong>Sangria</strong>

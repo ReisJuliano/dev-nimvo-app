@@ -3,7 +3,7 @@ export default function OpenRegisterCard({ onSubmit, loading }) {
         <section className="cash-register-card open">
             <div>
                 <h2>Caixa fechado</h2>
-                <p>Informe o valor inicial para liberar o operador no novo PDV.</p>
+                <p>Informe o valor inicial para liberar o operador no PDV atual.</p>
             </div>
 
             <form className="cash-register-form" onSubmit={onSubmit}>

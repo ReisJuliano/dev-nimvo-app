@@ -6,6 +6,7 @@ use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\Operations\Concerns\BuildsOverviewPages;
+use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Facades\DB;
 
 class SalesOverviewService
@@ -73,7 +74,7 @@ class SalesOverviewService
             ->with(['customer:id,name', 'user:id,name'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->where('status', 'finalized')
-            ->whereHas('payments', fn ($query) => $query->where('payment_method', 'credit'))
+            ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
             ->latest()
             ->get();
 
@@ -84,9 +85,9 @@ class SalesOverviewService
             ->map(function (Customer $customer) {
                 $openCredit = (float) $customer->sales()
                     ->where('status', 'finalized')
-                    ->whereHas('payments', fn ($query) => $query->where('payment_method', 'credit'))
+                    ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
                     ->join('sale_payments', 'sale_payments.sale_id', '=', 'sales.id')
-                    ->where('sale_payments.payment_method', 'credit')
+                    ->where('sale_payments.payment_method', PaymentMethod::CREDIT)
                     ->sum('sale_payments.amount');
 
                 return [

@@ -3,6 +3,7 @@
 namespace App\Services\Tenant\Operations\Concerns;
 
 use App\Models\Tenant\Sale;
+use App\Support\Tenant\PaymentMethod;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -82,15 +83,7 @@ trait BuildsOverviewPages
 
     protected function paymentLabel(string $method): string
     {
-        return match ($method) {
-            'cash' => 'Dinheiro',
-            'pix' => 'Pix',
-            'debit_card' => 'Cartao de debito',
-            'credit_card' => 'Cartao de credito',
-            'credit' => 'Fiado',
-            'mixed' => 'Misto',
-            default => ucfirst(str_replace('_', ' ', $method)),
-        };
+        return PaymentMethod::label($method);
     }
 
     protected function currency(mixed $value): string
