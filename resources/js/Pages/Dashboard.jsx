@@ -9,11 +9,11 @@ export default function Dashboard({ summary, recentSales, topProducts, lowStockI
         <AppLayout title="Inicio">
             <div className="dashboard-page">
                 <section className="dashboard-hero-card">
-                    <span>Operacao inicial migrada para React</span>
-                    <h1>Painel do PDV</h1>
+                    <span>Visao geral da operacao</span>
+                    <h1>Painel de desempenho</h1>
                     <p>
-                        Este painel replica o inicio do projeto de referencia com foco em vendas do dia,
-                        lucro, controle de produtos e acessos rapidos para as novas telas do tenant.
+                        Acompanhe o resultado do dia, a saúde do estoque e os movimentos mais recentes
+                        do sistema em uma visão direta para operação e gestão.
                     </p>
                 </section>
 

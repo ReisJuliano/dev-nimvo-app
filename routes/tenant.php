@@ -7,6 +7,7 @@ use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
@@ -39,6 +40,19 @@ Route::middleware('web')->group(function () {
             Route::get('/pdv', PosPageController::class)->name('pos.index');
             Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
             Route::get('/produtos', ProductsPageController::class)->name('products.index');
+            Route::get('/pedidos', OperationsPageController::class)->defaults('module', 'pedidos')->name('orders.index');
+            Route::get('/fiado', OperationsPageController::class)->defaults('module', 'fiado')->name('credit.index');
+            Route::get('/clientes', OperationsPageController::class)->defaults('module', 'clientes')->name('customers.index');
+            Route::get('/fornecedores', OperationsPageController::class)->defaults('module', 'fornecedores')->name('suppliers.index');
+            Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');
+            Route::get('/entrada-estoque', OperationsPageController::class)->defaults('module', 'entrada-estoque')->name('stock.inbound');
+            Route::get('/ajuste-estoque', OperationsPageController::class)->defaults('module', 'ajuste-estoque')->name('stock.adjustments');
+            Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.history');
+            Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
+            Route::get('/vendas', OperationsPageController::class)->defaults('module', 'vendas')->name('sales.index');
+            Route::get('/demanda', OperationsPageController::class)->defaults('module', 'demanda')->name('demand.index');
+            Route::get('/faltas', OperationsPageController::class)->defaults('module', 'faltas')->name('shortages.index');
+            Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
 
             Route::prefix('/api')->group(function () {
                 Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');

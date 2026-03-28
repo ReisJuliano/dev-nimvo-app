@@ -20,6 +20,16 @@ export function formatDateTime(value) {
     }).format(new Date(value))
 }
 
+export function formatDate(value) {
+    if (!value) {
+        return '-'
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+    }).format(new Date(value))
+}
+
 export function formatTime(value) {
     if (!value) {
         return '-'
@@ -29,4 +39,8 @@ export function formatTime(value) {
         hour: '2-digit',
         minute: '2-digit',
     }).format(new Date(value))
+}
+
+export function formatPercent(value) {
+    return `${formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 }
