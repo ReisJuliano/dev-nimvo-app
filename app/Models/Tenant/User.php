@@ -30,11 +30,6 @@ class User extends Authenticatable
         'must_change_password' => 'boolean',
     ];
 
-    public function getAuthIdentifierName(): string
-    {
-        return 'username';
-    }
-
     public function getAuthPassword(): string
     {
         return $this->password;

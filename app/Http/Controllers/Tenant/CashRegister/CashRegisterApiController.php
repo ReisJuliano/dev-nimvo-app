@@ -14,8 +14,10 @@ class CashRegisterApiController extends Controller
 {
     public function open(OpenCashRegisterRequest $request): JsonResponse
     {
+        $userId = auth()->user()?->getKey();
+
         $existing = CashRegister::query()
-            ->where('user_id', auth()->id())
+            ->where('user_id', $userId)
             ->where('status', 'open')
             ->exists();
 
@@ -24,7 +26,7 @@ class CashRegisterApiController extends Controller
         }
 
         $cashRegister = CashRegister::query()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $userId,
             'status' => 'open',
             'opening_amount' => $request->validated('opening_amount', 0),
             'opening_notes' => $request->validated('opening_notes'),
@@ -39,10 +41,12 @@ class CashRegisterApiController extends Controller
 
     public function movement(RegisterCashMovementRequest $request, CashRegister $cashRegister): JsonResponse
     {
-        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) auth()->id(), 404);
+        $userId = auth()->user()?->getKey();
+
+        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) $userId, 404);
 
         $movement = $cashRegister->movements()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $userId,
             'type' => $request->validated('type'),
             'amount' => $request->validated('amount'),
             'reason' => $request->validated('reason'),
@@ -60,7 +64,9 @@ class CashRegisterApiController extends Controller
         CashRegister $cashRegister,
         CashRegisterReportService $reportService,
     ): JsonResponse {
-        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) auth()->id(), 404);
+        $userId = auth()->user()?->getKey();
+
+        abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) $userId, 404);
 
         $cashRegister->update([
             'status' => 'closed',

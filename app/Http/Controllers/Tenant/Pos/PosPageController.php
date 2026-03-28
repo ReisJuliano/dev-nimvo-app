@@ -13,8 +13,10 @@ class PosPageController extends Controller
 {
     public function __invoke(): Response
     {
+        $userId = auth()->user()?->getKey();
+
         $cashRegister = CashRegister::query()
-            ->where('user_id', auth()->id())
+            ->where('user_id', $userId)
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();

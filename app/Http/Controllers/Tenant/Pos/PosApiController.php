@@ -88,7 +88,7 @@ class PosApiController extends Controller
 
     public function finalize(FinalizeSaleRequest $request, PosService $posService): JsonResponse
     {
-        $sale = $posService->finalize($request->validated(), (int) auth()->id());
+        $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
 
         return response()->json([
             'message' => 'Venda finalizada com sucesso.',

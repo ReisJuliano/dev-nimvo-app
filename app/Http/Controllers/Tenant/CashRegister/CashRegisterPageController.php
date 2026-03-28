@@ -12,9 +12,11 @@ class CashRegisterPageController extends Controller
 {
     public function __invoke(CashRegisterReportService $reportService): Response
     {
+        $userId = auth()->user()?->getKey();
+
         $openRegister = CashRegister::query()
             ->with(['movements.user:id,name', 'sales.payments'])
-            ->where('user_id', auth()->id())
+            ->where('user_id', $userId)
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();
