@@ -21,16 +21,15 @@ export default function GuestLayout({ title, heading, description, children }) {
                 <div className="guest-page">
                     <div className="guest-shell">
                         <GuestBrandPanel />
-
                         <section className="guest-card">
                             <div className="guest-card-header">
                                 <div className="guest-card-logo">
                                     <div className="guest-card-logo-badge">
-                                        <i className="fas fa-store" />
+                                        <img src="/assets/img/logo.png" alt="Logo Nimvo" />
                                     </div>
                                     <div>
                                         <strong>Nimvo</strong>
-                                        <span>Sistema Inteligente</span>
+                                        <span>Painel administrativo</span>
                                     </div>
                                 </div>
 

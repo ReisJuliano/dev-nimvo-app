@@ -25,7 +25,7 @@ export default function AppSidebar({
                     <div className="app-logo-icon">
                         <img
                             src="/assets/img/logo.png"
-                            alt="Logo"
+                            alt="Logo Nimvo"
                             onError={(event) => {
                                 event.currentTarget.style.display = 'none'
                                 event.currentTarget.parentElement.innerHTML =
@@ -35,7 +35,6 @@ export default function AppSidebar({
                     </div>
                     <div className="app-logo-text">
                         <span className="app-logo-name">Nimvo</span>
-                        <span className="app-logo-sub">Sistema Inteligente</span>
                     </div>
                 </div>
 
@@ -53,12 +52,14 @@ export default function AppSidebar({
             </div>
 
             <nav className="app-sidebar-nav">
+                <div className="app-sidebar-nav-kicker">Navegacao principal</div>
                 {navigationGroups.map((group) => (
                     <AppSidebarSection
                         key={group.section}
                         section={group}
                         currentUrl={currentUrl}
                         onNavigate={onCloseMobile}
+                        collapsed={collapsed}
                     />
                 ))}
             </nav>
