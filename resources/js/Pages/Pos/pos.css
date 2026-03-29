@@ -241,7 +241,7 @@
 .pos-cash-register-form {
     display: grid;
     gap: 0.75rem;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
 }
 
@@ -699,6 +699,16 @@
     font-weight: 600;
 }
 
+.pos-cash-change-panel {
+    margin: 0 1rem 1rem;
+    padding: 1rem;
+    border-radius: 20px;
+    border: 1px solid var(--app-border);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 248, 252, 0.92)),
+        var(--app-surface-muted);
+}
+
 .pos-discount-panel {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -835,11 +845,14 @@
 }
 
 .pos-payment-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     background: rgba(243, 247, 255, 0.86);
 }
 
 .pos-payment-tabs .ui-tab {
-    flex: 1 1 140px;
+    width: 100%;
+    justify-content: flex-start;
 }
 
 .pos-credit-card,
@@ -1073,7 +1086,7 @@
 .pos-cash-close-grid {
     display: grid;
     gap: 0.85rem;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .pos-cash-close-item {
@@ -1125,13 +1138,6 @@
 
 .pos-cash-close-diff.alert {
     background: rgba(216, 78, 97, 0.1);
-}
-
-.pos-cash-close-notes {
-    display: grid;
-    gap: 0.45rem;
-    color: var(--app-text-secondary);
-    font-weight: 600;
 }
 
 .pos-cash-report-card {

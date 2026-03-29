@@ -18,8 +18,6 @@ export default function CheckoutPanel({
     onClearCustomer,
     discountSummary,
     onOpenDiscountModal,
-    notes,
-    onNotesChange,
     paymentMethod,
     onPaymentChange,
     mixedPayments,
@@ -81,10 +79,6 @@ export default function CheckoutPanel({
                         <label>
                             Valor de abertura
                             <input className="ui-input" name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />
-                        </label>
-                        <label>
-                            Observacao
-                            <input className="ui-input" name="opening_notes" placeholder="Observacao da abertura" />
                         </label>
                         <button type="submit" className="pos-cash-register-button" disabled={openingCashRegister}>
                             <i className="fa-solid fa-lock-open" />
@@ -163,30 +157,6 @@ export default function CheckoutPanel({
                     </div>
                 </div>
 
-                {paymentMethod === 'cash' ? (
-                    <div className="pos-cash-change-field">
-                        <div className="pos-cash-change-copy">
-                            <label htmlFor="checkout-cash-received">Valor entregue</label>
-                            <small>Use para calcular o troco antes de concluir</small>
-                        </div>
-
-                        <div className="pos-cash-change-input-wrap">
-                            <span>R$</span>
-                            <input
-                                id="checkout-cash-received"
-                                className="ui-input pos-cash-change-input"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                inputMode="decimal"
-                                placeholder="0,00"
-                                value={cashReceived}
-                                onChange={(event) => onCashReceivedChange(event.target.value)}
-                            />
-                        </div>
-                    </div>
-                ) : null}
-
                 <div className="pos-discount-panel span-2">
                     <div className="pos-discount-panel-copy">
                         <span>Desconto</span>
@@ -201,11 +171,6 @@ export default function CheckoutPanel({
                         <kbd>Shift + D</kbd>
                     </button>
                 </div>
-
-                <label className="span-2">
-                    Observacoes
-                    <textarea className="ui-textarea" rows="3" value={notes} onChange={(event) => onNotesChange(event.target.value)} />
-                </label>
             </div>
 
             {creditStatus && selectedCustomer ? (
@@ -285,6 +250,35 @@ export default function CheckoutPanel({
                 </div>
             ) : null}
 
+            {paymentMethod === 'cash' ? (
+                <div className="pos-cash-change-field pos-cash-change-panel">
+                    <div className="pos-cash-change-copy">
+                        <label htmlFor="checkout-cash-received">Valor entregue</label>
+                        <small>Use para calcular o troco antes de concluir</small>
+                    </div>
+
+                    <div className="pos-cash-change-input-wrap">
+                        <span>R$</span>
+                        <input
+                            id="checkout-cash-received"
+                            className="ui-input pos-cash-change-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={cashReceived}
+                            onChange={(event) => onCashReceivedChange(event.target.value)}
+                        />
+                    </div>
+
+                    <div className={`pos-total-support-row ${cashShortfall > 0 ? 'alert' : ''}`}>
+                        <span>{cashShortfall > 0 ? 'Faltando' : 'Troco'}</span>
+                        <strong>{formatMoney(cashShortfall > 0 ? cashShortfall : cashChange)}</strong>
+                    </div>
+                </div>
+            ) : null}
+
             <div className="pos-total-panel">
                 <div>
                     <span>Subtotal</span>
@@ -294,18 +288,6 @@ export default function CheckoutPanel({
                     <span>Desconto</span>
                     <strong>{formatMoney(totals.discount)}</strong>
                 </div>
-                {paymentMethod === 'cash' ? (
-                    <>
-                        <div>
-                            <span>Valor entregue</span>
-                            <strong>{cashReceived === '' ? 'A informar' : formatMoney(Number(cashReceived || 0))}</strong>
-                        </div>
-                        <div className={`pos-total-support-row ${cashShortfall > 0 ? 'alert' : ''}`}>
-                            <span>{cashShortfall > 0 ? 'Faltando' : 'Troco'}</span>
-                            <strong>{formatMoney(cashShortfall > 0 ? cashShortfall : cashChange)}</strong>
-                        </div>
-                    </>
-                ) : null}
                 <div className="pos-total-row">
                     <span>Total</span>
                     <strong>{formatMoney(totals.total)}</strong>

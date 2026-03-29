@@ -684,7 +684,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         return {
             report,
             form: {
-                notes: '',
                 amounts: {
                     cash: '',
                     pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
@@ -708,10 +707,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             )
         })
 
-        if (form.notes.trim()) {
-            lines.push(`Obs: ${form.notes.trim()}`)
-        }
-
         return lines.join('\n')
     }
 
@@ -728,7 +723,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 method: 'post',
                 data: {
                     opening_amount: openingAmount,
-                    opening_notes: formData.get('opening_notes') || null,
                 },
             })
 
@@ -776,20 +770,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                             ...current.form.amounts,
                             [field]: value,
                         },
-                    },
-                }
-                : current
-        ))
-    }
-
-    function handleCloseCashRegisterNotesChange(value) {
-        setCloseCashRegisterModal((current) => (
-            current
-                ? {
-                    ...current,
-                    form: {
-                        ...current.form,
-                        notes: value,
                     },
                 }
                 : current
@@ -1083,8 +1063,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onClearCustomer={handleClearCustomer}
                     discountSummary={pricing.summary}
                     onOpenDiscountModal={openDiscountModal}
-                    notes={notes}
-                    onNotesChange={setNotes}
                     paymentMethod={paymentMethod}
                     onPaymentChange={handlePaymentMethodChange}
                     mixedPayments={mixedPayments}
@@ -1325,16 +1303,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 </div>
                             ))}
                         </div>
-
-                        <label className="pos-cash-close-notes">
-                            Observacao do fechamento
-                            <textarea
-                                className="ui-textarea"
-                                rows="3"
-                                value={closeCashRegisterModal.form.notes}
-                                onChange={(event) => handleCloseCashRegisterNotesChange(event.target.value)}
-                            />
-                        </label>
 
                         <div className="pos-quick-customer-actions">
                             <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
