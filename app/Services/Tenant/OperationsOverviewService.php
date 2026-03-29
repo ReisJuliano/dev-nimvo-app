@@ -15,7 +15,7 @@ class OperationsOverviewService
     ) {
     }
 
-    public function build(string $module, array $filters = []): array
+    public function build(string $module, array $filters = [], array $context = []): array
     {
         return match ($module) {
             'pedidos' => $this->sales->orders($filters),
@@ -26,7 +26,7 @@ class OperationsOverviewService
             'entrada-estoque' => $this->inventory->stockInbound(),
             'ajuste-estoque' => $this->inventory->stockAdjustments(),
             'movimentacao-estoque' => $this->inventory->stockHistory($filters),
-            'relatorios' => $this->sales->reports($filters),
+            'relatorios' => $this->sales->reportsHub($filters, data_get($context, 'enabledModules', [])),
             'vendas' => $this->sales->sales($filters),
             'demanda' => $this->sales->demand($filters),
             'faltas' => $this->inventory->shortages(),

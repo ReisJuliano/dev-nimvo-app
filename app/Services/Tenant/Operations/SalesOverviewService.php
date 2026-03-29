@@ -13,6 +13,60 @@ class SalesOverviewService
 {
     use BuildsOverviewPages;
 
+    public function reportsHub(array $filters, array $enabledModules = []): array
+    {
+        $productFilter = $this->resolveProductFilter($filters);
+        $sections = collect();
+
+        if ($this->isReportModuleEnabled($enabledModules, 'relatorios')) {
+            $sections->push($this->reports($filters) + [
+                'key' => 'summary',
+                'label' => 'Resumo',
+                'icon' => 'fa-chart-column',
+            ]);
+        }
+
+        if ($this->isReportModuleEnabled($enabledModules, 'vendas')) {
+            $sections->push($this->sales($filters) + [
+                'key' => 'sales',
+                'label' => 'Vendas',
+                'icon' => 'fa-receipt',
+            ]);
+        }
+
+        if ($this->isReportModuleEnabled($enabledModules, 'demanda')) {
+            $sections->push($this->demand($filters) + [
+                'key' => 'products',
+                'label' => 'Produtos',
+                'icon' => 'fa-boxes-stacked',
+            ]);
+        }
+
+        abort_if($sections->isEmpty(), 404);
+
+        $activeSection = (string) data_get(
+            $sections->firstWhere('key', (string) ($filters['section'] ?? '')),
+            'key',
+            data_get($sections->first(), 'key', 'summary'),
+        );
+        $currentSection = $sections->firstWhere('key', $activeSection) ?? $sections->first();
+
+        return [
+            'title' => 'Central de relatorios',
+            'description' => 'Resumo financeiro, vendas gerais e performance por produto em uma unica tela.',
+            'metrics' => data_get($currentSection, 'metrics', []),
+            'panels' => data_get($currentSection, 'panels', []),
+            'tables' => data_get($currentSection, 'tables', []),
+            'filters' => array_merge(data_get($currentSection, 'filters', []), [
+                'product' => $productFilter,
+                'showProductSearch' => true,
+                'section' => $activeSection,
+            ]),
+            'sections' => $sections->values()->all(),
+            'activeSection' => $activeSection,
+        ];
+    }
+
     public function orders(array $filters): array
     {
         [$from, $to] = $this->resolvePeriod($filters);
@@ -181,26 +235,39 @@ class SalesOverviewService
     public function reports(array $filters): array
     {
         [$from, $to] = $this->resolvePeriod($filters);
-        $summary = $this->salesQuery($from, $to)
+        $productFilter = $this->resolveProductFilter($filters);
+
+        $summaryQuery = $this->salesQuery($from, $to);
+        $this->applyProductFilterToSalesQuery($summaryQuery, $productFilter);
+
+        $summary = $summaryQuery
             ->selectRaw('COUNT(*) as qty, COALESCE(SUM(total), 0) as total, COALESCE(SUM(cost_total), 0) as cost, COALESCE(SUM(profit), 0) as profit')
             ->first();
-        $salesByDay = $this->salesQuery($from, $to)
+
+        $salesByDayQuery = $this->salesQuery($from, $to);
+        $this->applyProductFilterToSalesQuery($salesByDayQuery, $productFilter);
+
+        $salesByDay = $salesByDayQuery
             ->selectRaw('DATE(created_at) as day, COUNT(*) as qty, COALESCE(SUM(total), 0) as total, COALESCE(SUM(profit), 0) as profit')
             ->groupBy(DB::raw('DATE(created_at)'))
             ->orderBy('day')
             ->get();
+
         $payments = DB::table('sale_payments')
             ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
             ->where('sales.status', 'finalized')
             ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->when($productFilter, fn ($query) => $query->whereIn('sales.id', $this->filteredSaleIdsSubquery($from, $to, $productFilter)))
             ->groupBy('sale_payments.payment_method')
             ->orderByDesc(DB::raw('SUM(sale_payments.amount)'))
             ->get(['sale_payments.payment_method', DB::raw('COUNT(*) as qty'), DB::raw('SUM(sale_payments.amount) as total')]);
+
         $topProducts = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
             ->where('sales.status', 'finalized')
             ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->when($productFilter, fn ($query) => $this->applyProductFilterToProductQuery($query, $productFilter))
             ->groupBy('products.id', 'products.name')
             ->orderByDesc(DB::raw('SUM(sale_items.total)'))
             ->limit(10)
@@ -238,22 +305,46 @@ class SalesOverviewService
             ],
             $from,
             $to,
+            [
+                'product' => $productFilter,
+                'showProductSearch' => true,
+            ],
         );
     }
 
     public function sales(array $filters): array
     {
         [$from, $to] = $this->resolvePeriod($filters);
-        $sales = $this->salesQuery($from, $to)->with(['customer:id,name', 'user:id,name'])->latest()->limit(30)->get();
+        $productFilter = $this->resolveProductFilter($filters);
+
+        $summaryQuery = $this->salesQuery($from, $to);
+        $this->applyProductFilterToSalesQuery($summaryQuery, $productFilter);
+
+        $summary = $summaryQuery
+            ->selectRaw('COUNT(*) as qty, COALESCE(SUM(total), 0) as total, COALESCE(SUM(profit), 0) as profit')
+            ->first();
+
+        $salesQuery = $this->salesQuery($from, $to);
+        $this->applyProductFilterToSalesQuery($salesQuery, $productFilter);
+
+        $sales = $salesQuery
+            ->with(['customer:id,name', 'user:id,name'])
+            ->latest()
+            ->limit(30)
+            ->get();
 
         return $this->page(
             'Vendas gerais',
             'Vendas, lucro e formas de pagamento no periodo.',
             [
-                $this->metric('Vendas', $sales->count()),
-                $this->metric('Faturamento', $sales->sum('total'), 'money'),
-                $this->metric('Lucro', $sales->sum('profit'), 'money'),
-                $this->metric('Margem media', $sales->sum('total') > 0 ? ($sales->sum('profit') / $sales->sum('total')) * 100 : 0, 'percent'),
+                $this->metric('Vendas', (int) ($summary->qty ?? 0)),
+                $this->metric('Faturamento', (float) ($summary->total ?? 0), 'money'),
+                $this->metric('Lucro', (float) ($summary->profit ?? 0), 'money'),
+                $this->metric(
+                    'Margem media',
+                    (float) ($summary->total ?? 0) > 0 ? ((float) ($summary->profit ?? 0) / (float) ($summary->total ?? 0)) * 100 : 0,
+                    'percent',
+                ),
             ],
             [],
             [
@@ -277,18 +368,32 @@ class SalesOverviewService
             ],
             $from,
             $to,
+            [
+                'product' => $productFilter,
+                'showProductSearch' => true,
+            ],
         );
     }
 
     public function demand(array $filters): array
     {
         [$from, $to] = $this->resolvePeriod($filters);
-        $products = DB::table('sale_items')
+        $productFilter = $this->resolveProductFilter($filters);
+
+        $productsQuery = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->where('sales.status', 'finalized')
-            ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
+
+        $this->applyProductFilterToProductQuery($productsQuery, $productFilter);
+
+        $summary = (clone $productsQuery)
+            ->selectRaw('COUNT(DISTINCT products.id) as items_count, COALESCE(SUM(sale_items.quantity), 0) as qty, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit')
+            ->first();
+
+        $products = (clone $productsQuery)
             ->groupBy('products.id', 'products.name', 'products.code', 'categories.name')
             ->orderByDesc(DB::raw('SUM(sale_items.quantity)'))
             ->limit(20)
@@ -305,10 +410,10 @@ class SalesOverviewService
             'Vendas por produto',
             'Quantidade vendida por produto no periodo.',
             [
-                $this->metric('Itens com giro', $products->count()),
-                $this->metric('Quantidade vendida', $products->sum('qty'), 'number'),
-                $this->metric('Receita', $products->sum('revenue'), 'money'),
-                $this->metric('Lucro', $products->sum('profit'), 'money'),
+                $this->metric('Itens com giro', (int) ($summary->items_count ?? 0)),
+                $this->metric('Quantidade vendida', (float) ($summary->qty ?? 0), 'number'),
+                $this->metric('Receita', (float) ($summary->revenue ?? 0), 'money'),
+                $this->metric('Lucro', (float) ($summary->profit ?? 0), 'money'),
             ],
             [],
             [
@@ -323,6 +428,60 @@ class SalesOverviewService
             ],
             $from,
             $to,
+            [
+                'product' => $productFilter,
+                'showProductSearch' => true,
+            ],
         );
+    }
+
+    protected function resolveProductFilter(array $filters): ?string
+    {
+        $productFilter = trim((string) ($filters['product'] ?? ''));
+
+        return $productFilter !== '' ? $productFilter : null;
+    }
+
+    protected function applyProductFilterToSalesQuery($query, ?string $productFilter)
+    {
+        if (!$productFilter) {
+            return $query;
+        }
+
+        return $query->whereHas('items.product', function ($productQuery) use ($productFilter) {
+            $this->applyProductFilterToProductQuery($productQuery, $productFilter, $productQuery->getModel()->getTable());
+        });
+    }
+
+    protected function applyProductFilterToProductQuery($query, ?string $productFilter, string $table = 'products')
+    {
+        if (!$productFilter) {
+            return $query;
+        }
+
+        $likeFilter = str_contains($productFilter, '%') ? $productFilter : "%{$productFilter}%";
+
+        return $query->where(function ($nestedQuery) use ($table, $productFilter, $likeFilter) {
+            $nestedQuery
+                ->where("{$table}.barcode", $productFilter)
+                ->orWhere("{$table}.code", $productFilter)
+                ->orWhere("{$table}.barcode", 'like', $likeFilter)
+                ->orWhere("{$table}.code", 'like', $likeFilter)
+                ->orWhere("{$table}.name", 'like', $likeFilter)
+                ->orWhere("{$table}.description", 'like', $likeFilter);
+        });
+    }
+
+    protected function filteredSaleIdsSubquery($from, $to, ?string $productFilter)
+    {
+        $query = $this->salesQuery($from, $to)->select('sales.id');
+        $this->applyProductFilterToSalesQuery($query, $productFilter);
+
+        return $query;
+    }
+
+    protected function isReportModuleEnabled(array $enabledModules, string $moduleKey): bool
+    {
+        return data_get($enabledModules, $moduleKey, true) !== false;
     }
 }

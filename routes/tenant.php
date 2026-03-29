@@ -15,6 +15,7 @@ use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -51,8 +52,22 @@ Route::middleware('web')->group(function () {
             Route::get('/ajuste-estoque', OperationsPageController::class)->defaults('module', 'ajuste-estoque')->name('stock.adjustments');
             Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.history');
             Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
-            Route::get('/vendas', OperationsPageController::class)->defaults('module', 'vendas')->name('sales.index');
-            Route::get('/demanda', OperationsPageController::class)->defaults('module', 'demanda')->name('demand.index');
+            Route::get('/vendas', function (Request $request) {
+                return redirect()->route('reports.index', array_filter([
+                    'from' => $request->query('from'),
+                    'to' => $request->query('to'),
+                    'product' => $request->query('product'),
+                    'section' => 'sales',
+                ], fn ($value) => filled($value)));
+            })->name('sales.index');
+            Route::get('/demanda', function (Request $request) {
+                return redirect()->route('reports.index', array_filter([
+                    'from' => $request->query('from'),
+                    'to' => $request->query('to'),
+                    'product' => $request->query('product'),
+                    'section' => 'products',
+                ], fn ($value) => filled($value)));
+            })->name('demand.index');
             Route::get('/faltas', OperationsPageController::class)->defaults('module', 'faltas')->name('shortages.index');
             Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
             Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');

@@ -55,12 +55,20 @@ export default function AppLayout({ children, title = 'Inicio' }) {
         setSidebarOpen(false)
     }
 
+    function isNavigationItemEnabled(item) {
+        if (Array.isArray(item.moduleKeys)) {
+            return item.moduleKeys.some((moduleKey) => enabledModules[moduleKey] !== false)
+        }
+
+        return item.moduleKey == null || enabledModules[item.moduleKey] !== false
+    }
+
     const enabledModules = appSettings?.modules || {}
     const baseNavigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
     const navigationGroups = baseNavigationGroups
         .map((group) => ({
             ...group,
-            items: group.items.filter((item) => item.moduleKey == null || enabledModules[item.moduleKey] !== false),
+            items: group.items.filter((item) => isNavigationItemEnabled(item)),
         }))
         .filter((group) => group.items.length > 0)
     const userRoleLabel = auth?.user?.role === 'admin' ? 'Administrador' : 'Operacao'
@@ -74,7 +82,6 @@ export default function AppLayout({ children, title = 'Inicio' }) {
             />
 
             <div className="app-layout-root">
-                <div className="app-layout-backdrop app-layout-backdrop-one" />
                 <div className="app-layout-backdrop app-layout-backdrop-two" />
                 <div className="app-layout-shell">
                     <div

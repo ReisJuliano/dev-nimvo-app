@@ -40,6 +40,7 @@ trait BuildsOverviewPages
         array $tables,
         ?Carbon $from = null,
         ?Carbon $to = null,
+        array $extraFilters = [],
     ): array {
         return [
             'title' => $title,
@@ -47,11 +48,11 @@ trait BuildsOverviewPages
             'metrics' => $metrics,
             'panels' => $panels,
             'tables' => $tables,
-            'filters' => [
+            'filters' => array_merge([
                 'from' => $from?->format('Y-m-d'),
                 'to' => $to?->format('Y-m-d'),
                 'showDateRange' => $from !== null && $to !== null,
-            ],
+            ], $extraFilters),
         ];
     }
 

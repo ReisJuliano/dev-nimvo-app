@@ -3,10 +3,6 @@ export const navItems = [
         section: 'Gerencial',
         items: [
             { href: '/dashboard', label: 'Inicio', icon: 'fa-chart-pie' },
-            { href: '/relatorios', label: 'Relatorios', icon: 'fa-chart-bar', moduleKey: 'relatorios' },
-            { href: '/vendas', label: 'Vendas Gerais', icon: 'fa-receipt', moduleKey: 'vendas' },
-            { href: '/demanda', label: 'Vendas por Produto', icon: 'fa-chart-line', moduleKey: 'demanda' },
-            { href: '/faltas', label: 'Faltas e Giro', icon: 'fa-triangle-exclamation', moduleKey: 'faltas' },
         ],
     },
     {
@@ -33,6 +29,13 @@ export const navItems = [
             { href: '/entrada-estoque', label: 'Entrada', icon: 'fa-arrow-down', moduleKey: 'entrada_estoque' },
             { href: '/ajuste-estoque', label: 'Conferencia', icon: 'fa-sliders', moduleKey: 'ajuste_estoque' },
             { href: '/movimentacao-estoque', label: 'Movimentacao', icon: 'fa-timeline', moduleKey: 'movimentacao_estoque' },
+        ],
+    },
+    {
+        section: 'Relatorios',
+        items: [
+            { href: '/relatorios', label: 'Relatorios', icon: 'fa-chart-bar', moduleKeys: ['relatorios', 'vendas', 'demanda'] },
+            { href: '/faltas', label: 'Faltas e Giro', icon: 'fa-triangle-exclamation', moduleKey: 'faltas' },
         ],
     },
 ]

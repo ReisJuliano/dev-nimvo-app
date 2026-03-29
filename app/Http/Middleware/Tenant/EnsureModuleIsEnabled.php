@@ -16,6 +16,12 @@ class EnsureModuleIsEnabled
 
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->segment(1) === 'relatorios') {
+            abort_unless($this->isReportsHubEnabled(), 404);
+
+            return $next($request);
+        }
+
         $moduleKey = $this->resolveModuleKey($request);
 
         abort_unless($this->settingsService->isModuleEnabled($moduleKey), 404);
@@ -56,5 +62,12 @@ class EnsureModuleIsEnabled
             'usuarios' => 'usuarios',
             default => null,
         };
+    }
+
+    protected function isReportsHubEnabled(): bool
+    {
+        return $this->settingsService->isModuleEnabled('relatorios')
+            || $this->settingsService->isModuleEnabled('vendas')
+            || $this->settingsService->isModuleEnabled('demanda');
     }
 }
