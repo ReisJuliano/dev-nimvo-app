@@ -120,10 +120,27 @@ export default function CheckoutPanel({
                     </div>
                 </div>
 
-                <label>
-                    Desconto
-                    <input className="ui-input" type="number" step="0.01" value={discount} onChange={(event) => onDiscountChange(event.target.value)} />
-                </label>
+                <div className="pos-discount-field">
+                    <div className="pos-discount-copy">
+                        <label htmlFor="checkout-discount">Desconto</label>
+                        <small>Abate direto no total</small>
+                    </div>
+
+                    <div className="pos-discount-input-wrap">
+                        <span>R$</span>
+                        <input
+                            id="checkout-discount"
+                            className="ui-input pos-discount-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={discount}
+                            onChange={(event) => onDiscountChange(event.target.value)}
+                        />
+                    </div>
+                </div>
 
                 <label className="span-2">
                     Observacoes
