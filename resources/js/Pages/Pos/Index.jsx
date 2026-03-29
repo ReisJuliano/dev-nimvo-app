@@ -15,6 +15,14 @@ const closingPaymentFields = [
     { key: 'credit', label: 'Fiado' },
 ]
 
+const shortcutHints = [
+    { keys: ['Shift', 'P'], label: 'Focar busca de produtos' },
+    { keys: ['Shift', 'C'], label: 'Abrir cliente' },
+    { keys: ['Shift', 'F'], label: 'Finalizar venda' },
+    { keys: ['Shift', 'X'], label: 'Abrir fechamento do caixa' },
+    { keys: ['Esc'], label: 'Fechar popup ativo' },
+]
+
 export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
     const [customers, setCustomers] = useState(initialCustomers)
     const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
@@ -47,6 +55,12 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     useEffect(() => {
         setCashRegisterState(cashRegister)
     }, [cashRegister])
+
+    useEffect(() => {
+        if (searchTerm == null || String(searchTerm).toLowerCase() === 'null') {
+            setSearchTerm('')
+        }
+    }, [searchTerm])
 
     useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()
@@ -292,12 +306,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setCloseCashRegisterModal(null)
     }
 
-    function isTypingTarget(target) {
-        const tagName = target?.tagName
-
-        return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || target?.isContentEditable
-    }
-
     function buildCloseCashRegisterModal(report) {
         const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
 
@@ -518,8 +526,13 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
     useEffect(() => {
         function handleShortcuts(event) {
-            const usingShortcut = event.altKey && event.shiftKey
             const hasModalOpen = Boolean(cashReportModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen)
+            const isReservedShiftShortcut =
+                event.shiftKey &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.altKey &&
+                ['P', 'C', 'F', 'X'].includes(event.key.toUpperCase())
 
             if (event.key === 'Escape') {
                 if (cashReportModal) {
@@ -548,35 +561,38 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 return
             }
 
-            if (hasModalOpen) {
+            if (hasModalOpen && !isReservedShiftShortcut) {
                 return
             }
 
-            if (!usingShortcut || isTypingTarget(event.target)) {
+            if (!isReservedShiftShortcut) {
                 return
             }
 
-            const key = event.key.toLowerCase()
+            const key = event.key.toUpperCase()
 
-            if (key === 'p') {
+            if (key === 'P') {
                 event.preventDefault()
-                productSearchInputRef.current?.focus()
+                requestAnimationFrame(() => {
+                    productSearchInputRef.current?.focus()
+                    productSearchInputRef.current?.select?.()
+                })
                 return
             }
 
-            if (key === 'c') {
+            if (key === 'C') {
                 event.preventDefault()
                 setCustomerPickerOpen(true)
                 return
             }
 
-            if (key === 'f' && cashRegisterState && cart.length && !submitting) {
+            if (key === 'F' && cashRegisterState && cart.length && !submitting) {
                 event.preventDefault()
                 handleFinalize()
                 return
             }
 
-            if (key === 'x' && cashRegisterState && !loadingClosePreview && !closingCashRegister) {
+            if (key === 'X' && cashRegisterState && !loadingClosePreview && !closingCashRegister) {
                 event.preventDefault()
                 handleOpenCloseCashRegister()
             }
@@ -612,9 +628,27 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                     </span>
                                     <h1>PDV</h1>
                                     <p>Registro de vendas e operacao de caixa na mesma tela.</p>
-                                    <small className="pos-hero-shortcuts">
-                                        Atalhos: `Alt` + `Shift` + `P` busca, `C` cliente, `F` finalizar, `X` fechamento, `Esc` fecha janelas.
-                                    </small>
+                                    <div className="pos-hero-shortcuts">
+                                        <span className="pos-hero-shortcuts-title">Atalhos rapidos do caixa e da venda</span>
+                                        <small className="pos-hero-shortcuts-copy">
+                                            Os atalhos com `Shift` ficam reservados no PDV e nao digitam nos campos quando usados como comando.
+                                        </small>
+                                        <div className="pos-shortcut-list">
+                                            {shortcutHints.map((shortcut) => (
+                                                <div key={shortcut.label} className="pos-shortcut-chip">
+                                                    <span className="pos-shortcut-keys">
+                                                        {shortcut.keys.map((keyPart, index) => (
+                                                            <span key={`${shortcut.label}-${keyPart}`} className="pos-shortcut-keypart">
+                                                                {index ? <span>+</span> : null}
+                                                                <kbd>{keyPart}</kbd>
+                                                            </span>
+                                                        ))}
+                                                    </span>
+                                                    <small>{shortcut.label}</small>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -659,8 +693,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onQuickCustomer={handleOpenQuickCustomer}
                     creditStatus={creditStatus}
                     totals={totals}
-                    cartCount={cart.length}
-                    partialTotal={totals.total}
                     cashRegister={cashRegisterState}
                     openingCashRegister={openingCashRegister}
                     loadingClosePreview={loadingClosePreview}

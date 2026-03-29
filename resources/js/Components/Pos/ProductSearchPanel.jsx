@@ -12,6 +12,11 @@ export default function ProductSearchPanel({
     loading,
     onAddProduct,
 }) {
+    const normalizedSearchTerm =
+        searchTerm == null || String(searchTerm).toLowerCase() === 'null'
+            ? ''
+            : String(searchTerm)
+
     return (
         <section className="pos-card">
             <div className="pos-card-header">
@@ -35,7 +40,7 @@ export default function ProductSearchPanel({
                     className="ui-input"
                     type="search"
                     placeholder="Busque por nome, codigo, EAN ou descricao"
-                    value={searchTerm}
+                    value={normalizedSearchTerm}
                     onChange={(event) => onSearchChange(event.target.value)}
                 />
             </div>
