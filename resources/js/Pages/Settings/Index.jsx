@@ -58,7 +58,7 @@ export default function SettingsIndex({ settings, generalOptions, moduleSections
     }
 
     return (
-        <AppLayout title="Configuracoes">
+        <AppLayout title="Configuracoes" navigationModulesOverride={form.modules}>
             <div className="settings-page">
                 <section className="settings-hero">
                     <div>

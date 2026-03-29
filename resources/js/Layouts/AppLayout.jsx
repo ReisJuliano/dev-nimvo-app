@@ -5,13 +5,14 @@ import AppTopbar from '@/Components/Layout/AppTopbar'
 import { adminItems, navItems } from '@/Components/Layout/navigation'
 import './app-layout.css'
 
-export default function AppLayout({ children, title = 'Inicio' }) {
+export default function AppLayout({ children, title = 'Inicio', navigationModulesOverride = null }) {
     const { auth, appSettings } = usePage().props
     const currentUrl = usePage().url
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
     const [currentTime, setCurrentTime] = useState('')
     const [currentDate, setCurrentDate] = useState('')
+    const enabledModules = navigationModulesOverride ?? appSettings?.modules ?? {}
 
     useEffect(() => {
         function tick() {
@@ -63,7 +64,6 @@ export default function AppLayout({ children, title = 'Inicio' }) {
         return item.moduleKey == null || enabledModules[item.moduleKey] !== false
     }
 
-    const enabledModules = appSettings?.modules || {}
     const baseNavigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
     const navigationGroups = baseNavigationGroups
         .map((group) => ({
