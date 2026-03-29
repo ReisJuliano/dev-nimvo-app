@@ -14,7 +14,6 @@ export const navItems = [
         items: [
             { href: '/pdv', label: 'PDV', icon: 'fa-cash-register' },
             { href: '/pedidos', label: 'Pedidos', icon: 'fa-clipboard-list' },
-            { href: '/caixa', label: 'Abertura / Fechamento', icon: 'fa-cash-register' },
             { href: '/fiado', label: 'Fiado', icon: 'fa-handshake' },
         ],
     },

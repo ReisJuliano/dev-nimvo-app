@@ -3,7 +3,6 @@ import { Link } from '@inertiajs/react'
 const quickActions = [
     { href: '/pdv', label: 'Abrir PDV', icon: 'fa-cash-register', tooltip: 'Ir para o ponto de venda' },
     { href: '/produtos', label: 'Produtos', icon: 'fa-boxes-stacked', tooltip: 'Gerenciar catalogo' },
-    { href: '/caixa', label: 'Caixa', icon: 'fa-vault', tooltip: 'Acompanhar abertura e fechamento' },
 ]
 
 export default function AppTopbar({ title, currentDate, currentTime, onToggleMobileSidebar }) {

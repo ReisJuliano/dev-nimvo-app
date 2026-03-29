@@ -1,14 +1,23 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
 import { apiRequest } from '@/lib/http'
-import { formatMoney } from '@/lib/format'
+import { formatDateTime, formatMoney } from '@/lib/format'
 import './pos.css'
+
+const closingPaymentFields = [
+    { key: 'cash', label: 'Dinheiro' },
+    { key: 'pix', label: 'Pix' },
+    { key: 'debit_card', label: 'Cartao de debito' },
+    { key: 'credit_card', label: 'Cartao de credito' },
+    { key: 'credit', label: 'Fiado' },
+]
 
 export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
     const [customers, setCustomers] = useState(initialCustomers)
+    const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
     const [selectedCategory, setSelectedCategory] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [products, setProducts] = useState([])
@@ -25,9 +34,19 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [quickCustomerOpen, setQuickCustomerOpen] = useState(false)
     const [quickCustomerForm, setQuickCustomerForm] = useState({ name: '', phone: '' })
     const [submitting, setSubmitting] = useState(false)
+    const [openingCashRegister, setOpeningCashRegister] = useState(false)
+    const [loadingClosePreview, setLoadingClosePreview] = useState(false)
+    const [closingCashRegister, setClosingCashRegister] = useState(false)
+    const [closeCashRegisterModal, setCloseCashRegisterModal] = useState(null)
+    const [cashReportModal, setCashReportModal] = useState(null)
     const [feedback, setFeedback] = useState(null)
     const [loadingProducts, setLoadingProducts] = useState(false)
     const deferredCustomerSearch = useDeferredValue(customerSearch)
+    const productSearchInputRef = useRef(null)
+
+    useEffect(() => {
+        setCashRegisterState(cashRegister)
+    }, [cashRegister])
 
     useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()
@@ -105,11 +124,36 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         [customers, selectedCustomer],
     )
 
+    const closeCashRegisterRows = useMemo(() => {
+        if (!closeCashRegisterModal?.report) {
+            return []
+        }
+
+        const paymentTotals = Object.fromEntries(
+            closeCashRegisterModal.report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]),
+        )
+
+        return closingPaymentFields.map((field) => {
+            const expected =
+                field.key === 'cash'
+                    ? Number(closeCashRegisterModal.report.expected_cash || 0)
+                    : Number(paymentTotals[field.key] || 0)
+            const informed = Number(closeCashRegisterModal.form.amounts[field.key] || 0)
+
+            return {
+                ...field,
+                expected,
+                informed,
+                difference: informed - expected,
+            }
+        })
+    }, [closeCashRegisterModal])
+
     const filteredCustomers = useMemo(() => {
         const normalizedTerm = deferredCustomerSearch.trim().toLowerCase()
 
         if (!normalizedTerm) {
-            return customers
+            return []
         }
 
         return customers.filter((customer) =>
@@ -240,13 +284,175 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         showFeedback('success', 'Cliente cadastrado e selecionado para esta venda.')
     }
 
+    function closeCashReportModal() {
+        setCashReportModal(null)
+    }
+
+    function closeCloseCashRegisterModal() {
+        setCloseCashRegisterModal(null)
+    }
+
+    function isTypingTarget(target) {
+        const tagName = target?.tagName
+
+        return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || target?.isContentEditable
+    }
+
+    function buildCloseCashRegisterModal(report) {
+        const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
+
+        return {
+            report,
+            form: {
+                notes: '',
+                amounts: {
+                    cash: String(Number(report.expected_cash || 0).toFixed(2)),
+                    pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
+                    debit_card: String(Number(paymentTotals.debit_card || 0).toFixed(2)),
+                    credit_card: String(Number(paymentTotals.credit_card || 0).toFixed(2)),
+                    credit: String(Number(paymentTotals.credit || 0).toFixed(2)),
+                },
+            },
+        }
+    }
+
+    function buildCloseCashRegisterNotes(report, form) {
+        const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
+        const lines = ['Conferencia de fechamento do caixa:']
+
+        closingPaymentFields.forEach((field) => {
+            const expected = field.key === 'cash' ? Number(report.expected_cash || 0) : Number(paymentTotals[field.key] || 0)
+            const informed = Number(form.amounts[field.key] || 0)
+            lines.push(
+                `${field.label}: esperado ${expected.toFixed(2)} | informado ${informed.toFixed(2)} | diferenca ${(informed - expected).toFixed(2)}`,
+            )
+        })
+
+        if (form.notes.trim()) {
+            lines.push(`Obs: ${form.notes.trim()}`)
+        }
+
+        return lines.join('\n')
+    }
+
+    async function handleOpenCashRegister(event) {
+        event.preventDefault()
+        setOpeningCashRegister(true)
+        setFeedback(null)
+
+        const formData = new FormData(event.currentTarget)
+        const openingAmount = Number(formData.get('opening_amount') || 0)
+
+        try {
+            const response = await apiRequest('/api/cash-registers', {
+                method: 'post',
+                data: {
+                    opening_amount: openingAmount,
+                    opening_notes: formData.get('opening_notes') || null,
+                },
+            })
+
+            setCashRegisterState({
+                id: response.cash_register_id,
+                status: 'open',
+                opened_at: new Date().toISOString(),
+                opening_amount: openingAmount,
+            })
+            event.currentTarget.reset()
+            showFeedback('success', response.message || 'Caixa aberto com sucesso.')
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setOpeningCashRegister(false)
+        }
+    }
+
+    async function handleOpenCloseCashRegister() {
+        if (!cashRegisterState) {
+            return
+        }
+
+        setLoadingClosePreview(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/api/cash-registers/${cashRegisterState.id}/report`)
+            setCloseCashRegisterModal(buildCloseCashRegisterModal(response.report))
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setLoadingClosePreview(false)
+        }
+    }
+
+    function handleCloseCashRegisterAmountChange(field, value) {
+        setCloseCashRegisterModal((current) => (
+            current
+                ? {
+                    ...current,
+                    form: {
+                        ...current.form,
+                        amounts: {
+                            ...current.form.amounts,
+                            [field]: value,
+                        },
+                    },
+                }
+                : current
+        ))
+    }
+
+    function handleCloseCashRegisterNotesChange(value) {
+        setCloseCashRegisterModal((current) => (
+            current
+                ? {
+                    ...current,
+                    form: {
+                        ...current.form,
+                        notes: value,
+                    },
+                }
+                : current
+        ))
+    }
+
+    async function handleConfirmCloseCashRegister(event) {
+        event.preventDefault()
+
+        if (!cashRegisterState || !closeCashRegisterModal) {
+            return
+        }
+
+        setClosingCashRegister(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/api/cash-registers/${cashRegisterState.id}/close`, {
+                method: 'post',
+                data: {
+                    closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
+                    closing_notes: buildCloseCashRegisterNotes(closeCashRegisterModal.report, closeCashRegisterModal.form),
+                },
+            })
+
+            setCloseCashRegisterModal(null)
+            setCashRegisterState(null)
+            setCashReportModal(response.report)
+            showFeedback('success', response.message || 'Caixa fechado com sucesso.')
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setClosingCashRegister(false)
+        }
+    }
+
     async function handleFinalize() {
         if (!cart.length) {
             showFeedback('error', 'Adicione ao menos um produto antes de finalizar a venda.')
             return
         }
 
-        if (!cashRegister) {
+        if (!cashRegisterState) {
             showFeedback('error', 'Abra o caixa antes de tentar finalizar a venda.')
             return
         }
@@ -310,6 +516,89 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         }
     }
 
+    useEffect(() => {
+        function handleShortcuts(event) {
+            const usingShortcut = event.altKey && event.shiftKey
+            const hasModalOpen = Boolean(cashReportModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen)
+
+            if (event.key === 'Escape') {
+                if (cashReportModal) {
+                    event.preventDefault()
+                    closeCashReportModal()
+                    return
+                }
+
+                if (closeCashRegisterModal) {
+                    event.preventDefault()
+                    closeCloseCashRegisterModal()
+                    return
+                }
+
+                if (quickCustomerOpen) {
+                    event.preventDefault()
+                    setQuickCustomerOpen(false)
+                    return
+                }
+
+                if (customerPickerOpen) {
+                    event.preventDefault()
+                    closeCustomerPicker()
+                }
+
+                return
+            }
+
+            if (hasModalOpen) {
+                return
+            }
+
+            if (!usingShortcut || isTypingTarget(event.target)) {
+                return
+            }
+
+            const key = event.key.toLowerCase()
+
+            if (key === 'p') {
+                event.preventDefault()
+                productSearchInputRef.current?.focus()
+                return
+            }
+
+            if (key === 'c') {
+                event.preventDefault()
+                setCustomerPickerOpen(true)
+                return
+            }
+
+            if (key === 'f' && cashRegisterState && cart.length && !submitting) {
+                event.preventDefault()
+                handleFinalize()
+                return
+            }
+
+            if (key === 'x' && cashRegisterState && !loadingClosePreview && !closingCashRegister) {
+                event.preventDefault()
+                handleOpenCloseCashRegister()
+            }
+        }
+
+        window.addEventListener('keydown', handleShortcuts)
+
+        return () => window.removeEventListener('keydown', handleShortcuts)
+    }, [
+        cashReportModal,
+        closeCashRegisterModal,
+        quickCustomerOpen,
+        customerPickerOpen,
+        handleFinalize,
+        handleOpenCloseCashRegister,
+        cashRegisterState,
+        cart.length,
+        submitting,
+        loadingClosePreview,
+        closingCashRegister,
+    ])
+
     return (
         <AppLayout title="PDV">
             <div className="pos-page">
@@ -318,21 +607,14 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         <div className="ui-card-body">
                             <div className="pos-hero-grid">
                                 <div>
-                                    <span className={`ui-badge ${cashRegister ? 'success' : 'danger'}`}>
-                                        {cashRegister ? 'Caixa ativo' : 'Caixa fechado'}
+                                    <span className={`ui-badge ${cashRegisterState ? 'success' : 'danger'}`}>
+                                        {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
                                     <h1>PDV</h1>
-                                    <p>Registro de vendas e fechamento.</p>
-                                </div>
-                                <div className="pos-hero-kpis">
-                                    <div>
-                                        <small>Itens no carrinho</small>
-                                        <strong>{cart.length}</strong>
-                                    </div>
-                                    <div>
-                                        <small>Total parcial</small>
-                                        <strong>{formatMoney(totals.total)}</strong>
-                                    </div>
+                                    <p>Registro de vendas e operacao de caixa na mesma tela.</p>
+                                    <small className="pos-hero-shortcuts">
+                                        Atalhos: `Alt` + `Shift` + `P` busca, `C` cliente, `F` finalizar, `X` fechamento, `Esc` fecha janelas.
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -346,6 +628,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         onCategoryChange={setSelectedCategory}
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
+                        searchInputRef={productSearchInputRef}
                         hasSearchTerm={searchTerm.trim() !== ''}
                         products={products}
                         loading={loadingProducts}
@@ -376,11 +659,128 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onQuickCustomer={handleOpenQuickCustomer}
                     creditStatus={creditStatus}
                     totals={totals}
-                    disabled={!cashRegister || !cart.length || submitting}
+                    cartCount={cart.length}
+                    partialTotal={totals.total}
+                    cashRegister={cashRegisterState}
+                    openingCashRegister={openingCashRegister}
+                    loadingClosePreview={loadingClosePreview}
+                    closingCashRegister={closingCashRegister}
+                    onOpenCashRegister={handleOpenCashRegister}
+                    onOpenCloseCashRegister={handleOpenCloseCashRegister}
+                    disabled={!cashRegisterState || !cart.length || submitting}
                     onFinalize={handleFinalize}
-                    cashRegister={cashRegister}
                 />
             </div>
+
+            {closeCashRegisterModal ? (
+                <div className="pos-quick-customer" onClick={closeCloseCashRegisterModal}>
+                    <form
+                        className="pos-quick-customer-card pos-cash-close-card"
+                        onSubmit={handleConfirmCloseCashRegister}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Fechar caixa</h2>
+                                <p>Confira os valores por forma de pagamento antes de concluir o fechamento.</p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
+                                Cancelar
+                            </button>
+                        </div>
+
+                        <div className="pos-cash-close-grid">
+                            {closeCashRegisterRows.map((row) => (
+                                <div key={row.key} className="pos-cash-close-item">
+                                    <div className="pos-cash-close-item-header">
+                                        <strong>{row.label}</strong>
+                                        <span>{row.key === 'cash' ? 'Com abertura, sangrias e suprimentos' : 'Total da forma de pagamento'}</span>
+                                    </div>
+                                    <div className="pos-cash-close-item-values">
+                                        <div>
+                                            <small>Esperado</small>
+                                            <strong>{formatMoney(row.expected)}</strong>
+                                        </div>
+                                        <label>
+                                            <small>Informado</small>
+                                            <input
+                                                className="ui-input"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={closeCashRegisterModal.form.amounts[row.key]}
+                                                onChange={(event) => handleCloseCashRegisterAmountChange(row.key, event.target.value)}
+                                            />
+                                        </label>
+                                        <div className={`pos-cash-close-diff ${Math.abs(row.difference) > 0.009 ? 'alert' : ''}`}>
+                                            <small>Diferenca</small>
+                                            <strong>{formatMoney(row.difference)}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <label className="pos-cash-close-notes">
+                            Observacao do fechamento
+                            <textarea
+                                className="ui-textarea"
+                                rows="3"
+                                value={closeCashRegisterModal.form.notes}
+                                onChange={(event) => handleCloseCashRegisterNotesChange(event.target.value)}
+                            />
+                        </label>
+
+                        <div className="pos-quick-customer-actions">
+                            <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
+                                Voltar
+                            </button>
+                            <button className="pos-cash-register-button danger" type="submit" disabled={closingCashRegister}>
+                                <i className="fa-solid fa-lock" />
+                                {closingCashRegister ? 'Fechando...' : 'Confirmar fechamento'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ) : null}
+
+            {cashReportModal ? (
+                <div className="pos-quick-customer" onClick={closeCashReportModal}>
+                    <div className="pos-quick-customer-card pos-cash-report-card" onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Relatorio do caixa</h2>
+                                <p>
+                                    Aberto em {formatDateTime(cashReportModal.cashRegister.opened_at)} e fechado em{' '}
+                                    {formatDateTime(cashReportModal.cashRegister.closed_at)}
+                                </p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={closeCashReportModal}>
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="pos-cash-report-grid">
+                            <div className="pos-cash-report-box">
+                                <span>Total vendido</span>
+                                <strong>{formatMoney(cashReportModal.total_sales)}</strong>
+                            </div>
+                            <div className="pos-cash-report-box">
+                                <span>Dinheiro esperado</span>
+                                <strong>{formatMoney(cashReportModal.expected_cash)}</strong>
+                            </div>
+                            <div className="pos-cash-report-box">
+                                <span>Contado</span>
+                                <strong>{formatMoney(cashReportModal.cashRegister.closing_amount)}</strong>
+                            </div>
+                            <div className="pos-cash-report-box">
+                                <span>Diferenca</span>
+                                <strong>{formatMoney(cashReportModal.difference)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {customerPickerOpen ? (
                 <div className="pos-quick-customer" onClick={closeCustomerPicker}>
@@ -422,11 +822,16 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 <i className="fa-solid fa-user-slash" />
                                 Nao identificado
                             </button>
-                            <span>{filteredCustomers.length} cliente(s) encontrado(s)</span>
+                            <span>
+                                {customerSearch.trim()
+                                    ? `${filteredCustomers.length} cliente(s) encontrado(s)`
+                                    : 'Digite para pesquisar clientes'}
+                            </span>
                         </div>
 
                         <div className="pos-customer-picker-list">
-                            {filteredCustomers.length ? (
+                            {customerSearch.trim() ? (
+                                filteredCustomers.length ? (
                                 filteredCustomers.map((customer) => {
                                     const isActive = String(customer.id) === selectedCustomer
 
@@ -452,6 +857,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 })
                             ) : (
                                 <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>
+                                )
+                            ) : (
+                                <div className="pos-empty-state">Digite nome ou telefone para buscar um cliente.</div>
                             )}
                         </div>
                     </div>

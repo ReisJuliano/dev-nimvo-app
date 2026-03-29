@@ -6,6 +6,7 @@ export default function ProductSearchPanel({
     onCategoryChange,
     searchTerm,
     onSearchChange,
+    searchInputRef,
     hasSearchTerm,
     products,
     loading,
@@ -30,6 +31,7 @@ export default function ProductSearchPanel({
                 </select>
 
                 <input
+                    ref={searchInputRef}
                     className="ui-input"
                     type="search"
                     placeholder="Busque por nome, codigo, EAN ou descricao"

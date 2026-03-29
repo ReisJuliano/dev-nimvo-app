@@ -1,4 +1,4 @@
-import { formatMoney } from '@/lib/format'
+import { formatDateTime, formatMoney } from '@/lib/format'
 
 const paymentOptions = [
     { value: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave', tone: 'success' },
@@ -32,6 +32,13 @@ export default function CheckoutPanel({
     onQuickCustomer,
     creditStatus,
     totals,
+    cartCount,
+    partialTotal,
+    openingCashRegister,
+    loadingClosePreview,
+    closingCashRegister,
+    onOpenCashRegister,
+    onOpenCloseCashRegister,
     disabled,
     onFinalize,
     cashRegister,
@@ -43,12 +50,63 @@ export default function CheckoutPanel({
                     <h2>Fechamento</h2>
                     <p>{cashRegister ? 'Caixa aberto' : 'Abra o caixa para vender'}</p>
                 </div>
-                {cashRegister ? (
-                    <div className="pos-register-chip">
-                        <span>Caixa ativo</span>
-                        <strong>{formatMoney(cashRegister.opening_amount)}</strong>
+                <div className="pos-checkout-summary">
+                    <div className="pos-checkout-summary-item">
+                        <span>Itens</span>
+                        <strong>{cartCount}</strong>
                     </div>
-                ) : null}
+                    <div className="pos-checkout-summary-item">
+                        <span>Parcial</span>
+                        <strong>{formatMoney(partialTotal)}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div className="pos-cash-register-box">
+                <div className="pos-cash-register-copy">
+                    <span className={`ui-badge ${cashRegister ? 'success' : 'warning'}`}>
+                        {cashRegister ? 'Caixa aberto' : 'Caixa fechado'}
+                    </span>
+                    <strong>{cashRegister ? 'Caixa pronto para vender' : 'Abra o caixa antes de finalizar vendas'}</strong>
+                    <small>
+                        {cashRegister
+                            ? `Aberto em ${formatDateTime(cashRegister.opened_at)}`
+                            : 'Informe um valor inicial para iniciar a operacao no PDV.'}
+                    </small>
+                </div>
+
+                {cashRegister ? (
+                    <div className="pos-cash-register-actions">
+                        <div className="pos-cash-register-status">
+                            <span>Fechamento guiado</span>
+                            <strong>Conferencia por forma de pagamento</strong>
+                        </div>
+                        <button
+                            type="button"
+                            className="pos-cash-register-button danger"
+                            onClick={onOpenCloseCashRegister}
+                            disabled={loadingClosePreview || closingCashRegister}
+                        >
+                            <i className="fa-solid fa-lock" />
+                            {loadingClosePreview ? 'Carregando conferencia...' : 'Conferir e fechar caixa'}
+                        </button>
+                    </div>
+                ) : (
+                    <form className="pos-cash-register-form" onSubmit={onOpenCashRegister}>
+                        <label>
+                            Valor de abertura
+                            <input className="ui-input" name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />
+                        </label>
+                        <label>
+                            Observacao
+                            <input className="ui-input" name="opening_notes" placeholder="Observacao da abertura" />
+                        </label>
+                        <button type="submit" className="pos-cash-register-button" disabled={openingCashRegister}>
+                            <i className="fa-solid fa-lock-open" />
+                            {openingCashRegister ? 'Abrindo...' : 'Abrir caixa'}
+                        </button>
+                    </form>
+                )}
             </div>
 
             <div className="pos-checkout-grid">
