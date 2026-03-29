@@ -35,7 +35,7 @@ class UsersOverviewService
 
         return $this->page(
             'Usuarios',
-            'Gerencie a visao operacional da equipe com leitura rapida de perfil, atividade e resultado comercial.',
+            'Usuarios cadastrados e vendas por periodo.',
             [
                 $this->metric('Total', $users->count()),
                 $this->metric('Ativos', $users->where('status', 'Ativo')->count()),

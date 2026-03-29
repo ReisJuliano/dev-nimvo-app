@@ -11,6 +11,7 @@ export default function CashRegisterIndex({ openRegister, history }) {
     const [loading, setLoading] = useState(false)
     const [reportModal, setReportModal] = useState(null)
     const [refreshAfterClose, setRefreshAfterClose] = useState(false)
+    const [activeTab, setActiveTab] = useState(openRegister ? 'active' : 'history')
 
     function closeReportModal() {
         setReportModal(null)
@@ -91,13 +92,60 @@ export default function CashRegisterIndex({ openRegister, history }) {
     return (
         <AppLayout title="Caixa">
             <div className="cash-register-page">
-                {openRegister ? (
-                    <ActiveRegisterPanel report={openRegister} onMovement={handleMovement} onClose={handleClose} />
-                ) : (
-                    <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
-                )}
+                <section className="cash-register-hero ui-card">
+                    <div className="ui-card-body">
+                        <div className="cash-register-hero-grid">
+                            <div>
+                                <span className={`ui-badge ${openRegister ? 'success' : 'warning'}`}>
+                                    {openRegister ? 'Caixa aberto' : 'Caixa aguardando abertura'}
+                                </span>
+                                <h1>Gestao de caixa</h1>
+                                <p>Abertura, movimentacoes, fechamento e historico.</p>
+                            </div>
+                            <div className="cash-register-hero-metrics">
+                                <div>
+                                    <small>Historico</small>
+                                    <strong>{history.length}</strong>
+                                </div>
+                                <div>
+                                    <small>Status</small>
+                                    <strong>{openRegister ? 'Em operacao' : 'Fechado'}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-                <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
+                <section className="ui-tabs">
+                    <button
+                        type="button"
+                        className={`ui-tab ${activeTab === 'active' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('active')}
+                    >
+                        <i className="fa-solid fa-vault" />
+                        <span>Operacao</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`ui-tab ${activeTab === 'history' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('history')}
+                    >
+                        <i className="fa-solid fa-clock-rotate-left" />
+                        <span>Historico</span>
+                    </button>
+                </section>
+
+                {activeTab === 'active' ? (
+                    openRegister ? (
+                        <ActiveRegisterPanel report={openRegister} onMovement={handleMovement} onClose={handleClose} />
+                    ) : (
+                        <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
+                    )
+                ) : null}
+
+                {activeTab === 'history' ? (
+                    <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
+                ) : null}
             </div>
 
             {reportModal ? (
@@ -122,7 +170,7 @@ export default function CashRegisterIndex({ openRegister, history }) {
                                 <strong>{formatMoney(reportModal.total_sales)}</strong>
                             </div>
                             <div className="cash-register-report-box">
-                                <span>Dinheiro esperado</span>
+                                <span>Base de caixa</span>
                                 <strong>{formatMoney(reportModal.expected_cash)}</strong>
                             </div>
                             <div className="cash-register-report-box">

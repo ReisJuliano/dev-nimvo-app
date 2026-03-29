@@ -13,7 +13,6 @@ export default function AppTopbar({ title, currentDate, currentTime, onToggleMob
                     <i className="fas fa-bars" />
                 </button>
                 <div className="app-topbar-heading">
-                    <span className="app-page-kicker">Workspace Nimvo</span>
                     <span className="app-page-title">{title}</span>
                 </div>
             </div>

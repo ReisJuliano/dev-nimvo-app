@@ -13,6 +13,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
+    const [activeTab, setActiveTab] = useState('catalog')
     const deferredSearch = useDeferredValue(search)
 
     const filteredProducts = useMemo(() => {
@@ -24,10 +25,16 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                     .some((value) => value.toLowerCase().includes(deferredSearch.toLowerCase()))
 
             const matchesCategory = categoryId === '' || String(product.category_id) === String(categoryId)
+            const matchesTab =
+                activeTab === 'catalog'
+                    ? true
+                    : activeTab === 'stock'
+                      ? Number(product.stock_quantity) <= Number(product.min_stock)
+                      : Number(product.sale_price) > Number(product.cost_price)
 
-            return matchesSearch && matchesCategory
+            return matchesSearch && matchesCategory && matchesTab
         })
-    }, [products, deferredSearch, categoryId])
+    }, [products, deferredSearch, categoryId, activeTab])
 
     const summary = useMemo(() => {
         const stockValue = filteredProducts.reduce(
@@ -90,6 +97,54 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     return (
         <AppLayout title="Produtos">
             <div className="products-page">
+                <section className="products-hero ui-card">
+                    <div className="ui-card-body">
+                        <div className="products-hero-grid">
+                            <div>
+                                <h1>Produtos</h1>
+                                <p>Cadastro, consulta e ajuste de produtos.</p>
+                            </div>
+                            <div className="products-hero-actions">
+                                <button className="ui-button" onClick={handleCreate} type="button">
+                                    <i className="fa-solid fa-plus" />
+                                    Novo produto
+                                </button>
+                                <div className="products-hero-note">
+                                    <strong>{formatNumber(products.length)}</strong>
+                                    <span>itens cadastrados</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="ui-tabs">
+                    <button
+                        type="button"
+                        className={`ui-tab ${activeTab === 'catalog' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('catalog')}
+                    >
+                        <i className="fa-solid fa-box-open" />
+                        <span>Catalogo</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`ui-tab ${activeTab === 'stock' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('stock')}
+                    >
+                        <i className="fa-solid fa-triangle-exclamation" />
+                        <span>Reposicao</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`ui-tab ${activeTab === 'pricing' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('pricing')}
+                    >
+                        <i className="fa-solid fa-tags" />
+                        <span>Precificacao</span>
+                    </button>
+                </section>
+
                 <ProductToolbar
                     search={search}
                     onSearchChange={setSearch}
@@ -101,15 +156,18 @@ export default function ProductsIndex({ products, categories, suppliers }) {
 
                 <section className="products-summary-card">
                     <div className="products-summary-grid">
-                        <article>
+                        <article className="tone-primary">
+                            <span className="products-summary-kicker">Produtos</span>
                             <span>Total filtrado</span>
                             <strong>{formatNumber(summary.total)}</strong>
                         </article>
-                        <article>
+                        <article className="tone-warning">
+                            <span className="products-summary-kicker">Estoque</span>
                             <span>Estoque baixo</span>
                             <strong>{formatNumber(summary.lowStock)}</strong>
                         </article>
-                        <article>
+                        <article className="tone-success">
+                            <span className="products-summary-kicker">Valor</span>
                             <span>Valor em estoque</span>
                             <strong>{formatMoney(summary.stockValue)}</strong>
                         </article>

@@ -29,7 +29,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Fornecedores',
-            'Concentre os parceiros de compra com visibilidade de contato e cobertura atual do catalogo.',
+            'Cadastro de fornecedores e produtos vinculados.',
             [
                 $this->metric('Total', $suppliers->count()),
                 $this->metric('Ativos', $suppliers->where('status', 'Ativo')->count()),
@@ -71,7 +71,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Categorias',
-            'Organize o catalogo por familias de produto com leitura rapida de abrangencia e valor estocado.',
+            'Categorias cadastradas e valor em estoque.',
             [
                 $this->metric('Total', $categories->count()),
                 $this->metric('Ativas', $categories->where('status', 'Ativa')->count()),
@@ -112,7 +112,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Entrada de estoque',
-            'Priorize reabastecimento com foco nos itens abaixo do ponto minimo e nas necessidades por fornecedor.',
+            'Itens com necessidade de reposicao.',
             [
                 $this->metric('Itens prioritarios', $products->count()),
                 $this->metric('Reposicao sugerida', $products->sum('suggested_inbound'), 'number'),
@@ -161,7 +161,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Conferencia de estoque',
-            'Tenha uma visao direta dos itens criticos para reconferencia operacional e ajuste de saldo.',
+            'Itens para conferencia e ajuste de saldo.',
             [
                 $this->metric('Itens criticos', $products->count()),
                 $this->metric('Sem saldo', $products->where('stock_quantity', '<=', 0)->count()),
@@ -208,7 +208,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Movimentacao de estoque',
-            'Leia a movimentacao do periodo pela saida de vendas e pelas ultimas atualizacoes do catalogo.',
+            'Saidas do periodo e ultimas atualizacoes.',
             [
                 $this->metric('Saidas registradas', $outbound->sum('quantity'), 'number'),
                 $this->metric('Valor movimentado', $outbound->sum('total'), 'money'),
@@ -255,7 +255,7 @@ class InventoryOverviewService
 
         return $this->page(
             'Faltas e giro',
-            'Tenha visao dos itens em ruptura ou abaixo do ponto minimo para acelerar compra e reposicao.',
+            'Itens em falta ou abaixo do estoque minimo.',
             [
                 $this->metric('Itens em falta', $products->where('stock_quantity', '<=', 0)->count()),
                 $this->metric('Baixo estoque', $products->count()),

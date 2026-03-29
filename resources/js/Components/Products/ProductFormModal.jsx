@@ -43,25 +43,28 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                 <div className="products-modal-header">
                     <div>
                         <h2>{product ? 'Editar produto' : 'Novo produto'}</h2>
-                        <p>Cadastro reorganizado em campos pequenos e objetivos.</p>
+                        <p>Dados de cadastro e estoque.</p>
                     </div>
-                    <button onClick={onClose}>Fechar</button>
+                    <button className="ui-button-ghost" onClick={onClose} type="button">
+                        <i className="fa-solid fa-xmark" />
+                        Fechar
+                    </button>
                 </div>
 
                 <form className="products-form-grid" onSubmit={handleSubmit}>
-                    <label>
+                    <label className="products-field-group">
                         Codigo
                         <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} />
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         EAN
                         <input value={form.barcode ?? ''} onChange={(event) => updateField('barcode', event.target.value)} />
                     </label>
-                    <label className="span-2">
+                    <label className="products-field-group span-2">
                         Nome
                         <input required value={form.name ?? ''} onChange={(event) => updateField('name', event.target.value)} />
                     </label>
-                    <label className="span-2">
+                    <label className="products-field-group span-2">
                         Descricao
                         <textarea
                             rows="3"
@@ -69,7 +72,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             onChange={(event) => updateField('description', event.target.value)}
                         />
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Categoria
                         <select
                             value={form.category_id ?? ''}
@@ -83,7 +86,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             ))}
                         </select>
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Fornecedor
                         <select
                             value={form.supplier_id ?? ''}
@@ -97,7 +100,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             ))}
                         </select>
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Unidade
                         <select value={form.unit ?? 'UN'} onChange={(event) => updateField('unit', event.target.value)}>
                             <option value="UN">UN</option>
@@ -106,7 +109,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             <option value="L">L</option>
                         </select>
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Custo
                         <input
                             type="number"
@@ -115,7 +118,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             onChange={(event) => updateField('cost_price', event.target.value)}
                         />
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Venda
                         <input
                             type="number"
@@ -124,7 +127,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             onChange={(event) => updateField('sale_price', event.target.value)}
                         />
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Estoque
                         <input
                             type="number"
@@ -133,7 +136,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                             onChange={(event) => updateField('stock_quantity', event.target.value)}
                         />
                     </label>
-                    <label>
+                    <label className="products-field-group">
                         Estoque minimo
                         <input
                             type="number"
@@ -144,7 +147,7 @@ export default function ProductFormModal({ open, product, categories, suppliers,
                     </label>
 
                     <div className="products-modal-actions span-2">
-                        <button type="button" onClick={onClose}>
+                        <button className="ui-button-ghost" type="button" onClick={onClose}>
                             Cancelar
                         </button>
                         <button className="products-primary-button" type="submit" disabled={loading}>

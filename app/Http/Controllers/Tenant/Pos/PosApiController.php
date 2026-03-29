@@ -18,16 +18,23 @@ class PosApiController extends Controller
         $term = trim((string) $request->string('term'));
         $categoryId = $request->integer('category_id');
 
+        if ($term === '') {
+            return response()->json(['products' => []]);
+        }
+
+        $likeTerm = str_contains($term, '%') ? $term : "%{$term}%";
+
         $products = Product::query()
             ->when($categoryId, fn ($query) => $query->where('category_id', $categoryId))
             ->where('active', true)
-            ->when($term !== '', function ($query) use ($term) {
-                $query->where(function ($nested) use ($term) {
-                    $nested
-                        ->where('barcode', $term)
-                        ->orWhere('code', $term)
-                        ->orWhere('name', 'like', "%{$term}%");
-                });
+            ->where(function ($nested) use ($term, $likeTerm) {
+                $nested
+                    ->where('barcode', $term)
+                    ->orWhere('code', $term)
+                    ->orWhere('barcode', 'like', $likeTerm)
+                    ->orWhere('code', 'like', $likeTerm)
+                    ->orWhere('name', 'like', $likeTerm)
+                    ->orWhere('description', 'like', $likeTerm);
             })
             ->orderBy('name')
             ->limit(15)
@@ -37,6 +44,7 @@ class PosApiController extends Controller
                 'code' => $product->code,
                 'barcode' => $product->barcode,
                 'name' => $product->name,
+                'description' => $product->description,
                 'unit' => $product->unit,
                 'cost_price' => (float) $product->cost_price,
                 'sale_price' => (float) $product->sale_price,

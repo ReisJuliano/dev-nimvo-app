@@ -18,34 +18,43 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
             <section className="cash-register-card status">
                 <div className="cash-register-status-hero">
                     <div>
-                        <span>Caixa aberto</span>
+                        <span className="cash-register-hero-chip">Caixa em operacao</span>
                         <h2>{formatMoney(total_sales)}</h2>
-                        <p>{sales_count} venda(s) associadas a este caixa</p>
+                        <p>{sales_count} venda(s) registradas</p>
                     </div>
-                    <div>
-                        <strong>Operador</strong>
-                        <span>{cashRegister.user_name}</span>
+                    <div className="cash-register-hero-meta">
+                        <span className="cash-register-hero-label">Operador</span>
+                        <strong>{cashRegister.user_name}</strong>
                         <small>Aberto em {formatDateTime(cashRegister.opened_at)}</small>
                     </div>
                 </div>
 
                 <div className="cash-register-summary-grid">
-                    <article>
+                    <article className="tone-primary">
                         <span>Abertura</span>
                         <strong>{formatMoney(cashRegister.opening_amount)}</strong>
                     </article>
-                    <article>
+                    <article className="tone-info">
                         <span>Dinheiro vendido</span>
                         <strong>{formatMoney(cash_sales)}</strong>
                     </article>
-                    <article>
+                    <article className="tone-success">
                         <span>Suprimentos</span>
                         <strong>{formatMoney(total_supplies)}</strong>
                     </article>
-                    <article>
+                    <article className="tone-danger">
                         <span>Sangrias</span>
                         <strong>{formatMoney(total_withdrawals)}</strong>
                     </article>
+                </div>
+
+                <div className="cash-register-subsection">
+                    <div className="cash-register-section-header compact">
+                        <div>
+                            <span className="cash-register-section-kicker">Resumo financeiro</span>
+                            <h2>Formas de pagamento</h2>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="cash-register-payments">
@@ -66,24 +75,33 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
             <section className="cash-register-card">
                 <div className="cash-register-section-header">
                     <div>
+                        <span className="cash-register-section-kicker">Operacao manual</span>
                         <h2>Movimentacoes</h2>
-                        <p>Registre retirada e reforco de caixa conforme a operacao.</p>
+                        <p>Registre sangrias e suprimentos.</p>
                     </div>
                 </div>
 
                 <div className="cash-register-actions-grid">
-                    <form onSubmit={(event) => onMovement(event, 'withdrawal')}>
+                    <form className="cash-register-action-form tone-danger" onSubmit={(event) => onMovement(event, 'withdrawal')}>
+                        <span className="cash-register-form-chip">Saida</span>
                         <strong>Sangria</strong>
                         <input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" />
                         <input name="reason" placeholder="Motivo" />
-                        <button>Registrar retirada</button>
+                        <button>
+                            <i className="fa-solid fa-arrow-up-right-from-square" />
+                            Registrar retirada
+                        </button>
                     </form>
 
-                    <form onSubmit={(event) => onMovement(event, 'supply')}>
+                    <form className="cash-register-action-form tone-success" onSubmit={(event) => onMovement(event, 'supply')}>
+                        <span className="cash-register-form-chip">Entrada</span>
                         <strong>Suprimento</strong>
                         <input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" />
                         <input name="reason" placeholder="Motivo" />
-                        <button>Registrar entrada</button>
+                        <button>
+                            <i className="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center" />
+                            Registrar entrada
+                        </button>
                     </form>
                 </div>
 
@@ -108,8 +126,13 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
             </section>
 
             <section className="cash-register-card">
-                <h2>Fechamento</h2>
-                <p>Dinheiro esperado em caixa: {formatMoney(expected_cash)}</p>
+                <div className="cash-register-section-header">
+                    <div>
+                        <span className="cash-register-section-kicker">Conferencia final</span>
+                        <h2>Fechamento</h2>
+                        <p>Base de caixa em dinheiro: {formatMoney(expected_cash)}</p>
+                    </div>
+                </div>
 
                 <form className="cash-register-form" onSubmit={onClose}>
                     <label>
@@ -120,7 +143,10 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
                         Observacao
                         <textarea name="closing_notes" rows="3" />
                     </label>
-                    <button className="cash-register-danger-button">Fechar caixa</button>
+                    <button className="cash-register-danger-button">
+                        <i className="fa-solid fa-lock" />
+                        Fechar caixa
+                    </button>
                 </form>
             </section>
         </div>

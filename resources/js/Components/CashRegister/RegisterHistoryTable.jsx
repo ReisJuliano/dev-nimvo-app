@@ -5,9 +5,11 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
         <section className="cash-register-card">
             <div className="cash-register-section-header">
                 <div>
+                    <span className="cash-register-section-kicker">Historico</span>
                     <h2>Historico de caixas</h2>
-                    <p>Consultas rapidas de aberturas, fechamentos e conferencia anterior.</p>
+                    <p>Registros de abertura e fechamento.</p>
                 </div>
+                <span className="cash-register-count-chip">{history.length} registro(s)</span>
             </div>
 
             {history.length ? (
@@ -32,7 +34,14 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
                                         {formatMoney(register.opening_amount)} / {formatMoney(register.closing_amount)}
                                     </td>
                                     <td>
-                                        <button onClick={() => onViewReport(register.id)}>Ver relatorio</button>
+                                        <button
+                                            className="ui-tooltip"
+                                            data-tooltip="Abrir conferencia detalhada"
+                                            onClick={() => onViewReport(register.id)}
+                                        >
+                                            <i className="fa-solid fa-file-lines" />
+                                            Ver relatorio
+                                        </button>
                                     </td>
                                 </tr>
                             ))}

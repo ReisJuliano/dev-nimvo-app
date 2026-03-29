@@ -5,7 +5,7 @@ const paymentOptions = [
     { value: 'pix', label: 'Pix', icon: 'fa-qrcode', tone: 'info' },
     { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card', tone: 'primary' },
     { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card', tone: 'primary' },
-    { value: 'credit', label: 'Fiado', icon: 'fa-handshake', tone: 'warning' },
+    { value: 'credit', label: 'Crediario', icon: 'fa-handshake', tone: 'warning' },
     { value: 'mixed', label: 'Misto', icon: 'fa-layer-group', tone: 'danger' },
 ]
 
@@ -32,8 +32,6 @@ export default function CheckoutPanel({
     onQuickCustomer,
     creditStatus,
     totals,
-    cartCount,
-    partialTotal,
     openingCashRegister,
     loadingClosePreview,
     closingCashRegister,
@@ -45,23 +43,6 @@ export default function CheckoutPanel({
 }) {
     return (
         <section className="pos-card checkout">
-            <div className="pos-card-header">
-                <div>
-                    <h2>Fechamento</h2>
-                    <p>{cashRegister ? 'Caixa aberto' : 'Abra o caixa para vender'}</p>
-                </div>
-                <div className="pos-checkout-summary">
-                    <div className="pos-checkout-summary-item">
-                        <span>Itens</span>
-                        <strong>{cartCount}</strong>
-                    </div>
-                    <div className="pos-checkout-summary-item">
-                        <span>Parcial</span>
-                        <strong>{formatMoney(partialTotal)}</strong>
-                    </div>
-                </div>
-            </div>
-
             <div className="pos-cash-register-box">
                 <div className="pos-cash-register-copy">
                     <span className={`ui-badge ${cashRegister ? 'success' : 'warning'}`}>

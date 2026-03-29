@@ -30,7 +30,7 @@ class SalesOverviewService
 
         return $this->page(
             'Pedidos e comandas',
-            'Acompanhe o ritmo operacional do balcao com os ultimos atendimentos e o desempenho da equipe.',
+            'Pedidos do periodo e operadores com vendas.',
             [
                 $this->metric('Atendimentos', $sales->count()),
                 $this->metric('Faturamento', $sales->sum('total'), 'money', 'Periodo selecionado'),
@@ -102,8 +102,8 @@ class SalesOverviewService
             ->values();
 
         return $this->page(
-            'Fiado e a receber',
-            'Consolide limite, saldo em aberto e historico recente das vendas lancadas no credito do cliente.',
+            'Crediario e a receber',
+            'Limites, saldo em aberto e lancamentos a credito.',
             [
                 $this->metric('Clientes com limite', $customers->count()),
                 $this->metric('Em aberto', $customers->sum('open_credit'), 'money'),
@@ -156,7 +156,7 @@ class SalesOverviewService
 
         return $this->page(
             'Clientes',
-            'Visualize a base de relacionamento do tenant com foco em cadastro, atividade comercial e capacidade de credito.',
+            'Clientes cadastrados, vendas e limite de credito.',
             [
                 $this->metric('Total', $customers->count()),
                 $this->metric('Ativos', $customers->where('status', 'Ativo')->count()),
@@ -208,7 +208,7 @@ class SalesOverviewService
 
         return $this->page(
             'Relatorios',
-            'Analise faturamento, custo, margem e mix de venda a partir dos registros consolidados do tenant.',
+            'Resumo de faturamento, custo, lucro e pagamentos.',
             [
                 $this->metric('Vendas', (int) ($summary->qty ?? 0)),
                 $this->metric('Faturamento', (float) ($summary->total ?? 0), 'money'),
@@ -248,7 +248,7 @@ class SalesOverviewService
 
         return $this->page(
             'Vendas gerais',
-            'Monitore desempenho comercial com visao consolidada de receita, lucro e formas de pagamento.',
+            'Vendas, lucro e formas de pagamento no periodo.',
             [
                 $this->metric('Vendas', $sales->count()),
                 $this->metric('Faturamento', $sales->sum('total'), 'money'),
@@ -303,7 +303,7 @@ class SalesOverviewService
 
         return $this->page(
             'Vendas por produto',
-            'Acompanhe a demanda do mix vendido para orientar compra, reposicao e exposicao do catalogo.',
+            'Quantidade vendida por produto no periodo.',
             [
                 $this->metric('Itens com giro', $products->count()),
                 $this->metric('Quantidade vendida', $products->sum('qty'), 'number'),

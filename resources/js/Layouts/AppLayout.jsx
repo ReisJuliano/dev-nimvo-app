@@ -56,16 +56,19 @@ export default function AppLayout({ children, title = 'Inicio' }) {
     }
 
     const navigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
+    const userRoleLabel = auth?.user?.role === 'admin' ? 'Administrador' : 'Operacao'
 
     return (
         <>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
             <link
-                href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+                href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
                 rel="stylesheet"
             />
 
             <div className="app-layout-root">
+                <div className="app-layout-backdrop app-layout-backdrop-one" />
+                <div className="app-layout-backdrop app-layout-backdrop-two" />
                 <div className="app-layout-shell">
                     <div
                         className={`app-sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
@@ -86,6 +89,7 @@ export default function AppLayout({ children, title = 'Inicio' }) {
                     <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
                         <AppTopbar
                             title={title}
+                            userRoleLabel={userRoleLabel}
                             currentDate={currentDate}
                             currentTime={currentTime}
                             onToggleMobileSidebar={toggleMobileSidebar}

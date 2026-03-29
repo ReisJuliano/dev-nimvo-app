@@ -22,14 +22,15 @@ function renderCell(value, format) {
 
 export default function DataTable({ table }) {
     return (
-        <section className="operations-table-card">
+        <section className="operations-table-card ui-table-card">
             <header>
                 <h2>{table.title}</h2>
+                <span className="operations-card-tag">{table.rows.length} linha(s)</span>
             </header>
 
             {table.rows.length ? (
-                <div className="operations-table-wrap">
-                    <table>
+                <div className="operations-table-wrap ui-table-wrap">
+                    <table className="ui-table">
                         <thead>
                             <tr>
                                 {table.columns.map((column) => (

@@ -7,10 +7,7 @@ export default function DashboardHero({ userName }) {
             </span>
 
             <h2>Bem-vindo, {userName}.</h2>
-            <p>
-                Seu acesso foi concluido com sucesso. O sistema agora segue um fluxo mais organizado, com login,
-                validacao, redirecionamento e layout separados para facilitar futuras manutencoes.
-            </p>
+            <p>Acesse os modulos disponiveis para continuar o trabalho.</p>
         </section>
     )
 }

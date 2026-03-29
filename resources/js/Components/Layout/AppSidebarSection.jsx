@@ -29,7 +29,6 @@ export default function AppSidebarSection({ section, currentUrl, onNavigate, col
             <div className="app-nav-section-toggle">
                 <div>
                     <span className="app-nav-section-label">{section.section}</span>
-                    <small>{section.items.length} atalhos</small>
                 </div>
             </div>
 

@@ -12,7 +12,7 @@ const closingPaymentFields = [
     { key: 'pix', label: 'Pix' },
     { key: 'debit_card', label: 'Cartao de debito' },
     { key: 'credit_card', label: 'Cartao de credito' },
-    { key: 'credit', label: 'Fiado' },
+    { key: 'credit', label: 'Crediario' },
 ]
 
 const shortcutHints = [
@@ -152,13 +152,14 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 field.key === 'cash'
                     ? Number(closeCashRegisterModal.report.expected_cash || 0)
                     : Number(paymentTotals[field.key] || 0)
-            const informed = Number(closeCashRegisterModal.form.amounts[field.key] || 0)
+            const rawInformed = closeCashRegisterModal.form.amounts[field.key]
+            const informed = rawInformed === '' ? null : Number(rawInformed || 0)
 
             return {
                 ...field,
                 expected,
                 informed,
-                difference: informed - expected,
+                difference: informed === null ? null : informed - expected,
             }
         })
     }, [closeCashRegisterModal])
@@ -314,7 +315,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             form: {
                 notes: '',
                 amounts: {
-                    cash: String(Number(report.expected_cash || 0).toFixed(2)),
+                    cash: '',
                     pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
                     debit_card: String(Number(paymentTotals.debit_card || 0).toFixed(2)),
                     credit_card: String(Number(paymentTotals.credit_card || 0).toFixed(2)),
@@ -332,7 +333,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             const expected = field.key === 'cash' ? Number(report.expected_cash || 0) : Number(paymentTotals[field.key] || 0)
             const informed = Number(form.amounts[field.key] || 0)
             lines.push(
-                `${field.label}: esperado ${expected.toFixed(2)} | informado ${informed.toFixed(2)} | diferenca ${(informed - expected).toFixed(2)}`,
+                `${field.label}: informado ${informed.toFixed(2)} | diferenca ${(informed - expected).toFixed(2)}`,
             )
         })
 
@@ -431,6 +432,11 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             return
         }
 
+        if (closeCashRegisterModal.form.amounts.cash === '') {
+            showFeedback('error', 'Informe o valor contado em dinheiro antes de fechar o caixa.')
+            return
+        }
+
         setClosingCashRegister(true)
         setFeedback(null)
 
@@ -466,7 +472,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         }
 
         if (paymentMethod === 'credit' && !selectedCustomer) {
-            showFeedback('error', 'Selecione um cliente para registrar a venda no fiado.')
+            showFeedback('error', 'Selecione um cliente para registrar a venda no crediario.')
             return
         }
 
@@ -482,7 +488,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             }
 
             if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
-                showFeedback('error', 'Selecione um cliente para usar fiado no pagamento misto.')
+                showFeedback('error', 'Selecione um cliente para usar crediario no pagamento misto.')
                 return
             }
 
@@ -626,13 +632,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                     <span className={`ui-badge ${cashRegisterState ? 'success' : 'danger'}`}>
                                         {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
-                                    <h1>PDV</h1>
-                                    <p>Registro de vendas e operacao de caixa na mesma tela.</p>
+                                    <h1>Caixa</h1>
                                     <div className="pos-hero-shortcuts">
                                         <span className="pos-hero-shortcuts-title">Atalhos rapidos do caixa e da venda</span>
-                                        <small className="pos-hero-shortcuts-copy">
-                                            Os atalhos com `Shift` ficam reservados no PDV e nao digitam nos campos quando usados como comando.
-                                        </small>
                                         <div className="pos-shortcut-list">
                                             {shortcutHints.map((shortcut) => (
                                                 <div key={shortcut.label} className="pos-shortcut-chip">
@@ -729,12 +731,8 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                         <span>{row.key === 'cash' ? 'Com abertura, sangrias e suprimentos' : 'Total da forma de pagamento'}</span>
                                     </div>
                                     <div className="pos-cash-close-item-values">
-                                        <div>
-                                            <small>Esperado</small>
-                                            <strong>{formatMoney(row.expected)}</strong>
-                                        </div>
                                         <label>
-                                            <small>Informado</small>
+                                            <small>Valor informado</small>
                                             <input
                                                 className="ui-input"
                                                 type="number"
@@ -746,7 +744,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                         </label>
                                         <div className={`pos-cash-close-diff ${Math.abs(row.difference) > 0.009 ? 'alert' : ''}`}>
                                             <small>Diferenca</small>
-                                            <strong>{formatMoney(row.difference)}</strong>
+                                            <strong>{row.difference === null ? 'A conferir' : formatMoney(row.difference)}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -798,7 +796,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 <strong>{formatMoney(cashReportModal.total_sales)}</strong>
                             </div>
                             <div className="pos-cash-report-box">
-                                <span>Dinheiro esperado</span>
+                                <span>Base de caixa</span>
                                 <strong>{formatMoney(cashReportModal.expected_cash)}</strong>
                             </div>
                             <div className="pos-cash-report-box">
@@ -864,31 +862,31 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         <div className="pos-customer-picker-list">
                             {customerSearch.trim() ? (
                                 filteredCustomers.length ? (
-                                filteredCustomers.map((customer) => {
-                                    const isActive = String(customer.id) === selectedCustomer
+                                    filteredCustomers.map((customer) => {
+                                        const isActive = String(customer.id) === selectedCustomer
 
-                                    return (
-                                        <button
-                                            key={customer.id}
-                                            type="button"
-                                            className={`pos-customer-picker-item ${isActive ? 'active' : ''}`}
-                                            onClick={() => handleCustomerSelect(customer.id)}
-                                        >
-                                            <span className="pos-customer-picker-item-icon">
-                                                <i className={`fa-solid ${isActive ? 'fa-circle-check' : 'fa-user'}`} />
-                                            </span>
-                                            <span className="pos-customer-picker-item-copy">
-                                                <strong>{customer.name}</strong>
-                                                <small>{customer.phone || 'Sem telefone informado'}</small>
-                                            </span>
-                                            <span className="pos-customer-picker-item-action">
-                                                {isActive ? 'Selecionado' : 'Selecionar'}
-                                            </span>
-                                        </button>
-                                    )
-                                })
-                            ) : (
-                                <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>
+                                        return (
+                                            <button
+                                                key={customer.id}
+                                                type="button"
+                                                className={`pos-customer-picker-item ${isActive ? 'active' : ''}`}
+                                                onClick={() => handleCustomerSelect(customer.id)}
+                                            >
+                                                <span className="pos-customer-picker-item-icon">
+                                                    <i className={`fa-solid ${isActive ? 'fa-circle-check' : 'fa-user'}`} />
+                                                </span>
+                                                <span className="pos-customer-picker-item-copy">
+                                                    <strong>{customer.name}</strong>
+                                                    <small>{customer.phone || 'Sem telefone informado'}</small>
+                                                </span>
+                                                <span className="pos-customer-picker-item-action">
+                                                    {isActive ? 'Selecionado' : 'Selecionar'}
+                                                </span>
+                                            </button>
+                                        )
+                                    })
+                                ) : (
+                                    <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>
                                 )
                             ) : (
                                 <div className="pos-empty-state">Digite nome ou telefone para buscar um cliente.</div>

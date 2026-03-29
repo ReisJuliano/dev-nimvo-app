@@ -6,5 +6,23 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+    background: #eff3f8;
+}
+
+body {
+    margin: 0;
+    background: #eff3f8;
+    color: #142033;
+    font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
 }

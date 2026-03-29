@@ -15,11 +15,14 @@ function renderValue(metric) {
 export default function MetricGrid({ metrics }) {
     return (
         <section className="operations-metric-grid">
-            {metrics.map((metric) => (
-                <article key={metric.label} className="operations-metric-card">
-                    <span>{metric.label}</span>
+            {metrics.map((metric, index) => (
+                <article key={metric.label} className={`operations-metric-card tone-${index % 4}`}>
+                    <div className="operations-metric-top">
+                        <span>{metric.label}</span>
+                        <i className="fa-solid fa-chart-column" />
+                    </div>
                     <strong>{renderValue(metric)}</strong>
-                    <small>{metric.caption || 'Visão consolidada do módulo'}</small>
+                    <small>{metric.caption || 'Sem observacao'}</small>
                 </article>
             ))}
         </section>

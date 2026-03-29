@@ -94,7 +94,7 @@ class PosService
 
             if ($hasCredit && ! $customerId) {
                 throw ValidationException::withMessages([
-                    'customer_id' => 'Selecione um cliente para venda no fiado.',
+                    'customer_id' => 'Selecione um cliente para venda no crediario.',
                 ]);
             }
 
@@ -116,7 +116,7 @@ class PosService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor em fiado ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor em crediario ultrapassa o limite disponivel deste cliente.',
                     ]);
                 }
             }

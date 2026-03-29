@@ -24,13 +24,16 @@ export default function FilterBar({ filters }) {
         <form className="operations-filter-bar" onSubmit={handleSubmit}>
             <label>
                 <span>De</span>
-                <input name="from" type="date" defaultValue={filters.from || ''} />
+                <input className="ui-input" name="from" type="date" defaultValue={filters.from || ''} />
             </label>
             <label>
-                <span>Até</span>
-                <input name="to" type="date" defaultValue={filters.to || ''} />
+                <span>Ate</span>
+                <input className="ui-input" name="to" type="date" defaultValue={filters.to || ''} />
             </label>
-            <button type="submit">Atualizar</button>
+            <button className="ui-button" type="submit">
+                <i className="fa-solid fa-rotate" />
+                Atualizar
+            </button>
         </form>
     )
 }
