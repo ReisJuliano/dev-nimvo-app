@@ -560,6 +560,12 @@
     text-transform: uppercase;
 }
 
+.app-topbar-info-date strong {
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
 .app-topbar-info span {
     color: var(--app-text-muted);
     font-size: 0.86rem;
