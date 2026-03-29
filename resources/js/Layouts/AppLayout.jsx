@@ -6,7 +6,7 @@ import { adminItems, navItems } from '@/Components/Layout/navigation'
 import './app-layout.css'
 
 export default function AppLayout({ children, title = 'Inicio' }) {
-    const { auth } = usePage().props
+    const { auth, appSettings } = usePage().props
     const currentUrl = usePage().url
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
@@ -55,7 +55,14 @@ export default function AppLayout({ children, title = 'Inicio' }) {
         setSidebarOpen(false)
     }
 
-    const navigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
+    const enabledModules = appSettings?.modules || {}
+    const baseNavigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
+    const navigationGroups = baseNavigationGroups
+        .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => item.moduleKey == null || enabledModules[item.moduleKey] !== false),
+        }))
+        .filter((group) => group.items.length > 0)
     const userRoleLabel = auth?.user?.role === 'admin' ? 'Administrador' : 'Operacao'
 
     return (

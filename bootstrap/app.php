@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'password.changed' => \App\Http\Middleware\Tenant\EnsurePasswordIsChanged::class,
+            'module.enabled' => \App\Http\Middleware\Tenant\EnsureModuleIsEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

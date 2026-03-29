@@ -1,4 +1,5 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
@@ -229,6 +230,7 @@ function buildPreviewConfigFromDraft(draft, subtotal) {
 }
 
 export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
+    const { appSettings } = usePage().props
     const [customers, setCustomers] = useState(initialCustomers)
     const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
     const [selectedCategory, setSelectedCategory] = useState('')
@@ -258,6 +260,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [cashReportModal, setCashReportModal] = useState(null)
     const [feedback, setFeedback] = useState(null)
     const [loadingProducts, setLoadingProducts] = useState(false)
+    const requireCashClosingConference = appSettings?.cash_closing?.require_conference !== false
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const productSearchInputRef = useRef(null)
 
@@ -402,7 +405,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             closeCashRegisterModal.report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]),
         )
 
-        return closingPaymentFields.map((field) => {
+        return closingPaymentFields
+            .filter((field) => requireCashClosingConference || field.key === 'cash')
+            .map((field) => {
             const expected =
                 field.key === 'cash'
                     ? Number(closeCashRegisterModal.report.expected_cash || 0)
@@ -417,7 +422,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 difference: informed === null ? null : informed - expected,
             }
         })
-    }, [closeCashRegisterModal])
+    }, [closeCashRegisterModal, requireCashClosingConference])
 
     const filteredCustomers = useMemo(() => {
         const normalizedTerm = deferredCustomerSearch.trim().toLowerCase()
@@ -684,6 +689,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         return {
             report,
             form: {
+                notes: report.cashRegister.closing_notes || '',
                 amounts: {
                     cash: '',
                     pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
@@ -693,21 +699,6 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 },
             },
         }
-    }
-
-    function buildCloseCashRegisterNotes(report, form) {
-        const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
-        const lines = ['Conferencia de fechamento do caixa:']
-
-        closingPaymentFields.forEach((field) => {
-            const expected = field.key === 'cash' ? Number(report.expected_cash || 0) : Number(paymentTotals[field.key] || 0)
-            const informed = Number(form.amounts[field.key] || 0)
-            lines.push(
-                `${field.label}: informado ${informed.toFixed(2)} | diferenca ${(informed - expected).toFixed(2)}`,
-            )
-        })
-
-        return lines.join('\n')
     }
 
     async function handleOpenCashRegister(event) {
@@ -776,6 +767,20 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         ))
     }
 
+    function handleCloseCashRegisterNotesChange(value) {
+        setCloseCashRegisterModal((current) => (
+            current
+                ? {
+                    ...current,
+                    form: {
+                        ...current.form,
+                        notes: value,
+                    },
+                }
+                : current
+        ))
+    }
+
     async function handleConfirmCloseCashRegister(event) {
         event.preventDefault()
 
@@ -796,7 +801,12 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 method: 'post',
                 data: {
                     closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
-                    closing_notes: buildCloseCashRegisterNotes(closeCashRegisterModal.report, closeCashRegisterModal.form),
+                    closing_notes: closeCashRegisterModal.form.notes || null,
+                    closing_totals: Object.fromEntries(
+                        Object.entries(closeCashRegisterModal.form.amounts)
+                            .filter(([key]) => requireCashClosingConference || key === 'cash')
+                            .map(([key, value]) => [key, Number(value || 0)]),
+                    ),
                 },
             })
 
@@ -1085,6 +1095,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     closingCashRegister={closingCashRegister}
                     onOpenCashRegister={handleOpenCashRegister}
                     onOpenCloseCashRegister={handleOpenCloseCashRegister}
+                    requireCashClosingConference={requireCashClosingConference}
                     disabled={!cashRegisterState || !cart.length || submitting}
                     onFinalize={handleFinalize}
                 />
@@ -1269,7 +1280,11 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         <div className="pos-quick-customer-header">
                             <div>
                                 <h2>Fechar caixa</h2>
-                                <p>Confira os valores por forma de pagamento antes de concluir o fechamento.</p>
+                                <p>
+                                    {requireCashClosingConference
+                                        ? 'Confira os valores por forma de pagamento antes de concluir o fechamento.'
+                                        : 'Informe o valor contado em dinheiro para concluir o fechamento rapidamente.'}
+                                </p>
                             </div>
                             <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
                                 Cancelar
@@ -1303,6 +1318,16 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 </div>
                             ))}
                         </div>
+
+                        <label className="pos-discount-form-field">
+                            Observacao do fechamento
+                            <textarea
+                                className="ui-input pos-cash-close-notes"
+                                rows="3"
+                                value={closeCashRegisterModal.form.notes}
+                                onChange={(event) => handleCloseCashRegisterNotesChange(event.target.value)}
+                            />
+                        </label>
 
                         <div className="pos-quick-customer-actions">
                             <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
@@ -1351,6 +1376,41 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                 <strong>{formatMoney(cashReportModal.difference)}</strong>
                             </div>
                         </div>
+
+                        <div className="pos-cash-close-grid">
+                            {cashReportModal.closing_breakdown?.length ? (
+                                cashReportModal.closing_breakdown.map((row) => (
+                                    <div key={row.payment_method} className="pos-cash-close-item">
+                                        <div className="pos-cash-close-item-header">
+                                            <strong>{row.label}</strong>
+                                            <span>{row.recorded_at ? formatDateTime(row.recorded_at) : 'Sem data'}</span>
+                                        </div>
+                                        <div className="pos-cash-close-report-values">
+                                            <div>
+                                                <small>Esperado</small>
+                                                <strong>{formatMoney(row.expected)}</strong>
+                                            </div>
+                                            <div>
+                                                <small>Informado</small>
+                                                <strong>{row.informed === null ? 'Nao informado' : formatMoney(row.informed)}</strong>
+                                            </div>
+                                            <div className={Math.abs(row.difference || 0) > 0.009 ? 'alert' : ''}>
+                                                <small>Diferenca</small>
+                                                <strong>{row.difference === null ? 'Nao conferido' : formatMoney(row.difference)}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="pos-empty-state">Nenhuma conferencia detalhada foi salva neste fechamento.</div>
+                            )}
+                        </div>
+
+                        {cashReportModal.cashRegister.closing_notes ? (
+                            <div className="pos-empty-state">
+                                <strong>Observacao:</strong> {cashReportModal.cashRegister.closing_notes}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             ) : null}

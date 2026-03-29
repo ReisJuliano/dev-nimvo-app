@@ -18,6 +18,8 @@ class CashRegister extends Model
         'closing_amount',
         'opening_notes',
         'closing_notes',
+        'closing_breakdown',
+        'closing_snapshot',
         'opened_at',
         'closed_at',
     ];
@@ -25,6 +27,8 @@ class CashRegister extends Model
     protected $casts = [
         'opening_amount' => 'decimal:2',
         'closing_amount' => 'decimal:2',
+        'closing_breakdown' => 'array',
+        'closing_snapshot' => 'array',
         'opened_at' => 'datetime',
         'closed_at' => 'datetime',
     ];

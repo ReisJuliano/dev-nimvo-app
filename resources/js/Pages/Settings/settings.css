@@ -1,0 +1,212 @@
+.settings-page,
+.settings-form,
+.settings-modules-stack {
+    display: grid;
+    gap: 1rem;
+}
+
+.settings-hero,
+.settings-section,
+.settings-module-section,
+.settings-inline-option {
+    border: 1px solid var(--app-border);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 252, 0.92));
+    box-shadow: var(--app-shadow-sm);
+}
+
+.settings-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem 1.6rem;
+}
+
+.settings-hero span,
+.settings-section-header span {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.38rem 0.82rem;
+    border-radius: 999px;
+    background: rgba(47, 124, 246, 0.12);
+    color: var(--app-primary-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.settings-hero h1,
+.settings-section-header h2 {
+    margin: 0.9rem 0 0.35rem;
+    color: var(--app-text-primary);
+    letter-spacing: -0.04em;
+}
+
+.settings-hero h1 {
+    font-size: clamp(1.95rem, 4vw, 2.7rem);
+}
+
+.settings-hero p {
+    margin: 0;
+    max-width: 54rem;
+    color: var(--app-text-secondary);
+}
+
+.settings-hero-metrics,
+.settings-card-grid {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.settings-hero-metrics {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+}
+
+.settings-hero-metrics div,
+.settings-toggle-card {
+    padding: 1rem 1.05rem;
+    border-radius: 22px;
+    border: 1px solid var(--app-border);
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.settings-hero-metrics small,
+.settings-toggle-card p,
+.settings-module-section header small {
+    color: var(--app-text-muted);
+}
+
+.settings-hero-metrics strong,
+.settings-toggle-card strong,
+.settings-module-section header strong {
+    color: var(--app-text-primary);
+}
+
+.settings-section,
+.settings-module-section {
+    padding: 1.25rem;
+}
+
+.settings-inline-option {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+}
+
+.settings-inline-option.active {
+    border-color: rgba(47, 124, 246, 0.18);
+    box-shadow: 0 18px 34px rgba(47, 124, 246, 0.08);
+}
+
+.settings-inline-option p {
+    margin: 0.35rem 0 0;
+    color: var(--app-text-muted);
+    line-height: 1.5;
+}
+
+.settings-inline-option strong {
+    color: var(--app-text-primary);
+}
+
+.settings-section-header,
+.settings-module-section header,
+.settings-toggle-card,
+.settings-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.settings-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.settings-toggle-card.active {
+    border-color: rgba(47, 124, 246, 0.18);
+    box-shadow: 0 18px 34px rgba(47, 124, 246, 0.08);
+}
+
+.settings-toggle-card p {
+    margin: 0.35rem 0 0;
+    line-height: 1.5;
+}
+
+.settings-toggle-button,
+.settings-save-button {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    font-weight: 700;
+    transition: var(--app-transition);
+}
+
+.settings-toggle-button {
+    min-width: 110px;
+    background: linear-gradient(180deg, #eef4ff, #f7faff);
+    color: var(--app-text-secondary);
+}
+
+.settings-toggle-button.active,
+.settings-save-button {
+    background: linear-gradient(135deg, var(--app-primary), #57a1ff);
+    color: #fff;
+    box-shadow: 0 18px 30px rgba(47, 124, 246, 0.2);
+}
+
+.settings-module-section {
+    display: grid;
+    gap: 1rem;
+}
+
+.settings-actions {
+    align-items: center;
+}
+
+.settings-feedback {
+    flex: 1;
+    padding: 1rem 1.05rem;
+    border-radius: 18px;
+    border: 1px solid var(--app-border);
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.settings-feedback.success {
+    color: #0f7f52;
+    border-color: rgba(26, 168, 111, 0.18);
+    background: rgba(241, 253, 246, 0.96);
+}
+
+.settings-feedback.error {
+    color: #b53c51;
+    border-color: rgba(216, 78, 97, 0.16);
+    background: rgba(255, 244, 246, 0.96);
+}
+
+@media (max-width: 840px) {
+    .settings-hero,
+    .settings-section-header,
+    .settings-module-section header,
+    .settings-inline-option,
+    .settings-toggle-card,
+    .settings-actions {
+        flex-direction: column;
+    }
+
+    .settings-hero-metrics {
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .settings-toggle-button,
+    .settings-save-button {
+        width: 100%;
+        justify-content: center;
+    }
+}

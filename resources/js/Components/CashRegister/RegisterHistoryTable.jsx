@@ -20,7 +20,8 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
                                 <th>Abertura</th>
                                 <th>Fechamento</th>
                                 <th>Operador</th>
-                                <th>Valores</th>
+                                <th>Total vendido</th>
+                                <th>Diferenca</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -30,9 +31,8 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
                                     <td>{formatDateTime(register.opened_at)}</td>
                                     <td>{formatDateTime(register.closed_at)}</td>
                                     <td>{register.user_name}</td>
-                                    <td>
-                                        {formatMoney(register.opening_amount)} / {formatMoney(register.closing_amount)}
-                                    </td>
+                                    <td>{formatMoney(register.total_sales)}</td>
+                                    <td>{formatMoney(register.difference)}</td>
                                     <td>
                                         <button
                                             className="ui-tooltip"

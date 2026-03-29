@@ -42,6 +42,7 @@ export default function CheckoutPanel({
     disabled,
     onFinalize,
     cashRegister,
+    requireCashClosingConference,
 }) {
     return (
         <section className="pos-card checkout">
@@ -61,8 +62,12 @@ export default function CheckoutPanel({
                 {cashRegister ? (
                     <div className="pos-cash-register-actions">
                         <div className="pos-cash-register-status">
-                            <span>Fechamento guiado</span>
-                            <strong>Conferencia por forma de pagamento</strong>
+                            <span>{requireCashClosingConference ? 'Conferencia obrigatoria' : 'Fechamento rapido'}</span>
+                            <strong>
+                                {requireCashClosingConference
+                                    ? 'Conferencia por forma de pagamento'
+                                    : 'Somente o valor contado em dinheiro'}
+                            </strong>
                         </div>
                         <button
                             type="button"
@@ -71,7 +76,11 @@ export default function CheckoutPanel({
                             disabled={loadingClosePreview || closingCashRegister}
                         >
                             <i className="fa-solid fa-lock" />
-                            {loadingClosePreview ? 'Carregando conferencia...' : 'Conferir e fechar caixa'}
+                            {loadingClosePreview
+                                ? 'Carregando fechamento...'
+                                : requireCashClosingConference
+                                  ? 'Conferir e fechar caixa'
+                                  : 'Fechar caixa'}
                         </button>
                     </div>
                 ) : (

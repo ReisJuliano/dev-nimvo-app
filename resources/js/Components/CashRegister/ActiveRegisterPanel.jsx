@@ -1,6 +1,6 @@
 import { formatDateTime, formatMoney } from '@/lib/format'
 
-export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
+export default function ActiveRegisterPanel({ report, onMovement, onClose, onStartCloseConference, requireConference }) {
     const {
         cashRegister,
         payments,
@@ -134,20 +134,33 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose }) {
                     </div>
                 </div>
 
-                <form className="cash-register-form" onSubmit={onClose}>
-                    <label>
-                        Valor contado
-                        <input name="closing_amount" type="number" step="0.01" min="0" required />
-                    </label>
-                    <label>
-                        Observacao
-                        <textarea name="closing_notes" rows="3" />
-                    </label>
-                    <button className="cash-register-danger-button">
-                        <i className="fa-solid fa-lock" />
-                        Fechar caixa
-                    </button>
-                </form>
+                {requireConference ? (
+                    <div className="cash-register-form">
+                        <div className="cash-register-inline-alert">
+                            <strong>Conferencia guiada habilitada</strong>
+                            <span>Revise dinheiro, Pix, cartoes, crediario, sangrias e suprimentos antes de concluir.</span>
+                        </div>
+                        <button className="cash-register-danger-button" type="button" onClick={onStartCloseConference}>
+                            <i className="fa-solid fa-clipboard-check" />
+                            Abrir conferencia de fechamento
+                        </button>
+                    </div>
+                ) : (
+                    <form className="cash-register-form" onSubmit={onClose}>
+                        <label>
+                            Valor contado
+                            <input name="closing_amount" type="number" step="0.01" min="0" required />
+                        </label>
+                        <label>
+                            Observacao
+                            <textarea name="closing_notes" rows="3" />
+                        </label>
+                        <button className="cash-register-danger-button">
+                            <i className="fa-solid fa-lock" />
+                            Fechar caixa
+                        </button>
+                    </form>
+                )}
             </section>
         </div>
     )

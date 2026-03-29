@@ -65,15 +65,36 @@ class CashRegisterApiController extends Controller
         CashRegisterReportService $reportService,
     ): JsonResponse {
         $userId = auth()->user()?->getKey();
+        $closedAt = now();
 
         abort_unless($cashRegister->status === 'open' && (int) $cashRegister->user_id === (int) $userId, 404);
 
-        $cashRegister->update([
+        $report = $reportService->build($cashRegister);
+        $closingSnapshot = $reportService->buildClosingSnapshot(
+            $cashRegister,
+            $report,
+            $request->validated('closing_totals', []),
+            $request->validated('closing_notes'),
+            $closedAt,
+        );
+
+        $updates = [
             'status' => 'closed',
             'closing_amount' => $request->validated('closing_amount'),
             'closing_notes' => $request->validated('closing_notes'),
-            'closed_at' => now(),
-        ]);
+            'closed_at' => $closedAt,
+        ];
+
+        if ($reportService->supportsDatabaseSnapshotStorage()) {
+            $updates['closing_breakdown'] = $closingSnapshot['closing_breakdown'];
+            $updates['closing_snapshot'] = $closingSnapshot;
+        }
+
+        $cashRegister->update($updates);
+
+        if (!$reportService->supportsDatabaseSnapshotStorage()) {
+            $reportService->persistClosingSnapshot($cashRegister->fresh(), $closingSnapshot);
+        }
 
         return response()->json([
             'message' => 'Caixa fechado com sucesso.',
@@ -83,6 +104,8 @@ class CashRegisterApiController extends Controller
 
     public function report(CashRegister $cashRegister, CashRegisterReportService $reportService): JsonResponse
     {
+        abort_unless((int) $cashRegister->user_id === (int) auth()->user()?->getKey(), 404);
+
         return response()->json([
             'report' => $reportService->build($cashRegister),
         ]);

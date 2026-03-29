@@ -250,6 +250,26 @@
     box-shadow: 0 0 0 0.22rem rgba(47, 124, 246, 0.12);
 }
 
+.cash-register-inline-alert {
+    display: grid;
+    gap: 0.3rem;
+    padding: 1rem 1.05rem;
+    border-radius: 20px;
+    border: 1px solid rgba(47, 124, 246, 0.14);
+    background: linear-gradient(135deg, rgba(47, 124, 246, 0.08), rgba(255, 255, 255, 0.96));
+}
+
+.cash-register-inline-alert strong {
+    color: var(--app-text-primary);
+}
+
+.cash-register-inline-alert span,
+.cash-register-breakdown-top span,
+.cash-register-breakdown-values small,
+.cash-register-difference-pill small {
+    color: var(--app-text-muted);
+}
+
 .cash-register-primary-button,
 .cash-register-danger-button,
 .cash-register-actions-grid button,
@@ -436,11 +456,13 @@
     display: grid;
     place-items: center;
     padding: 1rem;
+    overflow-y: auto;
     z-index: 1060;
 }
 
 .cash-register-report-card {
     width: min(820px, 100%);
+    max-height: calc(100dvh - 2rem);
     border-radius: 28px;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(18px);
@@ -448,7 +470,8 @@
     gap: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.78);
     box-shadow: var(--app-shadow-lg);
-    overflow: hidden;
+    overflow: auto;
+    overscroll-behavior: contain;
 }
 
 .cash-register-report-header {
@@ -471,6 +494,77 @@
 .cash-register-report-section {
     display: grid;
     gap: 0.95rem;
+    padding: 0 1.2rem 1.2rem;
+}
+
+.cash-register-breakdown-grid {
+    display: grid;
+    gap: 0.95rem;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.cash-register-breakdown-card {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem 1.05rem;
+    border-radius: 20px;
+    border: 1px solid var(--app-border);
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
+}
+
+.cash-register-breakdown-card label {
+    display: grid;
+    gap: 0.45rem;
+    color: var(--app-text-secondary);
+    font-weight: 600;
+}
+
+.cash-register-breakdown-card input,
+.cash-register-report-section textarea {
+    width: 100%;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 16px;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--app-text-primary);
+    outline: none;
+}
+
+.cash-register-breakdown-top,
+.cash-register-breakdown-values {
+    display: flex;
+    gap: 0.85rem;
+    justify-content: space-between;
+}
+
+.cash-register-breakdown-values {
+    flex-wrap: wrap;
+}
+
+.cash-register-breakdown-values div,
+.cash-register-difference-pill {
+    display: grid;
+    gap: 0.22rem;
+}
+
+.cash-register-difference-pill {
+    padding: 0.75rem 0.85rem;
+    border-radius: 16px;
+    border: 1px solid var(--app-border);
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.cash-register-difference-pill.alert,
+.cash-register-breakdown-values .alert {
+    color: #b53c51;
+}
+
+.cash-register-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.85rem;
     padding: 0 1.2rem 1.2rem;
 }
 
@@ -497,6 +591,20 @@
     .cash-register-status-hero,
     .cash-register-section-header {
         flex-direction: column;
+    }
+
+    .cash-register-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cash-register-report-backdrop {
+        place-items: start center;
+        padding: 0.75rem;
+    }
+
+    .cash-register-report-card {
+        max-height: calc(100dvh - 1.5rem);
+        border-radius: 22px;
     }
 
     .cash-register-hero-meta {

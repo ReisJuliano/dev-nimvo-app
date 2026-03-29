@@ -12,6 +12,8 @@ use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
+use App\Http\Controllers\Tenant\Settings\SettingsApiController;
+use App\Http\Controllers\Tenant\Settings\SettingsPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
 use Illuminate\Support\Facades\Route;
 
@@ -35,7 +37,7 @@ Route::middleware('web')->group(function () {
         Route::put('/change-password', [PasswordChangeController::class, 'update'])
             ->name('password.change.update');
 
-        Route::middleware(EnsurePasswordIsChanged::class)->group(function () {
+        Route::middleware([EnsurePasswordIsChanged::class, 'module.enabled'])->group(function () {
             Route::get('/dashboard', DashboardController::class)->name('dashboard');
             Route::get('/pdv', PosPageController::class)->name('pos.index');
             Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
@@ -53,6 +55,7 @@ Route::middleware('web')->group(function () {
             Route::get('/demanda', OperationsPageController::class)->defaults('module', 'demanda')->name('demand.index');
             Route::get('/faltas', OperationsPageController::class)->defaults('module', 'faltas')->name('shortages.index');
             Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
+            Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
 
             Route::prefix('/api')->group(function () {
                 Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
@@ -69,6 +72,7 @@ Route::middleware('web')->group(function () {
                 Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');
                 Route::put('/products/{product}', [ProductsApiController::class, 'update'])->name('api.products.update');
                 Route::delete('/products/{product}', [ProductsApiController::class, 'destroy'])->name('api.products.destroy');
+                Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');
             });
         });
     });

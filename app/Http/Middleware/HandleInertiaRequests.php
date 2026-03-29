@@ -1,5 +1,8 @@
 <?php
+
 namespace App\Http\Middleware;
+
+use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -15,6 +18,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $tenant = tenant();
+        $settings = $tenant ? app(TenantSettingsService::class)->get() : null;
 
         return [
             ...parent::share($request),
@@ -31,6 +35,7 @@ class HandleInertiaRequests extends Middleware
                 'name' => $tenant->name,
                 'email' => $tenant->email,
             ] : null,
+            'appSettings' => $settings,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
             ],
