@@ -4,6 +4,7 @@ namespace App\Services\Tenant;
 
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
+use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Support\Tenant\PaymentMethod;
@@ -12,6 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class PosService
 {
+    public function __construct(
+        protected OrderDraftService $orderDraftService,
+    ) {
+    }
+
     public function finalize(array $payload, int $userId): array
     {
         $cashRegister = CashRegister::query()
@@ -27,6 +33,20 @@ class PosService
         }
 
         return DB::transaction(function () use ($payload, $userId, $cashRegister) {
+            $orderDraft = null;
+
+            if (!empty($payload['order_draft_id'])) {
+                $orderDraft = OrderDraft::query()
+                    ->lockForUpdate()
+                    ->find($payload['order_draft_id']);
+
+                if (!$orderDraft || $orderDraft->status === OrderDraft::STATUS_COMPLETED || $orderDraft->sale_id) {
+                    throw ValidationException::withMessages([
+                        'order_draft_id' => 'Este pedido nao esta mais disponivel para cobranca.',
+                    ]);
+                }
+            }
+
             $items = collect($payload['items'])->map(function (array $item) {
                 /** @var Product $product */
                 $product = Product::query()->lockForUpdate()->findOrFail($item['id']);
@@ -112,7 +132,7 @@ class PosService
             $paymentMethods = $resolvedPayments->pluck('method')->unique()->values();
             $paymentMethod = $paymentMethods->count() === 1 ? $paymentMethods->first() : PaymentMethod::MIXED;
 
-            $customerId = $payload['customer_id'] ?? null;
+            $customerId = $payload['customer_id'] ?? $orderDraft?->customer_id;
             $hasCredit = $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT);
 
             if ($hasCredit && ! $customerId) {
@@ -156,7 +176,7 @@ class PosService
                 'profit' => $total - $costTotal,
                 'payment_method' => $paymentMethod,
                 'status' => 'finalized',
-                'notes' => $payload['notes'] ?? null,
+                'notes' => $payload['notes'] ?? $orderDraft?->notes,
             ]);
 
             foreach ($items as $entry) {
@@ -183,6 +203,10 @@ class PosService
                     'payment_method' => $payment['method'],
                     'amount' => $payment['amount'],
                 ]);
+            }
+
+            if ($orderDraft) {
+                $this->orderDraftService->markAsCompleted($orderDraft, $sale);
             }
 
             return [

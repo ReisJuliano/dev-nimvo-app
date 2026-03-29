@@ -199,6 +199,72 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.94));
 }
 
+.pos-loaded-order-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 1rem 1rem;
+    padding: 1rem;
+    border-radius: 20px;
+    border: 1px solid var(--app-border);
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.pos-loaded-order-box span,
+.pos-pending-order-copy small {
+    color: var(--app-text-muted);
+}
+
+.pos-loaded-order-box strong,
+.pos-pending-order-top strong {
+    display: block;
+    margin: 0.2rem 0;
+}
+
+.pos-pending-orders-header {
+    align-items: flex-start;
+}
+
+.pos-pending-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1rem;
+}
+
+.pos-pending-order-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.86);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.pos-pending-order-card.active,
+.pos-pending-order-card:hover {
+    border-color: rgba(47, 124, 246, 0.28);
+    box-shadow: 0 12px 28px rgba(47, 124, 246, 0.12);
+    transform: translateY(-1px);
+}
+
+.pos-pending-order-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.pos-pending-order-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
 .pos-cash-register-copy {
     display: grid;
     gap: 0.28rem;
@@ -1395,6 +1461,12 @@
     .pos-cash-register-actions {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .pos-loaded-order-box,
+    .pos-pending-order-card {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .pos-shortcut-chip {

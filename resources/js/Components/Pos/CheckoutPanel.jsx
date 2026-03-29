@@ -43,6 +43,9 @@ export default function CheckoutPanel({
     onFinalize,
     cashRegister,
     requireCashClosingConference,
+    activeOrderDraftLabel,
+    canResetSale,
+    onResetSale,
 }) {
     return (
         <section className="pos-card checkout">
@@ -96,6 +99,25 @@ export default function CheckoutPanel({
                     </form>
                 )}
             </div>
+
+            {activeOrderDraftLabel || canResetSale ? (
+                <div className="pos-loaded-order-box">
+                    <div>
+                        <span>Venda em preparo</span>
+                        <strong>{activeOrderDraftLabel || 'Venda avulsa em andamento'}</strong>
+                        <small>
+                            {activeOrderDraftLabel
+                                ? 'Os itens vieram de um pedido enviado para o caixa.'
+                                : 'Limpe a venda atual para iniciar uma nova cobranca.'}
+                        </small>
+                    </div>
+
+                    <button type="button" className="ui-button-ghost" onClick={onResetSale}>
+                        <i className="fa-solid fa-broom-wide" />
+                        Limpar venda
+                    </button>
+                </div>
+            ) : null}
 
             <div className="pos-checkout-grid">
                 <div className="pos-customer-field span-2">

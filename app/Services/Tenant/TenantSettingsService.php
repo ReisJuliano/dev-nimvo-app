@@ -43,9 +43,9 @@ class TenantSettingsService
             [
                 'section' => 'Vendas',
                 'items' => [
-                    ['key' => 'pdv', 'label' => 'PDV', 'description' => 'Permite abrir o ponto de venda e registrar vendas.'],
-                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Libera abertura, sangrias, suprimentos e historico de fechamento.'],
-                    ['key' => 'pedidos', 'label' => 'Pedidos', 'description' => 'Exibe os pedidos e o acompanhamento operacional.'],
+                    ['key' => 'pdv', 'label' => 'PDV', 'description' => 'Permite cobrar vendas avulsas e pedidos enviados do modulo de comandas.'],
+                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Libera abertura, sangrias, suprimentos e historico de fechamento do caixa.'],
+                    ['key' => 'pedidos', 'label' => 'Pedidos', 'description' => 'Permite registrar comandas, mesas e pedidos persistidos antes da cobranca.'],
                     ['key' => 'crediario', 'label' => 'Crediario', 'description' => 'Mostra consultas e movimentacoes do fiado.'],
                 ],
             ],

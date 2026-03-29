@@ -6,20 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
+use App\Services\Tenant\OrderDraftService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PosPageController extends Controller
 {
-    public function __invoke(): Response
+    public function __invoke(OrderDraftService $orderDraftService): Response
     {
         $userId = auth()->user()?->getKey();
+        $requestedOrderDraftId = request()->integer('orderDraft');
 
         $cashRegister = CashRegister::query()
             ->where('user_id', $userId)
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();
+        $preloadedOrderDraft = $requestedOrderDraftId
+            ? $orderDraftService->findForCheckout($requestedOrderDraftId)
+            : null;
 
         return Inertia::render('Pos/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
@@ -27,6 +32,8 @@ class PosPageController extends Controller
                 ->where('active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone', 'credit_limit']),
+            'pendingOrderDrafts' => $orderDraftService->pendingCheckoutDrafts(),
+            'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,
                 'status' => $cashRegister->status,

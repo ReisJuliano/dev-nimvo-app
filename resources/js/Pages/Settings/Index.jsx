@@ -64,7 +64,7 @@ export default function SettingsIndex({ settings, generalOptions, moduleSections
                     <div>
                         <span>Configuracao geral</span>
                         <h1>Regras e modulos da operacao</h1>
-                        <p>Ative obrigatoriedades do fechamento e decida quais modulos ficam disponiveis na lateral e nas rotas.</p>
+                        <p>Ative obrigatoriedades do fechamento e decida quais modulos, comandas e cobrancas ficam disponiveis na lateral e nas rotas.</p>
                     </div>
                     <div className="settings-hero-metrics">
                         <div>

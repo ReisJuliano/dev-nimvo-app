@@ -43,6 +43,10 @@ class EnsureModuleIsEnabled
             return 'produtos';
         }
 
+        if ($request->is('api/orders*')) {
+            return 'pedidos';
+        }
+
         return match ($request->segment(1)) {
             'pdv' => 'pdv',
             'caixa' => 'caixa',

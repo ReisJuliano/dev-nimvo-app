@@ -16,6 +16,7 @@ class FinalizeSaleRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'order_draft_id' => ['nullable', 'integer', 'exists:order_drafts,id'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],

@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
+import PendingOrdersPanel from '@/Components/Pos/PendingOrdersPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
 import { apiRequest } from '@/lib/http'
 import { formatDateTime, formatMoney } from '@/lib/format'
@@ -229,10 +230,20 @@ function buildPreviewConfigFromDraft(draft, subtotal) {
     return { type: 'none' }
 }
 
-export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
+export default function PosIndex({
+    categories,
+    customers: initialCustomers,
+    cashRegister,
+    pendingOrderDrafts: initialPendingOrderDrafts,
+    preloadedOrderDraft,
+}) {
     const { appSettings } = usePage().props
     const [customers, setCustomers] = useState(initialCustomers)
     const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
+    const [pendingOrderDrafts, setPendingOrderDrafts] = useState(initialPendingOrderDrafts || [])
+    const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? null)
+    const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
+    const [refreshingPendingOrders, setRefreshingPendingOrders] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [products, setProducts] = useState([])
@@ -269,10 +280,22 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     }, [cashRegister])
 
     useEffect(() => {
+        setPendingOrderDrafts(initialPendingOrderDrafts || [])
+    }, [initialPendingOrderDrafts])
+
+    useEffect(() => {
         if (searchTerm == null || String(searchTerm).toLowerCase() === 'null') {
             setSearchTerm('')
         }
     }, [searchTerm])
+
+    useEffect(() => {
+        if (!preloadedOrderDraft) {
+            return
+        }
+
+        applyOrderDraftToSale(preloadedOrderDraft, false)
+    }, [preloadedOrderDraft])
 
     useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()
@@ -347,6 +370,14 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             setDiscountConfig({ type: 'none' })
         }
     }, [cart, discountConfig])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refreshPendingOrderDrafts({ quiet: true })
+        }, 15000)
+
+        return () => clearInterval(interval)
+    }, [])
 
     const selectedCartItem = useMemo(
         () => cart.find((item) => item.id === selectedCartItemId) ?? null,
@@ -460,6 +491,67 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setMixedPayments([])
         setMixedDraft({ method: 'cash', amount: '' })
         setCreditStatus(null)
+        setActiveOrderDraftId(null)
+    }
+
+    function applyOrderDraftToSale(orderDraft, showLoadedFeedback = true) {
+        setCart((orderDraft.items || []).map((item) => ({
+            ...item,
+            qty: Number(item.qty),
+            cost_price: Number(item.cost_price || 0),
+            sale_price: Number(item.sale_price || 0),
+            stock_quantity: Number(item.stock_quantity || 0),
+        })))
+        setSelectedCartItemId(orderDraft.items?.[0]?.id ?? null)
+        setSelectedCustomer(orderDraft.customer?.id ? String(orderDraft.customer.id) : '')
+        setDiscountConfig({ type: 'none' })
+        setDiscountDraft(buildDiscountDraft({ type: 'none' }, String(orderDraft.items?.[0]?.id ?? '')))
+        setDiscountModalOpen(false)
+        setCashReceived('')
+        setNotes(orderDraft.notes || '')
+        setPaymentMethod('cash')
+        setMixedPayments([])
+        setMixedDraft({ method: 'cash', amount: '' })
+        setCreditStatus(null)
+        setActiveOrderDraftId(orderDraft.id)
+        setFeedback(showLoadedFeedback ? { type: 'success', text: `${orderDraft.label} carregado para cobranca.` } : null)
+    }
+
+    async function refreshPendingOrderDrafts({ quiet = false } = {}) {
+        if (!quiet) {
+            setRefreshingPendingOrders(true)
+        }
+
+        try {
+            const response = await apiRequest('/api/orders/pending-checkout')
+            setPendingOrderDrafts(response.orders || [])
+        } catch (error) {
+            if (!quiet) {
+                showFeedback('error', error.message)
+            }
+        } finally {
+            if (!quiet) {
+                setRefreshingPendingOrders(false)
+            }
+        }
+    }
+
+    async function handleLoadOrderDraft(orderDraftId) {
+        if (cart.length && Number(activeOrderDraftId) !== Number(orderDraftId)) {
+            showFeedback('error', 'Finalize ou limpe a venda atual antes de carregar outro pedido.')
+            return
+        }
+
+        setLoadingOrderDraftId(orderDraftId)
+
+        try {
+            const response = await apiRequest(`/api/orders/${orderDraftId}`)
+            applyOrderDraftToSale(response.order)
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setLoadingOrderDraftId(null)
+        }
     }
 
     function handleAddProduct(product) {
@@ -868,6 +960,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setFeedback(null)
 
         try {
+            const finalizedOrderDraftId = activeOrderDraftId
             const payments =
                 paymentMethod === 'mixed'
                     ? mixedPayments.map((payment) => ({
@@ -879,6 +972,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             const response = await apiRequest('/api/pdv/sales', {
                 method: 'post',
                 data: {
+                    order_draft_id: activeOrderDraftId || null,
                     customer_id: selectedCustomer || null,
                     discount: totals.discount,
                     notes,
@@ -892,6 +986,10 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             })
 
             resetSale()
+            if (finalizedOrderDraftId) {
+                setPendingOrderDrafts((current) => current.filter((orderDraft) => Number(orderDraft.id) !== Number(finalizedOrderDraftId)))
+                refreshPendingOrderDrafts({ quiet: true })
+            }
             showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.`)
         } catch (error) {
             showFeedback('error', error.message)
@@ -1044,6 +1142,15 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
                     {feedback ? <div className={`pos-feedback ${feedback.type}`}>{feedback.text}</div> : null}
 
+                    <PendingOrdersPanel
+                        orders={pendingOrderDrafts}
+                        activeOrderDraftId={activeOrderDraftId}
+                        loadingOrderId={loadingOrderDraftId}
+                        refreshing={refreshingPendingOrders}
+                        onLoadOrder={handleLoadOrderDraft}
+                        onRefresh={refreshPendingOrderDrafts}
+                    />
+
                     <ProductSearchPanel
                         categories={categories}
                         selectedCategory={selectedCategory}
@@ -1096,6 +1203,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onOpenCashRegister={handleOpenCashRegister}
                     onOpenCloseCashRegister={handleOpenCloseCashRegister}
                     requireCashClosingConference={requireCashClosingConference}
+                    activeOrderDraftLabel={pendingOrderDrafts.find((orderDraft) => Number(orderDraft.id) === Number(activeOrderDraftId))?.label || null}
+                    canResetSale={Boolean(cart.length || activeOrderDraftId)}
+                    onResetSale={resetSale}
                     disabled={!cashRegisterState || !cart.length || submitting}
                     onFinalize={handleFinalize}
                 />
