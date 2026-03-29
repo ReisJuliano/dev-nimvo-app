@@ -1,9 +1,10 @@
-import { startTransition, useEffect, useMemo, useState } from 'react'
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
 import { apiRequest } from '@/lib/http'
+import { formatMoney } from '@/lib/format'
 import './pos.css'
 
 export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
@@ -13,6 +14,8 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [products, setProducts] = useState([])
     const [cart, setCart] = useState([])
     const [selectedCustomer, setSelectedCustomer] = useState('')
+    const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
+    const [customerSearch, setCustomerSearch] = useState('')
     const [discount, setDiscount] = useState('0')
     const [notes, setNotes] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('cash')
@@ -23,19 +26,49 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [quickCustomerForm, setQuickCustomerForm] = useState({ name: '', phone: '' })
     const [submitting, setSubmitting] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [loadingProducts, setLoadingProducts] = useState(false)
+    const deferredCustomerSearch = useDeferredValue(customerSearch)
 
     useEffect(() => {
+        const trimmedSearchTerm = searchTerm.trim()
+        let ignore = false
+
+        if (trimmedSearchTerm === '') {
+            setProducts([])
+            setLoadingProducts(false)
+            return () => {
+                ignore = true
+            }
+        }
+
         const timeout = setTimeout(() => {
             startTransition(async () => {
-                const response = await apiRequest('/api/pdv/products', {
-                    params: { term: searchTerm, category_id: selectedCategory || undefined },
-                })
+                if (ignore) {
+                    return
+                }
 
-                setProducts(response.products)
+                setLoadingProducts(true)
+
+                try {
+                    const response = await apiRequest('/api/pdv/products', {
+                        params: { term: trimmedSearchTerm, category_id: selectedCategory || undefined },
+                    })
+
+                    if (!ignore) {
+                        setProducts(response.products)
+                    }
+                } finally {
+                    if (!ignore) {
+                        setLoadingProducts(false)
+                    }
+                }
             })
         }, 250)
 
-        return () => clearTimeout(timeout)
+        return () => {
+            ignore = true
+            clearTimeout(timeout)
+        }
     }, [searchTerm, selectedCategory])
 
     useEffect(() => {
@@ -67,8 +100,32 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
     const mixedRemaining = useMemo(() => Math.max(0, totals.total - mixedTotal), [mixedTotal, totals.total])
 
+    const selectedCustomerData = useMemo(
+        () => customers.find((customer) => String(customer.id) === selectedCustomer) ?? null,
+        [customers, selectedCustomer],
+    )
+
+    const filteredCustomers = useMemo(() => {
+        const normalizedTerm = deferredCustomerSearch.trim().toLowerCase()
+
+        if (!normalizedTerm) {
+            return customers
+        }
+
+        return customers.filter((customer) =>
+            [customer.name, customer.phone]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+        )
+    }, [customers, deferredCustomerSearch])
+
     function showFeedback(type, text) {
         setFeedback({ type, text })
+    }
+
+    function closeCustomerPicker() {
+        setCustomerPickerOpen(false)
+        setCustomerSearch('')
     }
 
     function resetSale() {
@@ -150,6 +207,23 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         setMixedPayments((current) => current.filter((_, currentIndex) => currentIndex !== index))
     }
 
+    function handleCustomerSelect(customerId) {
+        setSelectedCustomer(String(customerId))
+        closeCustomerPicker()
+        setFeedback(null)
+    }
+
+    function handleClearCustomer() {
+        setSelectedCustomer('')
+        closeCustomerPicker()
+        setFeedback(null)
+    }
+
+    function handleOpenQuickCustomer() {
+        closeCustomerPicker()
+        setQuickCustomerOpen(true)
+    }
+
     async function handleQuickCustomerSubmit(event) {
         event.preventDefault()
         setFeedback(null)
@@ -211,9 +285,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             const payments =
                 paymentMethod === 'mixed'
                     ? mixedPayments.map((payment) => ({
-                          method: payment.method,
-                          amount: Number(payment.amount),
-                      }))
+                        method: payment.method,
+                        amount: Number(payment.amount),
+                    }))
                     : [{ method: paymentMethod, amount: totals.total }]
 
             const response = await apiRequest('/api/pdv/sales', {
@@ -240,6 +314,30 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         <AppLayout title="PDV">
             <div className="pos-page">
                 <div className="pos-column">
+                    <section className="pos-hero ui-card">
+                        <div className="ui-card-body">
+                            <div className="pos-hero-grid">
+                                <div>
+                                    <span className={`ui-badge ${cashRegister ? 'success' : 'danger'}`}>
+                                        {cashRegister ? 'Caixa ativo' : 'Caixa fechado'}
+                                    </span>
+                                    <h1>PDV</h1>
+                                    <p>Registro de vendas e fechamento.</p>
+                                </div>
+                                <div className="pos-hero-kpis">
+                                    <div>
+                                        <small>Itens no carrinho</small>
+                                        <strong>{cart.length}</strong>
+                                    </div>
+                                    <div>
+                                        <small>Total parcial</small>
+                                        <strong>{formatMoney(totals.total)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     {feedback ? <div className={`pos-feedback ${feedback.type}`}>{feedback.text}</div> : null}
 
                     <ProductSearchPanel
@@ -248,7 +346,9 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         onCategoryChange={setSelectedCategory}
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
+                        hasSearchTerm={searchTerm.trim() !== ''}
                         products={products}
+                        loading={loadingProducts}
                         onAddProduct={handleAddProduct}
                     />
 
@@ -256,9 +356,10 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 </div>
 
                 <CheckoutPanel
-                    customers={customers}
                     selectedCustomer={selectedCustomer}
-                    onCustomerChange={setSelectedCustomer}
+                    selectedCustomerData={selectedCustomerData}
+                    onOpenCustomerPicker={() => setCustomerPickerOpen(true)}
+                    onClearCustomer={handleClearCustomer}
                     discount={discount}
                     onDiscountChange={setDiscount}
                     notes={notes}
@@ -272,7 +373,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onMixedPaymentChange={handleMixedPaymentChange}
                     onMixedPaymentRemove={handleRemoveMixedPayment}
                     onAddMixedPayment={handleAddMixedPayment}
-                    onQuickCustomer={() => setQuickCustomerOpen(true)}
+                    onQuickCustomer={handleOpenQuickCustomer}
                     creditStatus={creditStatus}
                     totals={totals}
                     disabled={!cashRegister || !cart.length || submitting}
@@ -281,11 +382,96 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 />
             </div>
 
+            {customerPickerOpen ? (
+                <div className="pos-quick-customer" onClick={closeCustomerPicker}>
+                    <div className="pos-quick-customer-card pos-customer-picker-card" onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header pos-customer-picker-header">
+                            <div>
+                                <h2>Selecionar cliente</h2>
+                                <p>Pesquise por nome ou telefone e vincule a venda rapidamente.</p>
+                            </div>
+
+                            <div className="pos-customer-picker-top-actions">
+                                <button className="ui-button-ghost" type="button" onClick={handleOpenQuickCustomer}>
+                                    <i className="fa-solid fa-user-plus" />
+                                    Novo cliente
+                                </button>
+                                <button className="ui-button-ghost" type="button" onClick={closeCustomerPicker}>
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="pos-customer-picker-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                className="ui-input pos-customer-picker-input"
+                                placeholder="Buscar cliente por nome ou telefone"
+                                value={customerSearch}
+                                onChange={(event) => setCustomerSearch(event.target.value)}
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="pos-customer-picker-toolbar">
+                            <button
+                                type="button"
+                                className={`pos-customer-picker-ghost ${selectedCustomer ? '' : 'active'}`}
+                                onClick={handleClearCustomer}
+                            >
+                                <i className="fa-solid fa-user-slash" />
+                                Nao identificado
+                            </button>
+                            <span>{filteredCustomers.length} cliente(s) encontrado(s)</span>
+                        </div>
+
+                        <div className="pos-customer-picker-list">
+                            {filteredCustomers.length ? (
+                                filteredCustomers.map((customer) => {
+                                    const isActive = String(customer.id) === selectedCustomer
+
+                                    return (
+                                        <button
+                                            key={customer.id}
+                                            type="button"
+                                            className={`pos-customer-picker-item ${isActive ? 'active' : ''}`}
+                                            onClick={() => handleCustomerSelect(customer.id)}
+                                        >
+                                            <span className="pos-customer-picker-item-icon">
+                                                <i className={`fa-solid ${isActive ? 'fa-circle-check' : 'fa-user'}`} />
+                                            </span>
+                                            <span className="pos-customer-picker-item-copy">
+                                                <strong>{customer.name}</strong>
+                                                <small>{customer.phone || 'Sem telefone informado'}</small>
+                                            </span>
+                                            <span className="pos-customer-picker-item-action">
+                                                {isActive ? 'Selecionado' : 'Selecionar'}
+                                            </span>
+                                        </button>
+                                    )
+                                })
+                            ) : (
+                                <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
             {quickCustomerOpen ? (
-                <div className="pos-quick-customer">
-                    <form className="pos-quick-customer-card" onSubmit={handleQuickCustomerSubmit}>
-                        <h2>Novo cliente rapido</h2>
+                <div className="pos-quick-customer" onClick={() => setQuickCustomerOpen(false)}>
+                    <form className="pos-quick-customer-card" onSubmit={handleQuickCustomerSubmit} onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Novo cliente</h2>
+                                <p>Cadastre rapidamente e selecione na venda.</p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>
+                                Fechar
+                            </button>
+                        </div>
                         <input
+                            className="ui-input"
                             placeholder="Nome do cliente"
                             value={quickCustomerForm.name}
                             onChange={(event) =>
@@ -293,6 +479,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                             }
                         />
                         <input
+                            className="ui-input"
                             placeholder="Telefone"
                             value={quickCustomerForm.phone}
                             onChange={(event) =>
@@ -300,7 +487,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                             }
                         />
                         <div className="pos-quick-customer-actions">
-                            <button type="button" onClick={() => setQuickCustomerOpen(false)}>
+                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>
                                 Cancelar
                             </button>
                             <button className="pos-finalize-button" type="submit">

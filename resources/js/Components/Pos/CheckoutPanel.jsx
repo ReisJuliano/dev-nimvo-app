@@ -12,9 +12,10 @@ const paymentOptions = [
 const paymentLabels = Object.fromEntries(paymentOptions.map((option) => [option.value, option.label]))
 
 export default function CheckoutPanel({
-    customers,
     selectedCustomer,
-    onCustomerChange,
+    selectedCustomerData,
+    onOpenCustomerPicker,
+    onClearCustomer,
     discount,
     onDiscountChange,
     notes,
@@ -53,33 +54,47 @@ export default function CheckoutPanel({
             <div className="pos-checkout-grid">
                 <div className="pos-customer-field span-2">
                     <div className="pos-customer-field-header">
-                        <label htmlFor="pos-customer-select">Cliente</label>
-                        <small>{selectedCustomer ? 'Venda vinculada a um cadastro' : 'Cliente nao identificado'}</small>
+                        <div>
+                            <label>Cliente</label>
+                            <small>{selectedCustomer ? 'Venda vinculada a um cadastro' : 'Cliente nao identificado'}</small>
+                        </div>
+
+                        {selectedCustomer ? (
+                            <button type="button" className="pos-customer-clear" onClick={onClearCustomer}>
+                                Remover
+                            </button>
+                        ) : null}
                     </div>
 
                     <div className="pos-customer-row">
-                        <div className="pos-customer-select-shell">
-                            <i className="fa-solid fa-user" aria-hidden="true" />
-                            <select
-                                id="pos-customer-select"
-                                className="ui-select pos-customer-select"
-                                value={selectedCustomer}
-                                onChange={(event) => onCustomerChange(event.target.value)}
-                            >
-                                <option value="">Nao identificado</option>
-                                {customers.map((customer) => (
-                                    <option key={customer.id} value={customer.id}>
-                                        {customer.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <i className="fa-solid fa-chevron-down pos-customer-select-chevron" aria-hidden="true" />
-                        </div>
+                        <button
+                            type="button"
+                            className={`pos-customer-trigger ${selectedCustomerData ? 'selected' : ''}`}
+                            onClick={onOpenCustomerPicker}
+                        >
+                            <span className="pos-customer-trigger-icon">
+                                <i className={`fa-solid ${selectedCustomerData ? 'fa-id-card' : 'fa-user-plus'}`} aria-hidden="true" />
+                            </span>
+                            <span className="pos-customer-trigger-copy">
+                                <strong>{selectedCustomerData?.name ?? 'Nao identificado'}</strong>
+                                <small>
+                                    {selectedCustomerData?.phone
+                                        ? selectedCustomerData.phone
+                                        : selectedCustomerData
+                                            ? 'Cliente selecionado para esta venda'
+                                            : 'Adicione um cliente a esta venda'}
+                                </small>
+                            </span>
+                            <span className="pos-customer-trigger-action">
+                                <i className={`fa-solid ${selectedCustomerData ? 'fa-pen' : 'fa-magnifying-glass'}`} />
+                                {selectedCustomerData ? 'Trocar cliente' : 'Adicionar cliente'}
+                            </span>
+                        </button>
 
                         <button
                             type="button"
                             className="pos-inline-button pos-customer-action ui-tooltip"
-                            data-tooltip="Cadastrar cliente"
+                            data-tooltip="Cadastrar cliente rapido"
                             onClick={onQuickCustomer}
                         >
                             <i className="fa-solid fa-user-plus" />
