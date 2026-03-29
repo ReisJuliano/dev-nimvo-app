@@ -2,7 +2,13 @@ import { Head } from '@inertiajs/react'
 import GuestBrandPanel from '@/Components/Auth/GuestBrandPanel'
 import './guest-layout.css'
 
-export default function GuestLayout({ title, heading, description, children }) {
+export default function GuestLayout({
+    title,
+    heading,
+    description,
+    children,
+    centered = false,
+}) {
     return (
         <>
             <Head title={title} />
@@ -19,9 +25,9 @@ export default function GuestLayout({ title, heading, description, children }) {
 
             <div className="guest-root">
                 <div className="guest-page">
-                    <div className="guest-shell">
-                        <GuestBrandPanel />
-                        <section className="guest-card">
+                    <div className={`guest-shell${centered ? ' guest-shell-centered' : ''}`}>
+                        {!centered && <GuestBrandPanel />}
+                        <section className={`guest-card${centered ? ' guest-card-centered' : ''}`}>
                             <div className="guest-card-header">
                                 <div className="guest-card-logo">
                                     <div className="guest-card-logo-badge">

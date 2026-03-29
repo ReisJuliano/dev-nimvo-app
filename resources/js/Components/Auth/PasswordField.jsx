@@ -9,6 +9,9 @@ export default function PasswordField({
     onToggleVisibility,
     error,
 }) {
+    const toggleLabel = showPassword ? 'Ocultar senha' : 'Exibir senha'
+    const toggleIcon = showPassword ? 'fa-eye' : 'fa-eye-slash'
+
     return (
         <div className="guest-form-group">
             <label className="guest-form-label" htmlFor={id}>
@@ -31,9 +34,10 @@ export default function PasswordField({
                     type="button"
                     className="guest-input-action"
                     onClick={onToggleVisibility}
-                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    aria-label={toggleLabel}
+                    title={toggleLabel}
                 >
-                    <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} />
+                    <i className={`fas ${toggleIcon}`} />
                 </button>
             </div>
 

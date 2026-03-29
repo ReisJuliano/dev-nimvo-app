@@ -31,6 +31,7 @@ export default function Login() {
             title="Login - Nimvo"
             heading="Entrar no sistema"
             description="Informe suas credenciais para continuar no ambiente de gestao."
+            centered
         >
             <LoginForm
                 data={data}

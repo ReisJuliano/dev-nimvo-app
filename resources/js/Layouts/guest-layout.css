@@ -54,6 +54,11 @@ body {
     align-items: stretch;
 }
 
+.guest-shell-centered {
+    max-width: 430px;
+    grid-template-columns: minmax(0, 430px);
+}
+
 .guest-panel {
     position: relative;
     display: flex;
@@ -99,6 +104,10 @@ body {
     box-shadow: var(--guest-shadow);
     padding: 34px 32px;
     backdrop-filter: blur(16px);
+}
+
+.guest-card-centered {
+    width: 100%;
 }
 
 .guest-card-logo {

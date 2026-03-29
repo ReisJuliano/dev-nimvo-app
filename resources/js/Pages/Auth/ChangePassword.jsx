@@ -27,6 +27,7 @@ export default function ChangePassword() {
             title="Atualizar Senha - Nimvo"
             heading="Atualize sua senha"
             description="Para continuar no sistema, defina uma nova senha de acesso."
+            centered
         >
             <ChangePasswordForm
                 data={data}
