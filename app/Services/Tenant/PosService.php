@@ -38,13 +38,36 @@ class PosService
                     ]);
                 }
 
-                return compact('product', 'quantity');
+                $lineSubtotal = round((float) $product->sale_price * $quantity, 2);
+                $lineDiscount = round((float) ($item['discount'] ?? 0), 2);
+
+                if ($lineDiscount < 0 || $lineDiscount > $lineSubtotal) {
+                    throw ValidationException::withMessages([
+                        'items' => "Desconto invalido para {$product->name}.",
+                    ]);
+                }
+
+                return compact('product', 'quantity', 'lineSubtotal', 'lineDiscount');
             });
 
-            $subtotal = $items->sum(fn ($item) => (float) $item['product']->sale_price * $item['quantity']);
+            $subtotal = round($items->sum('lineSubtotal'), 2);
             $costTotal = $items->sum(fn ($item) => (float) $item['product']->cost_price * $item['quantity']);
-            $discount = (float) ($payload['discount'] ?? 0);
-            $total = max(0, $subtotal - $discount);
+            $discount = round((float) ($payload['discount'] ?? 0), 2);
+            $itemDiscountTotal = round($items->sum('lineDiscount'), 2);
+
+            if (abs($itemDiscountTotal - $discount) > 0.02) {
+                throw ValidationException::withMessages([
+                    'discount' => 'O desconto total nao confere com os descontos aplicados nos itens.',
+                ]);
+            }
+
+            if ($discount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount' => 'O desconto nao pode ser maior que o subtotal da venda.',
+                ]);
+            }
+
+            $total = round(max(0, $subtotal - $discount), 2);
 
             $payments = collect($payload['payments'])->map(function (array $payment) {
                 return [
@@ -140,15 +163,16 @@ class PosService
                 /** @var Product $product */
                 $product = $entry['product'];
                 $quantity = $entry['quantity'];
-                $lineTotal = (float) $product->sale_price * $quantity;
+                $lineTotal = round(max(0, $entry['lineSubtotal'] - $entry['lineDiscount']), 2);
+                $unitPrice = $quantity > 0 ? round($lineTotal / $quantity, 2) : 0;
 
                 $sale->items()->create([
                     'product_id' => $product->id,
                     'quantity' => $quantity,
                     'unit_cost' => $product->cost_price,
-                    'unit_price' => $product->sale_price,
+                    'unit_price' => $unitPrice,
                     'total' => $lineTotal,
-                    'profit' => ((float) $product->sale_price - (float) $product->cost_price) * $quantity,
+                    'profit' => round($lineTotal - ((float) $product->cost_price * $quantity), 2),
                 ]);
 
                 $product->decrement('stock_quantity', $quantity);

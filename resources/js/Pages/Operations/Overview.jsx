@@ -8,6 +8,7 @@ import './operations.css'
 
 export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
+    const heroTitle = `Painel de ${module.title.charAt(0).toLowerCase()}${module.title.slice(1)}`
 
     return (
         <AppLayout title={module.title}>
@@ -15,7 +16,7 @@ export default function OperationsOverview({ module }) {
                 <section className="operations-hero">
                     <div>
                         <span>Operacoes</span>
-                        <h1>{module.title}</h1>
+                        <h1>{heroTitle}</h1>
                         <p>{module.description}</p>
                     </div>
                     <div className="operations-hero-badges">

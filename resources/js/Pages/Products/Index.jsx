@@ -101,7 +101,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                     <div className="ui-card-body">
                         <div className="products-hero-grid">
                             <div>
-                                <h1>Produtos</h1>
+                                <h1>Catalogo de produtos</h1>
                                 <p>Cadastro, consulta e ajuste de produtos.</p>
                             </div>
                             <div className="products-hero-actions">

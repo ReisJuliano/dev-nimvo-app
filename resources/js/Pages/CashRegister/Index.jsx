@@ -99,7 +99,7 @@ export default function CashRegisterIndex({ openRegister, history }) {
                                 <span className={`ui-badge ${openRegister ? 'success' : 'warning'}`}>
                                     {openRegister ? 'Caixa aberto' : 'Caixa aguardando abertura'}
                                 </span>
-                                <h1>Gestao de caixa</h1>
+                                <h1>Rotina operacional</h1>
                                 <p>Abertura, movimentacoes, fechamento e historico.</p>
                             </div>
                             <div className="cash-register-hero-metrics">

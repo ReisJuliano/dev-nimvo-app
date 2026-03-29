@@ -16,8 +16,8 @@ export default function CheckoutPanel({
     selectedCustomerData,
     onOpenCustomerPicker,
     onClearCustomer,
-    discount,
-    onDiscountChange,
+    discountSummary,
+    onOpenDiscountModal,
     notes,
     onNotesChange,
     paymentMethod,
@@ -32,6 +32,10 @@ export default function CheckoutPanel({
     onQuickCustomer,
     creditStatus,
     totals,
+    cashReceived,
+    onCashReceivedChange,
+    cashChange,
+    cashShortfall,
     openingCashRegister,
     loadingClosePreview,
     closingCashRegister,
@@ -159,26 +163,43 @@ export default function CheckoutPanel({
                     </div>
                 </div>
 
-                <div className="pos-discount-field">
-                    <div className="pos-discount-copy">
-                        <label htmlFor="checkout-discount">Desconto</label>
-                        <small>Abate direto no total</small>
+                {paymentMethod === 'cash' ? (
+                    <div className="pos-cash-change-field">
+                        <div className="pos-cash-change-copy">
+                            <label htmlFor="checkout-cash-received">Valor entregue</label>
+                            <small>Use para calcular o troco antes de concluir</small>
+                        </div>
+
+                        <div className="pos-cash-change-input-wrap">
+                            <span>R$</span>
+                            <input
+                                id="checkout-cash-received"
+                                className="ui-input pos-cash-change-input"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                placeholder="0,00"
+                                value={cashReceived}
+                                onChange={(event) => onCashReceivedChange(event.target.value)}
+                            />
+                        </div>
+                    </div>
+                ) : null}
+
+                <div className="pos-discount-panel span-2">
+                    <div className="pos-discount-panel-copy">
+                        <span>Desconto</span>
+                        <strong>{discountSummary.title}</strong>
+                        <small>{discountSummary.description}</small>
+                        {discountSummary.itemHint ? <small>{discountSummary.itemHint}</small> : null}
                     </div>
 
-                    <div className="pos-discount-input-wrap">
-                        <span>R$</span>
-                        <input
-                            id="checkout-discount"
-                            className="ui-input pos-discount-input"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            placeholder="0,00"
-                            value={discount}
-                            onChange={(event) => onDiscountChange(event.target.value)}
-                        />
-                    </div>
+                    <button type="button" className="pos-inline-button pos-discount-trigger" onClick={onOpenDiscountModal}>
+                        <i className="fa-solid fa-badge-percent" />
+                        {totals.discount > 0 ? 'Editar desconto' : 'Aplicar desconto'}
+                        <kbd>Shift + D</kbd>
+                    </button>
                 </div>
 
                 <label className="span-2">
@@ -273,6 +294,18 @@ export default function CheckoutPanel({
                     <span>Desconto</span>
                     <strong>{formatMoney(totals.discount)}</strong>
                 </div>
+                {paymentMethod === 'cash' ? (
+                    <>
+                        <div>
+                            <span>Valor entregue</span>
+                            <strong>{cashReceived === '' ? 'A informar' : formatMoney(Number(cashReceived || 0))}</strong>
+                        </div>
+                        <div className={`pos-total-support-row ${cashShortfall > 0 ? 'alert' : ''}`}>
+                            <span>{cashShortfall > 0 ? 'Faltando' : 'Troco'}</span>
+                            <strong>{formatMoney(cashShortfall > 0 ? cashShortfall : cashChange)}</strong>
+                        </div>
+                    </>
+                ) : null}
                 <div className="pos-total-row">
                     <span>Total</span>
                     <strong>{formatMoney(totals.total)}</strong>

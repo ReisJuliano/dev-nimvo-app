@@ -22,6 +22,7 @@ class FinalizeSaleRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
+            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::all())],
             'payments.*.amount' => ['nullable', 'numeric', 'gt:0'],

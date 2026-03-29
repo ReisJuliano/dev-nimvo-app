@@ -44,7 +44,7 @@ export default function Dashboard({ summary, recentSales, topProducts, lowStockI
                 <section className="dashboard-hero-card">
                     <div className="dashboard-hero-copy">
                         <span>Resumo do dia</span>
-                        <h1>Inicio</h1>
+                        <h1>Painel gerencial</h1>
                         <p>Vendas, estoque e ultimos lancamentos.</p>
                     </div>
 

@@ -18,10 +18,215 @@ const closingPaymentFields = [
 const shortcutHints = [
     { keys: ['Shift', 'P'], label: 'Focar busca de produtos' },
     { keys: ['Shift', 'C'], label: 'Abrir cliente' },
+    { keys: ['Shift', 'D'], label: 'Abrir desconto' },
     { keys: ['Shift', 'F'], label: 'Finalizar venda' },
     { keys: ['Shift', 'X'], label: 'Abrir fechamento do caixa' },
     { keys: ['Esc'], label: 'Fechar popup ativo' },
 ]
+
+function roundCurrency(value) {
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100
+}
+
+function buildDiscountDraft(config, fallbackItemId = '') {
+    if (config.type === 'percent') {
+        return {
+            mode: 'percent',
+            percent: String(config.percent ?? ''),
+            targetTotal: '',
+            itemId: fallbackItemId,
+            itemDiscountType: 'value',
+            itemValue: '',
+            itemPercent: '',
+        }
+    }
+
+    if (config.type === 'target_total') {
+        return {
+            mode: 'target_total',
+            percent: '',
+            targetTotal: String(config.targetTotal ?? ''),
+            itemId: fallbackItemId,
+            itemDiscountType: 'value',
+            itemValue: '',
+            itemPercent: '',
+        }
+    }
+
+    if (config.type === 'item') {
+        return {
+            mode: 'item',
+            percent: '',
+            targetTotal: '',
+            itemId: String(config.itemId ?? fallbackItemId),
+            itemDiscountType: config.itemDiscountType ?? 'value',
+            itemValue: config.itemDiscountType === 'value' ? String(config.value ?? '') : '',
+            itemPercent: config.itemDiscountType === 'percent' ? String(config.value ?? '') : '',
+        }
+    }
+
+    return {
+        mode: 'percent',
+        percent: '',
+        targetTotal: '',
+        itemId: fallbackItemId,
+        itemDiscountType: 'value',
+        itemValue: '',
+        itemPercent: '',
+    }
+}
+
+function distributeDiscountAcrossItems(items, totalDiscount) {
+    const subtotal = roundCurrency(items.reduce((accumulator, item) => accumulator + item.lineSubtotal, 0))
+    let remainingDiscount = Math.min(roundCurrency(totalDiscount), subtotal)
+    let remainingBase = subtotal
+
+    return items.map((item, index) => {
+        if (remainingDiscount <= 0 || item.lineSubtotal <= 0) {
+            remainingBase = roundCurrency(remainingBase - item.lineSubtotal)
+            return { ...item, lineDiscount: 0 }
+        }
+
+        let lineDiscount
+
+        if (index === items.length - 1 || remainingBase <= 0) {
+            lineDiscount = Math.min(item.lineSubtotal, remainingDiscount)
+        } else {
+            lineDiscount = roundCurrency((remainingDiscount * item.lineSubtotal) / remainingBase)
+            lineDiscount = Math.min(item.lineSubtotal, lineDiscount)
+        }
+
+        remainingDiscount = roundCurrency(remainingDiscount - lineDiscount)
+        remainingBase = roundCurrency(remainingBase - item.lineSubtotal)
+
+        return { ...item, lineDiscount }
+    })
+}
+
+function resolvePricing(cart, config, selectedCartItem) {
+    const baseItems = cart.map((item) => ({
+        ...item,
+        qty: Number(item.qty),
+        lineSubtotal: roundCurrency(Number(item.sale_price) * Number(item.qty)),
+        lineDiscount: 0,
+    }))
+
+    const subtotal = roundCurrency(baseItems.reduce((accumulator, item) => accumulator + item.lineSubtotal, 0))
+    let discountedItems = baseItems
+    let summary = {
+        title: 'Sem desconto aplicado',
+        description: 'Use Shift + D para abrir o popup de desconto.',
+        itemHint: selectedCartItem ? `Item em foco: ${selectedCartItem.name}` : null,
+    }
+
+    if (config.type === 'percent') {
+        const percent = Math.max(0, Math.min(100, Number(config.percent || 0)))
+        const totalDiscount = roundCurrency((subtotal * percent) / 100)
+        discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
+        summary = {
+            title: `${percent}% de desconto na venda`,
+            description: `Abate total de ${formatMoney(totalDiscount)} distribuido entre os itens.`,
+            itemHint: null,
+        }
+    }
+
+    if (config.type === 'target_total') {
+        const targetTotal = Math.max(0, Math.min(subtotal, roundCurrency(config.targetTotal || 0)))
+        const totalDiscount = roundCurrency(Math.max(0, subtotal - targetTotal))
+        discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
+        summary = {
+            title: `Venda ajustada para ${formatMoney(targetTotal)}`,
+            description: `Desconto calculado automaticamente em ${formatMoney(totalDiscount)}.`,
+            itemHint: null,
+        }
+    }
+
+    if (config.type === 'item') {
+        discountedItems = baseItems.map((item) => {
+            if (String(item.id) !== String(config.itemId)) {
+                return item
+            }
+
+            const maxItemDiscount = item.lineSubtotal
+            const requestedDiscount =
+                config.itemDiscountType === 'percent'
+                    ? roundCurrency((item.lineSubtotal * Number(config.value || 0)) / 100)
+                    : roundCurrency(config.value || 0)
+
+            return {
+                ...item,
+                lineDiscount: Math.max(0, Math.min(maxItemDiscount, requestedDiscount)),
+            }
+        })
+
+        const discountedItem = cart.find((item) => String(item.id) === String(config.itemId))
+        summary = {
+            title: discountedItem ? `Desconto em ${discountedItem.name}` : 'Desconto por item',
+            description:
+                config.itemDiscountType === 'percent'
+                    ? `${Number(config.value || 0)}% aplicado no item selecionado.`
+                    : `${formatMoney(discountedItems.find((item) => String(item.id) === String(config.itemId))?.lineDiscount || 0)} abatido do item selecionado.`,
+            itemHint: discountedItem ? `Produto selecionado: ${discountedItem.name}` : null,
+        }
+    }
+
+    const items = discountedItems.map((item) => {
+        const lineDiscount = roundCurrency(item.lineDiscount || 0)
+        const lineTotal = roundCurrency(Math.max(0, item.lineSubtotal - lineDiscount))
+
+        return {
+            ...item,
+            lineDiscount,
+            lineTotal,
+            effectiveUnitPrice: item.qty > 0 ? roundCurrency(lineTotal / item.qty) : 0,
+        }
+    })
+
+    const discount = roundCurrency(items.reduce((accumulator, item) => accumulator + item.lineDiscount, 0))
+    const total = roundCurrency(Math.max(0, subtotal - discount))
+
+    return {
+        items,
+        subtotal,
+        discount,
+        total,
+        summary,
+    }
+}
+
+function buildPreviewConfigFromDraft(draft, subtotal) {
+    if (draft.mode === 'percent') {
+        return {
+            type: 'percent',
+            percent: draft.percent === '' ? 0 : roundCurrency(draft.percent),
+        }
+    }
+
+    if (draft.mode === 'target_total') {
+        return {
+            type: 'target_total',
+            targetTotal: draft.targetTotal === '' ? subtotal : roundCurrency(draft.targetTotal),
+        }
+    }
+
+    if (draft.mode === 'item') {
+        return {
+            type: 'item',
+            itemId: draft.itemId,
+            itemDiscountType: draft.itemDiscountType,
+            value:
+                draft.itemDiscountType === 'percent'
+                    ? draft.itemPercent === ''
+                        ? 0
+                        : roundCurrency(draft.itemPercent)
+                    : draft.itemValue === ''
+                      ? 0
+                      : roundCurrency(draft.itemValue),
+        }
+    }
+
+    return { type: 'none' }
+}
 
 export default function PosIndex({ categories, customers: initialCustomers, cashRegister }) {
     const [customers, setCustomers] = useState(initialCustomers)
@@ -30,10 +235,14 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     const [searchTerm, setSearchTerm] = useState('')
     const [products, setProducts] = useState([])
     const [cart, setCart] = useState([])
+    const [selectedCartItemId, setSelectedCartItemId] = useState(null)
     const [selectedCustomer, setSelectedCustomer] = useState('')
     const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
     const [customerSearch, setCustomerSearch] = useState('')
-    const [discount, setDiscount] = useState('0')
+    const [discountConfig, setDiscountConfig] = useState({ type: 'none' })
+    const [discountModalOpen, setDiscountModalOpen] = useState(false)
+    const [discountDraft, setDiscountDraft] = useState(buildDiscountDraft({ type: 'none' }))
+    const [cashReceived, setCashReceived] = useState('')
     const [notes, setNotes] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('cash')
     const [mixedPayments, setMixedPayments] = useState([])
@@ -115,16 +324,62 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             .catch(() => setCreditStatus(null))
     }, [selectedCustomer])
 
-    const totals = useMemo(() => {
-        const subtotal = cart.reduce((accumulator, item) => accumulator + item.sale_price * item.qty, 0)
-        const parsedDiscount = Number(discount || 0)
-
-        return {
-            subtotal,
-            discount: parsedDiscount,
-            total: Math.max(0, subtotal - parsedDiscount),
+    useEffect(() => {
+        if (!cart.length) {
+            setSelectedCartItemId(null)
+            return
         }
-    }, [cart, discount])
+
+        if (!cart.some((item) => item.id === selectedCartItemId)) {
+            setSelectedCartItemId(cart[0].id)
+        }
+    }, [cart, selectedCartItemId])
+
+    useEffect(() => {
+        if (discountConfig.type !== 'item') {
+            return
+        }
+
+        if (!cart.some((item) => String(item.id) === String(discountConfig.itemId))) {
+            setDiscountConfig({ type: 'none' })
+        }
+    }, [cart, discountConfig])
+
+    const selectedCartItem = useMemo(
+        () => cart.find((item) => item.id === selectedCartItemId) ?? null,
+        [cart, selectedCartItemId],
+    )
+
+    const pricing = useMemo(() => resolvePricing(cart, discountConfig, selectedCartItem), [cart, discountConfig, selectedCartItem])
+
+    const discountPreview = useMemo(() => {
+        const previewConfig = buildPreviewConfigFromDraft(discountDraft, pricing.subtotal)
+        return resolvePricing(cart, previewConfig, selectedCartItem)
+    }, [cart, discountDraft, pricing.subtotal, selectedCartItem])
+
+    const totals = useMemo(
+        () => ({
+            subtotal: pricing.subtotal,
+            discount: pricing.discount,
+            total: pricing.total,
+        }),
+        [pricing],
+    )
+
+    const cashReceivedAmount = useMemo(
+        () => (cashReceived === '' ? 0 : roundCurrency(cashReceived)),
+        [cashReceived],
+    )
+
+    const cashChange = useMemo(
+        () => Math.max(0, roundCurrency(cashReceivedAmount - totals.total)),
+        [cashReceivedAmount, totals.total],
+    )
+
+    const cashShortfall = useMemo(
+        () => (cashReceived === '' ? 0 : Math.max(0, roundCurrency(totals.total - cashReceivedAmount))),
+        [cashReceived, cashReceivedAmount, totals.total],
+    )
 
     const mixedTotal = useMemo(
         () => mixedPayments.reduce((accumulator, payment) => accumulator + Number(payment.amount || 0), 0),
@@ -189,8 +444,12 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
     function resetSale() {
         setCart([])
+        setSelectedCartItemId(null)
         setSelectedCustomer('')
-        setDiscount('0')
+        setDiscountConfig({ type: 'none' })
+        setDiscountDraft(buildDiscountDraft({ type: 'none' }))
+        setDiscountModalOpen(false)
+        setCashReceived('')
         setNotes('')
         setPaymentMethod('cash')
         setMixedPayments([])
@@ -229,6 +488,10 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         if (value !== 'mixed') {
             setMixedPayments([])
             setMixedDraft({ method: value === 'credit' ? 'credit' : 'cash', amount: '' })
+        }
+
+        if (value !== 'cash') {
+            setCashReceived('')
         }
     }
 
@@ -281,6 +544,114 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
     function handleOpenQuickCustomer() {
         closeCustomerPicker()
         setQuickCustomerOpen(true)
+    }
+
+    function openDiscountModal() {
+        if (!cart.length) {
+            showFeedback('error', 'Adicione ao menos um produto antes de aplicar desconto.')
+            return
+        }
+
+        setFeedback(null)
+        setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedCartItemId ?? cart[0]?.id ?? '')))
+        setDiscountModalOpen(true)
+    }
+
+    function closeDiscountModal() {
+        setDiscountModalOpen(false)
+    }
+
+    function handleDiscountDraftChange(field, value) {
+        setDiscountDraft((current) => ({ ...current, [field]: value }))
+    }
+
+    function handleClearDiscount() {
+        setDiscountConfig({ type: 'none' })
+        setDiscountDraft(buildDiscountDraft({ type: 'none' }, String(selectedCartItemId ?? cart[0]?.id ?? '')))
+        setFeedback(null)
+    }
+
+    function handleApplyDiscount(event) {
+        event.preventDefault()
+
+        if (!cart.length) {
+            setDiscountModalOpen(false)
+            return
+        }
+
+        if (discountDraft.mode === 'percent') {
+            const percent = Number(discountDraft.percent || 0)
+
+            if (percent <= 0 || percent > 100) {
+                showFeedback('error', 'Informe um percentual valido entre 0,01 e 100.')
+                return
+            }
+
+            setDiscountConfig({ type: 'percent', percent: roundCurrency(percent) })
+            setDiscountModalOpen(false)
+            setFeedback({ type: 'success', text: 'Desconto percentual aplicado na venda.' })
+            return
+        }
+
+        if (discountDraft.mode === 'target_total') {
+            const targetTotal = roundCurrency(discountDraft.targetTotal)
+
+            if (targetTotal < 0 || targetTotal >= pricing.subtotal) {
+                showFeedback('error', 'Informe um valor final menor que o subtotal atual da venda.')
+                return
+            }
+
+            setDiscountConfig({ type: 'target_total', targetTotal })
+            setDiscountModalOpen(false)
+            setFeedback({ type: 'success', text: 'Desconto por valor final aplicado na venda.' })
+            return
+        }
+
+        if (discountDraft.mode === 'item') {
+            const item = cart.find((entry) => String(entry.id) === String(discountDraft.itemId))
+
+            if (!item) {
+                showFeedback('error', 'Selecione um item valido para aplicar o desconto.')
+                return
+            }
+
+            const itemSubtotal = roundCurrency(Number(item.sale_price) * Number(item.qty))
+
+            if (discountDraft.itemDiscountType === 'percent') {
+                const percent = Number(discountDraft.itemPercent || 0)
+
+                if (percent <= 0 || percent > 100) {
+                    showFeedback('error', 'Informe um percentual valido para o desconto do item.')
+                    return
+                }
+
+                setDiscountConfig({
+                    type: 'item',
+                    itemId: String(item.id),
+                    itemDiscountType: 'percent',
+                    value: roundCurrency(percent),
+                })
+                setDiscountModalOpen(false)
+                setFeedback({ type: 'success', text: `Desconto aplicado ao item ${item.name}.` })
+                return
+            }
+
+            const amount = roundCurrency(discountDraft.itemValue)
+
+            if (amount <= 0 || amount > itemSubtotal) {
+                showFeedback('error', 'Informe um desconto menor ou igual ao total do item selecionado.')
+                return
+            }
+
+            setDiscountConfig({
+                type: 'item',
+                itemId: String(item.id),
+                itemDiscountType: 'value',
+                value: amount,
+            })
+            setDiscountModalOpen(false)
+            setFeedback({ type: 'success', text: `Desconto aplicado ao item ${item.name}.` })
+        }
     }
 
     async function handleQuickCustomerSubmit(event) {
@@ -476,6 +847,11 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
             return
         }
 
+        if (paymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) {
+            showFeedback('error', 'O valor entregue em dinheiro precisa cobrir o total da venda.')
+            return
+        }
+
         if (paymentMethod === 'mixed') {
             if (mixedPayments.length < 2) {
                 showFeedback('error', 'Adicione pelo menos duas parcelas para o pagamento misto.')
@@ -514,9 +890,13 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 method: 'post',
                 data: {
                     customer_id: selectedCustomer || null,
-                    discount: Number(discount || 0),
+                    discount: totals.discount,
                     notes,
-                    items: cart.map((item) => ({ id: item.id, qty: Number(item.qty) })),
+                    items: pricing.items.map((item) => ({
+                        id: item.id,
+                        qty: Number(item.qty),
+                        discount: Number(item.lineDiscount || 0),
+                    })),
                     payments,
                 },
             })
@@ -532,13 +912,15 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
 
     useEffect(() => {
         function handleShortcuts(event) {
-            const hasModalOpen = Boolean(cashReportModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen)
+            const hasModalOpen = Boolean(
+                cashReportModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen || discountModalOpen,
+            )
             const isReservedShiftShortcut =
                 event.shiftKey &&
                 !event.ctrlKey &&
                 !event.metaKey &&
                 !event.altKey &&
-                ['P', 'C', 'F', 'X'].includes(event.key.toUpperCase())
+                ['P', 'C', 'D', 'F', 'X'].includes(event.key.toUpperCase())
 
             if (event.key === 'Escape') {
                 if (cashReportModal) {
@@ -556,6 +938,12 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 if (quickCustomerOpen) {
                     event.preventDefault()
                     setQuickCustomerOpen(false)
+                    return
+                }
+
+                if (discountModalOpen) {
+                    event.preventDefault()
+                    closeDiscountModal()
                     return
                 }
 
@@ -592,6 +980,12 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                 return
             }
 
+            if (key === 'D' && cart.length) {
+                event.preventDefault()
+                openDiscountModal()
+                return
+            }
+
             if (key === 'F' && cashRegisterState && cart.length && !submitting) {
                 event.preventDefault()
                 handleFinalize()
@@ -612,6 +1006,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         closeCashRegisterModal,
         quickCustomerOpen,
         customerPickerOpen,
+        discountModalOpen,
         handleFinalize,
         handleOpenCloseCashRegister,
         cashRegisterState,
@@ -619,10 +1014,11 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
         submitting,
         loadingClosePreview,
         closingCashRegister,
+        openDiscountModal,
     ])
 
     return (
-        <AppLayout title="PDV">
+        <AppLayout title="Caixa">
             <div className="pos-page">
                 <div className="pos-column">
                     <section className="pos-hero ui-card">
@@ -632,7 +1028,7 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                                     <span className={`ui-badge ${cashRegisterState ? 'success' : 'danger'}`}>
                                         {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
-                                    <h1>Caixa</h1>
+                                    <h1>Ponto de venda</h1>
                                     <div className="pos-hero-shortcuts">
                                         <span className="pos-hero-shortcuts-title">Atalhos rapidos do caixa e da venda</span>
                                         <div className="pos-shortcut-list">
@@ -671,7 +1067,13 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                         onAddProduct={handleAddProduct}
                     />
 
-                    <CartPanel cart={cart} onQuantityChange={handleQuantityChange} onRemove={handleRemove} />
+                    <CartPanel
+                        cart={pricing.items}
+                        selectedItemId={selectedCartItemId}
+                        onSelectItem={setSelectedCartItemId}
+                        onQuantityChange={handleQuantityChange}
+                        onRemove={handleRemove}
+                    />
                 </div>
 
                 <CheckoutPanel
@@ -679,8 +1081,8 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     selectedCustomerData={selectedCustomerData}
                     onOpenCustomerPicker={() => setCustomerPickerOpen(true)}
                     onClearCustomer={handleClearCustomer}
-                    discount={discount}
-                    onDiscountChange={setDiscount}
+                    discountSummary={pricing.summary}
+                    onOpenDiscountModal={openDiscountModal}
                     notes={notes}
                     onNotesChange={setNotes}
                     paymentMethod={paymentMethod}
@@ -695,6 +1097,10 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onQuickCustomer={handleOpenQuickCustomer}
                     creditStatus={creditStatus}
                     totals={totals}
+                    cashReceived={cashReceived}
+                    onCashReceivedChange={setCashReceived}
+                    cashChange={cashChange}
+                    cashShortfall={cashShortfall}
                     cashRegister={cashRegisterState}
                     openingCashRegister={openingCashRegister}
                     loadingClosePreview={loadingClosePreview}
@@ -705,6 +1111,175 @@ export default function PosIndex({ categories, customers: initialCustomers, cash
                     onFinalize={handleFinalize}
                 />
             </div>
+
+            {discountModalOpen ? (
+                <div className="pos-quick-customer" onClick={closeDiscountModal}>
+                    <form className="pos-quick-customer-card pos-discount-modal-card" onSubmit={handleApplyDiscount} onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Aplicar desconto</h2>
+                                <p>Escolha como quer conceder o desconto para esta venda.</p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={closeDiscountModal}>
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="pos-discount-mode-grid">
+                            <button
+                                type="button"
+                                className={`pos-discount-mode ${discountDraft.mode === 'percent' ? 'active' : ''}`}
+                                onClick={() => handleDiscountDraftChange('mode', 'percent')}
+                            >
+                                <strong>Percentual</strong>
+                                <span>Aplica uma porcentagem sobre a venda inteira.</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`pos-discount-mode ${discountDraft.mode === 'target_total' ? 'active' : ''}`}
+                                onClick={() => handleDiscountDraftChange('mode', 'target_total')}
+                            >
+                                <strong>Valor final</strong>
+                                <span>Define o total final desejado para a venda.</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`pos-discount-mode ${discountDraft.mode === 'item' ? 'active' : ''}`}
+                                onClick={() => handleDiscountDraftChange('mode', 'item')}
+                            >
+                                <strong>Produto especifico</strong>
+                                <span>Desconta apenas o item selecionado no carrinho.</span>
+                            </button>
+                        </div>
+
+                        {discountDraft.mode === 'percent' ? (
+                            <label className="pos-discount-form-field">
+                                Percentual de desconto
+                                <input
+                                    className="ui-input"
+                                    type="number"
+                                    min="0.01"
+                                    max="100"
+                                    step="0.01"
+                                    value={discountDraft.percent}
+                                    onChange={(event) => handleDiscountDraftChange('percent', event.target.value)}
+                                />
+                                <small>Subtotal atual: {formatMoney(pricing.subtotal)}</small>
+                            </label>
+                        ) : null}
+
+                        {discountDraft.mode === 'target_total' ? (
+                            <label className="pos-discount-form-field">
+                                Valor final da venda
+                                <input
+                                    className="ui-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={discountDraft.targetTotal}
+                                    onChange={(event) => handleDiscountDraftChange('targetTotal', event.target.value)}
+                                />
+                                <small>Subtotal atual: {formatMoney(pricing.subtotal)}</small>
+                            </label>
+                        ) : null}
+
+                        {discountDraft.mode === 'item' ? (
+                            <div className="pos-discount-item-grid">
+                                <label className="pos-discount-form-field">
+                                    Produto
+                                    <select
+                                        className="ui-select"
+                                        value={discountDraft.itemId}
+                                        onChange={(event) => handleDiscountDraftChange('itemId', event.target.value)}
+                                    >
+                                        {pricing.items.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name} - {formatMoney(item.lineSubtotal)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <div className="pos-discount-type-toggle">
+                                    <button
+                                        type="button"
+                                        className={discountDraft.itemDiscountType === 'value' ? 'active' : ''}
+                                        onClick={() => handleDiscountDraftChange('itemDiscountType', 'value')}
+                                    >
+                                        Valor
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={discountDraft.itemDiscountType === 'percent' ? 'active' : ''}
+                                        onClick={() => handleDiscountDraftChange('itemDiscountType', 'percent')}
+                                    >
+                                        Percentual
+                                    </button>
+                                </div>
+
+                                {discountDraft.itemDiscountType === 'value' ? (
+                                    <label className="pos-discount-form-field">
+                                        Valor do desconto no item
+                                        <input
+                                            className="ui-input"
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            value={discountDraft.itemValue}
+                                            onChange={(event) => handleDiscountDraftChange('itemValue', event.target.value)}
+                                        />
+                                    </label>
+                                ) : (
+                                    <label className="pos-discount-form-field">
+                                        Percentual no item
+                                        <input
+                                            className="ui-input"
+                                            type="number"
+                                            min="0.01"
+                                            max="100"
+                                            step="0.01"
+                                            value={discountDraft.itemPercent}
+                                            onChange={(event) => handleDiscountDraftChange('itemPercent', event.target.value)}
+                                        />
+                                    </label>
+                                )}
+                            </div>
+                        ) : null}
+
+                        <div className="pos-discount-preview">
+                            <div>
+                                <span>Subtotal atual</span>
+                                <strong>{formatMoney(pricing.subtotal)}</strong>
+                            </div>
+                            <div>
+                                <span>Desconto atual</span>
+                                <strong>{formatMoney(pricing.discount)}</strong>
+                            </div>
+                            <div>
+                                <span>Total atual</span>
+                                <strong>{formatMoney(pricing.total)}</strong>
+                            </div>
+                            <div>
+                                <span>Desconto da previa</span>
+                                <strong>{formatMoney(discountPreview.discount)}</strong>
+                            </div>
+                            <div>
+                                <span>Total apos aplicar</span>
+                                <strong>{formatMoney(discountPreview.total)}</strong>
+                            </div>
+                        </div>
+
+                        <div className="pos-quick-customer-actions">
+                            <button className="ui-button-ghost" type="button" onClick={handleClearDiscount}>
+                                Remover desconto
+                            </button>
+                            <button className="pos-finalize-button" type="submit">
+                                Aplicar desconto
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ) : null}
 
             {closeCashRegisterModal ? (
                 <div className="pos-quick-customer" onClick={closeCloseCashRegisterModal}>

@@ -1,20 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { formatMoney, formatNumber } from '@/lib/format'
 
-export default function CartPanel({ cart, onQuantityChange, onRemove }) {
-    const [selectedItemId, setSelectedItemId] = useState(null)
-
-    useEffect(() => {
-        if (!cart.length) {
-            setSelectedItemId(null)
-            return
-        }
-
-        if (!cart.some((item) => item.id === selectedItemId)) {
-            setSelectedItemId(cart[0].id)
-        }
-    }, [cart, selectedItemId])
-
+export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuantityChange, onRemove }) {
     const selectedItem = useMemo(
         () => cart.find((item) => item.id === selectedItemId) ?? null,
         [cart, selectedItemId],
@@ -43,6 +30,18 @@ export default function CartPanel({ cart, onQuantityChange, onRemove }) {
                                     <small>Estoque atual</small>
                                     <strong>{formatNumber(Number(selectedItem.stock_quantity ?? 0))}</strong>
                                 </div>
+                                <div>
+                                    <small>Subtotal</small>
+                                    <strong>{formatMoney(selectedItem.lineSubtotal ?? selectedItem.sale_price * selectedItem.qty)}</strong>
+                                </div>
+                                <div>
+                                    <small>Desconto</small>
+                                    <strong>{formatMoney(selectedItem.lineDiscount ?? 0)}</strong>
+                                </div>
+                                <div>
+                                    <small>Total do item</small>
+                                    <strong>{formatMoney(selectedItem.lineTotal ?? selectedItem.sale_price * selectedItem.qty)}</strong>
+                                </div>
                                 {selectedItem.code ? (
                                     <div>
                                         <small>Codigo</small>
@@ -64,12 +63,15 @@ export default function CartPanel({ cart, onQuantityChange, onRemove }) {
                             <button
                                 type="button"
                                 className="pos-cart-summary"
-                                onClick={() => setSelectedItemId(item.id)}
+                                onClick={() => onSelectItem(item.id)}
                             >
                                 <div className="pos-cart-copy">
                                     <strong>{item.name}</strong>
                                     <div className="pos-inline-metadata">
                                         <span className="pos-meta-pill">Unit. {formatMoney(item.sale_price)}</span>
+                                        {Number(item.lineDiscount || 0) > 0 ? (
+                                            <span className="pos-meta-pill">Desc. {formatMoney(item.lineDiscount)}</span>
+                                        ) : null}
                                         {item.code ? <span className="pos-meta-pill">Cod. {item.code}</span> : null}
                                         {item.barcode ? <span className="pos-meta-pill">EAN {item.barcode}</span> : null}
                                     </div>
@@ -95,7 +97,7 @@ export default function CartPanel({ cart, onQuantityChange, onRemove }) {
                                 </div>
                                 <div className="pos-cart-metric total">
                                     <small>Total</small>
-                                    <strong>{formatMoney(item.sale_price * item.qty)}</strong>
+                                    <strong>{formatMoney(item.lineTotal ?? item.sale_price * item.qty)}</strong>
                                 </div>
                                 <button
                                     className="ui-tooltip"
