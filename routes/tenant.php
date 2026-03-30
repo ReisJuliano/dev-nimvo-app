@@ -10,6 +10,7 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Fashion\FashionModuleApiController;
 use App\Http\Controllers\Tenant\Fashion\FashionModulePageController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
+use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
@@ -127,6 +128,9 @@ Route::middleware('auth')->group(function () {
             Route::put('/fashion/online-orders/{orderDraft}', [FashionModuleApiController::class, 'updateOnlineOrder'])->name('api.fashion.online-orders.update');
             Route::post('/fashion/online-orders/{orderDraft}/send-to-cashier', [FashionModuleApiController::class, 'sendOnlineOrderToCashier'])->name('api.fashion.online-orders.send-to-cashier');
             Route::put('/fashion/whatsapp/settings', [FashionModuleApiController::class, 'updateWhatsAppSettings'])->name('api.fashion.whatsapp.settings');
+            Route::post('/operations/{module}/records', [OperationsApiController::class, 'store'])->name('api.operations.store');
+            Route::put('/operations/{module}/records/{record}', [OperationsApiController::class, 'update'])->whereNumber('record')->name('api.operations.update');
+            Route::delete('/operations/{module}/records/{record}', [OperationsApiController::class, 'destroy'])->whereNumber('record')->name('api.operations.destroy');
         });
     });
 });

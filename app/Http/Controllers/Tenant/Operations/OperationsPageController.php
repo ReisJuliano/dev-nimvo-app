@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant\Operations;
 
 use App\Http\Controllers\Controller;
 use App\Services\Tenant\OperationsOverviewService;
+use App\Services\Tenant\OperationsWorkspaceService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,13 +14,18 @@ class OperationsPageController extends Controller
 {
     public function __invoke(
         Request $request,
-        OperationsOverviewService $service,
+        OperationsOverviewService $overviewService,
+        OperationsWorkspaceService $workspaceService,
         TenantSettingsService $settingsService,
         string $module,
     ): Response
     {
+        if ($workspaceService->isWorkspaceModule($module)) {
+            return Inertia::render('Operations/Workspace', $workspaceService->build($module));
+        }
+
         return Inertia::render('Operations/Overview', [
-            'module' => $service->build($module, [
+            'module' => $overviewService->build($module, [
                 'from' => $request->query('from'),
                 'to' => $request->query('to'),
                 'product' => $request->query('product'),

@@ -16,6 +16,7 @@ class PosService
     public function __construct(
         protected OrderDraftService $orderDraftService,
         protected TenantSettingsService $settingsService,
+        protected InventoryMovementService $inventoryMovementService,
     ) {
     }
 
@@ -211,7 +212,13 @@ class PosService
                     'profit' => round($lineTotal - ((float) $product->cost_price * $quantity), 2),
                 ]);
 
-                $product->decrement('stock_quantity', $quantity);
+                $this->inventoryMovementService->apply($product, -$quantity, 'sale', [
+                    'user_id' => $userId,
+                    'reference' => $sale,
+                    'unit_cost' => $product->cost_price,
+                    'notes' => "Saida pela venda {$sale->sale_number}",
+                    'occurred_at' => $sale->created_at,
+                ]);
             }
 
             foreach ($resolvedPayments as $payment) {

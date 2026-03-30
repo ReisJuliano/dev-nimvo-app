@@ -3,6 +3,7 @@
 namespace App\Services\Tenant\Operations;
 
 use App\Models\Tenant\Category;
+use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Supplier;
 use App\Services\Tenant\Operations\Concerns\BuildsOverviewPages;
@@ -185,50 +186,61 @@ class InventoryOverviewService
     public function stockHistory(array $filters): array
     {
         [$from, $to] = $this->resolvePeriod($filters);
-        $outbound = DB::table('sale_items')
-            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->join('products', 'products.id', '=', 'sale_items.product_id')
-            ->where('sales.status', 'finalized')
-            ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+        $movementSummary = DB::table('inventory_movements')
+            ->join('products', 'products.id', '=', 'inventory_movements.product_id')
+            ->whereBetween('inventory_movements.occurred_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->groupBy('products.id', 'products.name', 'products.code')
-            ->orderByDesc(DB::raw('SUM(sale_items.quantity)'))
+            ->orderByDesc(DB::raw('SUM(ABS(inventory_movements.quantity_delta))'))
             ->limit(15)
-            ->get(['products.code', 'products.name', DB::raw('SUM(sale_items.quantity) as quantity'), DB::raw('SUM(sale_items.total) as total')]);
-        $recentUpdates = Product::query()
-            ->where('active', true)
-            ->latest('updated_at')
+            ->get([
+                'products.code',
+                'products.name',
+                DB::raw('SUM(inventory_movements.quantity_delta) as balance_delta'),
+                DB::raw('SUM(CASE WHEN inventory_movements.quantity_delta < 0 THEN ABS(inventory_movements.quantity_delta) ELSE 0 END) as outbound_quantity'),
+                DB::raw('SUM(CASE WHEN inventory_movements.quantity_delta > 0 THEN inventory_movements.quantity_delta ELSE 0 END) as inbound_quantity'),
+            ]);
+
+        $recentMovements = InventoryMovement::query()
+            ->with(['product:id,name,code'])
+            ->whereBetween('occurred_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->latest('occurred_at')
             ->limit(12)
             ->get()
-            ->map(fn (Product $product) => [
-                'code' => $product->code,
-                'name' => $product->name,
-                'stock_quantity' => (float) $product->stock_quantity,
-                'updated_at' => $product->updated_at?->toIso8601String(),
+            ->map(fn (InventoryMovement $movement) => [
+                'code' => $movement->product?->code,
+                'name' => $movement->product?->name,
+                'type' => $movement->type,
+                'quantity_delta' => (float) $movement->quantity_delta,
+                'stock_after' => (float) $movement->stock_after,
+                'occurred_at' => $movement->occurred_at?->toIso8601String(),
             ]);
 
         return $this->page(
             'Movimentacao de estoque',
             'Saidas do periodo e ultimas atualizacoes.',
             [
-                $this->metric('Saidas registradas', $outbound->sum('quantity'), 'number'),
-                $this->metric('Valor movimentado', $outbound->sum('total'), 'money'),
-                $this->metric('Itens com giro', $outbound->count()),
-                $this->metric('Atualizacoes recentes', $recentUpdates->count()),
+                $this->metric('Saidas registradas', $movementSummary->sum('outbound_quantity'), 'number'),
+                $this->metric('Entradas registradas', $movementSummary->sum('inbound_quantity'), 'number'),
+                $this->metric('Itens com giro', $movementSummary->count()),
+                $this->metric('Movimentos recentes', $recentMovements->count()),
             ],
             [],
             [
-                $this->table('Saidas por produto', [
+                $this->table('Movimentacao por produto', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
-                    ['key' => 'quantity', 'label' => 'Quantidade', 'format' => 'number'],
-                    ['key' => 'total', 'label' => 'Valor', 'format' => 'money'],
-                ], $outbound, 'Nenhuma saida registrada no periodo.'),
-                $this->table('Ultimas atualizacoes', [
+                    ['key' => 'outbound_quantity', 'label' => 'Saidas', 'format' => 'number'],
+                    ['key' => 'inbound_quantity', 'label' => 'Entradas', 'format' => 'number'],
+                    ['key' => 'balance_delta', 'label' => 'Saldo liquido', 'format' => 'number'],
+                ], $movementSummary, 'Nenhuma movimentacao registrada no periodo.'),
+                $this->table('Ultimos movimentos', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
-                    ['key' => 'stock_quantity', 'label' => 'Saldo', 'format' => 'number'],
-                    ['key' => 'updated_at', 'label' => 'Atualizado em', 'format' => 'datetime'],
-                ], $recentUpdates, 'Nenhuma atualizacao encontrada.'),
+                    ['key' => 'type', 'label' => 'Tipo'],
+                    ['key' => 'quantity_delta', 'label' => 'Delta', 'format' => 'number'],
+                    ['key' => 'stock_after', 'label' => 'Saldo final', 'format' => 'number'],
+                    ['key' => 'occurred_at', 'label' => 'Movimentado em', 'format' => 'datetime'],
+                ], $recentMovements, 'Nenhum movimento encontrado.'),
             ],
             $from,
             $to,
