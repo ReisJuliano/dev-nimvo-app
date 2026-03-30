@@ -1,19 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppSidebar from '@/Components/Layout/AppSidebar'
 import AppTopbar from '@/Components/Layout/AppTopbar'
 import { buildNavigationGroups } from '@/Components/Layout/navigation'
+import { apiRequest } from '@/lib/http'
 import useModules from '@/hooks/useModules'
 import './app-layout.css'
 
 export default function AppLayout({ children, title = 'Inicio', settingsOverride = null }) {
-    const { auth } = usePage().props
+    const { auth, tenant, appSettings, tenantNavigationCatalog } = usePage().props
     const currentUrl = usePage().url
+    const authUserId = auth?.user?.id ?? null
+    const tenantId = tenant?.id ?? null
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
     const [currentTime, setCurrentTime] = useState('')
     const [currentDate, setCurrentDate] = useState('')
-    const moduleState = useModules(settingsOverride)
+    const [shellState, setShellState] = useState({
+        settings: appSettings ?? null,
+        navigationCatalog: tenantNavigationCatalog ?? [],
+    })
+    const moduleState = useModules(settingsOverride ?? shellState.settings)
+
+    useEffect(() => {
+        setShellState({
+            settings: appSettings ?? null,
+            navigationCatalog: tenantNavigationCatalog ?? [],
+        })
+    }, [appSettings, tenantId, tenantNavigationCatalog])
 
     useEffect(() => {
         function tick() {
@@ -41,6 +55,49 @@ export default function AppLayout({ children, title = 'Inicio', settingsOverride
         return () => clearInterval(interval)
     }, [])
 
+    const refreshSystemNavigation = useEffectEvent(async () => {
+        if (settingsOverride != null || !tenantId || !authUserId) {
+            return
+        }
+
+        try {
+            const response = await apiRequest('/api/app-shell')
+
+            setShellState({
+                settings: response.settings ?? null,
+                navigationCatalog: response.navigationCatalog ?? [],
+            })
+        } catch {
+            // Ignore background refresh failures to avoid noisy UI.
+        }
+    })
+
+    useEffect(() => {
+        if (settingsOverride != null || !tenantId || !authUserId) {
+            return undefined
+        }
+
+        refreshSystemNavigation()
+
+        function handleWindowFocus() {
+            refreshSystemNavigation()
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === 'visible') {
+                refreshSystemNavigation()
+            }
+        }
+
+        window.addEventListener('focus', handleWindowFocus)
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            window.removeEventListener('focus', handleWindowFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    }, [authUserId, refreshSystemNavigation, settingsOverride, tenantId])
+
     function handleLogout() {
         router.post('/logout')
     }
@@ -57,11 +114,15 @@ export default function AppLayout({ children, title = 'Inicio', settingsOverride
         setSidebarOpen(false)
     }
 
-    const navigationGroups = buildNavigationGroups({
-        authRole: auth?.user?.role,
-        modules: moduleState.modules,
-        capabilities: moduleState.capabilities,
-    })
+    const navigationGroups = useMemo(
+        () => buildNavigationGroups({
+            authRole: auth?.user?.role,
+            modules: moduleState.modules,
+            capabilities: moduleState.capabilities,
+            catalog: shellState.navigationCatalog,
+        }),
+        [auth?.user?.role, moduleState.capabilities, moduleState.modules, shellState.navigationCatalog],
+    )
     const userRoleLabel = auth?.user?.role === 'admin' ? 'Administrador' : 'Operacao'
 
     return (

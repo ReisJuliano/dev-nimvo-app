@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -22,7 +23,17 @@ class TenantRoutesMiddlewareTest extends TestCase
 
         $this->assertContains(InitializeTenancyByDomain::class, $dashboardMiddleware);
         $this->assertContains(PreventAccessFromCentralDomains::class, $dashboardMiddleware);
+        $this->assertContains(HandleInertiaRequests::class, $dashboardMiddleware);
         $this->assertContains(InitializeTenancyByDomain::class, $ordersMiddleware);
         $this->assertContains(PreventAccessFromCentralDomains::class, $ordersMiddleware);
+        $this->assertContains(HandleInertiaRequests::class, $ordersMiddleware);
+        $this->assertLessThan(
+            array_search(HandleInertiaRequests::class, $dashboardMiddleware, true),
+            array_search(InitializeTenancyByDomain::class, $dashboardMiddleware, true),
+        );
+        $this->assertLessThan(
+            array_search(HandleInertiaRequests::class, $ordersMiddleware, true),
+            array_search(InitializeTenancyByDomain::class, $ordersMiddleware, true),
+        );
     }
 }

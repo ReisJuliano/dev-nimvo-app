@@ -8,20 +8,21 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function() {
-            \Illuminate\Support\Facades\Route::middleware('web')
+            \Illuminate\Support\Facades\Route::middleware([
+                'web',
+                \App\Http\Middleware\HandleInertiaRequests::class,
+            ])
                 ->group(base_path('routes/central.php'));
 
             \Illuminate\Support\Facades\Route::middleware([
-                'web',
                 \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
                 \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+                'web',
+                \App\Http\Middleware\HandleInertiaRequests::class,
             ])->group(base_path('routes/tenant.php'));
         }
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-        ]);
         $middleware->alias([
             'password.changed' => \App\Http\Middleware\Tenant\EnsurePasswordIsChanged::class,
             'module.enabled' => \App\Http\Middleware\Tenant\EnsureModuleIsEnabled::class,

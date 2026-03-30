@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Tenant\AppShellApiController;
 use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
@@ -38,6 +39,9 @@ Route::middleware('auth')->group(function () {
         ->name('password.change.show');
     Route::put('/change-password', [PasswordChangeController::class, 'update'])
         ->name('password.change.update');
+    Route::get('/api/app-shell', AppShellApiController::class)
+        ->middleware(EnsurePasswordIsChanged::class)
+        ->name('api.app-shell.show');
 
     Route::middleware([EnsurePasswordIsChanged::class, 'module.enabled'])->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
