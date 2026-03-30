@@ -3,8 +3,14 @@ export default function ProductToolbar({
     onSearchChange,
     categoryId,
     onCategoryChange,
+    collection,
+    onCollectionChange,
+    collections,
+    visibility,
+    onVisibilityChange,
     categories,
     onCreate,
+    isFashionMode = false,
 }) {
     const normalizedSearch =
         search == null || String(search).toLowerCase() === 'null'
@@ -19,7 +25,11 @@ export default function ProductToolbar({
                     <input
                         className="products-input"
                         type="search"
-                        placeholder="Buscar por nome, codigo ou EAN"
+                        placeholder={
+                            isFashionMode
+                                ? 'Buscar por nome, codigo, referencia, cor, tamanho ou colecao'
+                                : 'Buscar por nome, codigo ou EAN'
+                        }
                         value={normalizedSearch}
                         onChange={(event) => onSearchChange(event.target.value)}
                     />
@@ -37,9 +47,40 @@ export default function ProductToolbar({
                         </option>
                     ))}
                 </select>
+
+                {isFashionMode ? (
+                    <select
+                        className="products-input"
+                        value={collection}
+                        onChange={(event) => onCollectionChange(event.target.value)}
+                    >
+                        <option value="">Todas as colecoes</option>
+                        {collections.map((collectionName) => (
+                            <option key={collectionName} value={collectionName}>
+                                {collectionName}
+                            </option>
+                        ))}
+                    </select>
+                ) : null}
+
+                {isFashionMode ? (
+                    <select
+                        className="products-input"
+                        value={visibility}
+                        onChange={(event) => onVisibilityChange(event.target.value)}
+                    >
+                        <option value="all">Toda a vitrine</option>
+                        <option value="published">Somente publicados</option>
+                        <option value="hidden">Somente ocultos</option>
+                    </select>
+                ) : null}
             </div>
 
-            <button className="products-primary-button ui-tooltip" onClick={onCreate} data-tooltip="Cadastrar novo item">
+            <button
+                className="products-primary-button ui-tooltip"
+                onClick={onCreate}
+                data-tooltip={isFashionMode ? 'Cadastrar nova peca ou variante' : 'Cadastrar novo item'}
+            >
                 <i className="fa-solid fa-plus" />
                 Novo produto
             </button>

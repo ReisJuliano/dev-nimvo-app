@@ -11,11 +11,12 @@ use Illuminate\Validation\ValidationException;
 
 class OrderDraftService
 {
-    public function activeDrafts(): array
+    public function activeDrafts(array $channels = [OrderDraft::CHANNEL_STORE]): array
     {
         return OrderDraft::query()
             ->with(['customer:id,name', 'user:id,name'])
             ->whereIn('status', [OrderDraft::STATUS_DRAFT, OrderDraft::STATUS_SENT_TO_CASHIER])
+            ->when($channels !== [], fn ($query) => $query->whereIn('channel', $channels))
             ->orderByRaw("CASE WHEN status = ? THEN 0 ELSE 1 END", [OrderDraft::STATUS_DRAFT])
             ->latest('updated_at')
             ->get()
@@ -24,15 +25,33 @@ class OrderDraftService
             ->all();
     }
 
-    public function pendingCheckoutDrafts(): array
+    public function pendingCheckoutDrafts(?array $channels = null): array
     {
         return OrderDraft::query()
             ->with(['customer:id,name', 'user:id,name'])
             ->where('status', OrderDraft::STATUS_SENT_TO_CASHIER)
             ->whereNull('sale_id')
+            ->when(is_array($channels), fn ($query) => $query->whereIn('channel', $channels))
             ->latest('sent_to_cashier_at')
             ->get()
             ->map(fn (OrderDraft $draft) => $this->toSummary($draft))
+            ->values()
+            ->all();
+    }
+
+    public function channelDrafts(array $channels, bool $detailed = false): array
+    {
+        return OrderDraft::query()
+            ->with([
+                'customer:id,name,phone',
+                'user:id,name',
+                'items' => fn ($query) => $query->with('product:id,stock_quantity')->orderBy('id'),
+            ])
+            ->whereIn('channel', $channels)
+            ->whereIn('status', [OrderDraft::STATUS_DRAFT, OrderDraft::STATUS_SENT_TO_CASHIER])
+            ->latest('updated_at')
+            ->get()
+            ->map(fn (OrderDraft $draft) => $detailed ? $this->toDetail($draft) : $this->toSummary($draft))
             ->values()
             ->all();
     }
@@ -61,11 +80,15 @@ class OrderDraftService
             ->find($draftId);
     }
 
-    public function create(int $userId): OrderDraft
+    public function create(int $userId, array $attributes = []): OrderDraft
     {
         return OrderDraft::query()->create([
             'user_id' => $userId,
-            'type' => 'comanda',
+            'type' => $attributes['type'] ?? 'comanda',
+            'channel' => $attributes['channel'] ?? OrderDraft::CHANNEL_STORE,
+            'reference' => $this->normalizeReference($attributes['reference'] ?? null),
+            'customer_id' => $attributes['customer_id'] ?? null,
+            'notes' => $attributes['notes'] ?? null,
             'status' => OrderDraft::STATUS_DRAFT,
             'subtotal' => 0,
             'total' => 0,
@@ -98,6 +121,7 @@ class OrderDraftService
 
             $draft->forceFill([
                 'type' => $payload['type'],
+                'channel' => $payload['channel'] ?? $draft->channel ?? OrderDraft::CHANNEL_STORE,
                 'reference' => $this->normalizeReference($payload['reference'] ?? null),
                 'customer_id' => $payload['customer_id'] ?? null,
                 'notes' => $payload['notes'] ?? null,
@@ -188,6 +212,7 @@ class OrderDraftService
         return [
             'id' => $draft->id,
             'type' => $draft->type,
+            'channel' => $draft->channel,
             'reference' => $draft->reference,
             'label' => $this->displayLabel($draft),
             'status' => $draft->status,

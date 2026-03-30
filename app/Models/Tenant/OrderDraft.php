@@ -14,12 +14,16 @@ class OrderDraft extends Model
     public const STATUS_DRAFT = 'draft';
     public const STATUS_SENT_TO_CASHIER = 'sent_to_cashier';
     public const STATUS_COMPLETED = 'completed';
+    public const CHANNEL_STORE = 'store';
+    public const CHANNEL_SITE = 'site';
+    public const CHANNEL_WHATSAPP = 'whatsapp';
 
     protected $fillable = [
         'user_id',
         'customer_id',
         'sale_id',
         'type',
+        'channel',
         'reference',
         'status',
         'subtotal',

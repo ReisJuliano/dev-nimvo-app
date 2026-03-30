@@ -16,6 +16,11 @@ class Product extends Model
         'barcode',
         'name',
         'description',
+        'style_reference',
+        'color',
+        'size',
+        'collection',
+        'catalog_visible',
         'category_id',
         'supplier_id',
         'unit',
@@ -28,6 +33,7 @@ class Product extends Model
 
     protected $casts = [
         'active' => 'boolean',
+        'catalog_visible' => 'boolean',
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'stock_quantity' => 'decimal:3',

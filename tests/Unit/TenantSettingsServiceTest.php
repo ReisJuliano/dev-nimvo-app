@@ -16,6 +16,9 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertTrue($restaurantPreset['modules']['comandas']);
         $this->assertTrue($restaurantPreset['modules']['pdv_restaurante']);
         $this->assertTrue($restaurantPreset['modules']['mesas']);
+        $this->assertTrue($restaurantPreset['modules']['fichas_tecnicas']);
+        $this->assertTrue($restaurantPreset['modules']['cozinha']);
+        $this->assertTrue($restaurantPreset['modules']['delivery']);
         $this->assertFalse($restaurantPreset['modules']['pesagem']);
 
         $capabilities = $service->moduleCapabilities($restaurantPreset['modules']);
@@ -23,7 +26,35 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertTrue($capabilities['pdv']);
         $this->assertTrue($capabilities['pedidos']);
         $this->assertTrue($capabilities['caixa']);
+        $this->assertTrue($capabilities['fichas_tecnicas']);
+        $this->assertTrue($capabilities['cozinha']);
         $this->assertFalse($capabilities['crediario']);
+    }
+
+    public function test_clothing_store_preset_enables_variations_and_digital_modules(): void
+    {
+        $service = new TenantSettingsService();
+        $clothingPreset = collect($service->businessPresets())->firstWhere('key', 'loja_roupas');
+
+        $this->assertNotNull($clothingPreset);
+        $this->assertTrue($clothingPreset['modules']['pdv_simples']);
+        $this->assertTrue($clothingPreset['modules']['produtos_variacao']);
+        $this->assertTrue($clothingPreset['modules']['trocas_devolucoes']);
+        $this->assertTrue($clothingPreset['modules']['promocoes']);
+        $this->assertTrue($clothingPreset['modules']['catalogo_online']);
+        $this->assertTrue($clothingPreset['modules']['pedidos_online']);
+        $this->assertTrue($clothingPreset['modules']['whatsapp_pedidos']);
+        $this->assertFalse($clothingPreset['modules']['comandas']);
+
+        $capabilities = $service->moduleCapabilities($clothingPreset['modules']);
+
+        $this->assertTrue($capabilities['pdv']);
+        $this->assertTrue($capabilities['trocas_devolucoes']);
+        $this->assertTrue($capabilities['promocoes']);
+        $this->assertTrue($capabilities['catalogo_online']);
+        $this->assertTrue($capabilities['pedidos_online']);
+        $this->assertTrue($capabilities['whatsapp_pedidos']);
+        $this->assertFalse($capabilities['pedidos']);
     }
 
     public function test_merge_with_defaults_converts_legacy_settings_into_modular_flags(): void

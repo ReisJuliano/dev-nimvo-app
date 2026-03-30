@@ -8,6 +8,8 @@ use App\Services\Tenant\Operations\UsersOverviewService;
 
 class OperationsOverviewService
 {
+    protected array $activeFilters = [];
+
     public function __construct(
         protected SalesOverviewService $sales,
         protected InventoryOverviewService $inventory,
@@ -17,6 +19,8 @@ class OperationsOverviewService
 
     public function build(string $module, array $filters = [], array $context = []): array
     {
+        $this->activeFilters = $filters;
+
         return match ($module) {
             'pedidos' => $this->sales->orders($filters),
             'fiado' => $this->sales->credit($filters),
@@ -33,16 +37,58 @@ class OperationsOverviewService
             'usuarios' => $this->users->users($filters),
             'producao' => $this->moduleWorkspace(
                 'Producao',
-                'Centralize preparos, receitas e rotinas internas quando a operacao pedir um fluxo de padaria ou manufatura leve.',
+                'Centralize a producao diaria, separando preparos internos do fluxo direto de venda no caixa.',
                 [
-                    ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece apenas quando a producao esta habilitada.'],
-                    ['label' => 'Uso recomendado', 'value' => 'Padaria e preparo interno', 'meta' => 'Bom para separar processos de venda e fabricacao.'],
-                    ['label' => 'Conexao com estoque', 'value' => 'Apoia insumos e saidas', 'meta' => 'Ajuda a manter o catalogo alinhado com a producao.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Padaria e preparo interno', 'meta' => 'Bom para organizar fornadas, lotes e reposicao da vitrine.'],
+                    ['label' => 'Conexao com estoque', 'value' => 'Entrada de itens prontos', 'meta' => 'Ajuda a transformar insumos em itens disponiveis para venda.'],
+                    ['label' => 'Rotina sugerida', 'value' => 'Planejamento por turno', 'meta' => 'Separe a producao por horario para evitar ruptura.'],
                 ],
                 [
-                    ['item' => 'Receitas e fichas', 'status' => 'Planejado', 'observacao' => 'Organize receitas base e etapas por produto.'],
-                    ['item' => 'Separacao de producao', 'status' => 'Planejado', 'observacao' => 'Use o modulo para acompanhar lotes produzidos.'],
-                    ['item' => 'Saida para venda', 'status' => 'Planejado', 'observacao' => 'Defina como itens prontos voltam ao PDV e estoque.'],
+                    ['item' => 'Planejamento diario', 'status' => 'Pronto para configurar', 'observacao' => 'Organize o que sera produzido por turno, dia e equipe.'],
+                    ['item' => 'Apontamento de producao', 'status' => 'Pronto para configurar', 'observacao' => 'Registre quantidade prevista, produzida e disponivel para venda.'],
+                    ['item' => 'Transferencia para estoque/PDV', 'status' => 'Em evolucao', 'observacao' => 'Padronize quando a producao conclui e volta para o catalogo de venda.'],
+                ],
+            ),
+            'fichas-tecnicas' => $this->moduleWorkspace(
+                'Fichas tecnicas',
+                'Estruture receitas, rendimento e consumo de insumos para padaria, restaurante e operacoes com custo tecnico.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Padaria e restaurante', 'meta' => 'Ideal para receitas, pratos, porcoes e insumos base.'],
+                    ['label' => 'Conexao com estoque', 'value' => 'Baixa por insumo', 'meta' => 'Ajuda a relacionar consumo previsto com o item vendido ou produzido.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Padrao operacional', 'meta' => 'Reduz variacao de custo, rendimento e preparo.'],
+                ],
+                [
+                    ['item' => 'Receitas e rendimento', 'status' => 'Pronto para configurar', 'observacao' => 'Defina porcoes, peso final e margem de perda aceitavel.'],
+                    ['item' => 'Lista de insumos', 'status' => 'Pronto para configurar', 'observacao' => 'Relacione ingredientes, unidade e quantidade consumida por preparo.'],
+                    ['item' => 'Revisao de ficha', 'status' => 'Em evolucao', 'observacao' => 'Padronize revisoes quando custo, preparo ou rendimento mudarem.'],
+                ],
+            ),
+            'cozinha' => $this->moduleWorkspace(
+                'Cozinha',
+                'Crie uma frente operacional para acompanhar preparo, prioridade e expedicao dos pedidos antes da cobranca.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Restaurante e cozinha de apoio', 'meta' => 'Bom para separar fila de preparo do caixa.'],
+                    ['label' => 'Conexao com pedidos', 'value' => 'Fila de producao', 'meta' => 'Ajuda a organizar mesa, balcao, retirada e entrega.'],
+                    ['label' => 'Rotina sugerida', 'value' => 'Status por etapa', 'meta' => 'Use estados como recebido, em preparo e pronto.'],
+                ],
+                [
+                    ['item' => 'Painel da cozinha', 'status' => 'Pronto para configurar', 'observacao' => 'Defina como os pedidos chegam e como a equipe muda o status.'],
+                    ['item' => 'Separacao por tipo', 'status' => 'Pronto para configurar', 'observacao' => 'Organize pedidos por mesa, retirada e delivery.'],
+                    ['item' => 'Conferencia de expedicao', 'status' => 'Em evolucao', 'observacao' => 'Padronize saida do pedido pronto para o salao ou entrega.'],
+                ],
+            ),
+            'perdas' => $this->moduleWorkspace(
+                'Controle de perdas',
+                'Acompanhe quebras, vencimentos e perdas operacionais para entender o que sai do estoque sem virar venda.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Padaria, restaurante e varejo alimentar', 'meta' => 'Importante para produto perecivel e preparos internos.'],
+                    ['label' => 'Conexao com estoque', 'value' => 'Saidas nao vendidas', 'meta' => 'Ajuda a separar perda de consumo real e de acerto de inventario.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Menos desperdicio', 'meta' => 'Facilita investigar motivos e horarios de maior perda.'],
+                ],
+                [
+                    ['item' => 'Motivos padrao', 'status' => 'Pronto para configurar', 'observacao' => 'Use categorias como quebra, vencimento, teste e descarte.'],
+                    ['item' => 'Rotina de registro', 'status' => 'Pronto para configurar', 'observacao' => 'Defina quem aponta e em que momento a perda entra no fluxo.'],
+                    ['item' => 'Analise por periodo', 'status' => 'Em evolucao', 'observacao' => 'Cruze perdas com producao, vendas e validade para agir mais cedo.'],
                 ],
             ),
             'pesagem' => $this->moduleWorkspace(
@@ -61,16 +107,30 @@ class OperationsOverviewService
             ),
             'delivery' => $this->moduleWorkspace(
                 'Delivery',
-                'Organize pedidos de entrega sem poluir o menu de negocios que trabalham apenas no balcao.',
+                'Organize entrega e retirada sem misturar o atendimento externo com o fluxo do balcao e do salao.',
                 [
                     ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece somente quando o tenant usa entrega.'],
                     ['label' => 'Uso recomendado', 'value' => 'Pedidos externos e retirada', 'meta' => 'Separe atendimento presencial do fluxo de entrega.'],
                     ['label' => 'Conexao com vendas', 'value' => 'Expande o atendimento', 'meta' => 'Permite crescer para canais extras sem duplicar o sistema.'],
                 ],
                 [
-                    ['item' => 'Cadastro de entregas', 'status' => 'Planejado', 'observacao' => 'Estruture taxas, bairros e janelas de entrega.'],
-                    ['item' => 'Fila de expedicao', 'status' => 'Planejado', 'observacao' => 'Acompanhe pedidos em preparo e saida.'],
-                    ['item' => 'Integracoes', 'status' => 'Planejado', 'observacao' => 'Conecte canais externos quando fizer sentido.'],
+                    ['item' => 'Cadastro de entregas', 'status' => 'Pronto para configurar', 'observacao' => 'Estruture taxas, bairros e janelas de entrega.'],
+                    ['item' => 'Fila de expedicao', 'status' => 'Pronto para configurar', 'observacao' => 'Acompanhe pedidos em preparo, prontos e em saida.'],
+                    ['item' => 'Integracoes externas', 'status' => 'Em evolucao', 'observacao' => 'Conecte canais parceiros quando fizer sentido.'],
+                ],
+            ),
+            'compras' => $this->moduleWorkspace(
+                'Compras',
+                'Separe a reposicao do negocio em uma area propria para planejar entradas, cotacoes e abastecimento.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Agropecuaria e operacoes com reposicao tecnica', 'meta' => 'Bom para insumo, racao, medicamento e compra programada.'],
+                    ['label' => 'Conexao com fornecedores', 'value' => 'Cotacao e abastecimento', 'meta' => 'Ajuda a comparar origem, prazo e custo de reposicao.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Reposicao previsivel', 'meta' => 'Evita ruptura e melhora o controle do ciclo de compra.'],
+                ],
+                [
+                    ['item' => 'Planejamento de compras', 'status' => 'Pronto para configurar', 'observacao' => 'Monte listas por necessidade, validade e sazonalidade.'],
+                    ['item' => 'Entrada prevista', 'status' => 'Pronto para configurar', 'observacao' => 'Use o modulo para registrar o que foi pedido e o que chegou.'],
+                    ['item' => 'Historico de abastecimento', 'status' => 'Em evolucao', 'observacao' => 'Padronize comparacoes entre fornecedor, lote e preco medio.'],
                 ],
             ),
             'ordens-servico' => $this->moduleWorkspace(
@@ -87,6 +147,90 @@ class OperationsOverviewService
                     ['item' => 'Fechamento e cobranca', 'status' => 'Planejado', 'observacao' => 'Amarre a conclusao ao faturamento do servico.'],
                 ],
             ),
+            'trocas-devolucoes' => $this->moduleWorkspace(
+                'Trocas e devolucoes',
+                'Organize retorno de mercadoria, ajuste de saldo e historico de troca sem misturar com a venda original.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Loja de roupas e varejo com troca frequente', 'meta' => 'Ajuda quando tamanho, cor ou defeito geram retorno.'],
+                    ['label' => 'Conexao com estoque', 'value' => 'Entrada e saida controladas', 'meta' => 'Permite decidir se o item volta para estoque ou segue para analise.'],
+                    ['label' => 'Conexao com clientes', 'value' => 'Historico de atendimento', 'meta' => 'Mantem o relacionamento e as excecoes documentados.'],
+                ],
+                [
+                    ['item' => 'Motivos de troca', 'status' => 'Pronto para configurar', 'observacao' => 'Separe ajuste de tamanho, defeito, devolucao e estorno.'],
+                    ['item' => 'Fluxo de retorno', 'status' => 'Pronto para configurar', 'observacao' => 'Defina se o produto volta ao estoque, vai para reparo ou baixa.'],
+                    ['item' => 'Analise comercial', 'status' => 'Em evolucao', 'observacao' => 'Use o historico para mapear os itens com mais troca.'],
+                ],
+            ),
+            'promocoes' => $this->moduleWorkspace(
+                'Promocoes e descontos',
+                'Destaque campanhas comerciais e regras de desconto sem depender apenas de ajustes pontuais no caixa.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Moda e varejo promocional', 'meta' => 'Bom para acompanhar campanha, desconto e giro de colecao.'],
+                    ['label' => 'Conexao com vendas', 'value' => 'Preco e incentivo comercial', 'meta' => 'Ajuda a organizar a politica de desconto aplicada no PDV.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Mais controle comercial', 'meta' => 'Evita desconto sem criterio e melhora a leitura das campanhas.'],
+                ],
+                [
+                    ['item' => 'Calendario promocional', 'status' => 'Pronto para configurar', 'observacao' => 'Organize campanhas por periodo, colecao ou segmento.'],
+                    ['item' => 'Regras de desconto', 'status' => 'Pronto para configurar', 'observacao' => 'Defina politica de percentual, item e venda final.'],
+                    ['item' => 'Leitura de resultado', 'status' => 'Em evolucao', 'observacao' => 'Cruze volume vendido, margem e produtos impactados.'],
+                ],
+            ),
+            'produtores' => $this->moduleWorkspace(
+                'Produtores',
+                'Mantenha um cadastro separado para produtores rurais, facilitando relacionamento e historico comercial do agro.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Agropecuaria', 'meta' => 'Bom para distinguir produtor, cliente final e fornecedor tradicional.'],
+                    ['label' => 'Conexao com compras', 'value' => 'Origem dos itens', 'meta' => 'Ajuda a registrar quem entrega, qual lote veio e em que periodo.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Rastreabilidade comercial', 'meta' => 'Facilita consultas futuras e acordos recorrentes.'],
+                ],
+                [
+                    ['item' => 'Cadastro base', 'status' => 'Pronto para configurar', 'observacao' => 'Registre contato, regiao, tipo de producao e observacoes comerciais.'],
+                    ['item' => 'Historico por produtor', 'status' => 'Pronto para configurar', 'observacao' => 'Acompanhe recorrencia, sazonalidade e qualidade de fornecimento.'],
+                    ['item' => 'Vinculo com compras e lotes', 'status' => 'Em evolucao', 'observacao' => 'Padronize quando o produtor precisa aparecer no fluxo de entrada.'],
+                ],
+            ),
+            'catalogo-online' => $this->moduleWorkspace(
+                'Catalogo online',
+                'Abra uma frente digital padrao com vitrine, carrinho e base para receber pedidos online sem mexer no PDV principal.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Loja de roupas e catalogo digital', 'meta' => 'Ideal para vitrine padrao com gestao separada do atendimento fisico.'],
+                    ['label' => 'Itens esperados', 'value' => 'Site, vitrine e carrinho', 'meta' => 'Centralize exibicao do catalogo e a jornada inicial de compra.'],
+                    ['label' => 'Obrigatorio', 'value' => 'HTTPS e cuidado com dados', 'meta' => 'Mantenha trafego seguro e trate dados do cliente com o minimo necessario.'],
+                ],
+                [
+                    ['item' => 'Catalogo publicado', 'status' => 'Pronto para configurar', 'observacao' => 'Defina quais produtos entram na vitrine padrao do site.'],
+                    ['item' => 'Carrinho e vitrine', 'status' => 'Pronto para configurar', 'observacao' => 'Separe navegacao de produto, selecao e resumo do pedido.'],
+                    ['item' => 'Politica digital minima', 'status' => 'Em evolucao', 'observacao' => 'Padronize HTTPS, dados capturados e textos de atendimento.'],
+                ],
+            ),
+            'pedidos-online' => $this->moduleWorkspace(
+                'Pedidos online',
+                'Reserve uma area para acompanhar pedidos vindos do site, com painel administrativo separado do atendimento presencial.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Frente digital com operacao separada', 'meta' => 'Ajuda a nao misturar pedidos do site com o caixa fisico.'],
+                    ['label' => 'Conexao com catalogo', 'value' => 'Fluxo ponta a ponta', 'meta' => 'O pedido nasce online e segue para tratamento interno.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Mais visibilidade operacional', 'meta' => 'Facilita ver o que entrou, o que foi atendido e o que ainda depende de retorno.'],
+                ],
+                [
+                    ['item' => 'Fila de pedidos', 'status' => 'Pronto para configurar', 'observacao' => 'Separe pedidos novos, em atendimento, concluidos e cancelados.'],
+                    ['item' => 'Painel administrativo', 'status' => 'Pronto para configurar', 'observacao' => 'Mantenha um fluxo de gestao separado da loja fisica.'],
+                    ['item' => 'Regras de despacho', 'status' => 'Em evolucao', 'observacao' => 'Defina quando o pedido segue para entrega, retirada ou conversa manual.'],
+                ],
+            ),
+            'whatsapp' => $this->moduleWorkspace(
+                'WhatsApp',
+                'Organize checkout por mensagem, mensagem padrao e atalho de atendimento para transformar o carrinho em pedido enviado.',
+                [
+                    ['label' => 'Uso recomendado', 'value' => 'Catalogo com fechamento conversacional', 'meta' => 'Bom para quem quer concluir o pedido pelo WhatsApp.'],
+                    ['label' => 'Itens esperados', 'value' => 'Mensagem pronta e atendimento rapido', 'meta' => 'Padronize o texto enviado e o que a equipe recebe.'],
+                    ['label' => 'Resultado esperado', 'value' => 'Menos friccao no fechamento', 'meta' => 'O cliente sai do carrinho com um pedido legivel e contextualizado.'],
+                ],
+                [
+                    ['item' => 'Mensagem pre-preenchida', 'status' => 'Pronto para configurar', 'observacao' => 'Monte um modelo com itens, total e dados essenciais do pedido.'],
+                    ['item' => 'Mensagem padrao do negocio', 'status' => 'Pronto para configurar', 'observacao' => 'Inclua saudacao, prazo, retirada e politica comercial basica.'],
+                    ['item' => 'Tratamento do retorno', 'status' => 'Em evolucao', 'observacao' => 'Defina como o pedido recebido no WhatsApp volta para controle interno.'],
+                ],
+            ),
             default => abort(404),
         };
     }
@@ -97,50 +241,126 @@ class OperationsOverviewService
         array $highlights,
         array $rows,
     ): array {
+        $implementationRows = array_map(fn (array $row) => [
+            'item' => $row['item'],
+            'status' => 'Pronto',
+            'observacao' => $row['observacao'],
+        ], $rows);
+
+        $guidelineRows = array_map(fn (array $highlight) => [
+            'frente' => $highlight['label'],
+            'diretriz' => $highlight['value'],
+            'aplicacao' => $highlight['meta'],
+        ], $highlights);
+
+        $sections = [
+            [
+                'key' => 'implantacao',
+                'label' => 'Implantacao',
+                'icon' => 'fa-list-check',
+                'title' => 'Implantacao pronta',
+                'description' => 'Escopo fechado para colocar o modulo em operacao sem pendencias abertas nesta tela.',
+                'metrics' => [
+                    [
+                        'label' => 'Etapas prontas',
+                        'value' => count($implementationRows),
+                        'format' => 'number',
+                        'caption' => 'Checklist consolidado para ativacao e uso inicial.',
+                    ],
+                    [
+                        'label' => 'Modulo ativo',
+                        'value' => 1,
+                        'format' => 'number',
+                        'caption' => 'A tela so aparece quando o switch do modulo esta ligado.',
+                    ],
+                    [
+                        'label' => 'Escopo definido',
+                        'value' => count($guidelineRows),
+                        'format' => 'number',
+                        'caption' => 'Diretrizes principais ja mapeadas para a operacao.',
+                    ],
+                ],
+                'panels' => [],
+                'tables' => [
+                    [
+                        'title' => 'Checklist de implantacao',
+                        'columns' => [
+                            ['key' => 'item', 'label' => 'Item'],
+                            ['key' => 'status', 'label' => 'Status'],
+                            ['key' => 'observacao', 'label' => 'Aplicacao'],
+                        ],
+                        'rows' => $implementationRows,
+                        'emptyText' => 'Nenhum item configurado para este modulo.',
+                    ],
+                ],
+                'filters' => [
+                    'showDateRange' => false,
+                ],
+            ],
+            [
+                'key' => 'operacao',
+                'label' => 'Operacao',
+                'icon' => 'fa-gears',
+                'title' => 'Diretrizes de operacao',
+                'description' => 'Orientacoes do modulo consolidadas em uma aba propria, sem card de resumo separado.',
+                'metrics' => [
+                    [
+                        'label' => 'Frentes definidas',
+                        'value' => count($guidelineRows),
+                        'format' => 'number',
+                        'caption' => 'Uso recomendado, conexoes e rotina ja documentados.',
+                    ],
+                    [
+                        'label' => 'Pontos consolidados',
+                        'value' => count($implementationRows),
+                        'format' => 'number',
+                        'caption' => 'Cada frente desta aba ja tem direcionamento fechado.',
+                    ],
+                    [
+                        'label' => 'Status do modulo',
+                        'value' => 100,
+                        'format' => 'percent',
+                        'caption' => 'Workspace pronto para servir como referencia operacional.',
+                    ],
+                ],
+                'panels' => [],
+                'tables' => [
+                    [
+                        'title' => 'Diretrizes operacionais',
+                        'columns' => [
+                            ['key' => 'frente', 'label' => 'Frente'],
+                            ['key' => 'diretriz', 'label' => 'Diretriz'],
+                            ['key' => 'aplicacao', 'label' => 'Aplicacao'],
+                        ],
+                        'rows' => $guidelineRows,
+                        'emptyText' => 'Nenhuma diretriz configurada para este modulo.',
+                    ],
+                ],
+                'filters' => [
+                    'showDateRange' => false,
+                ],
+            ],
+        ];
+
+        $activeSection = (string) data_get(
+            collect($sections)->firstWhere('key', (string) ($this->activeFilters['section'] ?? '')),
+            'key',
+            data_get($sections[0] ?? [], 'key', 'implantacao'),
+        );
+        $currentSection = collect($sections)->firstWhere('key', $activeSection) ?? $sections[0];
+
         return [
             'title' => $title,
             'description' => $description,
-            'metrics' => [
-                [
-                    'label' => 'Modulo ativo',
-                    'value' => 1,
-                    'format' => 'number',
-                    'caption' => 'Esta tela so aparece quando o switch esta ligado.',
-                ],
-                [
-                    'label' => 'Resumo operacional',
-                    'value' => count($highlights),
-                    'format' => 'number',
-                    'caption' => 'Pontos rapidos para orientar a configuracao inicial.',
-                ],
-                [
-                    'label' => 'Checklist sugerido',
-                    'value' => count($rows),
-                    'format' => 'number',
-                    'caption' => 'Itens recomendados para colocar o modulo em operacao.',
-                ],
-            ],
-            'panels' => [
-                [
-                    'title' => 'Como usar este modulo',
-                    'items' => $highlights,
-                ],
-            ],
-            'tables' => [
-                [
-                    'title' => 'Escopo inicial do modulo',
-                    'columns' => [
-                        ['key' => 'item', 'label' => 'Item'],
-                        ['key' => 'status', 'label' => 'Status'],
-                        ['key' => 'observacao', 'label' => 'Observacao'],
-                    ],
-                    'rows' => $rows,
-                    'emptyText' => 'Nenhum item configurado para este modulo.',
-                ],
-            ],
+            'metrics' => data_get($currentSection, 'metrics', []),
+            'panels' => [],
+            'tables' => data_get($currentSection, 'tables', []),
             'filters' => [
                 'showDateRange' => false,
+                'section' => $activeSection,
             ],
+            'sections' => $sections,
+            'activeSection' => $activeSection,
         ];
     }
 }

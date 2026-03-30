@@ -1,0 +1,290 @@
+﻿.fashion-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fashion-hero,
+.fashion-panel-card,
+.fashion-empty-state,
+.fashion-feedback,
+.fashion-metric-grid article {
+    border: 1px solid var(--app-border);
+    border-radius: 24px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.fashion-hero {
+    padding: 1.5rem 1.6rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(243, 247, 252, 0.92));
+}
+
+.fashion-hero span {
+    display: inline-flex;
+    padding: 0.38rem 0.72rem;
+    border-radius: 999px;
+    background: rgba(47, 124, 246, 0.12);
+    color: var(--app-primary-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.fashion-hero h1 {
+    margin: 0.8rem 0 0.35rem;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    letter-spacing: -0.04em;
+}
+
+.fashion-hero p {
+    margin: 0;
+    color: var(--app-text-secondary);
+    max-width: 56rem;
+}
+
+.fashion-tabs {
+    margin: 0;
+}
+
+.fashion-module-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fashion-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.fashion-grid.two-columns {
+    grid-template-columns: minmax(280px, 0.95fr) minmax(340px, 1.05fr);
+}
+
+.fashion-panel-card {
+    overflow: hidden;
+}
+
+.fashion-panel-card header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.fashion-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fashion-panel-card h2 {
+    margin: 0;
+    font-size: 1.02rem;
+}
+
+.fashion-panel-card header span,
+.fashion-list-card-meta,
+.fashion-empty-state p,
+.fashion-feedback,
+.fashion-message-preview pre,
+.fashion-form-grid span,
+.fashion-panel-card small {
+    color: var(--app-text-muted);
+}
+
+.fashion-list-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.fashion-list-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    background: rgba(248, 250, 253, 0.92);
+    text-align: left;
+    cursor: pointer;
+}
+
+.fashion-list-card.active {
+    border-color: rgba(47, 124, 246, 0.3);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.fashion-list-card-top,
+.fashion-list-card-meta,
+.fashion-total-bar,
+.fashion-actions,
+.fashion-inline-adder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.fashion-list-card p {
+    margin: 0;
+    color: var(--app-text-secondary);
+}
+
+.fashion-metric-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.fashion-metric-grid article {
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.fashion-metric-grid strong {
+    font-size: 1.7rem;
+    letter-spacing: -0.04em;
+}
+
+.fashion-form-grid {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 1rem 1.15rem 1.15rem;
+}
+
+.fashion-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.fashion-form-grid input,
+.fashion-form-grid select,
+.fashion-form-grid textarea,
+.fashion-panel-card header select,
+.fashion-inline-adder select,
+.fashion-inline-adder input,
+.fashion-table-wrap input {
+    min-height: 46px;
+    border-radius: 14px;
+    border: 1px solid var(--app-border-strong);
+    padding: 0.72rem 0.85rem;
+    font: inherit;
+    background: #fff;
+}
+
+.fashion-form-grid textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.span-2 {
+    grid-column: span 2;
+}
+
+.fashion-inline-toggle {
+    flex-direction: row !important;
+    align-items: center;
+}
+
+.fashion-inline-toggle input {
+    min-height: auto;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+}
+
+.fashion-table-wrap {
+    overflow-x: auto;
+    padding: 0 1.15rem 1.15rem;
+}
+
+.fashion-chip {
+    min-height: 38px;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid var(--app-border-strong);
+    background: #fff;
+    cursor: pointer;
+}
+
+.fashion-chip.active {
+    background: rgba(26, 168, 111, 0.12);
+    color: #0d8a5b;
+}
+
+.fashion-total-bar {
+    padding: 0.9rem 1rem;
+    border: 1px dashed var(--app-border-strong);
+    border-radius: 16px;
+    background: rgba(248, 250, 253, 0.8);
+}
+
+.fashion-feedback {
+    margin: 0 1rem;
+    padding: 0.8rem 0.95rem;
+}
+
+.fashion-feedback.success {
+    background: rgba(26, 168, 111, 0.12);
+    color: #0d8a5b;
+}
+
+.fashion-feedback.error {
+    background: rgba(219, 57, 57, 0.12);
+    color: #a12727;
+}
+
+.fashion-empty-state {
+    margin: 1rem;
+    padding: 1rem;
+}
+
+.fashion-message-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem 1.15rem 1.15rem;
+}
+
+.fashion-message-preview pre {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(248, 250, 253, 0.92);
+    white-space: pre-wrap;
+    font: inherit;
+}
+
+@media (max-width: 960px) {
+    .fashion-grid.two-columns,
+    .fashion-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .span-2 {
+        grid-column: auto;
+    }
+
+    .fashion-list-card-top,
+    .fashion-list-card-meta,
+    .fashion-total-bar,
+    .fashion-actions,
+    .fashion-inline-adder,
+    .fashion-panel-card header,
+    .fashion-header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

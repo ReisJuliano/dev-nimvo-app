@@ -3,9 +3,12 @@
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\Product;
+use Illuminate\Support\Facades\Schema;
 
 class ProductService
 {
+    protected array $productColumnCache = [];
+
     public function nextCode(): string
     {
         $lastNumericCode = Product::query()
@@ -36,8 +39,34 @@ class ProductService
             'min_stock' => $data['min_stock'] ?? 0,
         ]);
 
+        if ($this->productColumnExists('style_reference')) {
+            $product->style_reference = $data['style_reference'] ?? null;
+        }
+
+        if ($this->productColumnExists('color')) {
+            $product->color = $data['color'] ?? null;
+        }
+
+        if ($this->productColumnExists('size')) {
+            $product->size = $data['size'] ?? null;
+        }
+
+        if ($this->productColumnExists('collection')) {
+            $product->collection = $data['collection'] ?? null;
+        }
+
+        if ($this->productColumnExists('catalog_visible')) {
+            $product->catalog_visible = (bool) ($data['catalog_visible'] ?? false);
+        }
+
         $product->save();
 
         return $product->fresh(['category:id,name', 'supplier:id,name']);
+    }
+
+    protected function productColumnExists(string $column): bool
+    {
+        return $this->productColumnCache[$column]
+            ??= Schema::connection((new Product())->getConnectionName())->hasColumn('products', $column);
     }
 }

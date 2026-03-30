@@ -9,7 +9,6 @@ export default function InfoPanels({ panels }) {
                 <article key={panel.title} className="operations-panel-card">
                     <header>
                         <h2>{panel.title}</h2>
-                        <span className="operations-card-tag">Resumo</span>
                     </header>
 
                     <div className="operations-panel-list">

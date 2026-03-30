@@ -25,9 +25,24 @@ export default function OperationsOverview({ module }) {
     const currentSection = hasSections
         ? module.sections.find((section) => section.key === module.activeSection) || module.sections[0]
         : module
+    const moduleMetrics = Array.isArray(module.metrics) ? module.metrics : []
+    const modulePanels = Array.isArray(module.panels) ? module.panels : []
+    const moduleTables = Array.isArray(module.tables) ? module.tables : []
     const heroTitle = hasSections
         ? module.title
         : `Painel de ${module.title.charAt(0).toLowerCase()}${module.title.slice(1)}`
+    const availableTabs = hasSections
+        ? []
+        : [
+            moduleMetrics.length || modulePanels.length || moduleTables.length
+                ? { key: 'overview', icon: 'fa-compass-drafting', label: 'Visao geral' }
+                : null,
+            moduleTables.length ? { key: 'tables', icon: 'fa-table-list', label: 'Tabelas' } : null,
+            modulePanels.length ? { key: 'insights', icon: 'fa-lightbulb', label: 'Painel' } : null,
+        ].filter(Boolean)
+    const resolvedActiveTab = availableTabs.some((tab) => tab.key === activeTab)
+        ? activeTab
+        : availableTabs[0]?.key || 'overview'
 
     function handleSectionChange(sectionKey) {
         router.get(window.location.pathname, buildFilterPayload(module.filters, { section: sectionKey }), {
@@ -48,7 +63,11 @@ export default function OperationsOverview({ module }) {
                     </div>
                     <div className="operations-hero-badges">
                         <span className="ui-badge success">
-                            {hasSections ? `${module.sections.length} secao(oes)` : `${currentSection.panels?.length || 0} resumo(s)`}
+                            {hasSections
+                                ? `${module.sections.length} aba(s)`
+                                : modulePanels.length
+                                  ? `${modulePanels.length} painel(is)`
+                                  : `${moduleTables.length} tabela(s)`}
                         </span>
                         {module.filters?.product ? (
                             <span className="ui-badge warning">Produto: {module.filters.product}</span>
@@ -81,6 +100,15 @@ export default function OperationsOverview({ module }) {
                                 <p>{currentSection.description}</p>
                             </div>
                             <div className="operations-section-badges">
+                                {currentSection.metrics?.length ? (
+                                    <span className="ui-badge success">{currentSection.metrics.length} indicador(es)</span>
+                                ) : null}
+                                {currentSection.tables?.length ? (
+                                    <span className="ui-badge warning">{currentSection.tables.length} tabela(s)</span>
+                                ) : null}
+                                {currentSection.panels?.length ? (
+                                    <span className="ui-badge">{currentSection.panels.length} painel(is)</span>
+                                ) : null}
                             </div>
                         </section>
 
@@ -95,40 +123,29 @@ export default function OperationsOverview({ module }) {
                     </>
                 ) : (
                     <>
-                        <section className="ui-tabs">
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('overview')}
-                            >
-                                <i className="fa-solid fa-compass-drafting" />
-                                <span>Visao geral</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'tables' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('tables')}
-                            >
-                                <i className="fa-solid fa-table-list" />
-                                <span>Tabelas</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'insights' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('insights')}
-                            >
-                                <i className="fa-solid fa-lightbulb" />
-                                <span>Resumo</span>
-                            </button>
-                        </section>
+                        {availableTabs.length > 1 ? (
+                            <section className="ui-tabs">
+                                {availableTabs.map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        className={`ui-tab ${resolvedActiveTab === tab.key ? 'active' : ''}`}
+                                        onClick={() => setActiveTab(tab.key)}
+                                    >
+                                        <i className={`fa-solid ${tab.icon}`} />
+                                        <span>{tab.label}</span>
+                                    </button>
+                                ))}
+                            </section>
+                        ) : null}
 
-                        <MetricGrid metrics={module.metrics} />
+                        {resolvedActiveTab !== 'tables' && moduleMetrics.length ? <MetricGrid metrics={moduleMetrics} /> : null}
 
-                        {activeTab !== 'tables' ? <InfoPanels panels={module.panels} /> : null}
+                        {resolvedActiveTab !== 'tables' ? <InfoPanels panels={modulePanels} /> : null}
 
-                        {activeTab !== 'insights' ? (
+                        {resolvedActiveTab !== 'insights' && moduleTables.length ? (
                             <div className="operations-table-grid">
-                                {module.tables.map((table) => (
+                                {moduleTables.map((table) => (
                                     <DataTable key={table.title} table={table} />
                                 ))}
                             </div>

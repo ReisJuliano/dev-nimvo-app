@@ -6,6 +6,9 @@ export const MODULE_DEFAULTS = {
     pdv_restaurante: false,
     estoque: true,
     producao: false,
+    fichas_tecnicas: false,
+    controle_perdas: false,
+    cozinha: false,
     pesagem: false,
     fiado: true,
     delivery: false,
@@ -13,10 +16,17 @@ export const MODULE_DEFAULTS = {
     relatorios_avancados: true,
     clientes: true,
     fornecedores: true,
+    produtores: false,
+    compras: false,
     ordens_servico: false,
     produtos_variacao: false,
     controle_lotes: false,
     controle_validade: false,
+    trocas_devolucoes: false,
+    promocoes: false,
+    catalogo_online: false,
+    pedidos_online: false,
+    whatsapp_pedidos: false,
     mesas: false,
     impressao_automatica: false,
 }
@@ -24,6 +34,7 @@ export const MODULE_DEFAULTS = {
 export const PRESET_LABELS = {
     restaurante: 'Restaurante',
     padaria: 'Padaria',
+    loja_roupas: 'Loja de roupas',
     mercearia: 'Mercearia',
     agropecuaria: 'Agropecuaria',
     [CUSTOM_PRESET]: 'Personalizado',
@@ -53,6 +64,7 @@ export function deriveCapabilities(inputModules = {}) {
         categorias: modules.estoque,
         clientes: modules.clientes,
         fornecedores: modules.fornecedores,
+        produtores: modules.produtores,
         entrada_estoque: modules.estoque,
         ajuste_estoque: modules.estoque,
         movimentacao_estoque: modules.estoque,
@@ -62,9 +74,18 @@ export function deriveCapabilities(inputModules = {}) {
         faltas: modules.relatorios_avancados && modules.estoque,
         usuarios: true,
         producao: modules.producao,
+        fichas_tecnicas: modules.fichas_tecnicas,
+        perdas: modules.controle_perdas,
+        cozinha: modules.cozinha,
         pesagem: modules.pesagem,
         delivery: modules.delivery,
+        compras: modules.compras,
         ordens_servico: modules.ordens_servico,
+        trocas_devolucoes: modules.trocas_devolucoes,
+        promocoes: modules.promocoes,
+        catalogo_online: modules.catalogo_online,
+        pedidos_online: modules.pedidos_online,
+        whatsapp_pedidos: modules.whatsapp_pedidos,
     }
 }
 
@@ -90,7 +111,7 @@ export function getPresetLabel(preset) {
 }
 
 export function getPdvLabel(modules) {
-    return modules.pdv_restaurante ? 'PDV Restaurante' : 'PDV Simples'
+    return modules.pdv_restaurante ? 'PDV Restaurante' : 'PDV Rapido'
 }
 
 export function getOrdersLabel(modules) {
@@ -98,5 +119,5 @@ export function getOrdersLabel(modules) {
 }
 
 export function getProductsLabel(modules) {
-    return modules.produtos_variacao ? 'Produtos e Variacoes' : 'Produtos'
+    return modules.produtos_variacao ? 'Produtos e Grade' : 'Produtos'
 }

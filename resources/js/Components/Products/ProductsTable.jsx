@@ -1,6 +1,6 @@
 import { formatMoney, formatNumber } from '@/lib/format'
 
-export default function ProductsTable({ products, onEdit, onDelete }) {
+export default function ProductsTable({ products, onEdit, onDelete, isFashionMode = false }) {
     if (!products.length) {
         return <div className="products-empty-state">Nenhum produto encontrado para os filtros atuais.</div>
     }
@@ -9,8 +9,12 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
         <section className="products-table-card ui-table-card">
             <div className="products-table-header">
                 <div>
-                    <h2>Produtos cadastrados</h2>
-                    <p>Lista de produtos, precos e saldo.</p>
+                    <h2>{isFashionMode ? 'Pecas e variacoes cadastradas' : 'Produtos cadastrados'}</h2>
+                    <p>
+                        {isFashionMode
+                            ? 'Catalogo com referencia, grade, colecao, vitrine e saldo por item.'
+                            : 'Lista de produtos, precos e saldo.'}
+                    </p>
                 </div>
                 <span className="products-table-counter">{formatNumber(products.length)} item(ns)</span>
             </div>
@@ -19,11 +23,12 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                     <thead>
                         <tr>
                             <th>Codigo</th>
-                            <th>EAN</th>
+                            {isFashionMode ? <th>Referencia</th> : <th>EAN</th>}
                             <th>Produto</th>
-                            <th>Categoria</th>
-                            <th>Custo</th>
+                            {isFashionMode ? <th>Grade</th> : <th>Categoria</th>}
+                            {isFashionMode ? <th>Colecao</th> : <th>Custo</th>}
                             <th>Venda</th>
+                            {isFashionMode ? <th>Vitrine</th> : null}
                             <th>Estoque</th>
                             <th>Acao</th>
                         </tr>
@@ -32,18 +37,44 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                         {products.map((product) => (
                             <tr key={product.id}>
                                 <td>{product.code}</td>
-                                <td>{product.barcode || '-'}</td>
+                                <td>{isFashionMode ? product.style_reference || '-' : product.barcode || '-'}</td>
                                 <td>
                                     <strong>{product.name}</strong>
-                                    <small>{product.unit}</small>
+                                    <small>
+                                        {isFashionMode
+                                            ? [product.category_name, product.barcode].filter(Boolean).join(' | ') || product.unit
+                                            : product.unit}
+                                    </small>
                                 </td>
-                                <td>
-                                    <span className="products-badge ui-badge primary">
-                                        {product.category_name || 'Sem categoria'}
-                                    </span>
-                                </td>
-                                <td>{formatMoney(product.cost_price)}</td>
+                                {isFashionMode ? (
+                                    <td>
+                                        <strong>{[product.color, product.size].filter(Boolean).join(' / ') || '-'}</strong>
+                                        <small>{product.color || product.size ? 'Cor e tamanho' : 'Sem grade definida'}</small>
+                                    </td>
+                                ) : (
+                                    <td>
+                                        <span className="products-badge ui-badge primary">
+                                            {product.category_name || 'Sem categoria'}
+                                        </span>
+                                    </td>
+                                )}
+                                {isFashionMode ? (
+                                    <td>
+                                        <span className="products-badge ui-badge warning">
+                                            {product.collection || 'Sem colecao'}
+                                        </span>
+                                    </td>
+                                ) : (
+                                    <td>{formatMoney(product.cost_price)}</td>
+                                )}
                                 <td>{formatMoney(product.sale_price)}</td>
+                                {isFashionMode ? (
+                                    <td>
+                                        <span className={`products-badge ui-badge ${product.catalog_visible ? 'success' : 'muted'}`}>
+                                            {product.catalog_visible ? 'Publicado' : 'Oculto'}
+                                        </span>
+                                    </td>
+                                ) : null}
                                 <td>
                                     <strong
                                         className={
