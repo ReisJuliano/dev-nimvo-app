@@ -1,10 +1,10 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
 import PendingOrdersPanel from '@/Components/Pos/PendingOrdersPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
+import useModules from '@/hooks/useModules'
 import { apiRequest } from '@/lib/http'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import './pos.css'
@@ -237,7 +237,7 @@ export default function PosIndex({
     pendingOrderDrafts: initialPendingOrderDrafts,
     preloadedOrderDraft,
 }) {
-    const { appSettings } = usePage().props
+    const moduleState = useModules()
     const [customers, setCustomers] = useState(initialCustomers)
     const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
     const [pendingOrderDrafts, setPendingOrderDrafts] = useState(initialPendingOrderDrafts || [])
@@ -271,9 +271,25 @@ export default function PosIndex({
     const [cashReportModal, setCashReportModal] = useState(null)
     const [feedback, setFeedback] = useState(null)
     const [loadingProducts, setLoadingProducts] = useState(false)
-    const requireCashClosingConference = appSettings?.cash_closing?.require_conference !== false
+    const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
+    const supportsCredit = moduleState.isCapabilityEnabled('crediario')
+    const supportsWeighing = moduleState.isModuleEnabled('pesagem')
+    const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const productSearchInputRef = useRef(null)
+
+    const checkoutPaymentOptions = useMemo(
+        () =>
+            [
+                { value: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave', tone: 'success' },
+                { value: 'pix', label: 'Pix', icon: 'fa-qrcode', tone: 'info' },
+                { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card', tone: 'primary' },
+                { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card', tone: 'primary' },
+                { value: 'credit', label: 'Fiado', icon: 'fa-handshake', tone: 'warning' },
+                { value: 'mixed', label: 'Misto', icon: 'fa-layer-group', tone: 'danger' },
+            ].filter((option) => supportsCredit || option.value !== 'credit'),
+        [supportsCredit],
+    )
 
     useEffect(() => {
         setCashRegisterState(cashRegister)
@@ -340,7 +356,7 @@ export default function PosIndex({
     }, [searchTerm, selectedCategory])
 
     useEffect(() => {
-        if (!selectedCustomer) {
+        if (!supportsCredit || !selectedCustomer) {
             setCreditStatus(null)
             return
         }
@@ -348,7 +364,7 @@ export default function PosIndex({
         apiRequest(`/api/pdv/customers/${selectedCustomer}/credit`)
             .then(setCreditStatus)
             .catch(() => setCreditStatus(null))
-    }, [selectedCustomer])
+    }, [selectedCustomer, supportsCredit])
 
     useEffect(() => {
         if (!cart.length) {
@@ -372,12 +388,43 @@ export default function PosIndex({
     }, [cart, discountConfig])
 
     useEffect(() => {
+        if (!supportsOrders) {
+            return undefined
+        }
+
         const interval = setInterval(() => {
             refreshPendingOrderDrafts({ quiet: true })
         }, 15000)
 
         return () => clearInterval(interval)
-    }, [])
+    }, [supportsOrders])
+
+    useEffect(() => {
+        if (supportsCredit) {
+            return
+        }
+
+        setCreditStatus(null)
+
+        if (paymentMethod === 'credit') {
+            setPaymentMethod('cash')
+        }
+
+        setMixedPayments((current) => current.filter((payment) => payment.method !== 'credit'))
+        setMixedDraft((current) => ({
+            ...current,
+            method: current.method === 'credit' ? 'cash' : current.method,
+        }))
+    }, [paymentMethod, supportsCredit])
+
+    useEffect(() => {
+        if (supportsOrders) {
+            return
+        }
+
+        setPendingOrderDrafts([])
+        setActiveOrderDraftId(null)
+    }, [supportsOrders])
 
     const selectedCartItem = useMemo(
         () => cart.find((item) => item.id === selectedCartItemId) ?? null,
@@ -518,6 +565,11 @@ export default function PosIndex({
     }
 
     async function refreshPendingOrderDrafts({ quiet = false } = {}) {
+        if (!supportsOrders) {
+            setPendingOrderDrafts([])
+            return
+        }
+
         if (!quiet) {
             setRefreshingPendingOrders(true)
         }
@@ -537,6 +589,11 @@ export default function PosIndex({
     }
 
     async function handleLoadOrderDraft(orderDraftId) {
+        if (!supportsOrders) {
+            showFeedback('error', 'Comandas estao desativadas para este tenant.')
+            return
+        }
+
         if (cart.length && Number(activeOrderDraftId) !== Number(orderDraftId)) {
             showFeedback('error', 'Finalize ou limpe a venda atual antes de carregar outro pedido.')
             return
@@ -579,6 +636,11 @@ export default function PosIndex({
     }
 
     function handlePaymentMethodChange(value) {
+        if (!supportsCredit && value === 'credit') {
+            showFeedback('error', 'O fiado esta desativado para este tenant.')
+            return
+        }
+
         setPaymentMethod(value)
         setFeedback(null)
 
@@ -1142,14 +1204,16 @@ export default function PosIndex({
 
                     {feedback ? <div className={`pos-feedback ${feedback.type}`}>{feedback.text}</div> : null}
 
-                    <PendingOrdersPanel
-                        orders={pendingOrderDrafts}
-                        activeOrderDraftId={activeOrderDraftId}
-                        loadingOrderId={loadingOrderDraftId}
-                        refreshing={refreshingPendingOrders}
-                        onLoadOrder={handleLoadOrderDraft}
-                        onRefresh={refreshPendingOrderDrafts}
-                    />
+                    {supportsOrders ? (
+                        <PendingOrdersPanel
+                            orders={pendingOrderDrafts}
+                            activeOrderDraftId={activeOrderDraftId}
+                            loadingOrderId={loadingOrderDraftId}
+                            refreshing={refreshingPendingOrders}
+                            onLoadOrder={handleLoadOrderDraft}
+                            onRefresh={refreshPendingOrderDrafts}
+                        />
+                    ) : null}
 
                     <ProductSearchPanel
                         categories={categories}
@@ -1162,6 +1226,11 @@ export default function PosIndex({
                         products={products}
                         loading={loadingProducts}
                         onAddProduct={handleAddProduct}
+                        subtitle={
+                            supportsWeighing
+                                ? 'Pesagem ativa: vendas podem trabalhar com quantidades fracionadas.'
+                                : 'Busque por nome, codigo, EAN ou descricao.'
+                        }
                     />
 
                     <CartPanel
@@ -1174,6 +1243,7 @@ export default function PosIndex({
                 </div>
 
                 <CheckoutPanel
+                    paymentOptions={checkoutPaymentOptions}
                     selectedCustomer={selectedCustomer}
                     selectedCustomerData={selectedCustomerData}
                     onOpenCustomerPicker={() => setCustomerPickerOpen(true)}

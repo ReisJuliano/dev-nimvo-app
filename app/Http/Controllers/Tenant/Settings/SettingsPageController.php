@@ -15,6 +15,7 @@ class SettingsPageController extends Controller
 
         return Inertia::render('Settings/Index', [
             'settings' => $settingsService->get(),
+            'businessPresets' => $settingsService->businessPresets(),
             'generalOptions' => $settingsService->generalOptions(),
             'moduleSections' => $settingsService->moduleDefinitions(),
         ]);

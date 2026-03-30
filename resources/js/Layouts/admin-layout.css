@@ -1,0 +1,202 @@
+:root {
+    --admin-bg: #e8ded1;
+    --admin-surface: rgba(255, 251, 246, 0.82);
+    --admin-panel: rgba(255, 252, 247, 0.94);
+    --admin-border: rgba(93, 67, 46, 0.14);
+    --admin-text: #1d231f;
+    --admin-muted: #6c736b;
+    --admin-sidebar-text: #f6efe5;
+    --admin-sidebar-muted: rgba(246, 239, 229, 0.7);
+    --admin-accent: #c6763c;
+    --admin-accent-strong: #925126;
+    --admin-success: #20845a;
+    --admin-danger: #b35348;
+    --admin-shadow: 0 32px 90px rgba(44, 30, 20, 0.14);
+    --admin-shadow-soft: 0 18px 40px rgba(44, 30, 20, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    color-scheme: light;
+}
+
+body {
+    margin: 0;
+    font-family: 'Manrope', sans-serif;
+    background:
+        radial-gradient(circle at top left, rgba(198, 118, 60, 0.2), transparent 30rem),
+        radial-gradient(circle at 85% 12%, rgba(50, 90, 80, 0.12), transparent 26rem),
+        linear-gradient(180deg, #f3eadf 0%, #e9ddcf 100%);
+    color: var(--admin-text);
+}
+
+.admin-layout-root {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.admin-layout-glow {
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(80px);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.admin-layout-glow-one {
+    width: 28rem;
+    height: 28rem;
+    top: -8rem;
+    right: -7rem;
+    background: rgba(198, 118, 60, 0.26);
+}
+
+.admin-layout-glow-two {
+    width: 24rem;
+    height: 24rem;
+    bottom: -6rem;
+    left: -5rem;
+    background: rgba(43, 85, 76, 0.18);
+}
+
+.admin-layout-shell {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.admin-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--admin-surface);
+    border-bottom: 1px solid rgba(93, 67, 46, 0.12);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--admin-shadow-soft);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.admin-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+.admin-brand-badge {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: #fff4ea;
+    background: linear-gradient(145deg, #1e2726 0%, #33453e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(17, 23, 24, 0.18);
+}
+
+.admin-brand strong,
+.admin-brand span {
+    display: block;
+}
+
+.admin-brand strong {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem;
+    letter-spacing: -0.03em;
+}
+
+.admin-brand span {
+    font-size: 0.78rem;
+    color: var(--admin-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.admin-topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.admin-user-chip,
+.admin-ghost-button {
+    min-height: 3rem;
+    border: 1px solid rgba(93, 67, 46, 0.12);
+    background: rgba(255, 255, 255, 0.72);
+    border-radius: 18px;
+    padding: 0.75rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    color: var(--admin-text);
+    text-decoration: none;
+    box-shadow: 0 10px 24px rgba(44, 30, 20, 0.08);
+}
+
+.admin-user-chip {
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.admin-ghost-button {
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.admin-ghost-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(198, 118, 60, 0.26);
+    background: rgba(255, 250, 244, 0.95);
+    box-shadow: 0 14px 28px rgba(198, 118, 60, 0.14);
+}
+
+.admin-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+}
+
+@media (max-width: 960px) {
+    .admin-layout-shell {
+        min-height: 100vh;
+    }
+}
+
+@media (max-width: 720px) {
+    .admin-topbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-topbar-actions {
+        justify-content: stretch;
+    }
+
+    .admin-topbar-actions > * {
+        width: 100%;
+    }
+}

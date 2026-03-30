@@ -15,6 +15,7 @@ class PosService
 {
     public function __construct(
         protected OrderDraftService $orderDraftService,
+        protected TenantSettingsService $settingsService,
     ) {
     }
 
@@ -36,6 +37,12 @@ class PosService
             $orderDraft = null;
 
             if (!empty($payload['order_draft_id'])) {
+                if (!$this->settingsService->isModuleEnabled('pedidos')) {
+                    throw ValidationException::withMessages([
+                        'order_draft_id' => 'Comandas estao desativadas para este tipo de comercio.',
+                    ]);
+                }
+
                 $orderDraft = OrderDraft::query()
                     ->lockForUpdate()
                     ->find($payload['order_draft_id']);
@@ -119,6 +126,15 @@ class PosService
             if ($resolvedPayments->count() > 1 && $resolvedPayments->pluck('method')->unique()->count() < 2) {
                 throw ValidationException::withMessages([
                     'payments' => 'Use ao menos duas formas para registrar pagamento misto.',
+                ]);
+            }
+
+            if (
+                $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT)
+                && !$this->settingsService->isModuleEnabled('crediario')
+            ) {
+                throw ValidationException::withMessages([
+                    'payments' => 'O fiado esta desativado para este tipo de comercio.',
                 ]);
             }
 

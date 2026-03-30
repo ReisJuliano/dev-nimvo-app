@@ -7,6 +7,7 @@ use App\Http\Requests\Tenant\Pos\FinalizeSaleRequest;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Services\Tenant\PosService;
+use App\Services\Tenant\TenantSettingsService;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class PosApiController extends Controller
 
     public function customerCredit(Customer $customer): JsonResponse
     {
+        abort_unless(app(TenantSettingsService::class)->isModuleEnabled('crediario'), 404);
+
         $openCredit = (float) $customer->sales()
             ->where('status', 'finalized')
             ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))

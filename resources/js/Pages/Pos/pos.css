@@ -162,6 +162,14 @@
     font-size: 0.86rem;
 }
 
+.pos-card-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
 .pos-search-grid,
 .pos-checkout-grid {
     display: grid;

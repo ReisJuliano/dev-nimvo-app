@@ -19,6 +19,7 @@ class HandleInertiaRequests extends Middleware
     {
         $tenant = tenant();
         $settings = $tenant ? app(TenantSettingsService::class)->get() : null;
+        $centralAdmin = auth('central_admin')->user();
 
         return [
             ...parent::share($request),
@@ -28,6 +29,13 @@ class HandleInertiaRequests extends Middleware
                     'name'     => $request->user()->name,
                     'username' => $request->user()->username,
                     'role'     => $request->user()->role,
+                ] : null,
+            ],
+            'centralAuth' => [
+                'user' => $centralAdmin ? [
+                    'id' => $centralAdmin->id,
+                    'name' => $centralAdmin->name,
+                    'username' => $centralAdmin->username,
                 ] : null,
             ],
             'tenant' => $tenant ? [

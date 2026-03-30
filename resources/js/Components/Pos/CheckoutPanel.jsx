@@ -1,17 +1,7 @@
 import { formatDateTime, formatMoney } from '@/lib/format'
 
-const paymentOptions = [
-    { value: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave', tone: 'success' },
-    { value: 'pix', label: 'Pix', icon: 'fa-qrcode', tone: 'info' },
-    { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card', tone: 'primary' },
-    { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card', tone: 'primary' },
-    { value: 'credit', label: 'Crediario', icon: 'fa-handshake', tone: 'warning' },
-    { value: 'mixed', label: 'Misto', icon: 'fa-layer-group', tone: 'danger' },
-]
-
-const paymentLabels = Object.fromEntries(paymentOptions.map((option) => [option.value, option.label]))
-
 export default function CheckoutPanel({
+    paymentOptions,
     selectedCustomer,
     selectedCustomerData,
     onOpenCustomerPicker,
@@ -47,6 +37,8 @@ export default function CheckoutPanel({
     canResetSale,
     onResetSale,
 }) {
+    const paymentLabels = Object.fromEntries(paymentOptions.map((option) => [option.value, option.label]))
+
     return (
         <section className="pos-card checkout">
             <div className="pos-cash-register-box">

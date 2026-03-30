@@ -2,7 +2,9 @@
 
 namespace App\Services\Tenant;
 
+use App\Models\Central\TenantSetting;
 use App\Models\Tenant\AppSetting;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -10,70 +12,130 @@ class TenantSettingsService
 {
     public const SETTINGS_KEY = 'general';
 
+    public const CUSTOM_PRESET = 'personalizado';
+
     public function defaults(): array
     {
         return [
+            'business' => [
+                'preset' => self::CUSTOM_PRESET,
+            ],
             'cash_closing' => [
                 'require_conference' => true,
             ],
-            'modules' => [
-                'pdv' => true,
-                'caixa' => true,
-                'pedidos' => true,
-                'crediario' => true,
-                'produtos' => true,
-                'categorias' => true,
-                'clientes' => true,
-                'fornecedores' => true,
-                'entrada_estoque' => true,
-                'ajuste_estoque' => true,
-                'movimentacao_estoque' => true,
-                'relatorios' => true,
-                'vendas' => true,
-                'demanda' => true,
-                'faltas' => true,
-                'usuarios' => true,
+            'modules' => $this->defaultModules(),
+        ];
+    }
+
+    public function defaultModules(): array
+    {
+        return [
+            'comandas' => true,
+            'pdv_simples' => true,
+            'pdv_restaurante' => false,
+            'estoque' => true,
+            'producao' => false,
+            'pesagem' => false,
+            'fiado' => true,
+            'delivery' => false,
+            'caixa' => true,
+            'relatorios_avancados' => true,
+            'clientes' => true,
+            'fornecedores' => true,
+            'ordens_servico' => false,
+            'produtos_variacao' => false,
+            'controle_lotes' => false,
+            'controle_validade' => false,
+            'mesas' => false,
+            'impressao_automatica' => false,
+        ];
+    }
+
+    public function moduleKeys(): array
+    {
+        return array_keys($this->defaultModules());
+    }
+
+    public function businessPresets(): array
+    {
+        return [
+            [
+                'key' => 'restaurante',
+                'label' => 'Restaurante',
+                'description' => 'Ativa comandas, mesas e o fluxo de PDV para atendimento em restaurante.',
+                'modules' => $this->presetModules('restaurante'),
+            ],
+            [
+                'key' => 'padaria',
+                'label' => 'Padaria',
+                'description' => 'Combina producao, PDV simples e estoque para uma operacao de padaria.',
+                'modules' => $this->presetModules('padaria'),
+            ],
+            [
+                'key' => 'mercearia',
+                'label' => 'Mercearia',
+                'description' => 'Habilita PDV simples com estoque e operacao enxuta para varejo rapido.',
+                'modules' => $this->presetModules('mercearia'),
+            ],
+            [
+                'key' => 'agropecuaria',
+                'label' => 'Agropecuaria',
+                'description' => 'Desativa comandas e combina PDV simples, estoque e pesagem.',
+                'modules' => $this->presetModules('agropecuaria'),
+            ],
+            [
+                'key' => self::CUSTOM_PRESET,
+                'label' => 'Personalizado',
+                'description' => 'Permite ligar e desligar cada modulo manualmente.',
+                'modules' => $this->defaultModules(),
             ],
         ];
+    }
+
+    public function presetKeys(): array
+    {
+        return array_column($this->businessPresets(), 'key');
     }
 
     public function moduleDefinitions(): array
     {
         return [
             [
-                'section' => 'Vendas',
+                'section' => 'Atendimento',
                 'items' => [
-                    ['key' => 'pdv', 'label' => 'PDV', 'description' => 'Permite cobrar vendas avulsas e pedidos enviados do modulo de comandas.'],
-                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Libera abertura, sangrias, suprimentos e historico de fechamento do caixa.'],
-                    ['key' => 'pedidos', 'label' => 'Pedidos', 'description' => 'Permite registrar comandas, mesas e pedidos persistidos antes da cobranca.'],
-                    ['key' => 'crediario', 'label' => 'Crediario', 'description' => 'Mostra consultas e movimentacoes do fiado.'],
+                    ['key' => 'comandas', 'label' => 'Usar Comandas', 'description' => 'Exibe a tela de comandas e o fluxo de pedidos enviados para o caixa.'],
+                    ['key' => 'pdv_simples', 'label' => 'Usar PDV simples', 'description' => 'Mantem o PDV focado em vendas avulsas e atendimento rapido no caixa.'],
+                    ['key' => 'pdv_restaurante', 'label' => 'Usar PDV Restaurante', 'description' => 'Prepara o PDV para trabalhar junto com comandas, mesas e filas de cobranca.'],
+                    ['key' => 'mesas', 'label' => 'Usar Mesa', 'description' => 'Habilita o contexto de mesas dentro da operacao de comandas.'],
+                    ['key' => 'delivery', 'label' => 'Usar Delivery', 'description' => 'Mostra o modulo de delivery para acompanhar pedidos de entrega.'],
+                    ['key' => 'impressao_automatica', 'label' => 'Usar Impressao automatica', 'description' => 'Liga automatizacoes de impressao em fluxos de venda e atendimento.'],
                 ],
             ],
             [
-                'section' => 'Cadastros',
+                'section' => 'Operacao',
                 'items' => [
-                    ['key' => 'produtos', 'label' => 'Produtos', 'description' => 'Gerencia o catalogo e a manutencao dos produtos.'],
-                    ['key' => 'categorias', 'label' => 'Categorias', 'description' => 'Controla a classificacao do catalogo.'],
-                    ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Permite consultar clientes e vincular vendas.'],
-                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'Mostra fornecedores e dados de abastecimento.'],
+                    ['key' => 'producao', 'label' => 'Usar Producao', 'description' => 'Libera o modulo de producao para padaria e preparos internos.'],
+                    ['key' => 'pesagem', 'label' => 'Usar Pesagem', 'description' => 'Destaca a operacao por peso, com apoio a vendas fracionadas.'],
+                    ['key' => 'ordens_servico', 'label' => 'Usar Ordens de servico', 'description' => 'Mostra o modulo de OS para atendimentos tecnicos e servicos.'],
+                    ['key' => 'fiado', 'label' => 'Usar Fiado', 'description' => 'Disponibiliza crediario e consultas de limite do cliente.'],
+                    ['key' => 'caixa', 'label' => 'Usar Caixa', 'description' => 'Mantem a abertura, conferencia e fechamento do caixa ativos.'],
                 ],
             ],
             [
-                'section' => 'Estoque',
+                'section' => 'Catalogo e estoque',
                 'items' => [
-                    ['key' => 'entrada_estoque', 'label' => 'Entrada', 'description' => 'Libera entradas e reabastecimento de estoque.'],
-                    ['key' => 'ajuste_estoque', 'label' => 'Conferencia', 'description' => 'Permite ajustes e conferencia de saldo.'],
-                    ['key' => 'movimentacao_estoque', 'label' => 'Movimentacao', 'description' => 'Exibe o historico de entradas e saidas do estoque.'],
+                    ['key' => 'estoque', 'label' => 'Usar Estoque', 'description' => 'Controla produtos, entradas, ajustes e movimentacoes do estoque.'],
+                    ['key' => 'produtos_variacao', 'label' => 'Produtos com variacao', 'description' => 'Prepara o catalogo para tamanhos, cores e outras variacoes.'],
+                    ['key' => 'controle_lotes', 'label' => 'Usar Controle de Lotes', 'description' => 'Marca a operacao para rastreabilidade por lote.'],
+                    ['key' => 'controle_validade', 'label' => 'Usar Validade', 'description' => 'Destaca acompanhamento de validade nos fluxos de estoque.'],
+                    ['key' => 'clientes', 'label' => 'Usar Clientes', 'description' => 'Mantem o cadastro e os atalhos para clientes disponiveis.'],
+                    ['key' => 'fornecedores', 'label' => 'Usar Fornecedores', 'description' => 'Mantem o cadastro e consultas de fornecedores ativos.'],
                 ],
             ],
             [
-                'section' => 'Gerencial',
+                'section' => 'Gestao',
                 'items' => [
-                    ['key' => 'relatorios', 'label' => 'Relatorios', 'description' => 'Mostra o painel de relatorios consolidados.'],
-                    ['key' => 'vendas', 'label' => 'Vendas gerais', 'description' => 'Exibe resumo e listagem das vendas.'],
-                    ['key' => 'demanda', 'label' => 'Vendas por produto', 'description' => 'Analisa demanda e performance por item.'],
-                    ['key' => 'faltas', 'label' => 'Faltas e giro', 'description' => 'Monitora giro, faltas e ruptura.'],
-                    ['key' => 'usuarios', 'label' => 'Usuarios', 'description' => 'Libera o modulo administrativo de usuarios.'],
+                    ['key' => 'relatorios_avancados', 'label' => 'Usar Relatorios avancados', 'description' => 'Libera os paineis consolidados, demanda e visoes gerenciais.'],
                 ],
             ],
         ];
@@ -90,34 +152,40 @@ class TenantSettingsService
         ];
     }
 
-    public function get(): array
+    public function get(?string $tenantId = null): array
     {
-        if (!$this->appSettingsTableExists()) {
-            return $this->getFromFile();
-        }
+        $stored = $this->readStoredSettings($this->resolveTenantId($tenantId));
 
-        $stored = AppSetting::query()
-            ->where('key', self::SETTINGS_KEY)
-            ->value('payload');
-
-        return $this->mergeWithDefaults(is_array($stored) ? $stored : []);
+        return $this->enrich($this->mergeWithDefaults($stored));
     }
 
-    public function update(array $data): array
+    public function update(array $data, ?string $tenantId = null): array
     {
-        $settings = $this->mergeWithDefaults($data);
+        $settings = $this->applyPresetRules($this->mergeWithDefaults($data));
+        $payload = $this->payloadForStorage($settings);
+        $tenantId = $this->resolveTenantId($tenantId);
+
+        if ($tenantId && $this->tenantSettingsTableExists()) {
+            TenantSetting::query()->updateOrCreate(
+                ['tenant_id' => $tenantId],
+                ['payload' => $payload],
+            );
+
+            return $this->enrich($payload);
+        }
 
         if (!$this->appSettingsTableExists()) {
-            $this->storeInFile($settings);
-            return $settings;
+            $this->storeInFile($payload, $tenantId);
+
+            return $this->enrich($payload);
         }
 
         AppSetting::query()->updateOrCreate(
             ['key' => self::SETTINGS_KEY],
-            ['payload' => $settings],
+            ['payload' => $payload],
         );
 
-        return $settings;
+        return $this->enrich($payload);
     }
 
     public function isModuleEnabled(?string $moduleKey): bool
@@ -126,25 +194,254 @@ class TenantSettingsService
             return true;
         }
 
-        return (bool) data_get($this->get(), "modules.{$moduleKey}", true);
+        $settings = $this->get();
+
+        if (array_key_exists($moduleKey, $settings['modules'] ?? [])) {
+            return (bool) data_get($settings, "modules.{$moduleKey}", true);
+        }
+
+        return (bool) data_get($settings, "capabilities.{$moduleKey}", true);
+    }
+
+    public function moduleCapabilities(array $modules): array
+    {
+        $modules = $this->normalizeModules($modules);
+
+        return [
+            'pdv' => $modules['pdv_simples'] || $modules['pdv_restaurante'],
+            'caixa' => $modules['caixa'],
+            'pedidos' => $modules['comandas'],
+            'crediario' => $modules['fiado'],
+            'produtos' => $modules['estoque'] || $modules['produtos_variacao'] || $modules['controle_lotes'] || $modules['controle_validade'],
+            'categorias' => $modules['estoque'],
+            'clientes' => $modules['clientes'],
+            'fornecedores' => $modules['fornecedores'],
+            'entrada_estoque' => $modules['estoque'],
+            'ajuste_estoque' => $modules['estoque'],
+            'movimentacao_estoque' => $modules['estoque'],
+            'relatorios' => $modules['relatorios_avancados'],
+            'vendas' => $modules['relatorios_avancados'],
+            'demanda' => $modules['relatorios_avancados'],
+            'faltas' => $modules['relatorios_avancados'] && $modules['estoque'],
+            'usuarios' => true,
+            'producao' => $modules['producao'],
+            'pesagem' => $modules['pesagem'],
+            'delivery' => $modules['delivery'],
+            'ordens_servico' => $modules['ordens_servico'],
+        ];
+    }
+
+    protected function readStoredSettings(?string $tenantId = null): array
+    {
+        if ($tenantId && $this->tenantSettingsTableExists()) {
+            $stored = TenantSetting::query()
+                ->where('tenant_id', $tenantId)
+                ->value('payload');
+
+            if (is_array($stored)) {
+                return $stored;
+            }
+        }
+
+        if (!$this->appSettingsTableExists()) {
+            return $this->getFromFile($tenantId);
+        }
+
+        $stored = AppSetting::query()
+            ->where('key', self::SETTINGS_KEY)
+            ->value('payload');
+
+        if (is_array($stored)) {
+            return $stored;
+        }
+
+        return $this->getFromFile($tenantId);
+    }
+
+    protected function enrich(array $settings): array
+    {
+        return $settings + [
+            'capabilities' => $this->moduleCapabilities($settings['modules'] ?? []),
+        ];
     }
 
     protected function mergeWithDefaults(array $settings): array
     {
+        $settings = $this->normalizeIncomingSettings($settings);
         $defaults = $this->defaults();
-        $merged = array_replace_recursive($defaults, $settings);
+        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'modules']));
 
+        $merged['business']['preset'] = $this->normalizePreset(data_get($merged, 'business.preset'));
         $merged['cash_closing']['require_conference'] = (bool) data_get(
             $merged,
             'cash_closing.require_conference',
             true,
         );
-
-        foreach (array_keys($defaults['modules']) as $moduleKey) {
-            $merged['modules'][$moduleKey] = (bool) data_get($merged, "modules.{$moduleKey}", true);
-        }
+        $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;
+    }
+
+    protected function normalizeIncomingSettings(array $settings): array
+    {
+        if (!$this->looksLikeLegacySettings($settings)) {
+            return $settings;
+        }
+
+        return [
+            'business' => [
+                'preset' => self::CUSTOM_PRESET,
+            ],
+            'cash_closing' => $settings['cash_closing'] ?? [],
+            'modules' => $this->mapLegacyModules((array) ($settings['modules'] ?? [])),
+        ];
+    }
+
+    protected function looksLikeLegacySettings(array $settings): bool
+    {
+        $legacyKeys = [
+            'pdv',
+            'caixa',
+            'pedidos',
+            'crediario',
+            'produtos',
+            'categorias',
+            'clientes',
+            'fornecedores',
+            'entrada_estoque',
+            'ajuste_estoque',
+            'movimentacao_estoque',
+            'relatorios',
+            'vendas',
+            'demanda',
+            'faltas',
+            'usuarios',
+        ];
+
+        $moduleKeys = array_keys((array) ($settings['modules'] ?? []));
+
+        return !isset($settings['business'])
+            && count(array_intersect($legacyKeys, $moduleKeys)) > 0;
+    }
+
+    protected function mapLegacyModules(array $legacyModules): array
+    {
+        $inventoryEnabled = (bool) data_get($legacyModules, 'produtos', true)
+            || (bool) data_get($legacyModules, 'categorias', true)
+            || (bool) data_get($legacyModules, 'entrada_estoque', true)
+            || (bool) data_get($legacyModules, 'ajuste_estoque', true)
+            || (bool) data_get($legacyModules, 'movimentacao_estoque', true);
+
+        $reportsEnabled = (bool) data_get($legacyModules, 'relatorios', true)
+            || (bool) data_get($legacyModules, 'vendas', true)
+            || (bool) data_get($legacyModules, 'demanda', true)
+            || (bool) data_get($legacyModules, 'faltas', true);
+
+        $ordersEnabled = (bool) data_get($legacyModules, 'pedidos', true);
+
+        return array_replace($this->defaultModules(), [
+            'comandas' => $ordersEnabled,
+            'pdv_simples' => (bool) data_get($legacyModules, 'pdv', true),
+            'pdv_restaurante' => $ordersEnabled,
+            'estoque' => $inventoryEnabled,
+            'fiado' => (bool) data_get($legacyModules, 'crediario', true),
+            'caixa' => (bool) data_get($legacyModules, 'caixa', true),
+            'relatorios_avancados' => $reportsEnabled,
+            'clientes' => (bool) data_get($legacyModules, 'clientes', true),
+            'fornecedores' => (bool) data_get($legacyModules, 'fornecedores', true),
+            'mesas' => $ordersEnabled,
+        ]);
+    }
+
+    protected function normalizeModules(array $modules): array
+    {
+        $normalized = array_replace($this->defaultModules(), $modules);
+
+        foreach ($this->moduleKeys() as $moduleKey) {
+            $normalized[$moduleKey] = (bool) data_get($normalized, $moduleKey, false);
+        }
+
+        if (!$normalized['comandas']) {
+            $normalized['mesas'] = false;
+        }
+
+        return $normalized;
+    }
+
+    protected function applyPresetRules(array $settings): array
+    {
+        $preset = $this->normalizePreset(data_get($settings, 'business.preset'));
+
+        if ($preset !== self::CUSTOM_PRESET) {
+            $settings['modules'] = $this->presetModules($preset);
+        }
+
+        $settings['business']['preset'] = $preset;
+        $settings['modules'] = $this->normalizeModules($settings['modules'] ?? []);
+
+        return $settings;
+    }
+
+    protected function presetModules(string $preset): array
+    {
+        $base = [
+            'comandas' => false,
+            'pdv_simples' => false,
+            'pdv_restaurante' => false,
+            'estoque' => false,
+            'producao' => false,
+            'pesagem' => false,
+            'fiado' => false,
+            'delivery' => false,
+            'caixa' => true,
+            'relatorios_avancados' => true,
+            'clientes' => true,
+            'fornecedores' => true,
+            'ordens_servico' => false,
+            'produtos_variacao' => false,
+            'controle_lotes' => false,
+            'controle_validade' => false,
+            'mesas' => false,
+            'impressao_automatica' => false,
+        ];
+
+        return match ($preset) {
+            'restaurante' => array_replace($base, [
+                'comandas' => true,
+                'pdv_restaurante' => true,
+                'estoque' => true,
+                'mesas' => true,
+            ]),
+            'padaria' => array_replace($base, [
+                'pdv_simples' => true,
+                'estoque' => true,
+                'producao' => true,
+            ]),
+            'mercearia' => array_replace($base, [
+                'pdv_simples' => true,
+                'estoque' => true,
+            ]),
+            'agropecuaria' => array_replace($base, [
+                'pdv_simples' => true,
+                'estoque' => true,
+                'pesagem' => true,
+            ]),
+            default => $this->defaultModules(),
+        };
+    }
+
+    protected function normalizePreset(?string $preset): string
+    {
+        $preset = trim((string) $preset);
+
+        return in_array($preset, $this->presetKeys(), true)
+            ? $preset
+            : self::CUSTOM_PRESET;
+    }
+
+    protected function payloadForStorage(array $settings): array
+    {
+        return Arr::only($settings, ['business', 'cash_closing', 'modules']);
     }
 
     protected function appSettingsTableExists(): bool
@@ -152,32 +449,43 @@ class TenantSettingsService
         return Schema::connection((new AppSetting())->getConnectionName())->hasTable('app_settings');
     }
 
-    protected function getFromFile(): array
+    protected function tenantSettingsTableExists(): bool
     {
-        if (!Storage::disk('local')->exists($this->settingsPath())) {
-            return $this->defaults();
-        }
-
-        $stored = json_decode((string) Storage::disk('local')->get($this->settingsPath()), true);
-
-        return $this->mergeWithDefaults(is_array($stored) ? $stored : []);
+        return Schema::connection((new TenantSetting())->getConnectionName())->hasTable('tenant_settings');
     }
 
-    protected function storeInFile(array $settings): void
+    protected function getFromFile(?string $tenantId = null): array
+    {
+        if (!Storage::disk('local')->exists($this->settingsPath($tenantId))) {
+            return [];
+        }
+
+        $stored = json_decode((string) Storage::disk('local')->get($this->settingsPath($tenantId)), true);
+
+        return is_array($stored) ? $stored : [];
+    }
+
+    protected function storeInFile(array $settings, ?string $tenantId = null): void
     {
         Storage::disk('local')->put(
-            $this->settingsPath(),
+            $this->settingsPath($tenantId),
             json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
         );
     }
 
-    protected function settingsPath(): string
+    protected function settingsPath(?string $tenantId = null): string
     {
-        return sprintf('private/tenant-runtime/%s/settings.json', $this->tenantId());
+        return sprintf('private/tenant-runtime/%s/settings.json', $tenantId ?: 'central');
     }
 
-    protected function tenantId(): string
+    protected function resolveTenantId(?string $tenantId = null): ?string
     {
-        return (string) (tenant()?->getTenantKey() ?? 'central');
+        if (filled($tenantId)) {
+            return (string) $tenantId;
+        }
+
+        return tenant()?->getTenantKey()
+            ? (string) tenant()->getTenantKey()
+            : null;
     }
 }

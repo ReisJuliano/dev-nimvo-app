@@ -23,31 +23,30 @@ class TenancyServiceProvider extends ServiceProvider
         return [
             // Tenant events
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [
-                JobPipeline::make([
-                    Jobs\CreateDatabase::class,
-                    Jobs\MigrateDatabase::class,
-                    // Jobs\SeedDatabase::class,
-
-                    // Your own jobs to prepare the tenant.
-                    // Provision API keys, create S3 buckets, anything you want!
-
-                ])->send(function (Events\TenantCreated $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
-            ],
+            Events\TenantCreated::class => array_values(array_filter([
+                $this->shouldManageTenantDatabases()
+                    ? JobPipeline::make([
+                        Jobs\CreateDatabase::class,
+                        Jobs\MigrateDatabase::class,
+                    ])->send(function (Events\TenantCreated $event) {
+                        return $event->tenant;
+                    })->shouldBeQueued(false)
+                    : null,
+            ])),
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],
             Events\UpdatingTenant::class => [],
             Events\TenantUpdated::class => [],
             Events\DeletingTenant::class => [],
-            Events\TenantDeleted::class => [
-                JobPipeline::make([
-                    Jobs\DeleteDatabase::class,
-                ])->send(function (Events\TenantDeleted $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
-            ],
+            Events\TenantDeleted::class => array_values(array_filter([
+                $this->shouldManageTenantDatabases()
+                    ? JobPipeline::make([
+                        Jobs\DeleteDatabase::class,
+                    ])->send(function (Events\TenantDeleted $event) {
+                        return $event->tenant;
+                    })->shouldBeQueued(false)
+                    : null,
+            ])),
 
             // Domain events
             Events\CreatingDomain::class => [],
@@ -118,14 +117,14 @@ class TenancyServiceProvider extends ServiceProvider
         }
     }
 
+    protected function shouldManageTenantDatabases(): bool
+    {
+        return !config('tenancy.dev_single_database');
+    }
+
     protected function mapRoutes()
     {
-        $this->app->booted(function () {
-            if (file_exists(base_path('routes/tenant.php'))) {
-                Route::namespace(static::$controllerNamespace)
-                    ->group(base_path('routes/tenant.php'));
-            }
-        });
+        //
     }
 
     protected function makeTenancyMiddlewareHighestPriority()

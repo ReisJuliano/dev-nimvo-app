@@ -1,7 +1,21 @@
 import { useMemo } from 'react'
 import { formatMoney, formatNumber } from '@/lib/format'
 
-export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuantityChange, onRemove }) {
+export default function CartPanel({
+    cart,
+    selectedItemId,
+    onSelectItem,
+    onQuantityChange,
+    onRemove,
+    title = 'Carrinho',
+    subtitle = 'Itens separados para fechamento',
+    emptyMessage = 'Adicione produtos para montar a venda.',
+    selectedLabel = 'Item selecionado',
+    activeActionLabel = 'Estoque',
+    selectActionLabel = 'Ver estoque',
+    removeLabel = 'Remover',
+    headerActions = null,
+}) {
     const selectedItem = useMemo(
         () => cart.find((item) => item.id === selectedItemId) ?? null,
         [cart, selectedItemId],
@@ -11,9 +25,11 @@ export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuanti
         <section className="pos-card">
             <div className="pos-card-header">
                 <div>
-                    <h2>Carrinho</h2>
-                    <p>Itens separados para fechamento</p>
+                    <h2>{title}</h2>
+                    {subtitle ? <p>{subtitle}</p> : null}
                 </div>
+
+                {headerActions ? <div className="pos-card-header-actions">{headerActions}</div> : null}
             </div>
 
             {cart.length ? (
@@ -21,7 +37,7 @@ export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuanti
                     {selectedItem ? (
                         <div className="pos-cart-detail-card">
                             <div>
-                                <span>Item selecionado</span>
+                                <span>{selectedLabel}</span>
                                 <strong>{selectedItem.name}</strong>
                             </div>
 
@@ -77,7 +93,7 @@ export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuanti
                                     </div>
                                 </div>
                                 <span className="pos-cart-summary-action">
-                                    {selectedItemId === item.id ? 'Estoque' : 'Ver estoque'}
+                                    {selectedItemId === item.id ? activeActionLabel : selectActionLabel}
                                 </span>
                             </button>
 
@@ -105,14 +121,14 @@ export default function CartPanel({ cart, selectedItemId, onSelectItem, onQuanti
                                     onClick={() => onRemove(item.id)}
                                 >
                                     <i className="fa-solid fa-trash-can" />
-                                    Remover
+                                    {removeLabel}
                                 </button>
                             </div>
                         </article>
                     ))}
                 </div>
             ) : (
-                <div className="pos-empty-state">Adicione produtos para montar a venda.</div>
+                <div className="pos-empty-state">{emptyMessage}</div>
             )}
         </section>
     )

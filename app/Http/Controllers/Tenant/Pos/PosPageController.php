@@ -7,22 +7,27 @@ use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
 use App\Services\Tenant\OrderDraftService;
+use App\Services\Tenant\TenantSettingsService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PosPageController extends Controller
 {
-    public function __invoke(OrderDraftService $orderDraftService): Response
+    public function __invoke(
+        OrderDraftService $orderDraftService,
+        TenantSettingsService $settingsService,
+    ): Response
     {
         $userId = auth()->user()?->getKey();
         $requestedOrderDraftId = request()->integer('orderDraft');
+        $ordersEnabled = $settingsService->isModuleEnabled('pedidos');
 
         $cashRegister = CashRegister::query()
             ->where('user_id', $userId)
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();
-        $preloadedOrderDraft = $requestedOrderDraftId
+        $preloadedOrderDraft = $ordersEnabled && $requestedOrderDraftId
             ? $orderDraftService->findForCheckout($requestedOrderDraftId)
             : null;
 
@@ -32,7 +37,7 @@ class PosPageController extends Controller
                 ->where('active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone', 'credit_limit']),
-            'pendingOrderDrafts' => $orderDraftService->pendingCheckoutDrafts(),
+            'pendingOrderDrafts' => $ordersEnabled ? $orderDraftService->pendingCheckoutDrafts() : [],
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,

@@ -4,6 +4,8 @@ namespace App\Services\Central;
 
 use App\Models\Central\Client;
 use App\Models\Tenant;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Str;
 
 class ProvisionTenantService
 {
@@ -14,9 +16,7 @@ class ProvisionTenantService
             'email' => $data['client_email'] ?? null,
         ];
 
-        if (!empty($data['tenant_id'])) {
-            $tenantData['id'] = $data['tenant_id'];
-        }
+        $tenantData['id'] = $this->resolveTenantId($data);
 
         $tenant = Tenant::create($tenantData);
 
@@ -33,6 +33,42 @@ class ProvisionTenantService
             'active' => $data['active'] ?? true,
         ]);
 
+        if (!config('tenancy.dev_single_database')) {
+            tenancy()->initialize($tenant);
+
+            Artisan::call('db:seed', [
+                '--class' => 'TenantDatabaseSeeder',
+                '--force' => true,
+            ]);
+
+            tenancy()->end();
+        }
+
         return $tenant->fresh(['domains', 'client']);
+    }
+
+    protected function resolveTenantId(array $data): string
+    {
+        $tenantId = trim((string) ($data['tenant_id'] ?? ''));
+
+        if ($tenantId !== '') {
+            return $tenantId;
+        }
+
+        $baseId = Str::slug((string) ($data['tenant_name'] ?? $data['client_name'] ?? 'tenant'));
+
+        if ($baseId === '') {
+            $baseId = 'tenant';
+        }
+
+        $tenantId = $baseId;
+        $suffix = 2;
+
+        while (Tenant::query()->whereKey($tenantId)->exists()) {
+            $tenantId = sprintf('%s-%d', $baseId, $suffix);
+            $suffix++;
+        }
+
+        return $tenantId;
     }
 }

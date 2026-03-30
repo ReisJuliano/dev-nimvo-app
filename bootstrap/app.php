@@ -9,7 +9,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function() {
             \Illuminate\Support\Facades\Route::middleware('web')
-                ->group(base_path('routes/tenant.php'));
+                ->group(base_path('routes/central.php'));
+
+            \Illuminate\Support\Facades\Route::middleware([
+                'web',
+                \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
+                \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
+            ])->group(base_path('routes/tenant.php'));
         }
     )
     ->withMiddleware(function (Middleware $middleware): void {

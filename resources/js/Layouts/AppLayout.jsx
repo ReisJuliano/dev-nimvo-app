@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppSidebar from '@/Components/Layout/AppSidebar'
 import AppTopbar from '@/Components/Layout/AppTopbar'
-import { adminItems, navItems } from '@/Components/Layout/navigation'
+import { buildNavigationGroups } from '@/Components/Layout/navigation'
+import useModules from '@/hooks/useModules'
 import './app-layout.css'
 
-export default function AppLayout({ children, title = 'Inicio', navigationModulesOverride = null }) {
-    const { auth, appSettings } = usePage().props
+export default function AppLayout({ children, title = 'Inicio', settingsOverride = null }) {
+    const { auth } = usePage().props
     const currentUrl = usePage().url
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
     const [currentTime, setCurrentTime] = useState('')
     const [currentDate, setCurrentDate] = useState('')
-    const enabledModules = navigationModulesOverride ?? appSettings?.modules ?? {}
+    const moduleState = useModules(settingsOverride)
 
     useEffect(() => {
         function tick() {
@@ -56,21 +57,11 @@ export default function AppLayout({ children, title = 'Inicio', navigationModule
         setSidebarOpen(false)
     }
 
-    function isNavigationItemEnabled(item) {
-        if (Array.isArray(item.moduleKeys)) {
-            return item.moduleKeys.some((moduleKey) => enabledModules[moduleKey] !== false)
-        }
-
-        return item.moduleKey == null || enabledModules[item.moduleKey] !== false
-    }
-
-    const baseNavigationGroups = auth?.user?.role === 'admin' ? [...navItems, adminItems] : navItems
-    const navigationGroups = baseNavigationGroups
-        .map((group) => ({
-            ...group,
-            items: group.items.filter((item) => isNavigationItemEnabled(item)),
-        }))
-        .filter((group) => group.items.length > 0)
+    const navigationGroups = buildNavigationGroups({
+        authRole: auth?.user?.role,
+        modules: moduleState.modules,
+        capabilities: moduleState.capabilities,
+    })
     const userRoleLabel = auth?.user?.role === 'admin' ? 'Administrador' : 'Operacao'
 
     return (

@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Http\Requests\Tenant\Settings;
+namespace App\Http\Requests\Central;
 
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateSettingsRequest extends FormRequest
+class UpdateTenantSettingsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->user()?->role === 'admin';
+        return auth('central_admin')->check();
     }
 
     public function rules(): array

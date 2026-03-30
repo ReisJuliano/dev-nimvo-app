@@ -11,6 +11,13 @@ export default function ProductSearchPanel({
     products,
     loading,
     onAddProduct,
+    title = 'Buscar produto',
+    subtitle = '',
+    actions = null,
+    categoryPlaceholder = 'Todas as categorias',
+    searchPlaceholder = 'Busque por nome, codigo, EAN ou descricao',
+    emptyMessage = 'Digite algo para buscar produtos',
+    noResultsMessage = 'Nenhum produto encontrado para essa pesquisa.',
 }) {
     const normalizedSearchTerm =
         searchTerm == null || String(searchTerm).toLowerCase() === 'null'
@@ -21,13 +28,16 @@ export default function ProductSearchPanel({
         <section className="pos-card">
             <div className="pos-card-header">
                 <div>
-                    <h2>Buscar produto</h2>
+                    <h2>{title}</h2>
+                    {subtitle ? <p>{subtitle}</p> : null}
                 </div>
+
+                {actions ? <div className="pos-card-header-actions">{actions}</div> : null}
             </div>
 
             <div className="pos-search-grid">
                 <select className="ui-select" value={selectedCategory} onChange={(event) => onCategoryChange(event.target.value)}>
-                    <option value="">Todas as categorias</option>
+                    <option value="">{categoryPlaceholder}</option>
                     {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                             {category.name}
@@ -39,7 +49,7 @@ export default function ProductSearchPanel({
                     ref={searchInputRef}
                     className="ui-input"
                     type="search"
-                    placeholder="Busque por nome, codigo, EAN ou descricao"
+                    placeholder={searchPlaceholder}
                     value={normalizedSearchTerm}
                     onChange={(event) => onSearchChange(event.target.value)}
                 />
@@ -49,7 +59,7 @@ export default function ProductSearchPanel({
                 {!hasSearchTerm ? (
                     <div className="pos-search-empty">
                         <i className="fas fa-search" style={{ fontSize: 48, color: '#ccc' }} />
-                        <p>Digite algo para buscar produtos</p>
+                        <p>{emptyMessage}</p>
                     </div>
                 ) : loading
                     ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="ui-skeleton" />)
@@ -82,7 +92,7 @@ export default function ProductSearchPanel({
                             </button>
                         ))
                         : (
-                            <div className="pos-search-empty">Nenhum produto encontrado para essa pesquisa.</div>
+                            <div className="pos-search-empty">{noResultsMessage}</div>
                         )}
             </div>
         </section>
