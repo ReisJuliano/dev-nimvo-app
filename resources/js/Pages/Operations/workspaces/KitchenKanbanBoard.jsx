@@ -78,22 +78,19 @@ function canMoveTo(status, target) {
     return Math.abs(fromIndex - toIndex) === 1
 }
 
-function resolveMoveMeta(status) {
+function resolveAdjacentMoveTargets(status) {
     const currentIndex = KITCHEN_COLUMNS.findIndex((column) => column.key === status)
 
     if (currentIndex < 0) {
-        return { target: null, icon: 'fa-chevron-right', label: 'Mover' }
+        return {
+            previous: null,
+            next: null,
+        }
     }
 
-    const hasNext = currentIndex < KITCHEN_COLUMNS.length - 1
-    const target = hasNext ? KITCHEN_COLUMNS[currentIndex + 1] : KITCHEN_COLUMNS[currentIndex - 1]
-    const icon = hasNext ? 'fa-chevron-right' : 'fa-chevron-left'
-    const action = hasNext ? 'Avancar para' : 'Voltar para'
-
     return {
-        target: target?.key ?? null,
-        icon,
-        label: target ? `${action} ${target.label}` : 'Mover',
+        previous: currentIndex > 0 ? KITCHEN_COLUMNS[currentIndex - 1] : null,
+        next: currentIndex < KITCHEN_COLUMNS.length - 1 ? KITCHEN_COLUMNS[currentIndex + 1] : null,
     }
 }
 
@@ -185,19 +182,33 @@ export default function KitchenKanbanBoard({
                                             {onMoveTicket ? (
                                                 <div className="ops-kitchen-kanban-actions">
                                                     {(() => {
-                                                        const move = resolveMoveMeta(ticket.status)
+                                                        const moves = resolveAdjacentMoveTargets(ticket.status)
+                                                        const previousTarget = moves.previous?.key ?? null
+                                                        const nextTarget = moves.next?.key ?? null
 
                                                         return (
-                                                            <button
-                                                                type="button"
-                                                                className="ops-kitchen-kanban-move"
-                                                                onClick={() => move.target && canMoveTo(ticket.status, move.target) && onMoveTicket(ticket, move.target)}
-                                                                disabled={!move.target || !canMoveTo(ticket.status, move.target) || loading}
-                                                                title={move.label}
-                                                                aria-label={move.label}
-                                                            >
-                                                                <i className={`fa-solid ${move.icon}`} />
-                                                            </button>
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ops-kitchen-kanban-move"
+                                                                    onClick={() => previousTarget && canMoveTo(ticket.status, previousTarget) && onMoveTicket(ticket, previousTarget)}
+                                                                    disabled={!previousTarget || !canMoveTo(ticket.status, previousTarget) || loading}
+                                                                    title={moves.previous ? `Voltar para ${moves.previous.label}` : 'Nao ha etapa anterior'}
+                                                                    aria-label={moves.previous ? `Voltar para ${moves.previous.label}` : 'Nao ha etapa anterior'}
+                                                                >
+                                                                    <i className="fa-solid fa-chevron-left" />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="ops-kitchen-kanban-move"
+                                                                    onClick={() => nextTarget && canMoveTo(ticket.status, nextTarget) && onMoveTicket(ticket, nextTarget)}
+                                                                    disabled={!nextTarget || !canMoveTo(ticket.status, nextTarget) || loading}
+                                                                    title={moves.next ? `Avancar para ${moves.next.label}` : 'Nao ha proxima etapa'}
+                                                                    aria-label={moves.next ? `Avancar para ${moves.next.label}` : 'Nao ha proxima etapa'}
+                                                                >
+                                                                    <i className="fa-solid fa-chevron-right" />
+                                                                </button>
+                                                            </>
                                                         )
                                                     })()}
                                                 </div>

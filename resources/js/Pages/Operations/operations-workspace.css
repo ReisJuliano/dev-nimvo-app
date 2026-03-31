@@ -475,6 +475,7 @@
 .ops-kitchen-kanban-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 0.35rem;
 }
 
 .ops-kitchen-kanban-move {

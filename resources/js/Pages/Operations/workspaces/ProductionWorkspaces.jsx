@@ -431,6 +431,8 @@ export function KitchenWorkspace({ moduleKey, payload }) {
             <MetricGrid items={metrics} />
             <p className="ops-kitchen-priority-note">
                 Prioridade automatica: urgente manual, atrasado acima de 35 min e atencao acima de 20 min.
+                {' '}
+                No card: use &lt; para voltar etapa e &gt; para avancar etapa.
             </p>
             <Feedback feedback={feedback} />
             <KitchenKanbanBoard

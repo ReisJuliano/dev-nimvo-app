@@ -4,9 +4,10 @@
     display: grid;
     gap: 1rem;
     background:
-        radial-gradient(circle at top right, rgba(239, 177, 79, 0.16), transparent 30%),
-        radial-gradient(circle at bottom left, rgba(53, 91, 120, 0.15), transparent 34%),
-        #f3f6f8;
+        radial-gradient(circle at 14% 10%, rgba(231, 176, 81, 0.2), transparent 26%),
+        radial-gradient(circle at 88% 0%, rgba(58, 109, 150, 0.24), transparent 34%),
+        linear-gradient(155deg, #0d1620 0%, #13202d 50%, #1a2a3a 100%);
+    color: #eaf1f7;
 }
 
 .kitchen-display-header {
@@ -14,22 +15,23 @@
     justify-content: space-between;
     align-items: flex-end;
     gap: 1rem;
-    border: 1px solid rgba(28, 50, 66, 0.12);
+    border: 1px solid rgba(170, 194, 216, 0.24);
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(7, 14, 22, 0.68);
     padding: 1rem 1.2rem;
+    backdrop-filter: blur(8px);
 }
 
 .kitchen-display-header span {
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.08em;
-    color: #526472;
+    color: #9eb3c5;
 }
 
 .kitchen-display-header h1 {
     margin: 0.25rem 0 0;
-    color: #173041;
+    color: #f4f8fc;
     font-size: clamp(1.3rem, 2.2vw, 2rem);
 }
 
@@ -40,16 +42,16 @@
 }
 
 .kitchen-display-meta article {
-    border: 1px solid rgba(28, 50, 66, 0.12);
+    border: 1px solid rgba(170, 194, 216, 0.2);
     border-radius: 16px;
     padding: 0.55rem 0.8rem;
     min-width: 92px;
-    background: #f9fbfd;
+    background: rgba(9, 18, 28, 0.78);
 }
 
 .kitchen-display-meta small {
     display: block;
-    color: #60717c;
+    color: #a7bccd;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -58,8 +60,67 @@
 .kitchen-display-meta strong {
     display: block;
     margin-top: 0.2rem;
-    color: #173041;
+    color: #f6fbff;
     font-size: 1.15rem;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-column {
+    background: rgba(7, 14, 22, 0.72);
+    border-color: rgba(170, 194, 216, 0.2);
+}
+
+.kitchen-display-page .ops-kitchen-kanban-column > header {
+    border-bottom-color: rgba(170, 194, 216, 0.2);
+}
+
+.kitchen-display-page .ops-kitchen-kanban-column > header strong {
+    color: #eff5fb;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-column > header small {
+    color: #a9bfd1;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-card {
+    background: #f8fbff;
+    border-color: rgba(26, 59, 86, 0.2);
+    box-shadow: 0 8px 20px rgba(5, 12, 18, 0.22);
+}
+
+.kitchen-display-page .ops-kitchen-kanban-card.priority-danger {
+    background: linear-gradient(180deg, rgba(255, 238, 241, 0.95), rgba(255, 255, 255, 0.98));
+}
+
+.kitchen-display-page .ops-kitchen-kanban-card.priority-warning {
+    background: linear-gradient(180deg, rgba(255, 248, 236, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+.kitchen-display-page .ops-kitchen-kanban-meta {
+    color: #5b6f80;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-item {
+    background: #ffffff;
+    border-color: rgba(26, 59, 86, 0.14);
+}
+
+.kitchen-display-page .ops-kitchen-kanban-item span {
+    color: #183243;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-item small {
+    color: #607482;
+}
+
+.kitchen-display-page .ops-kitchen-kanban-move {
+    background: #f0f5fa;
+    border-color: rgba(26, 59, 86, 0.2);
+}
+
+.kitchen-display-page .ops-kitchen-kanban-empty {
+    color: #9db2c3;
+    border-color: rgba(170, 194, 216, 0.24);
+    background: rgba(8, 16, 25, 0.5);
 }
 
 @media (max-width: 980px) {
