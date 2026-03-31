@@ -11,6 +11,7 @@ const emptyForm = {
     size: '',
     collection: '',
     catalog_visible: false,
+    requires_preparation: true,
     category_id: '',
     supplier_id: '',
     unit: 'UN',
@@ -37,7 +38,14 @@ export default function ProductFormModal({
         if (open) {
             setForm(
                 product
-                    ? { ...emptyForm, ...product, catalog_visible: Boolean(product.catalog_visible) }
+                    ? {
+                        ...emptyForm,
+                        ...product,
+                        catalog_visible: Boolean(product.catalog_visible),
+                        requires_preparation: Boolean(
+                            product.requires_preparation ?? emptyForm.requires_preparation,
+                        ),
+                    }
                     : { ...emptyForm },
             )
             setActiveTab('identity')
@@ -107,6 +115,12 @@ export default function ProductFormModal({
                 <form className="products-form-grid" onSubmit={handleSubmit}>
                     {(!isFashionMode || activeTab === 'identity') && (
                         <>
+                            <div className="products-form-section span-2">
+                                <div>
+                                    <h3>Identificacao</h3>
+                                    <p>Os campos abaixo ajudam na busca, etiqueta e organizacao do catalogo.</p>
+                                </div>
+                            </div>
                             <label className="products-field-group">
                                 Codigo
                                 <input
@@ -137,6 +151,13 @@ export default function ProductFormModal({
                                     onChange={(event) => updateField('description', event.target.value)}
                                 />
                             </label>
+
+                            <div className="products-form-section span-2">
+                                <div>
+                                    <h3>Classificacao</h3>
+                                    <p>Categoria, fornecedor e unidade para manter relatorios consistentes.</p>
+                                </div>
+                            </div>
                             <label className="products-field-group">
                                 Categoria
                                 <select
@@ -177,11 +198,28 @@ export default function ProductFormModal({
                                     <option value="L">L</option>
                                 </select>
                             </label>
+                            <label className="products-field-group span-2 products-toggle-card">
+                                <span className="products-toggle-card-title">Precisa fabricacao/preparo</span>
+                                <small>
+                                    Quando desmarcado, o item nao entra na fila da cozinha.
+                                </small>
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(form.requires_preparation)}
+                                    onChange={(event) => updateField('requires_preparation', event.target.checked)}
+                                />
+                            </label>
                         </>
                     )}
 
                     {isFashionMode && activeTab === 'fashion' ? (
                         <>
+                            <div className="products-form-section span-2">
+                                <div>
+                                    <h3>Grade e vitrine</h3>
+                                    <p>Referencia, colecao, cor, tamanho e publicacao no catalogo online.</p>
+                                </div>
+                            </div>
                             <label className="products-field-group">
                                 Referencia de estilo
                                 <input
@@ -228,6 +266,12 @@ export default function ProductFormModal({
 
                     {(!isFashionMode || activeTab === 'stock') && (
                         <>
+                            <div className="products-form-section span-2">
+                                <div>
+                                    <h3>Estoque e preco</h3>
+                                    <p>Preencha custos, venda e limites para alertas de reposicao.</p>
+                                </div>
+                            </div>
                             <label className="products-field-group">
                                 Custo
                                 <input

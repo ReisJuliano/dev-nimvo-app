@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import KitchenKanbanBoard from './KitchenKanbanBoard'
 import {
     Badge,
     buildRecordsUrl,
@@ -68,65 +69,12 @@ function RecipeItemsEditor({ products, items, onChange }) {
     )
 }
 
-function KitchenItemsEditor({ products, items, onChange }) {
-    const [draft, setDraft] = useState({ product_id: '', item_name: '', quantity: '1', unit: 'UN', notes: '' })
-
-    function addItem() {
-        if (!draft.item_name && !draft.product_id) return
-
-        const product = products.find((entry) => String(entry.id) === String(draft.product_id))
-        onChange([
-            ...items,
-            {
-                product_id: draft.product_id,
-                item_name: draft.item_name || product?.name || '',
-                quantity: String(parseNumber(draft.quantity, 1)),
-                unit: draft.unit || product?.unit || 'UN',
-                notes: draft.notes,
-            },
-        ])
-        setDraft({ product_id: '', item_name: '', quantity: '1', unit: 'UN', notes: '' })
-    }
-
-    return (
-        <>
-            <div className="ops-workspace-inline-adder span-2">
-                <select value={draft.product_id} onChange={(event) => {
-                    const product = products.find((entry) => String(entry.id) === String(event.target.value))
-                    setDraft((current) => ({ ...current, product_id: event.target.value, item_name: current.item_name || product?.name || '', unit: current.unit || product?.unit || 'UN' }))
-                }}>
-                    <option value="">Produto opcional</option>
-                    {products.map((product) => <option key={product.id} value={product.id}>{getProductOptionLabel(product)}</option>)}
-                </select>
-                <input value={draft.item_name} onChange={(event) => setDraft((current) => ({ ...current, item_name: event.target.value }))} placeholder="Nome do item" />
-                <input type="number" min="0.001" step="0.001" value={draft.quantity} onChange={(event) => setDraft((current) => ({ ...current, quantity: event.target.value }))} />
-                <button type="button" className="ui-button-ghost" onClick={addItem}>Adicionar</button>
-            </div>
-            <div className="ops-workspace-table-wrap span-2">
-                <table className="ui-table">
-                    <thead><tr><th>Item</th><th>Qtd</th><th>Unidade</th><th>Obs.</th><th>Acao</th></tr></thead>
-                    <tbody>
-                        {items.length ? items.map((item, index) => (
-                            <tr key={`${item.item_name}-${index}`}>
-                                <td><input value={item.item_name} onChange={(event) => onChange(items.map((entry, entryIndex) => (entryIndex === index ? { ...entry, item_name: event.target.value } : entry)))} /></td>
-                                <td><input type="number" min="0.001" step="0.001" value={item.quantity} onChange={(event) => onChange(items.map((entry, entryIndex) => (entryIndex === index ? { ...entry, quantity: event.target.value } : entry)))} /></td>
-                                <td><input value={item.unit} onChange={(event) => onChange(items.map((entry, entryIndex) => (entryIndex === index ? { ...entry, unit: event.target.value } : entry)))} /></td>
-                                <td><input value={item.notes || ''} onChange={(event) => onChange(items.map((entry, entryIndex) => (entryIndex === index ? { ...entry, notes: event.target.value } : entry)))} /></td>
-                                <td><button type="button" className="ui-button-ghost danger" onClick={() => onChange(items.filter((_, entryIndex) => entryIndex !== index))}>Remover</button></td>
-                            </tr>
-                        )) : <tr><td colSpan="5">Nenhum item adicionado.</td></tr>}
-                    </tbody>
-                </table>
-            </div>
-        </>
-    )
-}
-
 export function RecipesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, code: '', name: '', product_id: '', yield_quantity: '1', yield_unit: 'UN', prep_time_minutes: '', instructions: '', active: true, items: [] }
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('active')
     const [form, setForm] = useState(emptyForm)
+    const [detail, setDetail] = useState(null)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
@@ -178,14 +126,14 @@ export function RecipesWorkspace({ moduleKey, payload }) {
             <MetricGrid items={metrics} />
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Fichas tecnicas" subtitle={`${filteredRecords.length} registro(s)`} />
+                    <FeedbackHeader title="Receitas" subtitle={`${filteredRecords.length} registro(s)`} />
                     <Feedback feedback={feedback} />
                     <div className="ops-workspace-list-stack">
                         {filteredRecords.length ? filteredRecords.map((record) => (
                             <ListCard
                                 key={record.id}
                                 active={form.id === record.id}
-                                onClick={() => setForm({ ...emptyForm, ...record, product_id: record.product_id ? String(record.product_id) : '', yield_quantity: String(record.yield_quantity || 1), prep_time_minutes: record.prep_time_minutes ? String(record.prep_time_minutes) : '', items: (record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity) })) })}
+                                onClick={() => setDetail(record)}
                                 title={`${record.name} ${record.code ? `· ${record.code}` : ''}`}
                                 badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativa' : 'Inativa'}</Badge>}
                                 description={record.product_name || 'Sem produto final vinculado'}
@@ -210,6 +158,83 @@ export function RecipesWorkspace({ moduleKey, payload }) {
                     </form>
                 </section>
             </div>
+
+            {detail ? (
+                <div className="ops-recipe-modal" role="dialog" aria-modal="true">
+                    <div className="ops-recipe-modal-backdrop" onClick={() => setDetail(null)} />
+                    <div className="ops-recipe-modal-card">
+                        <header className="ops-recipe-modal-header">
+                            <div>
+                                <strong>{detail.name}</strong>
+                                <small>{detail.code ? `Codigo ${detail.code}` : 'Sem codigo'}</small>
+                            </div>
+                            <button type="button" className="ui-button-ghost" onClick={() => setDetail(null)}>
+                                <i className="fa-solid fa-xmark" />
+                                Fechar
+                            </button>
+                        </header>
+
+                        <div className="ops-recipe-modal-body">
+                            <div className="ops-recipe-metrics">
+                                <div>
+                                    <span>Rendimento</span>
+                                    <strong>{`${formatNumber(detail.yield_quantity)} ${detail.yield_unit}`}</strong>
+                                </div>
+                                <div>
+                                    <span>Tempo</span>
+                                    <strong>{detail.prep_time_minutes ? `${detail.prep_time_minutes} min` : 'Nao informado'}</strong>
+                                </div>
+                                <div>
+                                    <span>Produto final</span>
+                                    <strong>{detail.product_name || 'Sem vinculo'}</strong>
+                                </div>
+                            </div>
+
+                            <section className="ops-recipe-section">
+                                <h4>Insumos</h4>
+                                <div className="ops-recipe-items">
+                                    {(detail.items || []).map((item) => (
+                                        <article key={item.id} className="ops-recipe-item">
+                                            <strong>{item.product_name || item.ingredient_name || 'Insumo'}</strong>
+                                            <small>{`${formatNumber(item.quantity)} ${item.unit}`}</small>
+                                            {item.notes ? <p>{item.notes}</p> : null}
+                                        </article>
+                                    ))}
+                                </div>
+                            </section>
+
+                            <section className="ops-recipe-section">
+                                <h4>Modo de preparo</h4>
+                                <p className="ops-recipe-instructions">{detail.instructions || 'Nao informado.'}</p>
+                            </section>
+                        </div>
+
+                        <footer className="ops-recipe-modal-footer">
+                            <button
+                                type="button"
+                                className="ui-button-secondary"
+                                onClick={() => {
+                                    setForm({
+                                        ...emptyForm,
+                                        ...detail,
+                                        product_id: detail.product_id ? String(detail.product_id) : '',
+                                        yield_quantity: String(detail.yield_quantity || 1),
+                                        prep_time_minutes: detail.prep_time_minutes ? String(detail.prep_time_minutes) : '',
+                                        items: (detail.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity) })),
+                                    })
+                                    setDetail(null)
+                                }}
+                            >
+                                <i className="fa-solid fa-pen" />
+                                Editar receita
+                            </button>
+                            <button type="button" className="ui-button" onClick={() => setDetail(null)}>
+                                Ok
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            ) : null}
         </div>
     )
 }
@@ -306,44 +331,80 @@ export function ProductionWorkspace({ moduleKey, payload }) {
 }
 
 export function KitchenWorkspace({ moduleKey, payload }) {
-    const emptyForm = { id: null, reference: '', channel: 'balcao', status: 'queued', priority: 'normal', customer_name: '', notes: '', requested_at: '', items: [] }
     const [records, setRecords] = useState(payload.records || [])
-    const [activeTab, setActiveTab] = useState('queued')
-    const [form, setForm] = useState(emptyForm)
-    const [saving, setSaving] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
-    const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
     const metrics = useMemo(() => [
-        { label: 'Tickets', value: records.length, caption: 'Fila completa' },
-        { label: 'Urgentes', value: records.filter((record) => record.priority === 'urgent').length, caption: 'Atencao imediata' },
-        { label: 'Prontos', value: records.filter((record) => record.status === 'ready').length, caption: 'Aguardando saida' },
+        { label: 'Comandas', value: records.length, caption: 'Fila completa' },
+        { label: 'Em preparo', value: records.filter((record) => record.status === 'in_preparation').length, caption: 'Producao ativa' },
+        { label: 'Prontas', value: records.filter((record) => record.status === 'ready').length, caption: 'Aguardando retirada' },
     ], [records])
 
-    async function handleSubmit(event) {
-        event.preventDefault()
-        setSaving(true)
-        setFeedback(null)
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            if (document.hidden) return
+            void refreshRecords(true)
+        }, 10000)
+
+        return () => window.clearInterval(intervalId)
+    }, [moduleKey])
+
+    async function refreshRecords(silent = false) {
+        if (!silent) setLoading(true)
+
         try {
-            const payloadData = { ...form, requested_at: form.requested_at || null, items: form.items.map((item) => ({ product_id: item.product_id ? Number(item.product_id) : null, item_name: item.item_name, quantity: parseNumber(item.quantity, 1), unit: item.unit, notes: item.notes || null })) }
-            const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
-            setForm({ ...emptyForm, ...response.record, requested_at: ensureDateTime(response.record.requested_at), items: (response.record.items || []).map((item) => ({ ...item, product_id: item.product_id ? String(item.product_id) : '', quantity: String(item.quantity) })) })
-            setFeedback({ type: 'success', text: response.message })
+            const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'get' })
+            setRecords(response.records || [])
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
+            if (!silent) {
+                setFeedback({ type: 'error', text: error.message })
+            }
         } finally {
-            setSaving(false)
+            if (!silent) setLoading(false)
         }
     }
 
-    async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover o ticket "${form.reference || form.customer_name || `#${form.id}`}"?`)) return
+    function buildTicketPayload(ticket, nextStatus) {
+        return {
+            ...ticket,
+            status: nextStatus,
+            requested_at: ticket.requested_at || null,
+            items: (ticket.items || []).map((item) => ({
+                product_id: item.product_id ? Number(item.product_id) : null,
+                item_name: item.item_name,
+                quantity: parseNumber(item.quantity, 1),
+                unit: item.unit || 'UN',
+                notes: item.notes || null,
+            })),
+        }
+    }
+
+    async function handleMoveTicket(ticket, nextStatus) {
+        if (ticket.status === nextStatus) return
+
+        setFeedback(null)
+        setLoading(true)
+
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
-            setFeedback({ type: 'success', text: response.message })
+            const response = await apiRequest(buildRecordsUrl(moduleKey, ticket.id), {
+                method: 'put',
+                data: buildTicketPayload(ticket, nextStatus),
+            })
+
+            setRecords((current) => upsertRecord(current, response.record))
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    async function handleToggleItemDone(ticketId, itemId) {
+        setFeedback(null)
+        try {
+            const response = await apiRequest(`/api/kitchen/tickets/${ticketId}/items/${itemId}/toggle-done`, { method: 'post' })
+            setRecords((current) => upsertRecord(current, response.record))
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         }
@@ -351,41 +412,33 @@ export function KitchenWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack">
-            <SectionTabs tabs={[{ key: 'queued', label: 'Fila', icon: 'fa-list' }, { key: 'in_preparation', label: 'Em preparo', icon: 'fa-fire-burner' }, { key: 'ready', label: 'Prontos', icon: 'fa-bell-concierge' }, { key: 'completed', label: 'Expedidos', icon: 'fa-check-double' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Painel da cozinha" subtitle={`${filteredRecords.length} ticket(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? filteredRecords.map((record) => (
-                            <ListCard
-                                key={record.id}
-                                active={form.id === record.id}
-                                onClick={() => setForm({ ...emptyForm, ...record, requested_at: ensureDateTime(record.requested_at), items: (record.items || []).map((item) => ({ ...item, product_id: item.product_id ? String(item.product_id) : '', quantity: String(item.quantity) })) })}
-                                title={record.reference || record.customer_name || `Ticket #${record.id}`}
-                                badge={<Badge tone={record.priority === 'urgent' ? 'danger' : 'warning'}>{record.priority === 'urgent' ? 'Urgente' : record.status}</Badge>}
-                                description={record.channel}
-                                meta={[`${record.items?.length || 0} item(ns)`, record.customer_name || 'Sem cliente']}
-                            />
-                        )) : <EmptyState title="Sem tickets nesse status" text="Monte a fila de preparo e acompanhe o que ja saiu da cozinha." />}
+            <FeedbackHeader
+                title="Cozinha integrada"
+                subtitle="Comandas do restaurante em fluxo unico"
+                action={(
+                    <div className="ops-kitchen-header-actions">
+                        <button type="button" className="ui-button-ghost" onClick={() => refreshRecords(false)}>
+                            <i className="fa-solid fa-rotate-right" />
+                            Atualizar
+                        </button>
+                        <a className="ui-button" href="/cozinha-tv" target="_blank" rel="noreferrer">
+                            <i className="fa-solid fa-tv" />
+                            Abrir tela TV
+                        </a>
                     </div>
-                </section>
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar ticket' : 'Novo ticket'} subtitle="Fila operacional da cozinha" />
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                        <label><span>Referencia</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
-                        <label><span>Cliente / mesa</span><input value={form.customer_name} onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))} /></label>
-                        <label><span>Canal</span><select value={form.channel} onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}><option value="balcao">Balcao</option><option value="mesa">Mesa</option><option value="delivery">Delivery</option><option value="retirada">Retirada</option></select></label>
-                        <label><span>Status</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="queued">Fila</option><option value="in_preparation">Em preparo</option><option value="ready">Pronto</option><option value="completed">Expedido</option></select></label>
-                        <label><span>Prioridade</span><select value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}><option value="normal">Normal</option><option value="urgent">Urgente</option></select></label>
-                        <label><span>Recebido em</span><input type="datetime-local" value={form.requested_at} onChange={(event) => setForm((current) => ({ ...current, requested_at: event.target.value }))} /></label>
-                        <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
-                        <KitchenItemsEditor products={payload.products} items={form.items} onChange={(items) => setForm((current) => ({ ...current, items }))} />
-                        <div className="ops-workspace-actions span-2"><button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>Limpar</button>{form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}<button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar ticket' : 'Salvar ticket'}</button></div>
-                    </form>
-                </section>
-            </div>
+                )}
+            />
+            <MetricGrid items={metrics} />
+            <p className="ops-kitchen-priority-note">
+                Prioridade automatica: urgente manual, atrasado acima de 35 min e atencao acima de 20 min.
+            </p>
+            <Feedback feedback={feedback} />
+            <KitchenKanbanBoard
+                tickets={records}
+                onMoveTicket={handleMoveTicket}
+                onToggleItemDone={handleToggleItemDone}
+                loading={loading}
+            />
         </div>
     )
 }
@@ -476,3 +529,4 @@ export function LossesWorkspace({ moduleKey, payload }) {
         </div>
     )
 }
+

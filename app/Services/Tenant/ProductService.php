@@ -59,6 +59,12 @@ class ProductService
             $product->catalog_visible = (bool) ($data['catalog_visible'] ?? false);
         }
 
+        if ($this->productColumnExists('requires_preparation')) {
+            $product->requires_preparation = array_key_exists('requires_preparation', $data)
+                ? (bool) $data['requires_preparation']
+                : ($product->exists ? (bool) $product->requires_preparation : true);
+        }
+
         $product->save();
 
         return $product->fresh(['category:id,name', 'supplier:id,name']);

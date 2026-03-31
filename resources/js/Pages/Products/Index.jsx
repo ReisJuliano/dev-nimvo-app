@@ -123,6 +123,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 sale_price: Number(form.sale_price || 0),
                 stock_quantity: Number(form.stock_quantity || 0),
                 min_stock: Number(form.min_stock || 0),
+                requires_preparation: Boolean(form.requires_preparation),
             }
 
             if (form.id) {

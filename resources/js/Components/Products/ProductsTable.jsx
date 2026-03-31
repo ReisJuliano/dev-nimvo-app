@@ -29,6 +29,7 @@ export default function ProductsTable({ products, onEdit, onDelete, isFashionMod
                             {isFashionMode ? <th>Colecao</th> : <th>Custo</th>}
                             <th>Venda</th>
                             {isFashionMode ? <th>Vitrine</th> : null}
+                            {isFashionMode ? null : <th>Cozinha</th>}
                             <th>Estoque</th>
                             <th>Acao</th>
                         </tr>
@@ -75,6 +76,13 @@ export default function ProductsTable({ products, onEdit, onDelete, isFashionMod
                                         </span>
                                     </td>
                                 ) : null}
+                                {isFashionMode ? null : (
+                                    <td>
+                                        <span className={`products-badge ui-badge ${product.requires_preparation ? 'warning' : 'muted'}`}>
+                                            {product.requires_preparation ? 'Produz' : 'Pronto'}
+                                        </span>
+                                    </td>
+                                )}
                                 <td>
                                     <strong
                                         className={

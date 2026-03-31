@@ -7,8 +7,10 @@ use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
 use App\Http\Controllers\Tenant\Fashion\FashionModuleApiController;
 use App\Http\Controllers\Tenant\Fashion\FashionModulePageController;
+use App\Http\Controllers\Tenant\Operations\KitchenDisplayPageController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
@@ -56,6 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/producao', OperationsPageController::class)->defaults('module', 'producao')->name('production.index');
         Route::get('/fichas-tecnicas', OperationsPageController::class)->defaults('module', 'fichas-tecnicas')->name('recipes.index');
         Route::get('/cozinha', OperationsPageController::class)->defaults('module', 'cozinha')->name('kitchen.index');
+        Route::get('/cozinha-tv', KitchenDisplayPageController::class)->name('kitchen.display');
         Route::get('/perdas', OperationsPageController::class)->defaults('module', 'perdas')->name('losses.index');
         Route::get('/pesagem', OperationsPageController::class)->defaults('module', 'pesagem')->name('weighing.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
@@ -100,6 +103,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/pdv/customers/quick', [PosApiController::class, 'quickCustomer'])->name('api.pos.customers.quick');
             Route::post('/pdv/sales', [PosApiController::class, 'finalize'])->name('api.pos.sales.store');
 
+            Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
+            Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');
+            Route::post('/delivery/orders/{deliveryOrder}/status', [DeliveryApiController::class, 'updateStatus'])->name('api.delivery.orders.status');
+
             Route::post('/cash-registers', [CashRegisterApiController::class, 'open'])->name('api.cash-registers.open');
             Route::post('/cash-registers/{cashRegister}/movements', [CashRegisterApiController::class, 'movement'])->name('api.cash-registers.movements.store');
             Route::post('/cash-registers/{cashRegister}/close', [CashRegisterApiController::class, 'close'])->name('api.cash-registers.close');
@@ -115,6 +122,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/orders/{orderDraft}', [OrdersApiController::class, 'show'])->name('api.orders.show');
             Route::put('/orders/{orderDraft}', [OrdersApiController::class, 'update'])->name('api.orders.update');
             Route::post('/orders/{orderDraft}/send-to-cashier', [OrdersApiController::class, 'sendToCashier'])->name('api.orders.send-to-cashier');
+            Route::post('/orders/{orderDraft}/partial-checkout', [OrdersApiController::class, 'partialCheckout'])->name('api.orders.partial-checkout');
             Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');
             Route::post('/fashion/promotions', [FashionModuleApiController::class, 'storePromotion'])->name('api.fashion.promotions.store');
             Route::put('/fashion/promotions/{promotion}', [FashionModuleApiController::class, 'updatePromotion'])->name('api.fashion.promotions.update');
@@ -128,9 +136,14 @@ Route::middleware('auth')->group(function () {
             Route::put('/fashion/online-orders/{orderDraft}', [FashionModuleApiController::class, 'updateOnlineOrder'])->name('api.fashion.online-orders.update');
             Route::post('/fashion/online-orders/{orderDraft}/send-to-cashier', [FashionModuleApiController::class, 'sendOnlineOrderToCashier'])->name('api.fashion.online-orders.send-to-cashier');
             Route::put('/fashion/whatsapp/settings', [FashionModuleApiController::class, 'updateWhatsAppSettings'])->name('api.fashion.whatsapp.settings');
+            Route::get('/operations/{module}/records', [OperationsApiController::class, 'index'])->name('api.operations.index');
             Route::post('/operations/{module}/records', [OperationsApiController::class, 'store'])->name('api.operations.store');
             Route::put('/operations/{module}/records/{record}', [OperationsApiController::class, 'update'])->whereNumber('record')->name('api.operations.update');
             Route::delete('/operations/{module}/records/{record}', [OperationsApiController::class, 'destroy'])->whereNumber('record')->name('api.operations.destroy');
+            Route::post('/kitchen/tickets/{ticket}/items/{item}/toggle-done', [OperationsApiController::class, 'toggleKitchenItemDone'])
+                ->whereNumber('ticket')
+                ->whereNumber('item')
+                ->name('api.kitchen.items.toggle-done');
         });
     });
 });

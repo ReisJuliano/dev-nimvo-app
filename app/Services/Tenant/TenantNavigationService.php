@@ -38,13 +38,6 @@ class TenantNavigationService
                         'request_patterns' => ['pedidos', 'api/orders*'],
                     ],
                     [
-                        'href' => '/delivery',
-                        'label' => 'Delivery',
-                        'icon' => 'fa-motorcycle',
-                        'access_key' => 'delivery',
-                        'request_patterns' => ['delivery', 'api/operations/delivery*'],
-                    ],
-                    [
                         'href' => '/caixa',
                         'label' => 'Caixa',
                         'icon' => 'fa-vault',
@@ -86,7 +79,7 @@ class TenantNavigationService
                     ],
                     [
                         'href' => '/fichas-tecnicas',
-                        'label' => 'Fichas tecnicas',
+                        'label' => 'Receitas',
                         'icon' => 'fa-book-open',
                         'access_key' => 'fichas_tecnicas',
                         'request_patterns' => ['fichas-tecnicas', 'api/operations/fichas-tecnicas*'],
@@ -96,7 +89,7 @@ class TenantNavigationService
                         'label' => 'Cozinha',
                         'icon' => 'fa-utensils',
                         'access_key' => 'cozinha',
-                        'request_patterns' => ['cozinha', 'api/operations/cozinha*'],
+                        'request_patterns' => ['cozinha*', 'api/operations/cozinha*'],
                     ],
                     [
                         'href' => '/perdas',

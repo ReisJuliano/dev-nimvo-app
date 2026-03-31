@@ -6,6 +6,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\DeliveryOrder;
 use App\Models\Tenant\KitchenTicket;
 use App\Models\Tenant\LossRecord;
+use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Producer;
 use App\Models\Tenant\ProductionOrder;
@@ -17,12 +18,15 @@ use App\Models\Tenant\WeighingRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OperationsWorkspaceService
 {
+    protected array $productColumnCache = [];
+
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
     ) {
@@ -59,7 +63,7 @@ class OperationsWorkspaceService
             ],
             'fichas-tecnicas' => [
                 'moduleKey' => 'fichas-tecnicas',
-                'moduleTitle' => 'Fichas tecnicas',
+                'moduleTitle' => 'Receitas',
                 'moduleDescription' => 'Receitas reais com rendimento, tempo de preparo e consumo de insumos.',
                 'payload' => $this->recipesPayload(),
             ],
@@ -123,6 +127,22 @@ class OperationsWorkspaceService
             'ordens-servico' => ['message' => 'Ordem de servico salva com sucesso.', 'record' => $this->serializeServiceOrder($this->saveServiceOrder(null, $input, $userId))],
             default => abort(404),
         };
+    }
+
+    public function records(string $module): array
+    {
+        return [
+            'records' => match ($module) {
+                'cozinha' => KitchenTicket::query()
+                    ->with(['items.product:id,name,code,unit'])
+                    ->latest()
+                    ->get()
+                    ->map(fn (KitchenTicket $ticket) => $this->serializeKitchenTicket($ticket))
+                    ->values()
+                    ->all(),
+                default => data_get($this->build($module), 'payload.records', []),
+            },
+        ];
     }
 
     public function update(string $module, int $recordId, array $input, int $userId): array
@@ -870,10 +890,17 @@ class OperationsWorkspaceService
 
     protected function productOptions(): array
     {
+        $hasRequiresPreparation = $this->productColumnExists('requires_preparation');
+        $columns = ['id', 'name', 'code', 'unit', 'cost_price', 'sale_price', 'stock_quantity'];
+
+        if ($hasRequiresPreparation) {
+            $columns[] = 'requires_preparation';
+        }
+
         return Product::query()
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'code', 'unit', 'cost_price', 'sale_price', 'stock_quantity'])
+            ->get($columns)
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -882,10 +909,17 @@ class OperationsWorkspaceService
                 'cost_price' => (float) $product->cost_price,
                 'sale_price' => (float) $product->sale_price,
                 'stock_quantity' => (float) $product->stock_quantity,
+                'requires_preparation' => $hasRequiresPreparation ? (bool) $product->requires_preparation : true,
                 'label' => "{$product->name} ({$product->code})",
             ])
             ->values()
             ->all();
+    }
+
+    protected function productColumnExists(string $column): bool
+    {
+        return $this->productColumnCache[$column]
+            ??= Schema::connection((new Product())->getConnectionName())->hasColumn('products', $column);
     }
 
     protected function customerOptions(): array
@@ -1008,6 +1042,7 @@ class OperationsWorkspaceService
 
         return [
             'id' => $ticket->id,
+            'order_draft_id' => $ticket->order_draft_id,
             'reference' => $ticket->reference,
             'channel' => $ticket->channel,
             'status' => $ticket->status,
@@ -1026,9 +1061,94 @@ class OperationsWorkspaceService
                     'quantity' => (float) $item->quantity,
                     'unit' => $item->unit,
                     'notes' => $item->notes,
+                    'done_at' => $item->done_at?->toIso8601String(),
                 ])
                 ->values()
                 ->all(),
+        ];
+    }
+
+    public function toggleKitchenItemDone(int $ticketId, int $itemId): array
+    {
+        /** @var KitchenTicket $ticket */
+        $ticket = KitchenTicket::query()
+            ->with(['items.product:id,name,code,unit'])
+            ->findOrFail($ticketId);
+
+        $item = $ticket->items->firstWhere('id', $itemId);
+        abort_unless($item, 404);
+
+        $item->forceFill([
+            'done_at' => $item->done_at ? null : now(),
+        ])->save();
+
+        return [
+            'message' => $item->done_at ? 'Item confirmado.' : 'Item reaberto.',
+            'record' => $this->serializeKitchenTicket($ticket->fresh(['items.product:id,name,code,unit'])),
+        ];
+    }
+
+    public function listDeliveryOrders(): array
+    {
+        return [
+            'records' => DeliveryOrder::query()
+                ->with(['customer:id,name,phone'])
+                ->latest()
+                ->get()
+                ->map(fn (DeliveryOrder $order) => $this->serializeDeliveryOrder($order))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function createDeliveryFromDraft(OrderDraft $draft, array $input): array
+    {
+        $draft->loadMissing('customer:id,name,phone');
+
+        $order = DeliveryOrder::query()->create([
+            'customer_id' => $input['customer_id'] ?? $draft->customer_id,
+            'order_draft_id' => $draft->id,
+            'reference' => ($input['reference'] ?? null) ?: ($draft->reference ?: $draft->id),
+            'status' => 'pending',
+            'channel' => $input['channel'],
+            'recipient_name' => $input['recipient_name'] ?? ($draft->customer?->name ?? null),
+            'phone' => $input['phone'] ?? ($draft->customer?->phone ?? null),
+            'courier_name' => $input['courier_name'] ?? null,
+            'address' => $input['address'],
+            'neighborhood' => $input['neighborhood'] ?? null,
+            'delivery_fee' => round((float) ($input['delivery_fee'] ?? 0), 2),
+            'order_total' => round((float) $draft->total, 2),
+            'scheduled_for' => $input['scheduled_for'] ?? null,
+            'dispatched_at' => null,
+            'delivered_at' => null,
+            'notes' => $input['notes'] ?? null,
+        ]);
+
+        return [
+            'message' => 'Entrega criada com sucesso.',
+            'record' => $this->serializeDeliveryOrder($order->fresh(['customer:id,name,phone'])),
+        ];
+    }
+
+    public function updateDeliveryStatus(DeliveryOrder $order, array $input): array
+    {
+        $status = $input['status'];
+
+        [$dispatchedAt, $deliveredAt] = match ($status) {
+            'pending' => [null, null],
+            'dispatched' => [$order->dispatched_at ?: now(), null],
+            'delivered' => [$order->dispatched_at ?: now(), $order->delivered_at ?: now()],
+        };
+
+        $order->forceFill([
+            'status' => $status,
+            'dispatched_at' => $dispatchedAt,
+            'delivered_at' => $deliveredAt,
+        ])->save();
+
+        return [
+            'message' => 'Status da entrega atualizado.',
+            'record' => $this->serializeDeliveryOrder($order->fresh(['customer:id,name,phone'])),
         ];
     }
 

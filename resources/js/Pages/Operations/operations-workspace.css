@@ -246,6 +246,408 @@
     gap: 0.75rem;
 }
 
+.ops-kitchen-queue {
+    border: 1px solid rgba(28, 50, 66, 0.12);
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 24px 60px rgba(24, 41, 52, 0.08);
+    padding: 1.25rem;
+    overflow: hidden;
+}
+
+.ops-kitchen-queue-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(320px, 1fr);
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+}
+
+.ops-kitchen-ticket {
+    border: 1px solid rgba(27, 71, 96, 0.12);
+    border-radius: 22px;
+    background: #fcfdfd;
+    padding: 1rem;
+    display: grid;
+    gap: 0.85rem;
+    min-height: 220px;
+}
+
+.ops-kitchen-ticket.urgent {
+    border-color: rgba(216, 78, 97, 0.22);
+    background: linear-gradient(180deg, rgba(255, 241, 243, 0.65), rgba(255, 255, 255, 0.92));
+}
+
+.ops-kitchen-ticket-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.ops-kitchen-ticket-header strong {
+    color: #173041;
+    display: block;
+}
+
+.ops-kitchen-ticket-header small {
+    color: #60717c;
+    display: block;
+    margin-top: 0.2rem;
+}
+
+.ops-kitchen-items {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.ops-kitchen-item {
+    width: 100%;
+    border: 1px solid rgba(27, 71, 96, 0.12);
+    border-radius: 18px;
+    background: rgba(245, 248, 252, 0.92);
+    padding: 0.85rem 0.9rem;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.ops-kitchen-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(27, 71, 96, 0.26);
+    box-shadow: 0 16px 32px rgba(24, 41, 52, 0.08);
+}
+
+.ops-kitchen-item.done {
+    border-color: rgba(49, 121, 89, 0.22);
+    background: rgba(237, 249, 242, 0.85);
+}
+
+.ops-kitchen-item strong {
+    display: block;
+    color: #173041;
+}
+
+.ops-kitchen-item small {
+    display: block;
+    margin-top: 0.2rem;
+    color: #60717c;
+}
+
+.ops-kitchen-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.ops-kitchen-priority-note {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border: 1px dashed rgba(27, 71, 96, 0.24);
+    border-radius: 14px;
+    color: #4e616f;
+    background: rgba(245, 249, 252, 0.82);
+}
+
+.ops-kitchen-kanban {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.ops-kitchen-kanban-column {
+    border: 1px solid rgba(28, 50, 66, 0.12);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    padding: 0.9rem;
+    display: grid;
+    gap: 0.8rem;
+    min-height: 420px;
+}
+
+.ops-kitchen-kanban-column > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(28, 50, 66, 0.08);
+}
+
+.ops-kitchen-kanban-column > header strong {
+    color: #173041;
+}
+
+.ops-kitchen-kanban-column > header small {
+    color: #60717c;
+}
+
+.ops-kitchen-kanban-cards {
+    display: grid;
+    gap: 0.7rem;
+    align-content: flex-start;
+}
+
+.ops-kitchen-kanban-card {
+    border: 1px solid rgba(27, 71, 96, 0.14);
+    border-radius: 18px;
+    background: #fcfdfd;
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.ops-kitchen-kanban-card.priority-danger {
+    border-color: rgba(201, 62, 85, 0.3);
+    background: linear-gradient(180deg, rgba(255, 240, 243, 0.72), rgba(255, 255, 255, 0.95));
+}
+
+.ops-kitchen-kanban-card.priority-warning {
+    border-color: rgba(217, 154, 60, 0.3);
+    background: linear-gradient(180deg, rgba(255, 247, 234, 0.78), rgba(255, 255, 255, 0.95));
+}
+
+.ops-kitchen-kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.ops-kitchen-kanban-card-header strong {
+    color: #173041;
+}
+
+.ops-kitchen-kanban-meta {
+    display: flex;
+    gap: 0.5rem;
+    color: #60717c;
+    font-size: 0.82rem;
+}
+
+.ops-kitchen-kanban-items {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.ops-kitchen-kanban-item {
+    border: 1px solid rgba(27, 71, 96, 0.12);
+    border-radius: 14px;
+    background: rgba(245, 248, 252, 0.95);
+    padding: 0.5rem 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    text-align: left;
+}
+
+.ops-kitchen-kanban-item.action {
+    width: 100%;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease;
+}
+
+.ops-kitchen-kanban-item.action:hover {
+    transform: translateY(-1px);
+    border-color: rgba(27, 71, 96, 0.28);
+}
+
+.ops-kitchen-kanban-item.done {
+    border-color: rgba(49, 121, 89, 0.28);
+    background: rgba(236, 247, 241, 0.92);
+}
+
+.ops-kitchen-kanban-item span {
+    color: #173041;
+    font-weight: 600;
+}
+
+.ops-kitchen-kanban-item small {
+    color: #60717c;
+}
+
+.ops-kitchen-kanban-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.ops-kitchen-kanban-actions button {
+    border: 1px solid rgba(27, 71, 96, 0.16);
+    background: #fff;
+    border-radius: 10px;
+    padding: 0.42rem 0.55rem;
+    color: #35556a;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.ops-kitchen-kanban-actions button.active {
+    border-color: rgba(39, 103, 139, 0.3);
+    background: rgba(222, 239, 252, 0.64);
+    font-weight: 700;
+}
+
+.ops-kitchen-kanban-actions button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ops-kitchen-kanban-empty {
+    border: 1px dashed rgba(27, 71, 96, 0.2);
+    border-radius: 14px;
+    padding: 0.85rem 0.9rem;
+    text-align: center;
+    color: #60717c;
+}
+
+.ops-kitchen-kanban.tv .ops-kitchen-kanban-column {
+    min-height: calc(100vh - 210px);
+}
+
+.ops-kitchen-kanban.tv .ops-kitchen-kanban-card {
+    border-radius: 16px;
+    padding: 0.7rem;
+}
+
+.ops-recipe-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+}
+
+.ops-recipe-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(12, 18, 24, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.ops-recipe-modal-card {
+    position: relative;
+    width: min(920px, 100%);
+    max-height: min(78vh, 820px);
+    overflow: auto;
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+}
+
+.ops-recipe-modal-header,
+.ops-recipe-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem 1.3rem;
+    border-bottom: 1px solid rgba(27, 71, 96, 0.1);
+}
+
+.ops-recipe-modal-footer {
+    border-bottom: none;
+    border-top: 1px solid rgba(27, 71, 96, 0.1);
+    justify-content: flex-end;
+}
+
+.ops-recipe-modal-header strong {
+    display: block;
+    color: #173041;
+    font-size: 1.1rem;
+}
+
+.ops-recipe-modal-header small {
+    display: block;
+    margin-top: 0.2rem;
+    color: #60717c;
+}
+
+.ops-recipe-modal-body {
+    padding: 1.25rem 1.3rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.ops-recipe-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.ops-recipe-metrics > div {
+    padding: 0.95rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(27, 71, 96, 0.1);
+    background: linear-gradient(180deg, #fdfcf8 0%, #f5f8fb 100%);
+}
+
+.ops-recipe-metrics span {
+    color: #60717c;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.ops-recipe-metrics strong {
+    display: block;
+    margin-top: 0.35rem;
+    color: #173041;
+}
+
+.ops-recipe-section h4 {
+    margin: 0 0 0.6rem;
+    color: #173041;
+}
+
+.ops-recipe-items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.ops-recipe-item {
+    padding: 0.9rem 1rem;
+    border-radius: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(245, 248, 252, 0.9);
+}
+
+.ops-recipe-item strong {
+    display: block;
+    color: #173041;
+}
+
+.ops-recipe-item small {
+    display: block;
+    margin-top: 0.2rem;
+    color: #60717c;
+}
+
+.ops-recipe-item p {
+    margin: 0.5rem 0 0;
+    color: #4f5e68;
+}
+
+.ops-recipe-instructions {
+    margin: 0;
+    padding: 0.95rem 1rem;
+    border-radius: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(255, 255, 255, 0.92);
+    color: #32424c;
+    white-space: pre-wrap;
+}
+
 .ops-workspace-empty-state {
     padding: 1.8rem;
     text-align: center;
@@ -268,7 +670,22 @@
         grid-template-columns: 1fr;
     }
 
+    .ops-kitchen-kanban {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .span-2 {
         grid-column: auto;
+    }
+
+    .ops-recipe-metrics,
+    .ops-recipe-items {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .ops-kitchen-kanban {
+        grid-template-columns: 1fr;
     }
 }

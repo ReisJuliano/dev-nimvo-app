@@ -17,10 +17,12 @@ class KitchenTicketItem extends Model
         'quantity',
         'unit',
         'notes',
+        'done_at',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:3',
+        'done_at' => 'datetime',
     ];
 
     public function ticket(): BelongsTo

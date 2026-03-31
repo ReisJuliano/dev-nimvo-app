@@ -23,6 +23,7 @@ class UpsertProductRequest extends FormRequest
             'size' => ['nullable', 'string', 'max:120'],
             'collection' => ['nullable', 'string', 'max:120'],
             'catalog_visible' => ['nullable', 'boolean'],
+            'requires_preparation' => ['nullable', 'boolean'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'unit' => ['required', 'string', 'max:10'],

@@ -9,6 +9,15 @@ use Illuminate\Http\Request;
 
 class OperationsApiController extends Controller
 {
+    public function index(
+        OperationsWorkspaceService $workspaceService,
+        string $module,
+    ): JsonResponse {
+        abort_unless($workspaceService->isWorkspaceModule($module), 404);
+
+        return response()->json($workspaceService->records($module));
+    }
+
     public function store(
         Request $request,
         OperationsWorkspaceService $workspaceService,
@@ -44,5 +53,13 @@ class OperationsApiController extends Controller
         return response()->json([
             'message' => $workspaceService->destroy($module, $record),
         ]);
+    }
+
+    public function toggleKitchenItemDone(
+        OperationsWorkspaceService $workspaceService,
+        int $ticket,
+        int $item,
+    ): JsonResponse {
+        return response()->json($workspaceService->toggleKitchenItemDone($ticket, $item));
     }
 }
