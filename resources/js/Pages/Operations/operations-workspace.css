@@ -73,6 +73,17 @@
     color: #60717c;
 }
 
+.ops-workspace-label-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.ops-workspace-label-with-icon i {
+    color: #2e5c77;
+    font-size: 0.84rem;
+}
+
 .ops-workspace-metric-grid strong {
     display: block;
     margin: 0.35rem 0 0.2rem;

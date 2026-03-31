@@ -29,7 +29,7 @@ function isNavigationItemEnabled(item, authRole, modules, capabilities) {
         return modules[item.access_key] !== false
     }
 
-    return capabilities[item.access_key] !== false
+    return Boolean(capabilities?.[item.access_key])
 }
 
 export function buildNavigationGroups({ authRole, modules, capabilities, catalog }) {
@@ -37,6 +37,7 @@ export function buildNavigationGroups({ authRole, modules, capabilities, catalog
         .map((group) => ({
             ...group,
             items: (group.items ?? [])
+                .filter((item) => item.href !== '/configuracoes')
                 .filter((item) => isNavigationItemEnabled(item, authRole, modules, capabilities))
                 .map((item) => ({
                     ...item,

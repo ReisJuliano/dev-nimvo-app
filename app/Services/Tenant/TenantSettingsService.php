@@ -45,17 +45,10 @@ class TenantSettingsService
             'relatorios_avancados' => true,
             'clientes' => true,
             'fornecedores' => true,
-            'produtores' => false,
             'compras' => false,
             'ordens_servico' => false,
-            'produtos_variacao' => false,
             'controle_lotes' => false,
             'controle_validade' => false,
-            'trocas_devolucoes' => false,
-            'promocoes' => false,
-            'catalogo_online' => false,
-            'pedidos_online' => false,
-            'whatsapp_pedidos' => false,
             'mesas' => false,
             'impressao_automatica' => false,
         ];
@@ -76,28 +69,10 @@ class TenantSettingsService
                 'modules' => $this->presetModules('restaurante'),
             ],
             [
-                'key' => 'padaria',
-                'label' => 'Padaria',
-                'description' => 'Combina PDV rapido, estoque por insumo, fichas tecnicas, producao e perdas.',
-                'modules' => $this->presetModules('padaria'),
-            ],
-            [
-                'key' => 'loja_roupas',
-                'label' => 'Loja de roupas',
-                'description' => 'Ativa grade por variacao, vendas, trocas, promocoes e a frente digital com site e WhatsApp.',
-                'modules' => $this->presetModules('loja_roupas'),
-            ],
-            [
                 'key' => 'mercearia',
                 'label' => 'Mercearia',
                 'description' => 'Mantem PDV simples, estoque, codigo de barras, validade, fiado e caixa.',
                 'modules' => $this->presetModules('mercearia'),
-            ],
-            [
-                'key' => 'agropecuaria',
-                'label' => 'Agropecuaria',
-                'description' => 'Combina estoque com lotes, validade, pesagem, compras, produtores e relatorios.',
-                'modules' => $this->presetModules('agropecuaria'),
             ],
             [
                 'key' => self::CUSTOM_PRESET,
@@ -125,8 +100,6 @@ class TenantSettingsService
                     ['key' => 'mesas', 'label' => 'Usar Mesa', 'description' => 'Habilita o contexto de mesas dentro da operacao de comandas.'],
                     ['key' => 'delivery', 'label' => 'Usar Delivery', 'description' => 'Mostra o modulo de delivery para acompanhar pedidos de entrega.'],
                     ['key' => 'fiado', 'label' => 'Usar Fiado', 'description' => 'Disponibiliza crediario e consultas de limite do cliente.'],
-                    ['key' => 'trocas_devolucoes', 'label' => 'Usar Trocas e devolucoes', 'description' => 'Cria uma area dedicada para acompanhar devolucoes, estornos e reaproveitamento do estoque.'],
-                    ['key' => 'promocoes', 'label' => 'Usar Promocoes e descontos', 'description' => 'Destaca campanhas, regras comerciais e acompanhamento de descontos praticados.'],
                     ['key' => 'caixa', 'label' => 'Usar Caixa', 'description' => 'Mantem a abertura, conferencia e fechamento do caixa ativos.'],
                     ['key' => 'impressao_automatica', 'label' => 'Usar Impressao automatica', 'description' => 'Liga automatizacoes de impressao em fluxos de venda e atendimento.'],
                 ],
@@ -134,7 +107,7 @@ class TenantSettingsService
             [
                 'section' => 'Operacao',
                 'items' => [
-                    ['key' => 'producao', 'label' => 'Usar Producao', 'description' => 'Libera o modulo de producao para padaria e preparos internos.'],
+                    ['key' => 'producao', 'label' => 'Usar Producao', 'description' => 'Libera o modulo de producao para preparos internos e rotinas por lote.'],
                     ['key' => 'fichas_tecnicas', 'label' => 'Usar Fichas tecnicas', 'description' => 'Organiza receitas, rendimento, insumos e padroes operacionais por item.'],
                     ['key' => 'controle_perdas', 'label' => 'Usar Controle de perdas', 'description' => 'Acompanha quebras, perdas operacionais e motivos de descarte.'],
                     ['key' => 'cozinha', 'label' => 'Usar Cozinha', 'description' => 'Cria um quadro operacional para separar preparo, expedicao e conferencias de pedidos.'],
@@ -147,26 +120,16 @@ class TenantSettingsService
                 'section' => 'Catalogo e estoque',
                 'items' => [
                     ['key' => 'estoque', 'label' => 'Usar Estoque', 'description' => 'Controla produtos, entradas, ajustes e movimentacoes do estoque.'],
-                    ['key' => 'produtos_variacao', 'label' => 'Produtos com variacao', 'description' => 'Prepara o catalogo para tamanhos, cores e outras variacoes.'],
                     ['key' => 'controle_lotes', 'label' => 'Usar Controle de Lotes', 'description' => 'Marca a operacao para rastreabilidade por lote.'],
                     ['key' => 'controle_validade', 'label' => 'Usar Validade', 'description' => 'Destaca acompanhamento de validade nos fluxos de estoque.'],
                     ['key' => 'clientes', 'label' => 'Usar Clientes', 'description' => 'Mantem o cadastro e os atalhos para clientes disponiveis.'],
                     ['key' => 'fornecedores', 'label' => 'Usar Fornecedores', 'description' => 'Mantem o cadastro e consultas de fornecedores ativos.'],
-                    ['key' => 'produtores', 'label' => 'Usar Produtores', 'description' => 'Cria um cadastro especifico para produtores rurais e relacionamento comercial.'],
-                ],
-            ],
-            [
-                'section' => 'Digital',
-                'items' => [
-                    ['key' => 'catalogo_online', 'label' => 'Usar Catalogo online', 'description' => 'Separa uma frente digital para site padrao, vitrine de produtos e carrinho.'],
-                    ['key' => 'pedidos_online', 'label' => 'Usar Pedidos online', 'description' => 'Mostra uma area para acompanhar pedidos vindos do site e de canais digitais.'],
-                    ['key' => 'whatsapp_pedidos', 'label' => 'Usar Integracao com WhatsApp', 'description' => 'Organiza mensagens padrao, checkout via WhatsApp e fluxo de atendimento digital.'],
                 ],
             ],
             [
                 'section' => 'Gestao',
                 'items' => [
-                    ['key' => 'relatorios_avancados', 'label' => 'Usar Relatorios avancados', 'description' => 'Libera os paineis consolidados, demanda e visoes gerenciais.'],
+                    ['key' => 'relatorios_avancados', 'label' => 'Usar Relatorios', 'description' => 'Libera os paineis consolidados, demanda e visoes gerenciais.'],
                 ],
             ],
         ];
@@ -231,7 +194,7 @@ class TenantSettingsService
             return (bool) data_get($settings, "modules.{$moduleKey}", true);
         }
 
-        return (bool) data_get($settings, "capabilities.{$moduleKey}", true);
+        return (bool) data_get($settings, "capabilities.{$moduleKey}", false);
     }
 
     public function moduleCapabilities(array $modules): array
@@ -243,11 +206,10 @@ class TenantSettingsService
             'caixa' => $modules['caixa'],
             'pedidos' => $modules['comandas'],
             'crediario' => $modules['fiado'],
-            'produtos' => $modules['estoque'] || $modules['produtos_variacao'] || $modules['controle_lotes'] || $modules['controle_validade'],
+            'produtos' => $modules['estoque'] || $modules['controle_lotes'] || $modules['controle_validade'],
             'categorias' => $modules['estoque'],
             'clientes' => $modules['clientes'],
             'fornecedores' => $modules['fornecedores'],
-            'produtores' => $modules['produtores'],
             'entrada_estoque' => $modules['estoque'],
             'ajuste_estoque' => $modules['estoque'],
             'movimentacao_estoque' => $modules['estoque'],
@@ -264,11 +226,6 @@ class TenantSettingsService
             'delivery' => $modules['delivery'],
             'compras' => $modules['compras'],
             'ordens_servico' => $modules['ordens_servico'],
-            'trocas_devolucoes' => $modules['trocas_devolucoes'],
-            'promocoes' => $modules['promocoes'],
-            'catalogo_online' => $modules['catalogo_online'],
-            'pedidos_online' => $modules['pedidos_online'],
-            'whatsapp_pedidos' => $modules['whatsapp_pedidos'],
         ];
     }
 
@@ -396,7 +353,7 @@ class TenantSettingsService
 
     protected function normalizeModules(array $modules): array
     {
-        $normalized = array_replace($this->defaultModules(), $modules);
+        $normalized = array_replace($this->defaultModules(), Arr::only($modules, $this->moduleKeys()));
 
         foreach ($this->moduleKeys() as $moduleKey) {
             $normalized[$moduleKey] = (bool) data_get($normalized, $moduleKey, false);
@@ -441,17 +398,10 @@ class TenantSettingsService
             'relatorios_avancados' => true,
             'clientes' => false,
             'fornecedores' => false,
-            'produtores' => false,
             'compras' => false,
             'ordens_servico' => false,
-            'produtos_variacao' => false,
             'controle_lotes' => false,
             'controle_validade' => false,
-            'trocas_devolucoes' => false,
-            'promocoes' => false,
-            'catalogo_online' => false,
-            'pedidos_online' => false,
-            'whatsapp_pedidos' => false,
             'mesas' => false,
             'impressao_automatica' => false,
         ];
@@ -468,45 +418,12 @@ class TenantSettingsService
                 'clientes' => true,
                 'fornecedores' => true,
             ]),
-            'padaria' => array_replace($base, [
-                'pdv_simples' => true,
-                'estoque' => true,
-                'producao' => true,
-                'fichas_tecnicas' => true,
-                'controle_perdas' => true,
-                'fornecedores' => true,
-            ]),
-            'loja_roupas' => array_replace($base, [
-                'pdv_simples' => true,
-                'estoque' => true,
-                'caixa' => true,
-                'clientes' => true,
-                'fornecedores' => true,
-                'produtos_variacao' => true,
-                'trocas_devolucoes' => true,
-                'promocoes' => true,
-                'catalogo_online' => true,
-                'pedidos_online' => true,
-                'whatsapp_pedidos' => true,
-            ]),
             'mercearia' => array_replace($base, [
                 'pdv_simples' => true,
                 'estoque' => true,
                 'fiado' => true,
                 'clientes' => true,
                 'fornecedores' => true,
-                'controle_validade' => true,
-            ]),
-            'agropecuaria' => array_replace($base, [
-                'pdv_simples' => true,
-                'estoque' => true,
-                'pesagem' => true,
-                'fiado' => true,
-                'clientes' => true,
-                'fornecedores' => true,
-                'produtores' => true,
-                'compras' => true,
-                'controle_lotes' => true,
                 'controle_validade' => true,
             ]),
             default => $this->defaultModules(),

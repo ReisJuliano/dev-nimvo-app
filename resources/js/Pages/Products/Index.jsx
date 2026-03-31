@@ -3,13 +3,29 @@ import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
 import ProductToolbar from '@/Components/Products/ProductToolbar'
-import useModules from '@/hooks/useModules'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import './products.css'
 
+function normalizeProductRecord(product) {
+    return {
+        ...product,
+        category_id: product.category_id ?? product.category?.id ?? null,
+        supplier_id: product.supplier_id ?? product.supplier?.id ?? null,
+        category_name: product.category_name ?? product.category?.name ?? null,
+        supplier_name: product.supplier_name ?? product.supplier?.name ?? null,
+        cost_price: Number(product.cost_price || 0),
+        sale_price: Number(product.sale_price || 0),
+        stock_quantity: Number(product.stock_quantity || 0),
+        min_stock: Number(product.min_stock || 0),
+        active: product.active !== false,
+    }
+}
+
 export default function ProductsIndex({ products, categories, suppliers }) {
-    const { preset, modules } = useModules()
+    const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
+    const [categoryOptions, setCategoryOptions] = useState(categories || [])
+    const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
     const [search, setSearch] = useState('')
     const [categoryId, setCategoryId] = useState('')
     const [collection, setCollection] = useState('')
@@ -17,29 +33,23 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
-    const isFashionMode =
-        preset === 'loja_roupas' ||
-        modules.produtos_variacao ||
-        modules.promocoes ||
-        modules.catalogo_online ||
-        modules.pedidos_online ||
-        modules.whatsapp_pedidos
+    const isFashionMode = false
     const [activeTab, setActiveTab] = useState(isFashionMode ? 'catalog' : 'catalog')
     const deferredSearch = useDeferredValue(search)
     const collections = useMemo(
         () =>
             Array.from(
                 new Set(
-                    products
+                    collectionItems
                         .map((product) => product.collection)
                         .filter(Boolean),
                 ),
             ).sort((left, right) => left.localeCompare(right)),
-        [products],
+        [collectionItems],
     )
 
     const filteredProducts = useMemo(() => {
-        return products.filter((product) => {
+        return collectionItems.filter((product) => {
             const matchesSearch =
                 deferredSearch === '' ||
                 [
@@ -73,7 +83,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
 
             return matchesSearch && matchesCategory && matchesCollection && matchesVisibility && matchesTab
         })
-    }, [products, deferredSearch, categoryId, collection, visibility, activeTab, isFashionMode])
+    }, [collectionItems, deferredSearch, categoryId, collection, visibility, activeTab, isFashionMode])
 
     const summary = useMemo(() => {
         const stockValue = filteredProducts.reduce(
@@ -108,7 +118,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
         }
 
         await apiRequest(`/api/products/${product.id}`, { method: 'delete' })
-        window.location.reload()
+        setCollectionItems((current) => current.filter((entry) => entry.id !== product.id))
     }
 
     async function handleSubmit(form) {
@@ -131,15 +141,54 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             }
 
             if (form.id) {
-                await apiRequest(`/api/products/${form.id}`, { method: 'put', data: payload })
+                const response = await apiRequest(`/api/products/${form.id}`, { method: 'put', data: payload })
+                const normalized = normalizeProductRecord(response.product)
+                setCollectionItems((current) =>
+                    current.map((entry) => (entry.id === normalized.id ? normalized : entry)),
+                )
             } else {
-                await apiRequest('/api/products', { method: 'post', data: payload })
+                const response = await apiRequest('/api/products', { method: 'post', data: payload })
+                const normalized = normalizeProductRecord(response.product)
+                setCollectionItems((current) => [normalized, ...current])
             }
 
-            window.location.reload()
+            setModalOpen(false)
+            setSelectedProduct(null)
         } finally {
             setSaving(false)
         }
+    }
+
+    async function handleQuickCreateCategory(data) {
+        const response = await apiRequest('/api/operations/categorias/records', {
+            method: 'post',
+            data,
+        })
+
+        const record = response.record
+        setCategoryOptions((current) =>
+            [...current, { id: record.id, name: record.name }].sort((left, right) =>
+                String(left.name).localeCompare(String(right.name)),
+            ),
+        )
+
+        return record
+    }
+
+    async function handleQuickCreateSupplier(data) {
+        const response = await apiRequest('/api/operations/fornecedores/records', {
+            method: 'post',
+            data,
+        })
+
+        const record = response.record
+        setSupplierOptions((current) =>
+            [...current, { id: record.id, name: record.name }].sort((left, right) =>
+                String(left.name).localeCompare(String(right.name)),
+            ),
+        )
+
+        return record
     }
 
     return (
@@ -149,11 +198,9 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                     <div className="ui-card-body">
                         <div className="products-hero-grid">
                             <div>
-                                <h1>{isFashionMode ? 'Catalogo da loja de roupas' : 'Catalogo de produtos'}</h1>
+                                <h1>Catalogo de produtos</h1>
                                 <p>
-                                    {isFashionMode
-                                        ? 'Cadastre referencia, cor, tamanho, colecao, vitrine digital e estoque em um fluxo real de moda.'
-                                        : 'Cadastro, consulta e ajuste de produtos.'}
+                                    Cadastro, consulta e ajuste de produtos.
                                 </p>
                             </div>
                         </div>
@@ -218,7 +265,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                     collections={collections}
                     visibility={visibility}
                     onVisibilityChange={setVisibility}
-                    categories={categories}
+                    categories={categoryOptions}
                     onCreate={handleCreate}
                     isFashionMode={isFashionMode}
                 />
@@ -269,12 +316,14 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             <ProductFormModal
                 open={modalOpen}
                 product={selectedProduct}
-                categories={categories}
-                suppliers={suppliers}
+                categories={categoryOptions}
+                suppliers={supplierOptions}
+                products={collectionItems}
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
                 loading={saving}
-                isFashionMode={isFashionMode}
+                onQuickCreateCategory={handleQuickCreateCategory}
+                onQuickCreateSupplier={handleQuickCreateSupplier}
             />
         </AppLayout>
     )

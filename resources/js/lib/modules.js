@@ -16,34 +16,22 @@ export const MODULE_DEFAULTS = {
     relatorios_avancados: true,
     clientes: true,
     fornecedores: true,
-    produtores: false,
     compras: false,
     ordens_servico: false,
-    produtos_variacao: false,
     controle_lotes: false,
     controle_validade: false,
-    trocas_devolucoes: false,
-    promocoes: false,
-    catalogo_online: false,
-    pedidos_online: false,
-    whatsapp_pedidos: false,
     mesas: false,
     impressao_automatica: false,
 }
 
 export const PRESET_LABELS = {
     restaurante: 'Restaurante',
-    padaria: 'Padaria',
-    loja_roupas: 'Loja de roupas',
     mercearia: 'Mercearia',
-    agropecuaria: 'Agropecuaria',
     [CUSTOM_PRESET]: 'Personalizado',
 }
 
 export function normalizeModules(modules = {}) {
-    const normalized = Object.fromEntries(
-        Object.entries({ ...MODULE_DEFAULTS, ...modules }).map(([key, value]) => [key, Boolean(value)]),
-    )
+    const normalized = Object.fromEntries(Object.keys(MODULE_DEFAULTS).map((key) => [key, Boolean(modules?.[key] ?? MODULE_DEFAULTS[key])]))
 
     if (!normalized.comandas) {
         normalized.mesas = false
@@ -60,11 +48,10 @@ export function deriveCapabilities(inputModules = {}) {
         caixa: modules.caixa,
         pedidos: modules.comandas,
         crediario: modules.fiado,
-        produtos: modules.estoque || modules.produtos_variacao || modules.controle_lotes || modules.controle_validade,
+        produtos: modules.estoque || modules.controle_lotes || modules.controle_validade,
         categorias: modules.estoque,
         clientes: modules.clientes,
         fornecedores: modules.fornecedores,
-        produtores: modules.produtores,
         entrada_estoque: modules.estoque,
         ajuste_estoque: modules.estoque,
         movimentacao_estoque: modules.estoque,
@@ -81,11 +68,6 @@ export function deriveCapabilities(inputModules = {}) {
         delivery: modules.delivery,
         compras: modules.compras,
         ordens_servico: modules.ordens_servico,
-        trocas_devolucoes: modules.trocas_devolucoes,
-        promocoes: modules.promocoes,
-        catalogo_online: modules.catalogo_online,
-        pedidos_online: modules.pedidos_online,
-        whatsapp_pedidos: modules.whatsapp_pedidos,
     }
 }
 
@@ -119,5 +101,5 @@ export function getOrdersLabel(modules) {
 }
 
 export function getProductsLabel(modules) {
-    return modules.produtos_variacao ? 'Produtos e Grade' : 'Produtos'
+    return 'Produtos'
 }

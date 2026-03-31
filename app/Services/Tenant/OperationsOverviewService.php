@@ -39,7 +39,7 @@ class OperationsOverviewService
                 'Producao',
                 'Centralize a producao diaria, separando preparos internos do fluxo direto de venda no caixa.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Padaria e preparo interno', 'meta' => 'Bom para organizar fornadas, lotes e reposicao da vitrine.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Preparo interno', 'meta' => 'Bom para organizar lotes, rotinas e reposicao do estoque.'],
                     ['label' => 'Conexao com estoque', 'value' => 'Entrada de itens prontos', 'meta' => 'Ajuda a transformar insumos em itens disponiveis para venda.'],
                     ['label' => 'Rotina sugerida', 'value' => 'Planejamento por turno', 'meta' => 'Separe a producao por horario para evitar ruptura.'],
                 ],
@@ -51,9 +51,9 @@ class OperationsOverviewService
             ),
             'fichas-tecnicas' => $this->moduleWorkspace(
                 'Fichas tecnicas',
-                'Estruture receitas, rendimento e consumo de insumos para padaria, restaurante e operacoes com custo tecnico.',
+                'Estruture receitas, rendimento e consumo de insumos para preparos internos e operacoes com custo tecnico.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Padaria e restaurante', 'meta' => 'Ideal para receitas, pratos, porcoes e insumos base.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Restaurante e preparo interno', 'meta' => 'Ideal para receitas, pratos, porcoes e insumos base.'],
                     ['label' => 'Conexao com estoque', 'value' => 'Baixa por insumo', 'meta' => 'Ajuda a relacionar consumo previsto com o item vendido ou produzido.'],
                     ['label' => 'Resultado esperado', 'value' => 'Padrao operacional', 'meta' => 'Reduz variacao de custo, rendimento e preparo.'],
                 ],
@@ -81,7 +81,7 @@ class OperationsOverviewService
                 'Controle de perdas',
                 'Acompanhe quebras, vencimentos e perdas operacionais para entender o que sai do estoque sem virar venda.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Padaria, restaurante e varejo alimentar', 'meta' => 'Importante para produto perecivel e preparos internos.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Operacao com pereciveis', 'meta' => 'Importante para produto perecivel e preparos internos.'],
                     ['label' => 'Conexao com estoque', 'value' => 'Saidas nao vendidas', 'meta' => 'Ajuda a separar perda de consumo real e de acerto de inventario.'],
                     ['label' => 'Resultado esperado', 'value' => 'Menos desperdicio', 'meta' => 'Facilita investigar motivos e horarios de maior perda.'],
                 ],
@@ -96,7 +96,7 @@ class OperationsOverviewService
                 'Destaque a operacao por peso para vendas fracionadas, balanca e produtos que exigem quantidade variavel.',
                 [
                     ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece quando a pesagem esta liberada no tenant.'],
-                    ['label' => 'Uso recomendado', 'value' => 'Agropecuaria e varejo por peso', 'meta' => 'Bom para produtos vendidos em KG ou fracionados.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Varejo por peso', 'meta' => 'Bom para produtos vendidos em KG ou fracionados.'],
                     ['label' => 'Conexao com PDV', 'value' => 'Venda fracionada destacada', 'meta' => 'O PDV pode operar com quantidades decimais e leitura de peso.'],
                 ],
                 [
@@ -123,7 +123,7 @@ class OperationsOverviewService
                 'Compras',
                 'Separe a reposicao do negocio em uma area propria para planejar entradas, cotacoes e abastecimento.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Agropecuaria e operacoes com reposicao tecnica', 'meta' => 'Bom para insumo, racao, medicamento e compra programada.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Reposicao tecnica e suprimentos', 'meta' => 'Bom para insumos e compra programada.'],
                     ['label' => 'Conexao com fornecedores', 'value' => 'Cotacao e abastecimento', 'meta' => 'Ajuda a comparar origem, prazo e custo de reposicao.'],
                     ['label' => 'Resultado esperado', 'value' => 'Reposicao previsivel', 'meta' => 'Evita ruptura e melhora o controle do ciclo de compra.'],
                 ],
@@ -145,90 +145,6 @@ class OperationsOverviewService
                     ['item' => 'Abertura de OS', 'status' => 'Planejado', 'observacao' => 'Defina entrada, responsavel e previsao de entrega.'],
                     ['item' => 'Checklist tecnico', 'status' => 'Planejado', 'observacao' => 'Padronize diagnostico e execucao.'],
                     ['item' => 'Fechamento e cobranca', 'status' => 'Planejado', 'observacao' => 'Amarre a conclusao ao faturamento do servico.'],
-                ],
-            ),
-            'trocas-devolucoes' => $this->moduleWorkspace(
-                'Trocas e devolucoes',
-                'Organize retorno de mercadoria, ajuste de saldo e historico de troca sem misturar com a venda original.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Loja de roupas e varejo com troca frequente', 'meta' => 'Ajuda quando tamanho, cor ou defeito geram retorno.'],
-                    ['label' => 'Conexao com estoque', 'value' => 'Entrada e saida controladas', 'meta' => 'Permite decidir se o item volta para estoque ou segue para analise.'],
-                    ['label' => 'Conexao com clientes', 'value' => 'Historico de atendimento', 'meta' => 'Mantem o relacionamento e as excecoes documentados.'],
-                ],
-                [
-                    ['item' => 'Motivos de troca', 'status' => 'Pronto para configurar', 'observacao' => 'Separe ajuste de tamanho, defeito, devolucao e estorno.'],
-                    ['item' => 'Fluxo de retorno', 'status' => 'Pronto para configurar', 'observacao' => 'Defina se o produto volta ao estoque, vai para reparo ou baixa.'],
-                    ['item' => 'Analise comercial', 'status' => 'Em evolucao', 'observacao' => 'Use o historico para mapear os itens com mais troca.'],
-                ],
-            ),
-            'promocoes' => $this->moduleWorkspace(
-                'Promocoes e descontos',
-                'Destaque campanhas comerciais e regras de desconto sem depender apenas de ajustes pontuais no caixa.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Moda e varejo promocional', 'meta' => 'Bom para acompanhar campanha, desconto e giro de colecao.'],
-                    ['label' => 'Conexao com vendas', 'value' => 'Preco e incentivo comercial', 'meta' => 'Ajuda a organizar a politica de desconto aplicada no PDV.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Mais controle comercial', 'meta' => 'Evita desconto sem criterio e melhora a leitura das campanhas.'],
-                ],
-                [
-                    ['item' => 'Calendario promocional', 'status' => 'Pronto para configurar', 'observacao' => 'Organize campanhas por periodo, colecao ou segmento.'],
-                    ['item' => 'Regras de desconto', 'status' => 'Pronto para configurar', 'observacao' => 'Defina politica de percentual, item e venda final.'],
-                    ['item' => 'Leitura de resultado', 'status' => 'Em evolucao', 'observacao' => 'Cruze volume vendido, margem e produtos impactados.'],
-                ],
-            ),
-            'produtores' => $this->moduleWorkspace(
-                'Produtores',
-                'Mantenha um cadastro separado para produtores rurais, facilitando relacionamento e historico comercial do agro.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Agropecuaria', 'meta' => 'Bom para distinguir produtor, cliente final e fornecedor tradicional.'],
-                    ['label' => 'Conexao com compras', 'value' => 'Origem dos itens', 'meta' => 'Ajuda a registrar quem entrega, qual lote veio e em que periodo.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Rastreabilidade comercial', 'meta' => 'Facilita consultas futuras e acordos recorrentes.'],
-                ],
-                [
-                    ['item' => 'Cadastro base', 'status' => 'Pronto para configurar', 'observacao' => 'Registre contato, regiao, tipo de producao e observacoes comerciais.'],
-                    ['item' => 'Historico por produtor', 'status' => 'Pronto para configurar', 'observacao' => 'Acompanhe recorrencia, sazonalidade e qualidade de fornecimento.'],
-                    ['item' => 'Vinculo com compras e lotes', 'status' => 'Em evolucao', 'observacao' => 'Padronize quando o produtor precisa aparecer no fluxo de entrada.'],
-                ],
-            ),
-            'catalogo-online' => $this->moduleWorkspace(
-                'Catalogo online',
-                'Abra uma frente digital padrao com vitrine, carrinho e base para receber pedidos online sem mexer no PDV principal.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Loja de roupas e catalogo digital', 'meta' => 'Ideal para vitrine padrao com gestao separada do atendimento fisico.'],
-                    ['label' => 'Itens esperados', 'value' => 'Site, vitrine e carrinho', 'meta' => 'Centralize exibicao do catalogo e a jornada inicial de compra.'],
-                    ['label' => 'Obrigatorio', 'value' => 'HTTPS e cuidado com dados', 'meta' => 'Mantenha trafego seguro e trate dados do cliente com o minimo necessario.'],
-                ],
-                [
-                    ['item' => 'Catalogo publicado', 'status' => 'Pronto para configurar', 'observacao' => 'Defina quais produtos entram na vitrine padrao do site.'],
-                    ['item' => 'Carrinho e vitrine', 'status' => 'Pronto para configurar', 'observacao' => 'Separe navegacao de produto, selecao e resumo do pedido.'],
-                    ['item' => 'Politica digital minima', 'status' => 'Em evolucao', 'observacao' => 'Padronize HTTPS, dados capturados e textos de atendimento.'],
-                ],
-            ),
-            'pedidos-online' => $this->moduleWorkspace(
-                'Pedidos online',
-                'Reserve uma area para acompanhar pedidos vindos do site, com painel administrativo separado do atendimento presencial.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Frente digital com operacao separada', 'meta' => 'Ajuda a nao misturar pedidos do site com o caixa fisico.'],
-                    ['label' => 'Conexao com catalogo', 'value' => 'Fluxo ponta a ponta', 'meta' => 'O pedido nasce online e segue para tratamento interno.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Mais visibilidade operacional', 'meta' => 'Facilita ver o que entrou, o que foi atendido e o que ainda depende de retorno.'],
-                ],
-                [
-                    ['item' => 'Fila de pedidos', 'status' => 'Pronto para configurar', 'observacao' => 'Separe pedidos novos, em atendimento, concluidos e cancelados.'],
-                    ['item' => 'Painel administrativo', 'status' => 'Pronto para configurar', 'observacao' => 'Mantenha um fluxo de gestao separado da loja fisica.'],
-                    ['item' => 'Regras de despacho', 'status' => 'Em evolucao', 'observacao' => 'Defina quando o pedido segue para entrega, retirada ou conversa manual.'],
-                ],
-            ),
-            'whatsapp' => $this->moduleWorkspace(
-                'WhatsApp',
-                'Organize checkout por mensagem, mensagem padrao e atalho de atendimento para transformar o carrinho em pedido enviado.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Catalogo com fechamento conversacional', 'meta' => 'Bom para quem quer concluir o pedido pelo WhatsApp.'],
-                    ['label' => 'Itens esperados', 'value' => 'Mensagem pronta e atendimento rapido', 'meta' => 'Padronize o texto enviado e o que a equipe recebe.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Menos friccao no fechamento', 'meta' => 'O cliente sai do carrinho com um pedido legivel e contextualizado.'],
-                ],
-                [
-                    ['item' => 'Mensagem pre-preenchida', 'status' => 'Pronto para configurar', 'observacao' => 'Monte um modelo com itens, total e dados essenciais do pedido.'],
-                    ['item' => 'Mensagem padrao do negocio', 'status' => 'Pronto para configurar', 'observacao' => 'Inclua saudacao, prazo, retirada e politica comercial basica.'],
-                    ['item' => 'Tratamento do retorno', 'status' => 'Em evolucao', 'observacao' => 'Defina como o pedido recebido no WhatsApp volta para controle interno.'],
                 ],
             ),
             default => abort(404),

@@ -284,7 +284,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
 }
 
 export function PurchasesWorkspace({ moduleKey, payload }) {
-    const emptyForm = { id: null, supplier_id: '', producer_id: '', status: 'draft', expected_at: '', freight: '0', notes: '', items: [] }
+    const emptyForm = { id: null, supplier_id: '', status: 'draft', expected_at: '', freight: '0', notes: '', items: [] }
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('draft')
     const [form, setForm] = useState(emptyForm)
@@ -305,10 +305,10 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
         setSaving(true)
         setFeedback(null)
         try {
-            const payloadData = { ...form, supplier_id: form.supplier_id ? Number(form.supplier_id) : null, producer_id: form.producer_id ? Number(form.producer_id) : null, expected_at: form.expected_at || null, freight: parseNumber(form.freight, 0), items: form.items.map((item) => ({ product_id: Number(item.product_id), quantity: parseNumber(item.quantity, 0), unit_cost: parseNumber(item.unit_cost, 0) })) }
+            const payloadData = { ...form, supplier_id: form.supplier_id ? Number(form.supplier_id) : null, expected_at: form.expected_at || null, freight: parseNumber(form.freight, 0), items: form.items.map((item) => ({ product_id: Number(item.product_id), quantity: parseNumber(item.quantity, 0), unit_cost: parseNumber(item.unit_cost, 0) })) }
             const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
             setRecords((current) => upsertRecord(current, response.record))
-            setForm({ ...emptyForm, ...response.record, supplier_id: response.record.supplier_id ? String(response.record.supplier_id) : '', producer_id: response.record.producer_id ? String(response.record.producer_id) : '', expected_at: ensureDate(response.record.expected_at), freight: String(response.record.freight || 0), items: (response.record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })
+            setForm({ ...emptyForm, ...response.record, supplier_id: response.record.supplier_id ? String(response.record.supplier_id) : '', expected_at: ensureDate(response.record.expected_at), freight: String(response.record.freight || 0), items: (response.record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -342,10 +342,10 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
                             <ListCard
                                 key={record.id}
                                 active={form.id === record.id}
-                                onClick={() => setForm({ ...emptyForm, ...record, supplier_id: record.supplier_id ? String(record.supplier_id) : '', producer_id: record.producer_id ? String(record.producer_id) : '', expected_at: ensureDate(record.expected_at), freight: String(record.freight || 0), items: (record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })}
+                                onClick={() => setForm({ ...emptyForm, ...record, supplier_id: record.supplier_id ? String(record.supplier_id) : '', expected_at: ensureDate(record.expected_at), freight: String(record.freight || 0), items: (record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })}
                                 title={record.code}
                                 badge={<Badge tone={record.stock_applied_at ? 'success' : record.status === 'received' ? 'info' : 'warning'}>{record.status}</Badge>}
-                                description={record.supplier_name || record.producer_name || 'Sem origem definida'}
+                                description={record.supplier_name || 'Sem origem definida'}
                                 meta={[`${record.items?.length || 0} item(ns)`, formatMoney(record.total || 0)]}
                             />
                         )) : <EmptyState title="Sem compras nesse status" text="Cadastre entradas planejadas e receba itens direto no estoque." />}
@@ -355,7 +355,6 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
                     <FeedbackHeader title={form.id ? 'Editar compra' : 'Nova compra'} subtitle="Pedido com entrada automatica no estoque" />
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label><span>Fornecedor</span><select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}><option value="">Nao informado</option>{payload.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
-                        <label><span>Produtor</span><select value={form.producer_id} onChange={(event) => setForm((current) => ({ ...current, producer_id: event.target.value }))}><option value="">Nao informado</option>{payload.producers.map((producer) => <option key={producer.id} value={producer.id}>{producer.name}</option>)}</select></label>
                         <label><span>Status</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Rascunho</option><option value="ordered">Solicitada</option><option value="received">Recebida</option></select></label>
                         <label><span>Previsao</span><input type="date" value={form.expected_at} onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))} /></label>
                         <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>

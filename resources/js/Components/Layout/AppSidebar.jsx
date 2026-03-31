@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import AppSidebarSection from '@/Components/Layout/AppSidebarSection'
 
 export default function AppSidebar({
@@ -10,6 +11,51 @@ export default function AppSidebar({
     onCloseMobile,
     onLogout,
 }) {
+    const navRef = useRef(null)
+
+    useEffect(() => {
+        const nav = navRef.current
+        if (!nav || typeof window === 'undefined') {
+            return undefined
+        }
+
+        const saved = window.sessionStorage.getItem('app-sidebar-scroll-top')
+        if (saved !== null) {
+            nav.scrollTop = Number(saved)
+        }
+
+        const persistScroll = () => {
+            window.sessionStorage.setItem('app-sidebar-scroll-top', String(nav.scrollTop))
+        }
+
+        nav.addEventListener('scroll', persistScroll, { passive: true })
+
+        return () => {
+            nav.removeEventListener('scroll', persistScroll)
+            persistScroll()
+        }
+    }, [])
+
+    useEffect(() => {
+        const nav = navRef.current
+        if (!nav || typeof window === 'undefined') {
+            return
+        }
+
+        const saved = window.sessionStorage.getItem('app-sidebar-scroll-top')
+        if (saved !== null) {
+            nav.scrollTop = Number(saved)
+        }
+    }, [currentUrl])
+
+    function handleNavigate() {
+        if (typeof window !== 'undefined' && navRef.current) {
+            window.sessionStorage.setItem('app-sidebar-scroll-top', String(navRef.current.scrollTop))
+        }
+
+        onCloseMobile?.()
+    }
+
     const userInitials =
         auth?.user?.name
             ?.split(' ')
@@ -51,14 +97,14 @@ export default function AppSidebar({
                 </div>
             </div>
 
-            <nav className="app-sidebar-nav">
+            <nav className="app-sidebar-nav" ref={navRef}>
                 <div className="app-sidebar-nav-kicker">Navegacao principal</div>
                 {navigationGroups.map((group) => (
                     <AppSidebarSection
                         key={group.section}
                         section={group}
                         currentUrl={currentUrl}
-                        onNavigate={onCloseMobile}
+                        onNavigate={handleNavigate}
                         collapsed={collapsed}
                     />
                 ))}

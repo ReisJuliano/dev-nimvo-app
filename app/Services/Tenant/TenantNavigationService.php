@@ -51,20 +51,6 @@ class TenantNavigationService
                         'access_key' => 'crediario',
                         'request_patterns' => ['fiado'],
                     ],
-                    [
-                        'href' => '/trocas-devolucoes',
-                        'label' => 'Trocas e devolucoes',
-                        'icon' => 'fa-right-left',
-                        'access_key' => 'trocas_devolucoes',
-                        'request_patterns' => ['trocas-devolucoes'],
-                    ],
-                    [
-                        'href' => '/promocoes',
-                        'label' => 'Promocoes',
-                        'icon' => 'fa-tags',
-                        'access_key' => 'promocoes',
-                        'request_patterns' => ['promocoes'],
-                    ],
                 ],
             ],
             [
@@ -73,7 +59,7 @@ class TenantNavigationService
                     [
                         'href' => '/producao',
                         'label' => 'Producao',
-                        'icon' => 'fa-bread-slice',
+                        'icon' => 'fa-gears',
                         'access_key' => 'producao',
                         'request_patterns' => ['producao', 'api/operations/producao*'],
                     ],
@@ -152,13 +138,6 @@ class TenantNavigationService
                         'access_key' => 'fornecedores',
                         'request_patterns' => ['fornecedores'],
                     ],
-                    [
-                        'href' => '/produtores',
-                        'label' => 'Produtores',
-                        'icon' => 'fa-tractor',
-                        'access_key' => 'produtores',
-                        'request_patterns' => ['produtores', 'api/operations/produtores*'],
-                    ],
                 ],
             ],
             [
@@ -188,37 +167,11 @@ class TenantNavigationService
                 ],
             ],
             [
-                'section' => 'Digital',
-                'items' => [
-                    [
-                        'href' => '/catalogo-online',
-                        'label' => 'Catalogo online',
-                        'icon' => 'fa-globe',
-                        'access_key' => 'catalogo_online',
-                        'request_patterns' => ['catalogo-online'],
-                    ],
-                    [
-                        'href' => '/pedidos-online',
-                        'label' => 'Pedidos online',
-                        'icon' => 'fa-store',
-                        'access_key' => 'pedidos_online',
-                        'request_patterns' => ['pedidos-online'],
-                    ],
-                    [
-                        'href' => '/whatsapp',
-                        'label' => 'WhatsApp',
-                        'icon' => 'fa-comment-dots',
-                        'access_key' => 'whatsapp_pedidos',
-                        'request_patterns' => ['whatsapp'],
-                    ],
-                ],
-            ],
-            [
                 'section' => 'Relatorios',
                 'items' => [
                     [
                         'href' => '/relatorios',
-                        'label' => 'Relatorios avancados',
+                        'label' => 'Relatorios',
                         'icon' => 'fa-chart-bar',
                         'access_key' => 'relatorios',
                         'request_patterns' => ['relatorios', 'vendas', 'demanda'],

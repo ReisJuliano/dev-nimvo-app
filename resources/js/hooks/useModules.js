@@ -7,11 +7,11 @@ export default function useModules(settingsOverride = null) {
     const { business, modules, capabilities } = settings
 
     function isModuleEnabled(key) {
-        return modules[key] !== false
+        return Object.prototype.hasOwnProperty.call(modules, key) && modules[key] !== false
     }
 
     function isCapabilityEnabled(key) {
-        return capabilities[key] !== false
+        return Object.prototype.hasOwnProperty.call(capabilities, key) && capabilities[key] !== false
     }
 
     function isEnabled(key) {
@@ -23,7 +23,7 @@ export default function useModules(settingsOverride = null) {
     function isAnyEnabled(keys, scope = 'capabilities') {
         const source = scope === 'modules' ? modules : capabilities
 
-        return keys.some((key) => source[key] !== false)
+        return keys.some((key) => Object.prototype.hasOwnProperty.call(source, key) && source[key] !== false)
     }
 
     return {

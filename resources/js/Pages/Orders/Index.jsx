@@ -319,7 +319,6 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         moduleState.isCapabilityEnabled('relatorios')
         || moduleState.isCapabilityEnabled('vendas')
         || moduleState.isCapabilityEnabled('demanda')
-    const canOpenSettings = auth?.user?.role === 'admin'
 
     function showFeedback(type, text) {
         setFeedback({ type, text })
@@ -852,16 +851,6 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                                     collapsed={sidebarCollapsed}
                                     tone="info"
                                     onClick={() => handleSidebarNavigate('/relatorios')}
-                                />
-                            ) : null}
-                            {canOpenSettings ? (
-                                <SidebarToolButton
-                                    icon="fa-gear"
-                                    label="Configuracoes"
-                                    hint="Preferencias e modulos"
-                                    collapsed={sidebarCollapsed}
-                                    tone="neutral"
-                                    onClick={() => handleSidebarNavigate('/configuracoes')}
                                 />
                             ) : null}
                         </div>
