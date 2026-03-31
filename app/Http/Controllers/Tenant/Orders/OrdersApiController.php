@@ -87,4 +87,13 @@ class OrdersApiController extends Controller
             'order' => $orderDraftService->toDetail($result['order']),
         ]);
     }
+
+    public function destroy(OrderDraft $orderDraft, OrderDraftService $orderDraftService): JsonResponse
+    {
+        $orderDraftService->destroy($orderDraft);
+
+        return response()->json([
+            'message' => 'Comanda removida com sucesso.',
+        ]);
+    }
 }

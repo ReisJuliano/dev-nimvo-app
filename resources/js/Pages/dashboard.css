@@ -20,7 +20,11 @@
     display: grid;
     gap: 1rem;
     grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.7fr);
+    margin-inline: calc(var(--app-content-gutter, 1.5rem) * -1);
     padding: 1.7rem 1.8rem;
+    border-inline: none;
+    border-radius: 0;
+    box-shadow: none;
     background:
         radial-gradient(circle at top right, rgba(112, 180, 255, 0.28), transparent 26%),
         radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.12), transparent 18%),

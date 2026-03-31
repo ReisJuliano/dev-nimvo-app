@@ -121,6 +121,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/orders', [OrdersApiController::class, 'store'])->name('api.orders.store');
             Route::get('/orders/{orderDraft}', [OrdersApiController::class, 'show'])->name('api.orders.show');
             Route::put('/orders/{orderDraft}', [OrdersApiController::class, 'update'])->name('api.orders.update');
+            Route::delete('/orders/{orderDraft}', [OrdersApiController::class, 'destroy'])->name('api.orders.destroy');
             Route::post('/orders/{orderDraft}/send-to-cashier', [OrdersApiController::class, 'sendToCashier'])->name('api.orders.send-to-cashier');
             Route::post('/orders/{orderDraft}/partial-checkout', [OrdersApiController::class, 'partialCheckout'])->name('api.orders.partial-checkout');
             Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');

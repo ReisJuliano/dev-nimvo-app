@@ -19,7 +19,7 @@ class UpsertOrderDraftRequest extends FormRequest
             'reference' => ['nullable', 'string', 'max:80'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'notes' => ['nullable', 'string'],
-            'items' => ['required', 'array'],
+            'items' => ['present', 'array'],
             'items.*.id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
         ];

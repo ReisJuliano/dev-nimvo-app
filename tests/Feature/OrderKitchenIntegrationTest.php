@@ -8,6 +8,7 @@ use App\Models\Tenant\User;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class OrderKitchenIntegrationTest extends TestCase
@@ -112,6 +113,44 @@ class OrderKitchenIntegrationTest extends TestCase
         ]);
 
         $this->assertDatabaseMissing('kitchen_tickets', ['id' => $ticketId]);
+    }
+
+    public function test_it_syncs_kitchen_items_when_done_at_column_is_missing(): void
+    {
+        $this->enableKitchenModule();
+        Schema::table('kitchen_ticket_items', fn ($table) => $table->dropColumn('done_at'));
+
+        $user = $this->makeUser();
+        $preparedProduct = $this->makeProduct([
+            'code' => 'COZ-201',
+            'name' => 'Batata frita',
+            'requires_preparation' => true,
+        ]);
+
+        $service = app(OrderDraftService::class);
+        $draft = $service->create($user->id, [
+            'type' => 'comanda',
+            'reference' => '90',
+        ]);
+
+        $service->save($draft, [
+            'type' => 'comanda',
+            'channel' => 'store',
+            'reference' => '90',
+            'customer_id' => null,
+            'notes' => null,
+            'items' => [
+                ['id' => $preparedProduct->id, 'qty' => 1],
+            ],
+        ]);
+
+        $ticket = KitchenTicket::query()->where('order_draft_id', $draft->id)->first();
+
+        $this->assertNotNull($ticket);
+        $this->assertDatabaseHas('kitchen_ticket_items', [
+            'kitchen_ticket_id' => $ticket->id,
+            'product_id' => $preparedProduct->id,
+        ]);
     }
 
     protected function enableKitchenModule(): void

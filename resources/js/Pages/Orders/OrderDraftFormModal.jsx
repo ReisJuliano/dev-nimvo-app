@@ -11,6 +11,7 @@ export default function OrderDraftFormModal({
     onPickCustomer,
     onClose,
     onSubmit,
+    onSubmitAndAddProducts,
 }) {
     return (
         <OrdersModal
@@ -88,6 +89,10 @@ export default function OrderDraftFormModal({
                     <button type="button" className="ui-button-ghost" onClick={onClose}>
                         <i className="fa-solid fa-xmark" />
                         Cancelar
+                    </button>
+                    <button type="button" className="ui-button-secondary" onClick={onSubmitAndAddProducts} disabled={creatingDraft}>
+                        <i className="fa-solid fa-box-open" />
+                        Criar e adicionar produtos
                     </button>
                     <button type="submit" className="ui-button" disabled={creatingDraft}>
                         <i className="fa-solid fa-plus" />

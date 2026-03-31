@@ -17,6 +17,10 @@ class OrderDraftService
 {
     protected ?bool $kitchenSyncAvailable = null;
 
+    protected ?bool $kitchenTablesAvailable = null;
+
+    protected ?bool $kitchenItemDoneAtColumnAvailable = null;
+
     protected array $productColumnCache = [];
 
     public function __construct(
@@ -218,6 +222,25 @@ class OrderDraftService
         ])->save();
     }
 
+    public function destroy(OrderDraft $draft): void
+    {
+        if ($draft->status === OrderDraft::STATUS_COMPLETED || $draft->sale_id) {
+            throw ValidationException::withMessages([
+                'order' => 'Este pedido ja foi concluido e nao pode ser removido.',
+            ]);
+        }
+
+        DB::transaction(function () use ($draft): void {
+            if ($this->hasKitchenTables()) {
+                KitchenTicket::query()
+                    ->where('order_draft_id', $draft->id)
+                    ->delete();
+            }
+
+            $draft->delete();
+        });
+    }
+
     public function toSummary(OrderDraft $draft): array
     {
         $itemsCount = $draft->relationLoaded('items')
@@ -314,26 +337,31 @@ class OrderDraftService
         $this->applyKitchenTimelineFromStatus($ticket);
         $ticket->save();
 
-        $doneAtByKey = $ticket->items
-            ->mapWithKeys(fn ($item) => [
+        $canPersistItemDoneAt = $this->hasKitchenItemDoneAtColumn();
+        $doneAtByKey = $canPersistItemDoneAt
+            ? $ticket->items->mapWithKeys(fn ($item) => [
                 $this->kitchenItemKey($item->product_id, $item->item_name, $item->notes) => $item->done_at,
-            ]);
+            ])
+            : collect();
 
         $ticket->items()->delete();
 
         foreach ($kitchenItems as $kitchenItem) {
-            $doneAt = $doneAtByKey->get(
-                $this->kitchenItemKey($kitchenItem['product_id'], $kitchenItem['item_name'], $kitchenItem['notes']),
-            );
-
-            $ticket->items()->create([
+            $payload = [
                 'product_id' => $kitchenItem['product_id'],
                 'item_name' => $kitchenItem['item_name'],
                 'quantity' => $kitchenItem['quantity'],
                 'unit' => $kitchenItem['unit'],
                 'notes' => $kitchenItem['notes'],
-                'done_at' => $doneAt,
-            ]);
+            ];
+
+            if ($canPersistItemDoneAt) {
+                $payload['done_at'] = $doneAtByKey->get(
+                    $this->kitchenItemKey($kitchenItem['product_id'], $kitchenItem['item_name'], $kitchenItem['notes']),
+                );
+            }
+
+            $ticket->items()->create($payload);
         }
     }
 
@@ -439,16 +467,41 @@ class OrderDraftService
             return $this->kitchenSyncAvailable = false;
         }
 
-        $connection = (new KitchenTicket())->getConnectionName();
-
-        return $this->kitchenSyncAvailable = Schema::connection($connection)->hasTable('kitchen_tickets')
-            && Schema::connection($connection)->hasTable('kitchen_ticket_items');
+        return $this->kitchenSyncAvailable = $this->hasKitchenTables();
     }
 
     protected function productColumnExists(string $column): bool
     {
         return $this->productColumnCache[$column]
             ??= Schema::connection((new Product())->getConnectionName())->hasColumn('products', $column);
+    }
+
+    protected function hasKitchenTables(): bool
+    {
+        if ($this->kitchenTablesAvailable !== null) {
+            return $this->kitchenTablesAvailable;
+        }
+
+        $connection = (new KitchenTicket())->getConnectionName();
+
+        return $this->kitchenTablesAvailable = Schema::connection($connection)->hasTable('kitchen_tickets')
+            && Schema::connection($connection)->hasTable('kitchen_ticket_items');
+    }
+
+    protected function hasKitchenItemDoneAtColumn(): bool
+    {
+        if ($this->kitchenItemDoneAtColumnAvailable !== null) {
+            return $this->kitchenItemDoneAtColumnAvailable;
+        }
+
+        if (!$this->hasKitchenTables()) {
+            return $this->kitchenItemDoneAtColumnAvailable = false;
+        }
+
+        $connection = (new KitchenTicket())->getConnectionName();
+
+        return $this->kitchenItemDoneAtColumnAvailable = Schema::connection($connection)
+            ->hasColumn('kitchen_ticket_items', 'done_at');
     }
 
     protected function displayLabel(OrderDraft $draft): string

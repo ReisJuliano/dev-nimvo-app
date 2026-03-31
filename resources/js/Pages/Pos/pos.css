@@ -987,11 +987,16 @@
 }
 
 .pos-total-support-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.85rem;
     padding-top: 0.2rem;
 }
 
 .pos-total-support-row strong {
     color: #0f7f52;
+    white-space: nowrap;
 }
 
 .pos-total-support-row.alert strong {

@@ -78,6 +78,25 @@ function canMoveTo(status, target) {
     return Math.abs(fromIndex - toIndex) === 1
 }
 
+function resolveMoveMeta(status) {
+    const currentIndex = KITCHEN_COLUMNS.findIndex((column) => column.key === status)
+
+    if (currentIndex < 0) {
+        return { target: null, icon: 'fa-chevron-right', label: 'Mover' }
+    }
+
+    const hasNext = currentIndex < KITCHEN_COLUMNS.length - 1
+    const target = hasNext ? KITCHEN_COLUMNS[currentIndex + 1] : KITCHEN_COLUMNS[currentIndex - 1]
+    const icon = hasNext ? 'fa-chevron-right' : 'fa-chevron-left'
+    const action = hasNext ? 'Avancar para' : 'Voltar para'
+
+    return {
+        target: target?.key ?? null,
+        icon,
+        label: target ? `${action} ${target.label}` : 'Mover',
+    }
+}
+
 function cardTitle(ticket) {
     if (ticket.reference) return ticket.reference
     if (ticket.customer_name) return ticket.customer_name
@@ -163,19 +182,24 @@ export default function KitchenKanbanBoard({
                                                     : <div className="ops-kitchen-kanban-empty">Sem itens</div>}
                                             </div>
 
-                                            {!tvMode && onMoveTicket ? (
+                                            {onMoveTicket ? (
                                                 <div className="ops-kitchen-kanban-actions">
-                                                    {KITCHEN_COLUMNS.map((target) => (
-                                                        <button
-                                                            key={target.key}
-                                                            type="button"
-                                                            className={target.key === ticket.status ? 'active' : ''}
-                                                            onClick={() => onMoveTicket(ticket, target.key)}
-                                                            disabled={!canMoveTo(ticket.status, target.key) || loading}
-                                                        >
-                                                            {target.label}
-                                                        </button>
-                                                    ))}
+                                                    {(() => {
+                                                        const move = resolveMoveMeta(ticket.status)
+
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                className="ops-kitchen-kanban-move"
+                                                                onClick={() => move.target && canMoveTo(ticket.status, move.target) && onMoveTicket(ticket, move.target)}
+                                                                disabled={!move.target || !canMoveTo(ticket.status, move.target) || loading}
+                                                                title={move.label}
+                                                                aria-label={move.label}
+                                                            >
+                                                                <i className={`fa-solid ${move.icon}`} />
+                                                            </button>
+                                                        )
+                                                    })()}
                                                 </div>
                                             ) : null}
                                         </section>

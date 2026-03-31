@@ -27,6 +27,8 @@ class OperationsWorkspaceService
 {
     protected array $productColumnCache = [];
 
+    protected ?bool $kitchenItemDoneAtColumnAvailable = null;
+
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
     ) {
@@ -922,6 +924,22 @@ class OperationsWorkspaceService
             ??= Schema::connection((new Product())->getConnectionName())->hasColumn('products', $column);
     }
 
+    protected function kitchenItemDoneAtColumnExists(): bool
+    {
+        if ($this->kitchenItemDoneAtColumnAvailable !== null) {
+            return $this->kitchenItemDoneAtColumnAvailable;
+        }
+
+        $connection = (new KitchenTicket())->getConnectionName();
+
+        if (!Schema::connection($connection)->hasTable('kitchen_ticket_items')) {
+            return $this->kitchenItemDoneAtColumnAvailable = false;
+        }
+
+        return $this->kitchenItemDoneAtColumnAvailable = Schema::connection($connection)
+            ->hasColumn('kitchen_ticket_items', 'done_at');
+    }
+
     protected function customerOptions(): array
     {
         return Customer::query()
@@ -1039,6 +1057,7 @@ class OperationsWorkspaceService
     protected function serializeKitchenTicket(KitchenTicket $ticket): array
     {
         $ticket->loadMissing('items.product:id,name,code,unit');
+        $hasDoneAt = $this->kitchenItemDoneAtColumnExists();
 
         return [
             'id' => $ticket->id,
@@ -1061,7 +1080,7 @@ class OperationsWorkspaceService
                     'quantity' => (float) $item->quantity,
                     'unit' => $item->unit,
                     'notes' => $item->notes,
-                    'done_at' => $item->done_at?->toIso8601String(),
+                    'done_at' => $hasDoneAt ? $item->done_at?->toIso8601String() : null,
                 ])
                 ->values()
                 ->all(),
@@ -1077,6 +1096,12 @@ class OperationsWorkspaceService
 
         $item = $ticket->items->firstWhere('id', $itemId);
         abort_unless($item, 404);
+
+        if (!$this->kitchenItemDoneAtColumnExists()) {
+            throw ValidationException::withMessages([
+                'kitchen' => 'Atualize o banco para habilitar a confirmacao de itens da cozinha.',
+            ]);
+        }
 
         $item->forceFill([
             'done_at' => $item->done_at ? null : now(),

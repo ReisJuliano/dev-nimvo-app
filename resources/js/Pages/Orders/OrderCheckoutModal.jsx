@@ -19,6 +19,7 @@ export default function OrderCheckoutModal({
     submittingCheckout,
     onClose,
     onOpenDiscountModal,
+    onOpenPartialCheckout,
     onConfirm,
 }) {
     if (!draft) {
@@ -158,6 +159,10 @@ export default function OrderCheckoutModal({
                     <button type="button" className="ui-button-ghost" onClick={onClose}>
                         <i className="fa-solid fa-xmark" />
                         Cancelar
+                    </button>
+                    <button type="button" className="ui-button-secondary" onClick={onOpenPartialCheckout}>
+                        <i className="fa-solid fa-people-group" />
+                        Pagamento parcial
                     </button>
                     <button type="button" className="ui-button-secondary" onClick={onOpenDiscountModal}>
                         <i className="fa-solid fa-badge-percent" />

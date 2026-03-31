@@ -16,14 +16,17 @@ export default function OrderDetailModal({
     clock,
     printingDraft,
     sendingDraft,
+    deletingDraft,
     onClose,
     onOpenProductsModal,
     onOpenQuantityModal,
     onOpenTransferModal,
     onOpenDiscountModal,
     onOpenCheckoutModal,
+    onOpenDeliveryModal,
     onPrintDraft,
     onSendToCashier,
+    onDeleteDraft,
     onQuantityChange,
     onRemoveItem,
     onCustomerChange,
@@ -78,6 +81,10 @@ export default function OrderDetailModal({
                         <i className="fa-solid fa-box-open" />
                         Adicionar produto
                     </button>
+                    <button type="button" className="ui-button-secondary" onClick={onOpenDeliveryModal}>
+                        <i className="fa-solid fa-motorcycle" />
+                        Enviar para entrega
+                    </button>
                     <button type="button" className="ui-button-ghost" onClick={onOpenQuantityModal} disabled={!selectedItem}>
                         <i className="fa-solid fa-arrows-up-down" />
                         Alterar quantidade
@@ -106,6 +113,10 @@ export default function OrderDetailModal({
                     >
                         <i className="fa-solid fa-cash-register" />
                         {sendingDraft ? 'Enviando...' : sentToCashier ? 'Ja no caixa' : 'Enviar ao caixa'}
+                    </button>
+                    <button type="button" className="ui-button-danger" onClick={onDeleteDraft} disabled={deletingDraft}>
+                        <i className="fa-solid fa-trash-can" />
+                        {deletingDraft ? 'Excluindo...' : 'Excluir comanda'}
                     </button>
                 </section>
 

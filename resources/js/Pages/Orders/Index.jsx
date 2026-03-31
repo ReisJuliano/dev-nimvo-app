@@ -13,6 +13,9 @@ import OrderTransferModal from './OrderTransferModal'
 import OrderQuantityModal from './OrderQuantityModal'
 import OrderDiscountModal from './OrderDiscountModal'
 import OrderCheckoutModal from './OrderCheckoutModal'
+import OrderPartialCheckoutModal from './OrderPartialCheckoutModal'
+import OrderDeliveryModal from './OrderDeliveryModal'
+import OrderDeliveriesModal from './OrderDeliveriesModal'
 import {
     buildDiscountDraft,
     buildDraftPayload,
@@ -55,8 +58,10 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const [creatingDraft, setCreatingDraft] = useState(false)
     const [savingDraft, setSavingDraft] = useState(false)
     const [sendingDraft, setSendingDraft] = useState(false)
+    const [deletingDraft, setDeletingDraft] = useState(false)
     const [printingDraft, setPrintingDraft] = useState(false)
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
+    const [submittingDelivery, setSubmittingDelivery] = useState(false)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
     const [listFilter, setListFilter] = useState(initialDraft?.status === 'sent_to_cashier' ? 'sent_to_cashier' : 'draft')
     const [draftModalOpen, setDraftModalOpen] = useState(false)
@@ -67,6 +72,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const [discountModalOpen, setDiscountModalOpen] = useState(false)
     const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
     const [quantityModalOpen, setQuantityModalOpen] = useState(false)
+    const [deliveryModalOpen, setDeliveryModalOpen] = useState(false)
+    const [deliveriesModalOpen, setDeliveriesModalOpen] = useState(false)
     const [newDraftForm, setNewDraftForm] = useState(getInitialNewDraftForm())
     const [searchDraftTerm, setSearchDraftTerm] = useState('')
     const [feedback, setFeedback] = useState(null)
@@ -82,6 +89,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const [paymentTab, setPaymentTab] = useState('cash')
     const [cardType, setCardType] = useState('credit_card')
     const [cashReceived, setCashReceived] = useState('')
+    const [partialCheckoutModalOpen, setPartialCheckoutModalOpen] = useState(false)
+    const [submittingPartialCheckout, setSubmittingPartialCheckout] = useState(false)
     const [creditStatus, setCreditStatus] = useState(null)
     const [quantityDraft, setQuantityDraft] = useState(String(initialDraftState?.items?.[0]?.qty ?? '1'))
     const [clock, setClock] = useState(Date.now())
@@ -137,6 +146,19 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             clearTimeout(timeout)
         }
     }, [searchTerm, selectedCategory])
+
+    const isAnyModalOpen =
+        draftModalOpen ||
+        productsModalOpen ||
+        newDraftModalOpen ||
+        searchModalOpen ||
+        transferModalOpen ||
+        discountModalOpen ||
+        checkoutModalOpen ||
+        partialCheckoutModalOpen ||
+        deliveryModalOpen ||
+        deliveriesModalOpen ||
+        quantityModalOpen
 
     useEffect(() => {
         if (!currentDraft?.items?.length) {
@@ -198,15 +220,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         return () => clearTimeout(timeout)
     }, [productsModalOpen, searchModalOpen, newDraftModalOpen, quantityModalOpen])
 
-    const isAnyModalOpen =
-        draftModalOpen ||
-        productsModalOpen ||
-        newDraftModalOpen ||
-        searchModalOpen ||
-        transferModalOpen ||
-        discountModalOpen ||
-        checkoutModalOpen ||
-        quantityModalOpen
+    // (duplicated further above) kept for history; remove to avoid conflicting definitions
 
     useEffect(() => {
         if (!isAnyModalOpen) {
@@ -226,6 +240,9 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                 return
             }
 
+            if (deliveriesModalOpen) return void setDeliveriesModalOpen(false)
+            if (deliveryModalOpen) return void setDeliveryModalOpen(false)
+            if (partialCheckoutModalOpen) return void setPartialCheckoutModalOpen(false)
             if (checkoutModalOpen) return void setCheckoutModalOpen(false)
             if (discountModalOpen) return void setDiscountModalOpen(false)
             if (quantityModalOpen) return void setQuantityModalOpen(false)
@@ -238,7 +255,19 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [draftModalOpen, productsModalOpen, newDraftModalOpen, searchModalOpen, transferModalOpen, discountModalOpen, checkoutModalOpen, quantityModalOpen])
+    }, [
+        draftModalOpen,
+        productsModalOpen,
+        newDraftModalOpen,
+        searchModalOpen,
+        transferModalOpen,
+        discountModalOpen,
+        checkoutModalOpen,
+        partialCheckoutModalOpen,
+        deliveryModalOpen,
+        deliveriesModalOpen,
+        quantityModalOpen,
+    ])
 
     const selectedCustomer = useMemo(
         () => customerOptions.find((customer) => String(customer.id) === currentDraft?.customerId) ?? null,
@@ -443,8 +472,9 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         return Number(response.customer.id)
     }
 
-    async function handleCreateDraft(event) {
-        event.preventDefault()
+    async function handleCreateDraft(event, options = {}) {
+        event?.preventDefault?.()
+        const openProductsAfter = Boolean(options.openProductsAfter)
         setCreatingDraft(true)
         try {
             if (currentDraft) await saveDraftNow(currentDraft)
@@ -465,6 +495,10 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             setListFilter('draft')
             setNewDraftForm(getInitialNewDraftForm())
             showFeedback('success', response.message)
+
+            if (openProductsAfter) {
+                setProductsModalOpen(true)
+            }
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -518,6 +552,40 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             showFeedback('error', error.message)
         } finally {
             setSendingDraft(false)
+        }
+    }
+
+    async function handleDeleteDraft() {
+        if (!currentDraft?.id) return
+        if (!window.confirm(`Remover a comanda "${currentDraft.label}"?`)) return
+
+        const draftId = Number(currentDraft.id)
+        setDeletingDraft(true)
+        setFeedback(null)
+
+        try {
+            clearTimeout(saveTimeoutRef.current)
+            await apiRequest(`/api/orders/${draftId}`, { method: 'delete' })
+
+            setDrafts((current) => current.filter((draft) => Number(draft.id) !== draftId))
+            lastSavedSignatureRef.current = null
+            setCurrentDraft(null)
+            setSelectedItemId(null)
+            setDraftModalOpen(false)
+            setProductsModalOpen(false)
+            setTransferModalOpen(false)
+            setDiscountModalOpen(false)
+            setCheckoutModalOpen(false)
+            setQuantityModalOpen(false)
+            setPartialCheckoutModalOpen(false)
+            setDeliveryModalOpen(false)
+            updateDraftUrl(null)
+            resetCheckoutState('')
+            showFeedback('success', 'Comanda removida com sucesso.')
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setDeletingDraft(false)
         }
     }
 
@@ -593,6 +661,72 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             showFeedback('error', error.message)
         } finally {
             setSubmittingCheckout(false)
+        }
+    }
+
+    async function handleFinalizePartialCheckout({ resolvedPaymentMethod: method, cashShortfall: shortfall, cashReceived: received, pricing: partialPricing, items }) {
+        if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
+        if (!items?.length || partialPricing.total <= 0) return showFeedback('error', 'Selecione ao menos um item para cobrar.')
+        if (method === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar a comanda no fiado.')
+        if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
+
+        setSubmittingPartialCheckout(true)
+        setFeedback(null)
+        try {
+            await saveDraftNow(currentDraft)
+            const response = await apiRequest(`/api/orders/${currentDraft.id}/partial-checkout`, {
+                method: 'post',
+                data: {
+                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                    discount: partialPricing.discount,
+                    notes: currentDraft.notes || null,
+                    items: items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                    payments: [{ method, amount: partialPricing.total }],
+                },
+            })
+
+            hydrateDraft(response.order)
+            setDraftModalOpen(true)
+            setCheckoutModalOpen(false)
+            setPartialCheckoutModalOpen(false)
+            showFeedback('success', response.message || `Venda ${response.sale?.sale_number || ''} finalizada com sucesso.`)
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setSubmittingPartialCheckout(false)
+        }
+    }
+
+    async function handleCreateDelivery(form) {
+        if (!currentDraft) return
+
+        setSubmittingDelivery(true)
+        setFeedback(null)
+        try {
+            await saveDraftNow(currentDraft)
+            const response = await apiRequest(`/api/delivery/orders/${currentDraft.id}/from-draft`, {
+                method: 'post',
+                data: {
+                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                    channel: form.channel,
+                    reference: form.reference || null,
+                    recipient_name: form.recipient_name || null,
+                    phone: form.phone || null,
+                    courier_name: form.courier_name || null,
+                    address: form.address,
+                    neighborhood: form.neighborhood || null,
+                    delivery_fee: Number(form.delivery_fee || 0),
+                    notes: form.notes || null,
+                },
+            })
+
+            setDeliveryModalOpen(false)
+            setDeliveriesModalOpen(true)
+            showFeedback('success', response.message)
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setSubmittingDelivery(false)
         }
     }
 
@@ -865,14 +999,17 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         clock={clock}
                         printingDraft={printingDraft}
                         sendingDraft={sendingDraft}
+                        deletingDraft={deletingDraft}
                         onClose={() => setDraftModalOpen(false)}
                         onOpenProductsModal={() => currentDraft ? setProductsModalOpen(true) : showFeedback('error', 'Crie ou selecione uma comanda antes de abrir os produtos.')}
                         onOpenQuantityModal={() => selectedItem ? (setQuantityDraft(String(selectedItem.qty)), setQuantityModalOpen(true)) : showFeedback('error', 'Selecione um item da comanda para ajustar a quantidade.')}
                         onOpenTransferModal={() => currentDraft && (setTransferForm({ type: currentDraft.type, reference: currentDraft.reference, customerId: currentDraft.customerId, notes: currentDraft.notes }), setTransferModalOpen(true))}
                         onOpenDiscountModal={() => currentDraft?.items?.length ? (setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft.items[0]?.id ?? ''))), setDiscountModalOpen(true)) : showFeedback('error', 'Adicione ao menos um produto antes de aplicar desconto.')}
                         onOpenCheckoutModal={() => currentDraft?.items?.length ? setCheckoutModalOpen(true) : showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')}
+                        onOpenDeliveryModal={() => setDeliveryModalOpen(true)}
                         onPrintDraft={handlePrintDraft}
                         onSendToCashier={handleSendToCashier}
+                        onDeleteDraft={handleDeleteDraft}
                         onQuantityChange={handleQuantityChange}
                         onRemoveItem={handleRemove}
                         onCustomerChange={(value) => updateDraft((current) => ({ ...current, customerId: value }))}
@@ -913,6 +1050,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         onPickCustomer={(customer) => setNewDraftForm((current) => ({ ...current, customerName: customer.name, customerId: String(customer.id) }))}
                         onClose={() => setNewDraftModalOpen(false)}
                         onSubmit={handleCreateDraft}
+                        onSubmitAndAddProducts={() => handleCreateDraft(null, { openProductsAfter: true })}
                     />
                 ) : null}
 
@@ -994,12 +1132,40 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         creditStatus={creditStatus}
                         submittingCheckout={submittingCheckout}
                         onClose={() => setCheckoutModalOpen(false)}
+                        onOpenPartialCheckout={() => setPartialCheckoutModalOpen(true)}
                         onOpenDiscountModal={() => {
                             setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft?.items?.[0]?.id ?? '')))
                             setDiscountModalOpen(true)
                         }}
                         onConfirm={handleFinalizeCheckout}
                     />
+                ) : null}
+
+                {partialCheckoutModalOpen ? (
+                    <OrderPartialCheckoutModal
+                        draft={currentDraft}
+                        feedback={feedback}
+                        selectedCustomer={selectedCustomer}
+                        discountConfig={discountConfig}
+                        creditStatus={creditStatus}
+                        submittingCheckout={submittingPartialCheckout}
+                        onClose={() => setPartialCheckoutModalOpen(false)}
+                        onConfirm={handleFinalizePartialCheckout}
+                    />
+                ) : null}
+
+                {deliveryModalOpen ? (
+                    <OrderDeliveryModal
+                        draft={currentDraft}
+                        selectedCustomer={selectedCustomer}
+                        submitting={submittingDelivery}
+                        onClose={() => setDeliveryModalOpen(false)}
+                        onSubmit={handleCreateDelivery}
+                    />
+                ) : null}
+
+                {deliveriesModalOpen ? (
+                    <OrderDeliveriesModal open={deliveriesModalOpen} onClose={() => setDeliveriesModalOpen(false)} />
                 ) : null}
             </div>
         </AppLayout>

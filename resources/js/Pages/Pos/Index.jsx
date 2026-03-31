@@ -660,19 +660,20 @@ export default function PosIndex({
 
     function handleAddMixedPayment() {
         const amount = Number(mixedDraft.amount || 0)
+        const resolvedAmount = amount > 0 ? amount : mixedRemaining
 
-        if (amount <= 0) {
+        if (resolvedAmount <= 0) {
             showFeedback('error', 'Informe um valor valido para adicionar ao pagamento misto.')
             return
         }
 
-        if (amount > mixedRemaining + 0.001) {
+        if (resolvedAmount > mixedRemaining + 0.001) {
             showFeedback('error', 'A soma das parcelas nao pode ultrapassar o total da venda.')
             return
         }
 
         setFeedback(null)
-        setMixedPayments((current) => [...current, { method: mixedDraft.method, amount: mixedDraft.amount }])
+        setMixedPayments((current) => [...current, { method: mixedDraft.method, amount: String(resolvedAmount.toFixed(2)) }])
         setMixedDraft((current) => ({ ...current, amount: '' }))
     }
 
@@ -860,7 +861,8 @@ export default function PosIndex({
         setOpeningCashRegister(true)
         setFeedback(null)
 
-        const formData = new FormData(event.currentTarget)
+        const formEl = event.currentTarget
+        const formData = new FormData(formEl)
         const openingAmount = Number(formData.get('opening_amount') || 0)
 
         try {
@@ -877,7 +879,7 @@ export default function PosIndex({
                 opened_at: new Date().toISOString(),
                 opening_amount: openingAmount,
             })
-            event.currentTarget.reset()
+            formEl?.reset?.()
             showFeedback('success', response.message || 'Caixa aberto com sucesso.')
         } catch (error) {
             showFeedback('error', error.message)

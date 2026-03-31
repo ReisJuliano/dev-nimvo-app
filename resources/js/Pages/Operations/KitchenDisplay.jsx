@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
 import KitchenKanbanBoard from './workspaces/KitchenKanbanBoard'
+import { buildRecordsUrl, parseNumber, upsertRecord } from './workspaces/shared'
 import './operations-workspace.css'
 import './kitchen-display.css'
 
@@ -13,6 +14,7 @@ function formatClock(value) {
 export default function KitchenDisplay({ moduleTitle, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [clock, setClock] = useState(() => new Date())
+    const [movingTicket, setMovingTicket] = useState(false)
 
     const summary = useMemo(() => ({
         orders: records.length,
@@ -41,6 +43,41 @@ export default function KitchenDisplay({ moduleTitle, payload }) {
             setRecords(response.records || [])
         } catch {
             // A tela de TV continua exibindo o ultimo estado valido em caso de falha.
+        }
+    }
+
+    function buildTicketPayload(ticket, nextStatus) {
+        return {
+            reference: ticket.reference || null,
+            channel: ticket.channel,
+            status: nextStatus,
+            priority: ticket.priority || 'normal',
+            customer_name: ticket.customer_name || null,
+            notes: ticket.notes || null,
+            requested_at: ticket.requested_at || null,
+            items: (ticket.items || []).map((item) => ({
+                product_id: item.product_id ? Number(item.product_id) : null,
+                item_name: item.item_name,
+                quantity: parseNumber(item.quantity, 1),
+                unit: item.unit || 'UN',
+                notes: item.notes || null,
+            })),
+        }
+    }
+
+    async function handleMoveTicket(ticket, nextStatus) {
+        if (!ticket?.id || ticket.status === nextStatus) return
+        setMovingTicket(true)
+        try {
+            const response = await apiRequest(buildRecordsUrl('cozinha', ticket.id), {
+                method: 'put',
+                data: buildTicketPayload(ticket, nextStatus),
+            })
+            setRecords((current) => upsertRecord(current, response.record))
+        } catch {
+            // Em TV, mantemos o estado atual e tentamos novamente no proximo refresh.
+        } finally {
+            setMovingTicket(false)
         }
     }
 
@@ -74,7 +111,7 @@ export default function KitchenDisplay({ moduleTitle, payload }) {
                     </div>
                 </header>
 
-                <KitchenKanbanBoard tickets={records} tvMode />
+                <KitchenKanbanBoard tickets={records} tvMode onMoveTicket={handleMoveTicket} loading={movingTicket} />
             </div>
         </>
     )
