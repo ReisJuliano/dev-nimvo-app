@@ -64,12 +64,12 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 activeTab === 'catalog'
                     ? true
                     : activeTab === 'stock'
-                      ? Number(product.stock_quantity) <= Number(product.min_stock)
-                      : activeTab === 'grade'
-                        ? [product.style_reference, product.color, product.size, product.collection].some(Boolean)
-                        : activeTab === 'showcase'
-                          ? Boolean(product.catalog_visible)
-                          : Number(product.sale_price) > Number(product.cost_price)
+                        ? Number(product.stock_quantity) <= Number(product.min_stock)
+                        : activeTab === 'grade'
+                            ? [product.style_reference, product.color, product.size, product.collection].some(Boolean)
+                            : activeTab === 'showcase'
+                                ? Boolean(product.catalog_visible)
+                                : Number(product.sale_price) > Number(product.cost_price)
 
             return matchesSearch && matchesCategory && matchesCollection && matchesVisibility && matchesTab
         })
@@ -117,13 +117,17 @@ export default function ProductsIndex({ products, categories, suppliers }) {
         try {
             const payload = {
                 ...form,
-                category_id: form.category_id || null,
-                supplier_id: form.supplier_id || null,
-                cost_price: Number(form.cost_price || 0),
-                sale_price: Number(form.sale_price || 0),
+                name: form.name?.trim() || '',
+                barcode: form.barcode?.trim() || '',
+                category_id: form.category_id ? Number(form.category_id) : null,
+                supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
+                internal_notes: form.internal_notes?.trim() || null,
+                cost_price: form.cost_price === '' ? null : Number(form.cost_price),
+                sale_price: form.sale_price === '' ? null : Number(form.sale_price),
                 stock_quantity: Number(form.stock_quantity || 0),
                 min_stock: Number(form.min_stock || 0),
                 requires_preparation: Boolean(form.requires_preparation),
+                active: Boolean(form.active),
             }
 
             if (form.id) {
@@ -138,7 +142,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
         }
     }
 
-        return (
+    return (
         <AppLayout title="Produtos">
             <div className="products-page">
                 <section className="products-hero ui-card">
@@ -151,16 +155,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                                         ? 'Cadastre referencia, cor, tamanho, colecao, vitrine digital e estoque em um fluxo real de moda.'
                                         : 'Cadastro, consulta e ajuste de produtos.'}
                                 </p>
-                            </div>
-                            <div className="products-hero-actions">
-                                <button className="ui-button" onClick={handleCreate} type="button">
-                                    <i className="fa-solid fa-plus" />
-                                    Novo produto
-                                </button>
-                                <div className="products-hero-note">
-                                    <strong>{formatNumber(products.length)}</strong>
-                                    <span>itens cadastrados</span>
-                                </div>
                             </div>
                         </div>
                     </div>

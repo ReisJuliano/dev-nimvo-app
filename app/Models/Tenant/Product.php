@@ -16,6 +16,7 @@ class Product extends Model
         'barcode',
         'name',
         'description',
+        'internal_notes',
         'style_reference',
         'color',
         'size',

@@ -37,7 +37,14 @@ class ProductService
             'sale_price' => $data['sale_price'] ?? 0,
             'stock_quantity' => $data['stock_quantity'] ?? ($product->exists ? $product->stock_quantity : 0),
             'min_stock' => $data['min_stock'] ?? 0,
+            'active' => array_key_exists('active', $data)
+                ? (bool) $data['active']
+                : ($product->exists ? (bool) $product->active : true),
         ]);
+
+        if ($this->productColumnExists('internal_notes')) {
+            $product->internal_notes = $data['internal_notes'] ?? null;
+        }
 
         if ($this->productColumnExists('style_reference')) {
             $product->style_reference = $data['style_reference'] ?? null;
