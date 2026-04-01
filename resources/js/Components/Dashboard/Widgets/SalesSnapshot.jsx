@@ -14,7 +14,7 @@ const paymentLabels = {
     pix: 'Pix',
     debit_card: 'Debito',
     credit_card: 'Credito',
-    credit: 'Crediario',
+    credit: 'A Prazo',
     mixed: 'Misto',
 }
 

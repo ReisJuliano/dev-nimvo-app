@@ -507,9 +507,9 @@ class OrderDraftService
     protected function displayLabel(OrderDraft $draft): string
     {
         $prefix = match ($draft->type) {
-            'mesa' => 'Mesa',
+            'mesa' => 'Referencia',
             'pedido' => 'Pedido',
-            default => 'Comanda',
+            default => 'Atendimento',
         };
 
         $reference = $this->normalizeReference($draft->reference);

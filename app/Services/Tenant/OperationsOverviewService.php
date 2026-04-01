@@ -23,7 +23,7 @@ class OperationsOverviewService
 
         return match ($module) {
             'pedidos' => $this->sales->orders($filters),
-            'fiado' => $this->sales->credit($filters),
+            'a-prazo', 'fiado' => $this->sales->credit($filters),
             'clientes' => $this->sales->customers($filters),
             'fornecedores' => $this->inventory->suppliers(),
             'categorias' => $this->inventory->categories(),
@@ -37,7 +37,7 @@ class OperationsOverviewService
             'usuarios' => $this->users->users($filters),
             'producao' => $this->moduleWorkspace(
                 'Producao',
-                'Centralize a producao diaria, separando preparos internos do fluxo direto de venda no caixa.',
+                'Centralize a producao diaria e mantenha a reposicao integrada ao checkout.',
                 [
                     ['label' => 'Uso recomendado', 'value' => 'Preparo interno', 'meta' => 'Bom para organizar lotes, rotinas e reposicao do estoque.'],
                     ['label' => 'Conexao com estoque', 'value' => 'Entrada de itens prontos', 'meta' => 'Ajuda a transformar insumos em itens disponiveis para venda.'],
@@ -51,9 +51,9 @@ class OperationsOverviewService
             ),
             'fichas-tecnicas' => $this->moduleWorkspace(
                 'Fichas tecnicas',
-                'Estruture receitas, rendimento e consumo de insumos para preparos internos e operacoes com custo tecnico.',
+                'Estruture composicao, rendimento e consumo dos itens com controle operacional.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Restaurante e preparo interno', 'meta' => 'Ideal para receitas, pratos, porcoes e insumos base.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Operacao com preparo interno', 'meta' => 'Ideal para itens compostos, rendimento e insumos base.'],
                     ['label' => 'Conexao com estoque', 'value' => 'Baixa por insumo', 'meta' => 'Ajuda a relacionar consumo previsto com o item vendido ou produzido.'],
                     ['label' => 'Resultado esperado', 'value' => 'Padrao operacional', 'meta' => 'Reduz variacao de custo, rendimento e preparo.'],
                 ],
@@ -65,16 +65,16 @@ class OperationsOverviewService
             ),
             'cozinha' => $this->moduleWorkspace(
                 'Cozinha',
-                'Crie uma frente operacional para acompanhar preparo, prioridade e expedicao dos pedidos antes da cobranca.',
+                'Crie uma fila operacional para acompanhar preparo, prioridade e expedicao antes da cobranca.',
                 [
-                    ['label' => 'Uso recomendado', 'value' => 'Restaurante e cozinha de apoio', 'meta' => 'Bom para separar fila de preparo do caixa.'],
-                    ['label' => 'Conexao com pedidos', 'value' => 'Fila de producao', 'meta' => 'Ajuda a organizar mesa, balcao, retirada e entrega.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Filas operacionais e preparo', 'meta' => 'Bom para separar preparacao do momento de cobranca.'],
+                    ['label' => 'Conexao com pedidos', 'value' => 'Fila de producao', 'meta' => 'Ajuda a organizar referencias, retirada e entrega.'],
                     ['label' => 'Rotina sugerida', 'value' => 'Status por etapa', 'meta' => 'Use estados como recebido, em preparo e pronto.'],
                 ],
                 [
                     ['item' => 'Painel da cozinha', 'status' => 'Pronto para configurar', 'observacao' => 'Defina como os pedidos chegam e como a equipe muda o status.'],
-                    ['item' => 'Separacao por tipo', 'status' => 'Pronto para configurar', 'observacao' => 'Organize pedidos por mesa, retirada e delivery.'],
-                    ['item' => 'Conferencia de expedicao', 'status' => 'Em evolucao', 'observacao' => 'Padronize saida do pedido pronto para o salao ou entrega.'],
+                    ['item' => 'Separacao por tipo', 'status' => 'Pronto para configurar', 'observacao' => 'Organize pedidos por referencia, retirada e entrega.'],
+                    ['item' => 'Conferencia de expedicao', 'status' => 'Em evolucao', 'observacao' => 'Padronize a saida do pedido pronto para retirada ou entrega.'],
                 ],
             ),
             'perdas' => $this->moduleWorkspace(
@@ -107,7 +107,7 @@ class OperationsOverviewService
             ),
             'delivery' => $this->moduleWorkspace(
                 'Delivery',
-                'Organize entrega e retirada sem misturar o atendimento externo com o fluxo do balcao e do salao.',
+                'Organize entrega e retirada sem misturar o atendimento externo com o fluxo direto.',
                 [
                     ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece somente quando o tenant usa entrega.'],
                     ['label' => 'Uso recomendado', 'value' => 'Pedidos externos e retirada', 'meta' => 'Separe atendimento presencial do fluxo de entrega.'],

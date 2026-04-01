@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react'
 import { useState } from 'react'
+import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import DataTable from '@/Components/Operations/DataTable'
 import FilterBar from '@/Components/Operations/FilterBar'
 import InfoPanels from '@/Components/Operations/InfoPanels'
@@ -14,6 +15,7 @@ function buildFilterPayload(filters, overrides = {}) {
             to: filters?.to || undefined,
             product: filters?.product || undefined,
             section: filters?.section || undefined,
+            cash_register: filters?.cash_register || undefined,
             ...overrides,
         }).filter(([, value]) => value != null && value !== ''),
     )
@@ -28,6 +30,7 @@ export default function OperationsOverview({ module }) {
     const moduleMetrics = Array.isArray(module.metrics) ? module.metrics : []
     const modulePanels = Array.isArray(module.panels) ? module.panels : []
     const moduleTables = Array.isArray(module.tables) ? module.tables : []
+    const currentDialog = currentSection?.dialog ?? null
     const heroTitle = hasSections
         ? module.title
         : `Painel de ${module.title.charAt(0).toLowerCase()}${module.title.slice(1)}`
@@ -45,11 +48,32 @@ export default function OperationsOverview({ module }) {
         : availableTabs[0]?.key || 'overview'
 
     function handleSectionChange(sectionKey) {
-        router.get(window.location.pathname, buildFilterPayload(module.filters, { section: sectionKey }), {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        })
+        router.get(
+            window.location.pathname,
+            buildFilterPayload(module.filters, {
+                section: sectionKey,
+                cash_register: sectionKey === 'cash_registers' ? module.filters?.cash_register || undefined : undefined,
+            }),
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        )
+    }
+
+    function handleCloseDialog() {
+        router.get(
+            window.location.pathname,
+            buildFilterPayload(module.filters, {
+                cash_register: undefined,
+            }),
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        )
     }
 
     return (
@@ -59,7 +83,6 @@ export default function OperationsOverview({ module }) {
                     <div>
                         <span>Operacoes</span>
                         <h1>{heroTitle}</h1>
-                        <p>{module.description}</p>
                     </div>
                     <div className="operations-hero-badges">
                         <span className="ui-badge success">
@@ -97,7 +120,6 @@ export default function OperationsOverview({ module }) {
                             <div>
                                 <span className="operations-section-kicker">Visao ativa</span>
                                 <h2>{currentSection.title}</h2>
-                                <p>{currentSection.description}</p>
                             </div>
                             <div className="operations-section-badges">
                                 {currentSection.metrics?.length ? (
@@ -153,6 +175,10 @@ export default function OperationsOverview({ module }) {
                     </>
                 )}
             </div>
+
+            {currentDialog?.type === 'cash_register_closing_report' ? (
+                <ClosingReportModal report={currentDialog.report} onClose={handleCloseDialog} />
+            ) : null}
         </AppLayout>
     )
 }

@@ -17,7 +17,7 @@ class PaymentMethod
             'dinheiro' => self::CASH,
             'cartao_debito' => self::DEBIT_CARD,
             'cartao_credito' => self::CREDIT_CARD,
-            'fiado' => self::CREDIT,
+            'fiado', 'a_prazo', 'a-prazo', 'a prazo' => self::CREDIT,
             'misto' => self::MIXED,
             null, '' => self::CASH,
             default => (string) $method,
@@ -31,7 +31,7 @@ class PaymentMethod
             self::PIX => 'Pix',
             self::DEBIT_CARD => 'Cartao de debito',
             self::CREDIT_CARD => 'Cartao de credito',
-            self::CREDIT => 'Crediario',
+            self::CREDIT => 'A Prazo',
             self::MIXED => 'Misto',
             default => ucfirst(str_replace('_', ' ', (string) $method)),
         };

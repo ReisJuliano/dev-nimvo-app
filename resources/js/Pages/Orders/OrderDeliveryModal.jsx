@@ -21,7 +21,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
     return (
         <OrdersModal
             title="Enviar para entrega"
-            subtitle="Crie um acompanhamento de entrega a partir desta comanda."
+            subtitle="Crie um acompanhamento de entrega a partir deste atendimento."
             size="lg"
             onClose={onClose}
         >
@@ -50,7 +50,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                             className="ui-input"
                             value={form.reference}
                             onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
-                            placeholder="Ex.: Mesa 10 / Comanda 123"
+                            placeholder="Ex.: Referencia 10 / Atendimento 123"
                         />
                     </label>
                     <label className="orders-form-field">

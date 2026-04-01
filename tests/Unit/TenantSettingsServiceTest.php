@@ -7,54 +7,43 @@ use PHPUnit\Framework\TestCase;
 
 class TenantSettingsServiceTest extends TestCase
 {
-    public function test_restaurant_preset_enables_expected_modules_and_capabilities(): void
+    public function test_service_preset_enables_expected_modules_and_capabilities(): void
     {
         $service = new TenantSettingsService();
-        $restaurantPreset = collect($service->businessPresets())->firstWhere('key', 'restaurante');
+        $preset = collect($service->businessPresets())->firstWhere('key', TenantSettingsService::SERVICE_PRESET);
 
-        $this->assertNotNull($restaurantPreset);
-        $this->assertTrue($restaurantPreset['modules']['comandas']);
-        $this->assertTrue($restaurantPreset['modules']['pdv_restaurante']);
-        $this->assertTrue($restaurantPreset['modules']['mesas']);
-        $this->assertTrue($restaurantPreset['modules']['fichas_tecnicas']);
-        $this->assertTrue($restaurantPreset['modules']['cozinha']);
-        $this->assertTrue($restaurantPreset['modules']['delivery']);
-        $this->assertFalse($restaurantPreset['modules']['pesagem']);
+        $this->assertNotNull($preset);
+        $this->assertTrue($preset['modules']['comandas']);
+        $this->assertTrue($preset['modules']['pdv_avancado']);
+        $this->assertTrue($preset['modules']['mesas']);
+        $this->assertTrue($preset['modules']['fichas_tecnicas']);
+        $this->assertTrue($preset['modules']['cozinha']);
+        $this->assertTrue($preset['modules']['delivery']);
+        $this->assertFalse($preset['modules']['pesagem']);
 
-        $capabilities = $service->moduleCapabilities($restaurantPreset['modules']);
+        $capabilities = $service->moduleCapabilities($preset['modules']);
 
         $this->assertTrue($capabilities['pdv']);
         $this->assertTrue($capabilities['pedidos']);
         $this->assertTrue($capabilities['caixa']);
         $this->assertTrue($capabilities['fichas_tecnicas']);
         $this->assertTrue($capabilities['cozinha']);
+        $this->assertFalse($capabilities['prazo']);
         $this->assertFalse($capabilities['crediario']);
     }
 
-    public function test_clothing_store_preset_enables_variations_and_digital_modules(): void
+    public function test_direct_sales_preset_enables_expected_modules(): void
     {
         $service = new TenantSettingsService();
-        $clothingPreset = collect($service->businessPresets())->firstWhere('key', 'loja_roupas');
+        $preset = collect($service->businessPresets())->firstWhere('key', TenantSettingsService::DIRECT_SALES_PRESET);
 
-        $this->assertNotNull($clothingPreset);
-        $this->assertTrue($clothingPreset['modules']['pdv_simples']);
-        $this->assertTrue($clothingPreset['modules']['produtos_variacao']);
-        $this->assertTrue($clothingPreset['modules']['trocas_devolucoes']);
-        $this->assertTrue($clothingPreset['modules']['promocoes']);
-        $this->assertTrue($clothingPreset['modules']['catalogo_online']);
-        $this->assertTrue($clothingPreset['modules']['pedidos_online']);
-        $this->assertTrue($clothingPreset['modules']['whatsapp_pedidos']);
-        $this->assertFalse($clothingPreset['modules']['comandas']);
-
-        $capabilities = $service->moduleCapabilities($clothingPreset['modules']);
-
-        $this->assertTrue($capabilities['pdv']);
-        $this->assertTrue($capabilities['trocas_devolucoes']);
-        $this->assertTrue($capabilities['promocoes']);
-        $this->assertTrue($capabilities['catalogo_online']);
-        $this->assertTrue($capabilities['pedidos_online']);
-        $this->assertTrue($capabilities['whatsapp_pedidos']);
-        $this->assertFalse($capabilities['pedidos']);
+        $this->assertNotNull($preset);
+        $this->assertTrue($preset['modules']['pdv_simples']);
+        $this->assertFalse($preset['modules']['pdv_avancado']);
+        $this->assertTrue($preset['modules']['estoque']);
+        $this->assertTrue($preset['modules']['prazo']);
+        $this->assertTrue($preset['modules']['controle_validade']);
+        $this->assertFalse($preset['modules']['comandas']);
     }
 
     public function test_merge_with_defaults_converts_legacy_settings_into_modular_flags(): void
@@ -85,12 +74,12 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertTrue($merged['modules']['pdv_simples']);
         $this->assertFalse($merged['modules']['comandas']);
         $this->assertFalse($merged['modules']['mesas']);
-        $this->assertFalse($merged['modules']['fiado']);
+        $this->assertFalse($merged['modules']['prazo']);
         $this->assertTrue($merged['modules']['estoque']);
         $this->assertFalse($merged['modules']['fornecedores']);
     }
 
-    public function test_normalize_modules_turns_off_tables_when_comandas_are_disabled(): void
+    public function test_normalize_modules_maps_legacy_aliases(): void
     {
         $service = new TenantSettingsService();
         $normalizeModules = \Closure::bind(
@@ -100,11 +89,28 @@ class TenantSettingsServiceTest extends TestCase
         );
 
         $normalized = $normalizeModules([
+            'pdv_restaurante' => true,
+            'fiado' => false,
             'comandas' => false,
             'mesas' => true,
         ]);
 
+        $this->assertTrue($normalized['pdv_avancado']);
+        $this->assertFalse($normalized['prazo']);
         $this->assertFalse($normalized['comandas']);
         $this->assertFalse($normalized['mesas']);
+    }
+
+    public function test_normalize_preset_maps_legacy_keys(): void
+    {
+        $service = new TenantSettingsService();
+        $normalizePreset = \Closure::bind(
+            fn (?string $preset) => $this->normalizePreset($preset),
+            $service,
+            TenantSettingsService::class,
+        );
+
+        $this->assertSame(TenantSettingsService::SERVICE_PRESET, $normalizePreset('restaurante'));
+        $this->assertSame(TenantSettingsService::DIRECT_SALES_PRESET, $normalizePreset('mercearia'));
     }
 }

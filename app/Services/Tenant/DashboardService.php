@@ -36,7 +36,7 @@ class DashboardService
             ->map(fn (Sale $sale) => [
                 'id' => $sale->id,
                 'sale_number' => $sale->sale_number,
-                'customer_name' => $sale->customer?->name ?? 'Balcao',
+                'customer_name' => $sale->customer?->name ?? 'Nao identificado',
                 'user_name' => $sale->user?->name,
                 'payment_method' => $sale->payment_method,
                 'total' => (float) $sale->total,

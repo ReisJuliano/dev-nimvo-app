@@ -15,8 +15,8 @@ export default function OrderDraftFormModal({
 }) {
     return (
         <OrdersModal
-            title="Nova Comanda"
-            subtitle="Crie uma comanda limpa e abra o popup principal ja em foco."
+            title="Novo atendimento"
+            subtitle="Crie um atendimento e abra o fluxo principal ja em foco."
             size="lg"
             onClose={onClose}
         >
@@ -30,7 +30,7 @@ export default function OrderDraftFormModal({
                             onClick={() => setForm((current) => ({ ...current, type }))}
                         >
                             <strong>{getOrderTypeLabel(type)}</strong>
-                            <small>{type === 'mesa' ? 'Atendimento por mesa' : type === 'pedido' ? 'Entrega ou retirada' : 'Comprovante rapido'}</small>
+                            <small>{type === 'mesa' ? 'Atendimento por referencia' : type === 'pedido' ? 'Entrega ou retirada' : 'Fluxo rapido'}</small>
                         </button>
                     ))}
                 </div>
@@ -48,7 +48,7 @@ export default function OrderDraftFormModal({
                     </label>
 
                     <label className="orders-form-field">
-                        <span>Numero da mesa / referencia</span>
+                        <span>Referencia</span>
                         <input
                             className="ui-input"
                             value={form.reference}
@@ -96,7 +96,7 @@ export default function OrderDraftFormModal({
                     </button>
                     <button type="submit" className="ui-button" disabled={creatingDraft}>
                         <i className="fa-solid fa-plus" />
-                        {creatingDraft ? 'Criando...' : 'Criar comanda'}
+                        {creatingDraft ? 'Criando...' : 'Criar atendimento'}
                     </button>
                 </div>
             </form>

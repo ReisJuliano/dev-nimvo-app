@@ -5,8 +5,8 @@ import { getOrderStatusMeta } from './orderUtils'
 export default function OrderSearchModal({ term, setTerm, inputRef, results, onClose, onOpenDraft }) {
     return (
         <OrdersModal
-            title="Pesquisar Comanda"
-            subtitle="Localize rapidamente uma comanda ativa e abra o popup completo."
+            title="Pesquisar atendimento"
+            subtitle="Localize rapidamente um atendimento ativo e abra o detalhe completo."
             size="lg"
             onClose={onClose}
         >
@@ -18,7 +18,7 @@ export default function OrderSearchModal({ term, setTerm, inputRef, results, onC
                         className="ui-input"
                         type="search"
                         value={term}
-                        placeholder="Ex.: Joao, mesa 12, comanda 5"
+                        placeholder="Ex.: Joao, referencia 12, atendimento 5"
                         onChange={(event) => setTerm(event.target.value)}
                     />
                 </label>
@@ -46,7 +46,7 @@ export default function OrderSearchModal({ term, setTerm, inputRef, results, onC
                         <div className="orders-inline-empty wide">
                             <i className="fa-solid fa-magnifying-glass" />
                             <div>
-                                <strong>Nenhuma comanda encontrada</strong>
+                                <strong>Nenhum atendimento encontrado</strong>
                                 <p>Tente outro termo ou volte para abrir uma nova.</p>
                             </div>
                         </div>

@@ -17,7 +17,7 @@ export default function OrderDiscountModal({
     return (
         <OrdersModal
             title="Aplicar Desconto"
-            subtitle="Use o mesmo calculo do PDV para fechar a comanda sem sair desta tela."
+            subtitle="Use o mesmo calculo do checkout sem sair desta tela."
             size="lg"
             onClose={onClose}
         >
@@ -29,7 +29,7 @@ export default function OrderDiscountModal({
                         onClick={() => setDiscountDraft((current) => ({ ...current, mode: 'percent' }))}
                     >
                         <strong>Percentual</strong>
-                        <small>Desconto em toda a comanda</small>
+                        <small>Desconto em todo o atendimento</small>
                     </button>
                     <button
                         type="button"
@@ -37,7 +37,7 @@ export default function OrderDiscountModal({
                         onClick={() => setDiscountDraft((current) => ({ ...current, mode: 'target_total' }))}
                     >
                         <strong>Total final</strong>
-                        <small>Define quanto a comanda deve custar</small>
+                        <small>Define quanto o atendimento deve custar</small>
                     </button>
                     <button
                         type="button"
@@ -81,7 +81,7 @@ export default function OrderDiscountModal({
                 {discountDraft.mode === 'item' ? (
                     <div className="orders-form-grid">
                         <label className="orders-form-field span-2">
-                            <span>Item da comanda</span>
+                            <span>Item do atendimento</span>
                             <select
                                 className="ui-select"
                                 value={discountDraft.itemId}

@@ -336,7 +336,7 @@ export function KitchenWorkspace({ moduleKey, payload }) {
     const [feedback, setFeedback] = useState(null)
 
     const metrics = useMemo(() => [
-        { label: 'Comandas', value: records.length, caption: 'Fila completa' },
+        { label: 'Atendimentos', value: records.length, caption: 'Fila completa' },
         { label: 'Em preparo', value: records.filter((record) => record.status === 'in_preparation').length, caption: 'Producao ativa' },
         { label: 'Prontas', value: records.filter((record) => record.status === 'ready').length, caption: 'Aguardando retirada' },
     ], [records])
@@ -414,7 +414,7 @@ export function KitchenWorkspace({ moduleKey, payload }) {
         <div className="ops-workspace-stack">
             <FeedbackHeader
                 title="Cozinha integrada"
-                subtitle="Comandas do restaurante em fluxo unico"
+                subtitle="Pedidos em fluxo unico"
                 action={(
                     <div className="ops-kitchen-header-actions">
                         <button type="button" className="ui-button-ghost" onClick={() => refreshRecords(false)}>

@@ -77,7 +77,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                     <div>
                         <span className="cash-register-section-kicker">Operacao manual</span>
                         <h2>Movimentacoes</h2>
-                        <p>Registre sangrias e suprimentos.</p>
+                        <p>Registre entradas e retiradas.</p>
                     </div>
                 </div>
 
@@ -130,7 +130,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                     <div>
                         <span className="cash-register-section-kicker">Conferencia final</span>
                         <h2>Fechamento</h2>
-                        <p>Base de caixa em dinheiro: {formatMoney(expected_cash)}</p>
+                        <p>Saldo esperado em dinheiro: {formatMoney(expected_cash)}</p>
                     </div>
                 </div>
 
@@ -138,11 +138,11 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                     <div className="cash-register-form">
                         <div className="cash-register-inline-alert">
                             <strong>Conferencia guiada habilitada</strong>
-                            <span>Revise dinheiro, Pix, cartoes, crediario, sangrias e suprimentos antes de concluir.</span>
+                            <span>Revise dinheiro, Pix, cartoes, A Prazo, sangrias e suprimentos antes de concluir.</span>
                         </div>
                         <button className="cash-register-danger-button" type="button" onClick={onStartCloseConference}>
                             <i className="fa-solid fa-clipboard-check" />
-                            Abrir conferencia de fechamento
+                            Revisar fechamento
                         </button>
                     </div>
                 ) : (

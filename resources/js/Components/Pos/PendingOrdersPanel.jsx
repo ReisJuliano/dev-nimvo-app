@@ -12,8 +12,7 @@ export default function PendingOrdersPanel({
         <section className="pos-card">
             <div className="pos-card-header pos-pending-orders-header">
                 <div>
-                    <h2>Pedidos enviados para o caixa</h2>
-                    <p>Carregue uma comanda ou mesa ja pronta para apenas cobrar no PDV.</p>
+                    <h2>Atendimentos prontos para cobranca</h2>
                 </div>
 
                 <button type="button" className="ui-button-ghost" onClick={onRefresh} disabled={refreshing}>
@@ -33,7 +32,7 @@ export default function PendingOrdersPanel({
                                 <div className="pos-pending-order-copy">
                                     <div className="pos-pending-order-top">
                                         <span className={`ui-badge ${isActive ? 'success' : 'info'}`}>
-                                            {isActive ? 'Em cobranca' : 'Aguardando caixa'}
+                                            {isActive ? 'Em cobranca' : 'Aguardando cobranca'}
                                         </span>
                                         <strong>{order.label}</strong>
                                     </div>
@@ -52,14 +51,14 @@ export default function PendingOrdersPanel({
 
                                 <button type="button" className="pos-inline-button" onClick={() => onLoadOrder(order.id)} disabled={isLoading}>
                                     <i className="fa-solid fa-cash-register" />
-                                    {isLoading ? 'Abrindo...' : isActive ? 'Recarregar' : 'Cobrar agora'}
+                                    {isLoading ? 'Abrindo...' : isActive ? 'Recarregar' : 'Abrir'}
                                 </button>
                             </article>
                         )
                     })}
                 </div>
             ) : (
-                <div className="pos-empty-state">Nenhum pedido foi enviado para o caixa ainda.</div>
+                <div className="pos-empty-state">Nenhum atendimento aguardando cobranca.</div>
             )}
         </section>
     )

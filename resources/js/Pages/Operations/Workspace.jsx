@@ -13,7 +13,6 @@ export default function OperationsWorkspace({ moduleKey, moduleTitle, moduleDesc
                     <div>
                         <span>Operacoes</span>
                         <h1>{moduleTitle}</h1>
-                        <p>{moduleDescription}</p>
                     </div>
                 </section>
 

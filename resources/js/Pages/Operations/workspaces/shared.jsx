@@ -40,7 +40,7 @@ export function FeedbackHeader({ title, subtitle, action = null }) {
         <header className="ops-workspace-panel-header">
             <div>
                 <h2>{title}</h2>
-                <span>{subtitle}</span>
+                {subtitle ? <span>{subtitle}</span> : null}
             </div>
             {action}
         </header>

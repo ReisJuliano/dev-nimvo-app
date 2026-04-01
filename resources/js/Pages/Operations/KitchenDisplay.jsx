@@ -93,7 +93,7 @@ export default function KitchenDisplay({ moduleTitle, payload }) {
                     </div>
                     <div className="kitchen-display-meta">
                         <article>
-                            <small>Comandas</small>
+                            <small>Atendimentos</small>
                             <strong>{formatNumber(summary.orders)}</strong>
                         </article>
                         <article>

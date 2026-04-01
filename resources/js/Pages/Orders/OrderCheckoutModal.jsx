@@ -29,7 +29,7 @@ export default function OrderCheckoutModal({
     return (
         <OrdersModal
             title="Finalizar Pedido"
-            subtitle="Resumo completo da comanda com pagamento em abas, sem abrir outra pagina."
+            subtitle="Resumo completo do atendimento com pagamento em abas."
             size="lg"
             onClose={onClose}
         >
@@ -46,7 +46,7 @@ export default function OrderCheckoutModal({
 
                 <div className="orders-checkout-summary">
                     <div>
-                        <span>Comanda</span>
+                        <span>Atendimento</span>
                         <strong>{draft.label}</strong>
                         <small>{selectedCustomer?.name || 'Cliente nao identificado'}</small>
                     </div>
@@ -132,8 +132,8 @@ export default function OrderCheckoutModal({
                             <div className="orders-inline-empty wide">
                                 <i className="fa-solid fa-user-tag" />
                                 <div>
-                                    <strong>Cliente obrigatorio para fiado</strong>
-                                    <p>Vincule um cliente na comanda antes de concluir com esta forma de pagamento.</p>
+                                    <strong>Cliente obrigatorio para A Prazo</strong>
+                                    <p>Vincule um cliente antes de concluir com esta forma de pagamento.</p>
                                 </div>
                             </div>
                         )}

@@ -24,7 +24,7 @@ export default function OrderProductModal({
     return (
         <OrdersModal
             title="Adicionar produto"
-            subtitle={`Comanda ${draft.reference || `#${draft.id}`} pronta para receber novos itens.`}
+            subtitle={`Atendimento ${draft.reference || `#${draft.id}`} pronto para receber novos itens.`}
             size="xl"
             onClose={onClose}
             footer={(
@@ -81,7 +81,7 @@ export default function OrderProductModal({
 
                 <div className="orders-modal-summary-strip">
                     <div>
-                        <span>Comanda atual</span>
+                        <span>Atendimento atual</span>
                         <strong>{draft.label}</strong>
                     </div>
                     <div>
@@ -100,7 +100,7 @@ export default function OrderProductModal({
                             <i className="fa-solid fa-magnifying-glass" />
                             <div>
                                 <strong>Digite para buscar produtos</strong>
-                                <p>Os resultados aparecem em cards. Clique em qualquer um para adicionar direto na comanda.</p>
+                                <p>Os resultados aparecem em cards. Clique em qualquer um para adicionar direto no atendimento.</p>
                             </div>
                         </div>
                     ) : loadingProducts ? (

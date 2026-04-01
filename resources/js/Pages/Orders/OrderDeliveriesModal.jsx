@@ -76,7 +76,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
                         <i className="fa-solid fa-motorcycle" />
                         <div>
                             <strong>Nenhuma entrega cadastrada</strong>
-                            <p>Envie uma comanda para entrega para ela aparecer aqui.</p>
+                            <p>Envie um atendimento para entrega para ele aparecer aqui.</p>
                         </div>
                     </div>
                 ) : null}

@@ -103,8 +103,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                 <section className="settings-hero">
                     <div>
                         <span>Plataforma modular</span>
-                        <h1>Modulos do sistema por tipo de comercio</h1>
-                        <p>Escolha um preset rapido ou personalize cada switch para liberar so as telas, menus e fluxos que fazem sentido para o negocio.</p>
+                        <h1>Modulos do sistema</h1>
                     </div>
                     <div className="settings-hero-metrics">
                         <div>
@@ -126,9 +125,8 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                     <section className="settings-section">
                         <div className="settings-section-header">
                             <div>
-                                <span>Tipo de comercio</span>
-                                <h2>Presets rapidos</h2>
-                                <p>Ao selecionar um preset, os modulos principais sao ligados automaticamente.</p>
+                                <span>Configuracao base</span>
+                                <h2>Presets</h2>
                             </div>
                         </div>
 
@@ -148,8 +146,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                             <span>{preset.label}</span>
                                             <strong>{activeCount} modulos</strong>
                                         </div>
-                                        <p>{preset.description}</p>
-                                        <small>{isActive ? 'Preset em uso' : 'Aplicar preset'}</small>
+                                        <small>{isActive ? 'Ativo' : 'Aplicar'}</small>
                                     </button>
                                 )
                             })}
@@ -180,8 +177,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         <div className="settings-section-header">
                             <div>
                                 <span>Modulos do sistema</span>
-                                <h2>Liga e desliga por area</h2>
-                                <p>A sidebar, as rotas e as telas acompanham os modulos ativos sem deixar espacos vazios.</p>
+                                <h2>Por area</h2>
                             </div>
                             <div className="settings-summary-badges">
                                 {activeLabels.slice(0, 6).map((label) => (
@@ -215,7 +211,6 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                                 <article key={item.key} className={`settings-toggle-card ${active ? 'active' : ''}`}>
                                                     <div>
                                                         <strong>{item.label}</strong>
-                                                        <p>{item.description}</p>
                                                     </div>
                                                     <button
                                                         type="button"

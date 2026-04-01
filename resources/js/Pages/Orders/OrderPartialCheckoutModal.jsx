@@ -106,7 +106,7 @@ export default function OrderPartialCheckoutModal({
     return (
         <OrdersModal
             title="Pagamento parcial"
-            subtitle="Selecione os itens que a pessoa vai pagar. O restante permanece na comanda."
+            subtitle="Selecione os itens que a pessoa vai pagar. O restante permanece no atendimento."
             size="lg"
             onClose={onClose}
         >
@@ -123,7 +123,7 @@ export default function OrderPartialCheckoutModal({
 
                 <div className="orders-checkout-summary">
                     <div>
-                        <span>Comanda</span>
+                        <span>Atendimento</span>
                         <strong>{draft.label}</strong>
                         <small>{selectedCustomer?.name || 'Cliente nao identificado'}</small>
                     </div>
@@ -180,7 +180,7 @@ export default function OrderPartialCheckoutModal({
                             <i className="fa-solid fa-receipt" />
                             <div>
                                 <strong>Sem itens para cobrar</strong>
-                                <p>Adicione produtos na comanda antes de fazer o pagamento parcial.</p>
+                                <p>Adicione produtos no atendimento antes de fazer o pagamento parcial.</p>
                             </div>
                         </div>
                     )}
@@ -261,8 +261,8 @@ export default function OrderPartialCheckoutModal({
                             <div className="orders-inline-empty wide">
                                 <i className="fa-solid fa-user-tag" />
                                 <div>
-                                    <strong>Cliente obrigatorio para fiado</strong>
-                                    <p>Vincule um cliente na comanda antes de concluir com esta forma de pagamento.</p>
+                                    <strong>Cliente obrigatorio para A Prazo</strong>
+                                    <p>Vincule um cliente antes de concluir com esta forma de pagamento.</p>
                                 </div>
                             </div>
                         )}

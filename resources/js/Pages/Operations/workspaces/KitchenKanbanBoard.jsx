@@ -8,8 +8,8 @@ export const KITCHEN_COLUMNS = [
 ]
 
 const CHANNEL_LABELS = {
-    balcao: 'Balcao',
-    mesa: 'Mesa',
+    balcao: 'Direto',
+    mesa: 'Referencia',
     delivery: 'Delivery',
     retirada: 'Retirada',
 }
@@ -97,7 +97,7 @@ function resolveAdjacentMoveTargets(status) {
 function cardTitle(ticket) {
     if (ticket.reference) return ticket.reference
     if (ticket.customer_name) return ticket.customer_name
-    if (ticket.order_draft_id) return `Comanda #${ticket.order_draft_id}`
+    if (ticket.order_draft_id) return `Atendimento #${ticket.order_draft_id}`
 
     return `Ticket #${ticket.id}`
 }
@@ -217,7 +217,7 @@ export default function KitchenKanbanBoard({
                                     )
                                 })
                             ) : (
-                                <div className="ops-kitchen-kanban-empty">Sem comandas</div>
+                                <div className="ops-kitchen-kanban-empty">Sem atendimentos</div>
                             )}
                         </div>
                     </article>

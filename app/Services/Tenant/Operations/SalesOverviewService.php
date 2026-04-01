@@ -5,6 +5,7 @@ namespace App\Services\Tenant\Operations;
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\Operations\Concerns\BuildsOverviewPages;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,11 @@ use Illuminate\Support\Facades\DB;
 class SalesOverviewService
 {
     use BuildsOverviewPages;
+
+    public function __construct(
+        protected CashRegisterReportService $cashRegisterReports,
+    ) {
+    }
 
     public function reportsHub(array $filters, array $enabledModules = []): array
     {
@@ -34,6 +40,14 @@ class SalesOverviewService
             ]);
         }
 
+        if ($this->isReportModuleEnabled($enabledModules, 'caixa')) {
+            $sections->push($this->cashRegisters($filters) + [
+                'key' => 'cash_registers',
+                'label' => 'Caixas',
+                'icon' => 'fa-vault',
+            ]);
+        }
+
         if ($this->isReportModuleEnabled($enabledModules, 'demanda')) {
             $sections->push($this->demand($filters) + [
                 'key' => 'products',
@@ -50,21 +64,123 @@ class SalesOverviewService
             data_get($sections->first(), 'key', 'summary'),
         );
         $currentSection = $sections->firstWhere('key', $activeSection) ?? $sections->first();
+        $currentFilters = (array) data_get($currentSection, 'filters', []);
+        $showProductSearch = (bool) data_get($currentFilters, 'showProductSearch', false);
 
         return [
-            'title' => 'Central de relatorios',
-            'description' => 'Resumo financeiro, vendas gerais e performance por produto em uma unica tela.',
+            'title' => 'Relatorios',
+            'description' => 'Resumo financeiro em uma unica tela.',
             'metrics' => data_get($currentSection, 'metrics', []),
             'panels' => data_get($currentSection, 'panels', []),
             'tables' => data_get($currentSection, 'tables', []),
-            'filters' => array_merge(data_get($currentSection, 'filters', []), [
-                'product' => $productFilter,
-                'showProductSearch' => true,
+            'filters' => array_merge($currentFilters, [
+                'cash_register' => data_get($currentFilters, 'cash_register'),
+                'product' => $showProductSearch ? $productFilter : null,
                 'section' => $activeSection,
             ]),
             'sections' => $sections->values()->all(),
             'activeSection' => $activeSection,
         ];
+    }
+
+    public function cashRegisters(array $filters): array
+    {
+        [$from, $to] = $this->resolvePeriod($filters);
+        $selectedRegisterId = $this->resolveCashRegisterFilter($filters);
+        $selectedRegister = $selectedRegisterId
+            ? CashRegister::query()
+                ->with('user:id,name')
+                ->whereKey($selectedRegisterId)
+                ->where('status', 'closed')
+                ->whereBetween('closed_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+                ->first()
+            : null;
+        $selectedReport = $selectedRegister ? $this->cashRegisterReports->build($selectedRegister) : null;
+
+        $registers = CashRegister::query()
+            ->with('user:id,name')
+            ->where('status', 'closed')
+            ->whereBetween('closed_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->latest('closed_at')
+            ->limit(40)
+            ->get();
+
+        $reports = $registers->map(function (CashRegister $cashRegister) use ($from, $to, $selectedRegisterId) {
+            $report = $this->cashRegisterReports->build($cashRegister);
+            $isSelected = (int) $cashRegister->id === $selectedRegisterId;
+
+            return [
+                'id' => $cashRegister->id,
+                'user_name' => $cashRegister->user?->name ?? '-',
+                'opened_at' => $cashRegister->opened_at?->toIso8601String(),
+                'closed_at' => $cashRegister->closed_at?->toIso8601String(),
+                'opening_amount' => (float) ($report['cashRegister']['opening_amount'] ?? 0),
+                'closing_amount' => (float) ($report['cashRegister']['closing_amount'] ?? 0),
+                'expected_cash' => (float) ($report['expected_cash'] ?? 0),
+                'difference' => (float) ($report['difference'] ?? 0),
+                'sales_count' => (int) ($report['sales_count'] ?? 0),
+                'total_sales' => (float) ($report['total_sales'] ?? 0),
+                'details_action' => [
+                    'label' => $isSelected ? 'Ocultar' : 'Abrir',
+                    'href' => $this->reportsUrl([
+                        'from' => $from->format('Y-m-d'),
+                        'to' => $to->format('Y-m-d'),
+                        'section' => 'cash_registers',
+                        'cash_register' => $isSelected ? null : $cashRegister->id,
+                    ]),
+                    'icon' => $isSelected ? 'fa-eye-slash' : 'fa-folder-open',
+                    'tone' => $isSelected ? 'secondary' : 'ghost',
+                ],
+                '_selected' => $isSelected,
+            ];
+        });
+
+        $registersWithDifference = $reports->filter(fn (array $report) => abs((float) $report['difference']) > 0.009);
+        $page = $this->page(
+            'Caixas fechados',
+            'Historico de caixas ja encerrados.',
+            [
+                $this->metric('Fechamentos', $reports->count()),
+                $this->metric('Total vendido', $reports->sum('total_sales'), 'money'),
+                $this->metric('Diferenca liquida', $reports->sum('difference'), 'money'),
+                $this->metric('Com divergencia', $registersWithDifference->count()),
+            ],
+            [
+                $this->panel('Operadores', $reports
+                    ->groupBy('user_name')
+                    ->map(fn ($group, $userName) => [
+                        'label' => $userName ?: 'Operador',
+                        'value' => $this->currency($group->sum('total_sales')),
+                        'meta' => "{$group->count()} fechamento(s)",
+                    ])),
+            ],
+            [
+                $this->table('Fechamentos do periodo', [
+                    ['key' => 'user_name', 'label' => 'Operador'],
+                    ['key' => 'opened_at', 'label' => 'Abertura', 'format' => 'datetime'],
+                    ['key' => 'closed_at', 'label' => 'Fechamento', 'format' => 'datetime'],
+                    ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
+                    ['key' => 'total_sales', 'label' => 'Total vendido', 'format' => 'money'],
+                    ['key' => 'expected_cash', 'label' => 'Esperado', 'format' => 'money'],
+                    ['key' => 'closing_amount', 'label' => 'Contado', 'format' => 'money'],
+                    ['key' => 'difference', 'label' => 'Diferenca', 'format' => 'money'],
+                    ['key' => 'details_action', 'label' => 'Abrir', 'format' => 'action'],
+                ], $reports, 'Nenhum caixa fechado no periodo.'),
+            ],
+            $from,
+            $to,
+            [
+                'cash_register' => $selectedRegister?->getKey(),
+                'showProductSearch' => false,
+            ],
+        );
+
+        $page['dialog'] = $selectedReport ? [
+            'type' => 'cash_register_closing_report',
+            'report' => $selectedReport,
+        ] : null;
+
+        return $page;
     }
 
     public function orders(array $filters): array
@@ -83,7 +199,7 @@ class SalesOverviewService
             ->get();
 
         return $this->page(
-            'Pedidos e comandas',
+            'Pedidos e atendimentos',
             'Pedidos do periodo e operadores com vendas.',
             [
                 $this->metric('Atendimentos', $sales->count()),
@@ -109,7 +225,7 @@ class SalesOverviewService
                 ], $sales->map(fn (Sale $sale) => [
                     'sale_number' => $sale->sale_number,
                     'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Balcao',
+                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
                     'user_name' => $sale->user?->name ?? '-',
                     'payment_method' => $this->paymentLabel($sale->payment_method),
                     'total' => (float) $sale->total,
@@ -156,8 +272,8 @@ class SalesOverviewService
             ->values();
 
         return $this->page(
-            'Crediario e a receber',
-            'Limites, saldo em aberto e lancamentos a credito.',
+            'A Prazo',
+            'Limites, saldo em aberto e lancamentos pendentes.',
             [
                 $this->metric('Clientes com limite', $customers->count()),
                 $this->metric('Em aberto', $customers->sum('open_credit'), 'money'),
@@ -172,7 +288,7 @@ class SalesOverviewService
                     ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
                     ['key' => 'open_credit', 'label' => 'Em aberto', 'format' => 'money'],
                     ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
-                ], $customers, 'Nenhum cliente com controle de credito.'),
+                ], $customers, 'Nenhum cliente com limite configurado.'),
                 $this->table('Lancamentos recentes', [
                     ['key' => 'sale_number', 'label' => 'Venda'],
                     ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
@@ -182,10 +298,10 @@ class SalesOverviewService
                 ], $creditSales->map(fn (Sale $sale) => [
                     'sale_number' => $sale->sale_number,
                     'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Balcao',
+                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
                     'user_name' => $sale->user?->name ?? '-',
                     'total' => (float) $sale->total,
-                ]), 'Nenhuma venda a credito no periodo.'),
+                ]), 'Nenhum lancamento a prazo no periodo.'),
             ],
             $from,
             $to,
@@ -210,7 +326,7 @@ class SalesOverviewService
 
         return $this->page(
             'Clientes',
-            'Clientes cadastrados, vendas e limite de credito.',
+            'Clientes, vendas e limite disponivel.',
             [
                 $this->metric('Total', $customers->count()),
                 $this->metric('Ativos', $customers->where('status', 'Ativo')->count()),
@@ -275,7 +391,7 @@ class SalesOverviewService
 
         return $this->page(
             'Relatorios',
-            'Resumo de faturamento, custo, lucro e pagamentos.',
+            'Faturamento, custo, lucro e pagamentos.',
             [
                 $this->metric('Vendas', (int) ($summary->qty ?? 0)),
                 $this->metric('Faturamento', (float) ($summary->total ?? 0), 'money'),
@@ -359,7 +475,7 @@ class SalesOverviewService
                 ], $sales->map(fn (Sale $sale) => [
                     'sale_number' => $sale->sale_number,
                     'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Balcao',
+                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
                     'user_name' => $sale->user?->name ?? '-',
                     'payment_method' => $this->paymentLabel($sale->payment_method),
                     'total' => (float) $sale->total,
@@ -433,6 +549,22 @@ class SalesOverviewService
                 'showProductSearch' => true,
             ],
         );
+    }
+
+    protected function resolveCashRegisterFilter(array $filters): ?int
+    {
+        $cashRegisterId = (int) ($filters['cash_register'] ?? 0);
+
+        return $cashRegisterId > 0 ? $cashRegisterId : null;
+    }
+
+    protected function reportsUrl(array $query): string
+    {
+        $normalized = array_filter($query, fn ($value) => $value !== null && $value !== '');
+
+        return empty($normalized)
+            ? '/relatorios'
+            : '/relatorios?'.http_build_query($normalized);
     }
 
     protected function resolveProductFilter(array $filters): ?string

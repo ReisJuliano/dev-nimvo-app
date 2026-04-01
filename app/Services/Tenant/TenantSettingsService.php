@@ -14,6 +14,10 @@ class TenantSettingsService
 
     public const CUSTOM_PRESET = 'personalizado';
 
+    public const SERVICE_PRESET = 'atendimento';
+
+    public const DIRECT_SALES_PRESET = 'venda_direta';
+
     public function defaults(): array
     {
         return [
@@ -32,14 +36,14 @@ class TenantSettingsService
         return [
             'comandas' => true,
             'pdv_simples' => true,
-            'pdv_restaurante' => false,
+            'pdv_avancado' => false,
             'estoque' => true,
             'producao' => false,
             'fichas_tecnicas' => false,
             'controle_perdas' => false,
             'cozinha' => false,
             'pesagem' => false,
-            'fiado' => true,
+            'prazo' => true,
             'delivery' => false,
             'caixa' => true,
             'relatorios_avancados' => true,
@@ -63,21 +67,21 @@ class TenantSettingsService
     {
         return [
             [
-                'key' => 'restaurante',
-                'label' => 'Restaurante',
-                'description' => 'Ativa comandas, mesas e o fluxo de PDV para atendimento em restaurante.',
-                'modules' => $this->presetModules('restaurante'),
+                'key' => self::SERVICE_PRESET,
+                'label' => 'Atendimento',
+                'description' => 'Fluxo integrado com pedidos, preparo e acompanhamento.',
+                'modules' => $this->presetModules(self::SERVICE_PRESET),
             ],
             [
-                'key' => 'mercearia',
-                'label' => 'Mercearia',
-                'description' => 'Mantem PDV simples, estoque, codigo de barras, validade, fiado e caixa.',
-                'modules' => $this->presetModules('mercearia'),
+                'key' => self::DIRECT_SALES_PRESET,
+                'label' => 'Venda direta',
+                'description' => 'Checkout simples com estoque, clientes e rotinas essenciais.',
+                'modules' => $this->presetModules(self::DIRECT_SALES_PRESET),
             ],
             [
                 'key' => self::CUSTOM_PRESET,
                 'label' => 'Personalizado',
-                'description' => 'Permite ligar e desligar cada modulo manualmente.',
+                'description' => 'Ligacao manual de modulos.',
                 'modules' => $this->defaultModules(),
             ],
         ];
@@ -85,51 +89,55 @@ class TenantSettingsService
 
     public function presetKeys(): array
     {
-        return array_column($this->businessPresets(), 'key');
+        return [
+            self::SERVICE_PRESET,
+            self::DIRECT_SALES_PRESET,
+            self::CUSTOM_PRESET,
+        ];
     }
 
     public function moduleDefinitions(): array
     {
         return [
             [
-                'section' => 'Atendimento e vendas',
+                'section' => 'Atendimento',
                 'items' => [
-                    ['key' => 'comandas', 'label' => 'Usar Comandas', 'description' => 'Exibe a tela de comandas e o fluxo de pedidos enviados para o caixa.'],
-                    ['key' => 'pdv_simples', 'label' => 'Usar PDV rapido', 'description' => 'Mantem o PDV focado em vendas avulsas, leitura rapida e atendimento direto no caixa.'],
-                    ['key' => 'pdv_restaurante', 'label' => 'Usar PDV Restaurante', 'description' => 'Prepara o PDV para trabalhar junto com comandas, mesas e filas de cobranca.'],
-                    ['key' => 'mesas', 'label' => 'Usar Mesa', 'description' => 'Habilita o contexto de mesas dentro da operacao de comandas.'],
-                    ['key' => 'delivery', 'label' => 'Usar Delivery', 'description' => 'Mostra o modulo de delivery para acompanhar pedidos de entrega.'],
-                    ['key' => 'fiado', 'label' => 'Usar Fiado', 'description' => 'Disponibiliza crediario e consultas de limite do cliente.'],
-                    ['key' => 'caixa', 'label' => 'Usar Caixa', 'description' => 'Mantem a abertura, conferencia e fechamento do caixa ativos.'],
-                    ['key' => 'impressao_automatica', 'label' => 'Usar Impressao automatica', 'description' => 'Liga automatizacoes de impressao em fluxos de venda e atendimento.'],
+                    ['key' => 'comandas', 'label' => 'Pedidos', 'description' => 'Organiza atendimentos antes da cobranca.'],
+                    ['key' => 'pdv_simples', 'label' => 'Checkout', 'description' => 'Fluxo direto para vendas rapidas.'],
+                    ['key' => 'pdv_avancado', 'label' => 'Checkout integrado', 'description' => 'Integra checkout, pedidos e cobranca.'],
+                    ['key' => 'mesas', 'label' => 'Referencias', 'description' => 'Agrupa atendimentos por contexto ou origem.'],
+                    ['key' => 'delivery', 'label' => 'Entregas', 'description' => 'Acompanha pedidos externos.'],
+                    ['key' => 'prazo', 'label' => 'A Prazo', 'description' => 'Permite registrar saldo pendente por cliente.'],
+                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Controla abertura, conferencia e fechamento.'],
+                    ['key' => 'impressao_automatica', 'label' => 'Impressao automatica', 'description' => 'Automatiza impressoes operacionais.'],
                 ],
             ],
             [
                 'section' => 'Operacao',
                 'items' => [
-                    ['key' => 'producao', 'label' => 'Usar Producao', 'description' => 'Libera o modulo de producao para preparos internos e rotinas por lote.'],
-                    ['key' => 'fichas_tecnicas', 'label' => 'Usar Fichas tecnicas', 'description' => 'Organiza receitas, rendimento, insumos e padroes operacionais por item.'],
-                    ['key' => 'controle_perdas', 'label' => 'Usar Controle de perdas', 'description' => 'Acompanha quebras, perdas operacionais e motivos de descarte.'],
-                    ['key' => 'cozinha', 'label' => 'Usar Cozinha', 'description' => 'Cria um quadro operacional para separar preparo, expedicao e conferencias de pedidos.'],
-                    ['key' => 'pesagem', 'label' => 'Usar Pesagem', 'description' => 'Destaca a operacao por peso, com apoio a vendas fracionadas.'],
-                    ['key' => 'ordens_servico', 'label' => 'Usar Ordens de servico', 'description' => 'Mostra o modulo de OS para atendimentos tecnicos e servicos.'],
-                    ['key' => 'compras', 'label' => 'Usar Compras', 'description' => 'Abre uma area para acompanhar abastecimento, entradas planejadas e reposicoes por fornecedor.'],
+                    ['key' => 'producao', 'label' => 'Producao', 'description' => 'Planeja lotes e etapas internas.'],
+                    ['key' => 'fichas_tecnicas', 'label' => 'Fichas tecnicas', 'description' => 'Padroniza composicao e rendimento.'],
+                    ['key' => 'controle_perdas', 'label' => 'Perdas', 'description' => 'Registra quebras e descartes.'],
+                    ['key' => 'cozinha', 'label' => 'Fila operacional', 'description' => 'Acompanha preparo por status.'],
+                    ['key' => 'pesagem', 'label' => 'Pesagem', 'description' => 'Destaca operacoes por peso.'],
+                    ['key' => 'ordens_servico', 'label' => 'Ordens de servico', 'description' => 'Gerencia atendimentos tecnicos.'],
+                    ['key' => 'compras', 'label' => 'Compras', 'description' => 'Organiza reposicao e entrada planejada.'],
                 ],
             ],
             [
-                'section' => 'Catalogo e estoque',
+                'section' => 'Catalogo',
                 'items' => [
-                    ['key' => 'estoque', 'label' => 'Usar Estoque', 'description' => 'Controla produtos, entradas, ajustes e movimentacoes do estoque.'],
-                    ['key' => 'controle_lotes', 'label' => 'Usar Controle de Lotes', 'description' => 'Marca a operacao para rastreabilidade por lote.'],
-                    ['key' => 'controle_validade', 'label' => 'Usar Validade', 'description' => 'Destaca acompanhamento de validade nos fluxos de estoque.'],
-                    ['key' => 'clientes', 'label' => 'Usar Clientes', 'description' => 'Mantem o cadastro e os atalhos para clientes disponiveis.'],
-                    ['key' => 'fornecedores', 'label' => 'Usar Fornecedores', 'description' => 'Mantem o cadastro e consultas de fornecedores ativos.'],
+                    ['key' => 'estoque', 'label' => 'Estoque', 'description' => 'Controla saldo e movimentacoes.'],
+                    ['key' => 'controle_lotes', 'label' => 'Lotes', 'description' => 'Rastreia itens por lote.'],
+                    ['key' => 'controle_validade', 'label' => 'Validade', 'description' => 'Monitora datas e vencimentos.'],
+                    ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Mantem cadastros ativos.'],
+                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'Mantem origem de compra e contato.'],
                 ],
             ],
             [
                 'section' => 'Gestao',
                 'items' => [
-                    ['key' => 'relatorios_avancados', 'label' => 'Usar Relatorios', 'description' => 'Libera os paineis consolidados, demanda e visoes gerenciais.'],
+                    ['key' => 'relatorios_avancados', 'label' => 'Relatorios', 'description' => 'Libera visoes consolidadas.'],
                 ],
             ],
         ];
@@ -140,8 +148,8 @@ class TenantSettingsService
         return [
             [
                 'key' => 'cash_closing.require_conference',
-                'label' => 'Conferencia obrigatoria no fechamento',
-                'description' => 'Exige a revisao por forma de pagamento antes de concluir o fechamento do caixa.',
+                'label' => 'Conferencia no fechamento',
+                'description' => 'Revisa os totais antes de concluir o caixa.',
             ],
         ];
     }
@@ -189,6 +197,7 @@ class TenantSettingsService
         }
 
         $settings = $this->get();
+        $moduleKey = $this->normalizeModuleAlias($moduleKey);
 
         if (array_key_exists($moduleKey, $settings['modules'] ?? [])) {
             return (bool) data_get($settings, "modules.{$moduleKey}", true);
@@ -202,10 +211,11 @@ class TenantSettingsService
         $modules = $this->normalizeModules($modules);
 
         return [
-            'pdv' => $modules['pdv_simples'] || $modules['pdv_restaurante'],
+            'pdv' => $modules['pdv_simples'] || $modules['pdv_avancado'],
             'caixa' => $modules['caixa'],
             'pedidos' => $modules['comandas'],
-            'crediario' => $modules['fiado'],
+            'prazo' => $modules['prazo'],
+            'crediario' => $modules['prazo'],
             'produtos' => $modules['estoque'] || $modules['controle_lotes'] || $modules['controle_validade'],
             'categorias' => $modules['estoque'],
             'clientes' => $modules['clientes'],
@@ -282,17 +292,25 @@ class TenantSettingsService
 
     protected function normalizeIncomingSettings(array $settings): array
     {
-        if (!$this->looksLikeLegacySettings($settings)) {
-            return $settings;
+        if ($this->looksLikeLegacySettings($settings)) {
+            return [
+                'business' => [
+                    'preset' => self::CUSTOM_PRESET,
+                ],
+                'cash_closing' => $settings['cash_closing'] ?? [],
+                'modules' => $this->mapLegacyModules((array) ($settings['modules'] ?? [])),
+            ];
         }
 
-        return [
-            'business' => [
-                'preset' => self::CUSTOM_PRESET,
-            ],
-            'cash_closing' => $settings['cash_closing'] ?? [],
-            'modules' => $this->mapLegacyModules((array) ($settings['modules'] ?? [])),
-        ];
+        if (isset($settings['business'])) {
+            $settings['business']['preset'] = $this->normalizePreset(data_get($settings, 'business.preset'));
+        }
+
+        if (isset($settings['modules'])) {
+            $settings['modules'] = $this->normalizeModules((array) $settings['modules']);
+        }
+
+        return $settings;
     }
 
     protected function looksLikeLegacySettings(array $settings): bool
@@ -340,9 +358,9 @@ class TenantSettingsService
         return array_replace($this->defaultModules(), [
             'comandas' => $ordersEnabled,
             'pdv_simples' => (bool) data_get($legacyModules, 'pdv', true),
-            'pdv_restaurante' => $ordersEnabled,
+            'pdv_avancado' => $ordersEnabled,
             'estoque' => $inventoryEnabled,
-            'fiado' => (bool) data_get($legacyModules, 'crediario', true),
+            'prazo' => (bool) data_get($legacyModules, 'crediario', true),
             'caixa' => (bool) data_get($legacyModules, 'caixa', true),
             'relatorios_avancados' => $reportsEnabled,
             'clientes' => (bool) data_get($legacyModules, 'clientes', true),
@@ -353,6 +371,7 @@ class TenantSettingsService
 
     protected function normalizeModules(array $modules): array
     {
+        $modules = $this->mapLegacyModuleAliases($modules);
         $normalized = array_replace($this->defaultModules(), Arr::only($modules, $this->moduleKeys()));
 
         foreach ($this->moduleKeys() as $moduleKey) {
@@ -385,14 +404,14 @@ class TenantSettingsService
         $base = [
             'comandas' => false,
             'pdv_simples' => false,
-            'pdv_restaurante' => false,
+            'pdv_avancado' => false,
             'estoque' => false,
             'producao' => false,
             'fichas_tecnicas' => false,
             'controle_perdas' => false,
             'cozinha' => false,
             'pesagem' => false,
-            'fiado' => false,
+            'prazo' => false,
             'delivery' => false,
             'caixa' => true,
             'relatorios_avancados' => true,
@@ -406,10 +425,10 @@ class TenantSettingsService
             'impressao_automatica' => false,
         ];
 
-        return match ($preset) {
-            'restaurante' => array_replace($base, [
+        return match ($this->normalizePreset($preset)) {
+            self::SERVICE_PRESET => array_replace($base, [
                 'comandas' => true,
-                'pdv_restaurante' => true,
+                'pdv_avancado' => true,
                 'estoque' => true,
                 'fichas_tecnicas' => true,
                 'cozinha' => true,
@@ -418,10 +437,10 @@ class TenantSettingsService
                 'clientes' => true,
                 'fornecedores' => true,
             ]),
-            'mercearia' => array_replace($base, [
+            self::DIRECT_SALES_PRESET => array_replace($base, [
                 'pdv_simples' => true,
                 'estoque' => true,
-                'fiado' => true,
+                'prazo' => true,
                 'clientes' => true,
                 'fornecedores' => true,
                 'controle_validade' => true,
@@ -434,9 +453,37 @@ class TenantSettingsService
     {
         $preset = trim((string) $preset);
 
+        $preset = match ($preset) {
+            'restaurante' => self::SERVICE_PRESET,
+            'mercearia' => self::DIRECT_SALES_PRESET,
+            default => $preset,
+        };
+
         return in_array($preset, $this->presetKeys(), true)
             ? $preset
             : self::CUSTOM_PRESET;
+    }
+
+    protected function normalizeModuleAlias(string $moduleKey): string
+    {
+        return match ($moduleKey) {
+            'fiado' => 'prazo',
+            'pdv_restaurante' => 'pdv_avancado',
+            default => $moduleKey,
+        };
+    }
+
+    protected function mapLegacyModuleAliases(array $modules): array
+    {
+        if (array_key_exists('fiado', $modules) && !array_key_exists('prazo', $modules)) {
+            $modules['prazo'] = $modules['fiado'];
+        }
+
+        if (array_key_exists('pdv_restaurante', $modules) && !array_key_exists('pdv_avancado', $modules)) {
+            $modules['pdv_avancado'] = $modules['pdv_restaurante'];
+        }
+
+        return $modules;
     }
 
     protected function payloadForStorage(array $settings): array

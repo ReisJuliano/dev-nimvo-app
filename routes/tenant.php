@@ -57,7 +57,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', OperationsPageController::class)->defaults('module', 'compras')->name('purchases.index');
         Route::get('/ordens-servico', OperationsPageController::class)->defaults('module', 'ordens-servico')->name('service-orders.index');
-        Route::get('/fiado', OperationsPageController::class)->defaults('module', 'fiado')->name('credit.index');
+        Route::get('/a-prazo', OperationsPageController::class)->defaults('module', 'a-prazo')->name('credit.index');
+        Route::get('/fiado', function (Request $request) {
+            return redirect()->route('credit.index', array_filter([
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+            ], fn ($value) => filled($value)));
+        });
         Route::get('/clientes', OperationsPageController::class)->defaults('module', 'clientes')->name('customers.index');
         Route::get('/fornecedores', OperationsPageController::class)->defaults('module', 'fornecedores')->name('suppliers.index');
         Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');

@@ -93,7 +93,7 @@ class OrdersApiController extends Controller
         $orderDraftService->destroy($orderDraft);
 
         return response()->json([
-            'message' => 'Comanda removida com sucesso.',
+            'message' => 'Atendimento removido com sucesso.',
         ]);
     }
 }

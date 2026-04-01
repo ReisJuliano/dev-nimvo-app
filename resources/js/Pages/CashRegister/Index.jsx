@@ -1,37 +1,13 @@
 import { useState } from 'react'
 import ActiveRegisterPanel from '@/Components/CashRegister/ActiveRegisterPanel'
+import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import OpenRegisterCard from '@/Components/CashRegister/OpenRegisterCard'
 import RegisterHistoryTable from '@/Components/CashRegister/RegisterHistoryTable'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
-import { formatDateTime, formatMoney } from '@/lib/format'
+import { buildCloseCashRegisterModal, buildCloseCashRegisterRows } from '@/lib/cashRegister'
+import { formatMoney } from '@/lib/format'
 import './cash-register.css'
-
-const closingPaymentFields = [
-    { key: 'cash', label: 'Dinheiro' },
-    { key: 'pix', label: 'Pix' },
-    { key: 'debit_card', label: 'Cartao de debito' },
-    { key: 'credit_card', label: 'Cartao de credito' },
-    { key: 'credit', label: 'Crediario' },
-]
-
-function buildCloseConferenceModal(report) {
-    const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
-
-    return {
-        report,
-        form: {
-            notes: report.cashRegister.closing_notes || '',
-            amounts: {
-                cash: '',
-                pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
-                debit_card: String(Number(paymentTotals.debit_card || 0).toFixed(2)),
-                credit_card: String(Number(paymentTotals.credit_card || 0).toFixed(2)),
-                credit: String(Number(paymentTotals.credit || 0).toFixed(2)),
-            },
-        },
-    }
-}
 
 export default function CashRegisterIndex({ openRegister, history, settings }) {
     const [loading, setLoading] = useState(false)
@@ -124,7 +100,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             return
         }
 
-        setCloseConferenceModal(buildCloseConferenceModal(openRegister))
+        setCloseConferenceModal(buildCloseCashRegisterModal(openRegister))
     }
 
     function handleCloseConferenceAmountChange(field, value) {
@@ -197,23 +173,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         setReportModal(response.report)
     }
 
-    const closeConferenceRows = closeConferenceModal
-        ? closingPaymentFields.map((field) => {
-            const breakdown = closeConferenceModal.report.closing_breakdown.find(
-                (row) => row.payment_method === field.key,
-            )
-            const rawInformed = closeConferenceModal.form.amounts[field.key]
-            const informed = rawInformed === '' ? null : Number(rawInformed || 0)
-            const expected = Number(breakdown?.expected || 0)
-
-            return {
-                ...field,
-                expected,
-                informed,
-                difference: informed === null ? null : informed - expected,
-            }
-        })
-        : []
+    const closeConferenceRows = buildCloseCashRegisterRows(closeConferenceModal, true)
 
     return (
         <AppLayout title="Caixa">
@@ -223,10 +183,9 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         <div className="cash-register-hero-grid">
                             <div>
                                 <span className={`ui-badge ${openRegister ? 'success' : 'warning'}`}>
-                                    {openRegister ? 'Caixa aberto' : 'Caixa aguardando abertura'}
+                                    {openRegister ? 'Caixa aberto' : 'Caixa fechado'}
                                 </span>
-                                <h1>Pos-conferencia de caixa</h1>
-                                <p>Acompanhe abertura, sangrias, fechamento e consulte qualquer conferencia ja realizada.</p>
+                                <h1>Caixa</h1>
                             </div>
                             <div className="cash-register-hero-metrics">
                                 <div>
@@ -249,7 +208,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         onClick={() => setActiveTab('active')}
                     >
                         <i className="fa-solid fa-vault" />
-                        <span>Operacao</span>
+                        <span>Atual</span>
                     </button>
                     <button
                         type="button"
@@ -290,7 +249,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         <div className="cash-register-report-header">
                             <div>
                                 <h2>Conferencia de fechamento</h2>
-                                <p>Revise cada forma de pagamento, incluindo o impacto das sangrias como saida de dinheiro.</p>
+                                <p>Revise os totais antes de concluir o fechamento.</p>
                             </div>
                             <button className="cash-register-primary-button" type="button" onClick={closeConference}>
                                 Cancelar
@@ -346,140 +305,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 </div>
             ) : null}
 
-            {reportModal ? (
-                <div className="cash-register-report-backdrop" onClick={closeReportModal}>
-                    <div className="cash-register-report-card" onClick={(event) => event.stopPropagation()}>
-                        <div className="cash-register-report-header">
-                            <div>
-                                <h2>Relatorio do fechamento</h2>
-                                <p>
-                                    Aberto em {formatDateTime(reportModal.cashRegister.opened_at)} e fechado em{' '}
-                                    {formatDateTime(reportModal.cashRegister.closed_at)}
-                                </p>
-                            </div>
-                            <button className="cash-register-primary-button" onClick={closeReportModal}>
-                                Fechar
-                            </button>
-                        </div>
-
-                        <div className="cash-register-report-grid">
-                            <div className="cash-register-report-box">
-                                <span>Total vendido</span>
-                                <strong>{formatMoney(reportModal.total_sales)}</strong>
-                            </div>
-                            <div className="cash-register-report-box">
-                                <span>Base de caixa</span>
-                                <strong>{formatMoney(reportModal.expected_cash)}</strong>
-                            </div>
-                            <div className="cash-register-report-box">
-                                <span>Contado em dinheiro</span>
-                                <strong>{formatMoney(reportModal.cashRegister.closing_amount)}</strong>
-                            </div>
-                            <div className="cash-register-report-box">
-                                <span>Diferenca em dinheiro</span>
-                                <strong>{formatMoney(reportModal.difference)}</strong>
-                            </div>
-                        </div>
-
-                        <div className="cash-register-report-section">
-                            <h3>Pos-conferencia por valor</h3>
-                            <div className="cash-register-breakdown-grid">
-                                {reportModal.closing_breakdown?.length ? (
-                                    reportModal.closing_breakdown.map((row) => (
-                                        <article key={row.payment_method} className="cash-register-breakdown-card">
-                                            <div className="cash-register-breakdown-top">
-                                                <strong>{row.label}</strong>
-                                                <span>{row.recorded_at ? formatDateTime(row.recorded_at) : 'Sem data'}</span>
-                                            </div>
-                                            <div className="cash-register-breakdown-values">
-                                                <div>
-                                                    <small>Esperado</small>
-                                                    <strong>{formatMoney(row.expected)}</strong>
-                                                </div>
-                                                <div>
-                                                    <small>Informado</small>
-                                                    <strong>{row.informed === null ? 'Nao informado' : formatMoney(row.informed)}</strong>
-                                                </div>
-                                                <div className={Math.abs(row.difference || 0) > 0.009 ? 'alert' : ''}>
-                                                    <small>Diferenca</small>
-                                                    <strong>{row.difference === null ? 'Nao conferido' : formatMoney(row.difference)}</strong>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    ))
-                                ) : (
-                                    <div className="cash-register-empty">Nenhuma pos-conferencia registrada neste fechamento.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="cash-register-report-section">
-                            <h3>Formas de pagamento das vendas</h3>
-                            <div className="cash-register-payments">
-                                {reportModal.payments.length ? (
-                                    reportModal.payments.map((payment) => (
-                                        <article key={payment.payment_method}>
-                                            <span>{payment.label}</span>
-                                            <strong>{formatMoney(payment.total)}</strong>
-                                            <small>{payment.qtd} lancamento(s)</small>
-                                        </article>
-                                    ))
-                                ) : (
-                                    <div className="cash-register-empty">Nenhuma venda encontrada neste caixa.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="cash-register-report-section">
-                            <h3>Movimentacoes do caixa</h3>
-                            <div className="cash-register-summary-grid">
-                                <article className="tone-primary">
-                                    <span>Abertura</span>
-                                    <strong>{formatMoney(reportModal.cashRegister.opening_amount)}</strong>
-                                </article>
-                                <article className="tone-success">
-                                    <span>Suprimentos</span>
-                                    <strong>{formatMoney(reportModal.total_supplies)}</strong>
-                                </article>
-                                <article className="tone-danger">
-                                    <span>Sangrias</span>
-                                    <strong>{formatMoney(reportModal.total_withdrawals)}</strong>
-                                </article>
-                                <article className="tone-info">
-                                    <span>Dinheiro vendido</span>
-                                    <strong>{formatMoney(reportModal.cash_sales)}</strong>
-                                </article>
-                            </div>
-
-                            <div className="cash-register-movements-list compact">
-                                {reportModal.movements.length ? (
-                                    reportModal.movements.map((movement) => (
-                                        <div key={movement.id} className="cash-register-movement-row">
-                                            <div>
-                                                <strong>{movement.type === 'withdrawal' ? 'Sangria' : 'Suprimento'}</strong>
-                                                <span>{movement.reason || 'Sem observacao'}</span>
-                                            </div>
-                                            <div>
-                                                <strong>{formatMoney(movement.amount)}</strong>
-                                                <small>{formatDateTime(movement.created_at)}</small>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="cash-register-empty">Nenhuma movimentacao registrada.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {reportModal.cashRegister.closing_notes ? (
-                            <div className="cash-register-report-section">
-                                <h3>Observacao do fechamento</h3>
-                                <div className="cash-register-empty">{reportModal.cashRegister.closing_notes}</div>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-            ) : null}
+            <ClosingReportModal report={reportModal} onClose={closeReportModal} />
         </AppLayout>
     )
 }

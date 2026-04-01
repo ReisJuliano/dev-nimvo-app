@@ -381,6 +381,17 @@
     overflow-x: auto;
 }
 
+.operations-table-action {
+    min-height: 40px;
+    padding: 0.65rem 0.85rem;
+    border-radius: 14px;
+    white-space: nowrap;
+}
+
+.operations-table-card .ui-table tbody tr.is-selected {
+    background: rgba(47, 124, 246, 0.1);
+}
+
 .operations-empty-state {
     padding: 1.4rem 1rem;
     color: var(--app-text-muted);

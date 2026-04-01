@@ -6,8 +6,7 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
             <div className="cash-register-section-header">
                 <div>
                     <span className="cash-register-section-kicker">Historico</span>
-                    <h2>Historico de caixas</h2>
-                    <p>Registros de abertura e fechamento.</p>
+                    <h2>Fechamentos</h2>
                 </div>
                 <span className="cash-register-count-chip">{history.length} registro(s)</span>
             </div>

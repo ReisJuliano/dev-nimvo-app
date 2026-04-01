@@ -3,8 +3,8 @@ import OrdersModal from './OrdersModal'
 export default function OrderTransferModal({ form, setForm, customers, onClose, onSubmit }) {
     return (
         <OrdersModal
-            title="Transferir Comanda"
-            subtitle="Reposicione a comanda para outra mesa, referencia ou cliente sem sair do popup."
+            title="Reorganizar atendimento"
+            subtitle="Reposicione o atendimento para outra referencia ou cliente sem sair do detalhe."
             size="lg"
             onClose={onClose}
         >
@@ -17,8 +17,8 @@ export default function OrderTransferModal({ form, setForm, customers, onClose, 
                             value={form.type}
                             onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}
                         >
-                            <option value="comanda">Comanda</option>
-                            <option value="mesa">Mesa</option>
+                            <option value="comanda">Atendimento</option>
+                            <option value="mesa">Referencia</option>
                             <option value="pedido">Pedido</option>
                         </select>
                     </label>
@@ -55,7 +55,7 @@ export default function OrderTransferModal({ form, setForm, customers, onClose, 
                             className="ui-textarea"
                             rows="4"
                             value={form.notes}
-                            placeholder="Atualize os recados da comanda se precisar"
+                            placeholder="Atualize as observacoes se precisar"
                             onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                         />
                     </label>

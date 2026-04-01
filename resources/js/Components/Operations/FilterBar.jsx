@@ -9,6 +9,7 @@ export default function FilterBar({ filters }) {
         const to = formData.get('to')
         const product = String(formData.get('product') || '').trim()
         const section = String(formData.get('section') || '').trim()
+        const cashRegister = String(formData.get('cash_register') || '').trim()
 
         router.get(
             window.location.pathname,
@@ -17,6 +18,7 @@ export default function FilterBar({ filters }) {
                 to: to || undefined,
                 product: product || undefined,
                 section: section || undefined,
+                cash_register: cashRegister || undefined,
             },
             { preserveScroll: true, preserveState: true, replace: true },
         )
@@ -58,6 +60,7 @@ export default function FilterBar({ filters }) {
             ) : null}
 
             <input name="section" type="hidden" value={filters.section || ''} readOnly />
+            <input name="cash_register" type="hidden" value={filters.cash_register || ''} readOnly />
             <button className="ui-button" type="submit">
                 <i className="fa-solid fa-rotate" />
                 Atualizar

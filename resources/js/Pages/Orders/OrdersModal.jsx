@@ -5,7 +5,7 @@ export default function OrdersModal({ title, subtitle, size = 'lg', onClose, chi
                 <div className="orders-modal-header">
                     <div>
                         <div className="orders-modal-header-topline">
-                            <span className="orders-page-kicker">Pedidos / Comandas</span>
+                            <span className="orders-page-kicker">Pedidos / Atendimentos</span>
                             {badge}
                         </div>
                         <h2>{title}</h2>

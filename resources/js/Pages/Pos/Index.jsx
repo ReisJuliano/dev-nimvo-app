@@ -1,28 +1,22 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import CartPanel from '@/Components/Pos/CartPanel'
+import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
 import PendingOrdersPanel from '@/Components/Pos/PendingOrdersPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
 import useModules from '@/hooks/useModules'
+import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { apiRequest } from '@/lib/http'
-import { formatDateTime, formatMoney } from '@/lib/format'
+import { formatMoney } from '@/lib/format'
 import './pos.css'
-
-const closingPaymentFields = [
-    { key: 'cash', label: 'Dinheiro' },
-    { key: 'pix', label: 'Pix' },
-    { key: 'debit_card', label: 'Cartao de debito' },
-    { key: 'credit_card', label: 'Cartao de credito' },
-    { key: 'credit', label: 'Crediario' },
-]
 
 const shortcutHints = [
     { keys: ['Shift', 'P'], label: 'Focar busca de produtos' },
     { keys: ['Shift', 'C'], label: 'Abrir cliente' },
     { keys: ['Shift', 'D'], label: 'Abrir desconto' },
     { keys: ['Shift', 'F'], label: 'Finalizar venda' },
-    { keys: ['Shift', 'X'], label: 'Abrir fechamento do caixa' },
+    { keys: ['Shift', 'X'], label: 'Abrir ou fechar caixa' },
     { keys: ['Esc'], label: 'Fechar popup ativo' },
 ]
 
@@ -265,6 +259,7 @@ export default function PosIndex({
     const [quickCustomerForm, setQuickCustomerForm] = useState({ name: '', phone: '' })
     const [submitting, setSubmitting] = useState(false)
     const [openingCashRegister, setOpeningCashRegister] = useState(false)
+    const [openCashRegisterModal, setOpenCashRegisterModal] = useState(null)
     const [loadingClosePreview, setLoadingClosePreview] = useState(false)
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [closeCashRegisterModal, setCloseCashRegisterModal] = useState(null)
@@ -272,7 +267,7 @@ export default function PosIndex({
     const [feedback, setFeedback] = useState(null)
     const [loadingProducts, setLoadingProducts] = useState(false)
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
-    const supportsCredit = moduleState.isCapabilityEnabled('crediario')
+    const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
     const supportsWeighing = moduleState.isModuleEnabled('pesagem')
     const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
     const deferredCustomerSearch = useDeferredValue(customerSearch)
@@ -285,10 +280,10 @@ export default function PosIndex({
                 { value: 'pix', label: 'Pix', icon: 'fa-qrcode', tone: 'info' },
                 { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card', tone: 'primary' },
                 { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card', tone: 'primary' },
-                { value: 'credit', label: 'Fiado', icon: 'fa-handshake', tone: 'warning' },
+                { value: 'credit', label: 'A Prazo', icon: 'fa-handshake', tone: 'warning' },
                 { value: 'mixed', label: 'Misto', icon: 'fa-layer-group', tone: 'danger' },
-            ].filter((option) => supportsCredit || option.value !== 'credit'),
-        [supportsCredit],
+            ].filter((option) => supportsDeferredPayment || option.value !== 'credit'),
+        [supportsDeferredPayment],
     )
 
     useEffect(() => {
@@ -356,7 +351,7 @@ export default function PosIndex({
     }, [searchTerm, selectedCategory])
 
     useEffect(() => {
-        if (!supportsCredit || !selectedCustomer) {
+        if (!supportsDeferredPayment || !selectedCustomer) {
             setCreditStatus(null)
             return
         }
@@ -364,7 +359,7 @@ export default function PosIndex({
         apiRequest(`/api/pdv/customers/${selectedCustomer}/credit`)
             .then(setCreditStatus)
             .catch(() => setCreditStatus(null))
-    }, [selectedCustomer, supportsCredit])
+    }, [selectedCustomer, supportsDeferredPayment])
 
     useEffect(() => {
         if (!cart.length) {
@@ -400,7 +395,7 @@ export default function PosIndex({
     }, [supportsOrders])
 
     useEffect(() => {
-        if (supportsCredit) {
+        if (supportsDeferredPayment) {
             return
         }
 
@@ -415,7 +410,7 @@ export default function PosIndex({
             ...current,
             method: current.method === 'credit' ? 'cash' : current.method,
         }))
-    }, [paymentMethod, supportsCredit])
+    }, [paymentMethod, supportsDeferredPayment])
 
     useEffect(() => {
         if (supportsOrders) {
@@ -479,27 +474,7 @@ export default function PosIndex({
             return []
         }
 
-        const paymentTotals = Object.fromEntries(
-            closeCashRegisterModal.report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]),
-        )
-
-        return closingPaymentFields
-            .filter((field) => requireCashClosingConference || field.key === 'cash')
-            .map((field) => {
-            const expected =
-                field.key === 'cash'
-                    ? Number(closeCashRegisterModal.report.expected_cash || 0)
-                    : Number(paymentTotals[field.key] || 0)
-            const rawInformed = closeCashRegisterModal.form.amounts[field.key]
-            const informed = rawInformed === '' ? null : Number(rawInformed || 0)
-
-            return {
-                ...field,
-                expected,
-                informed,
-                difference: informed === null ? null : informed - expected,
-            }
-        })
+        return buildCloseCashRegisterRows(closeCashRegisterModal, requireCashClosingConference)
     }, [closeCashRegisterModal, requireCashClosingConference])
 
     const filteredCustomers = useMemo(() => {
@@ -590,7 +565,7 @@ export default function PosIndex({
 
     async function handleLoadOrderDraft(orderDraftId) {
         if (!supportsOrders) {
-            showFeedback('error', 'Comandas estao desativadas para este tenant.')
+            showFeedback('error', 'Pedidos estao desativados nesta conta.')
             return
         }
 
@@ -636,8 +611,8 @@ export default function PosIndex({
     }
 
     function handlePaymentMethodChange(value) {
-        if (!supportsCredit && value === 'credit') {
-            showFeedback('error', 'O fiado esta desativado para este tenant.')
+        if (!supportsDeferredPayment && value === 'credit') {
+            showFeedback('error', 'O pagamento a prazo esta desativado nesta conta.')
             return
         }
 
@@ -834,42 +809,57 @@ export default function PosIndex({
         setCashReportModal(null)
     }
 
+    function closeOpenCashRegisterModal() {
+        setOpenCashRegisterModal(null)
+    }
+
     function closeCloseCashRegisterModal() {
         setCloseCashRegisterModal(null)
     }
 
-    function buildCloseCashRegisterModal(report) {
-        const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
+    function handleOpenCashWorkflow() {
+        if (cashRegisterState) {
+            if (!loadingClosePreview && !closingCashRegister) {
+                handleOpenCloseCashRegister()
+            }
 
-        return {
-            report,
-            form: {
-                notes: report.cashRegister.closing_notes || '',
-                amounts: {
-                    cash: '',
-                    pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
-                    debit_card: String(Number(paymentTotals.debit_card || 0).toFixed(2)),
-                    credit_card: String(Number(paymentTotals.credit_card || 0).toFixed(2)),
-                    credit: String(Number(paymentTotals.credit || 0).toFixed(2)),
-                },
-            },
+            return
         }
+
+        setFeedback(null)
+        setOpenCashRegisterModal(createOpenCashRegisterForm())
+    }
+
+    function handleOpenCashRegisterFieldChange(field, value) {
+        setOpenCashRegisterModal((current) => (
+            current
+                ? {
+                    ...current,
+                    [field]: value,
+                }
+                : current
+        ))
     }
 
     async function handleOpenCashRegister(event) {
         event.preventDefault()
+
+        if (!openCashRegisterModal) {
+            return
+        }
+
         setOpeningCashRegister(true)
         setFeedback(null)
 
-        const formEl = event.currentTarget
-        const formData = new FormData(formEl)
-        const openingAmount = Number(formData.get('opening_amount') || 0)
+        const openingAmount = Number(openCashRegisterModal.openingAmount || 0)
+        const openingNotes = openCashRegisterModal.openingNotes.trim()
 
         try {
             const response = await apiRequest('/api/cash-registers', {
                 method: 'post',
                 data: {
                     opening_amount: openingAmount,
+                    opening_notes: openingNotes || null,
                 },
             })
 
@@ -879,7 +869,7 @@ export default function PosIndex({
                 opened_at: new Date().toISOString(),
                 opening_amount: openingAmount,
             })
-            formEl?.reset?.()
+            setOpenCashRegisterModal(null)
             showFeedback('success', response.message || 'Caixa aberto com sucesso.')
         } catch (error) {
             showFeedback('error', error.message)
@@ -989,7 +979,7 @@ export default function PosIndex({
         }
 
         if (paymentMethod === 'credit' && !selectedCustomer) {
-            showFeedback('error', 'Selecione um cliente para registrar a venda no crediario.')
+            showFeedback('error', 'Selecione um cliente para registrar a venda a prazo.')
             return
         }
 
@@ -1010,7 +1000,7 @@ export default function PosIndex({
             }
 
             if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
-                showFeedback('error', 'Selecione um cliente para usar crediario no pagamento misto.')
+                showFeedback('error', 'Selecione um cliente para usar A Prazo no pagamento misto.')
                 return
             }
 
@@ -1065,7 +1055,7 @@ export default function PosIndex({
     useEffect(() => {
         function handleShortcuts(event) {
             const hasModalOpen = Boolean(
-                cashReportModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen || discountModalOpen,
+                cashReportModal || openCashRegisterModal || closeCashRegisterModal || quickCustomerOpen || customerPickerOpen || discountModalOpen,
             )
             const isReservedShiftShortcut =
                 event.shiftKey &&
@@ -1078,6 +1068,12 @@ export default function PosIndex({
                 if (cashReportModal) {
                     event.preventDefault()
                     closeCashReportModal()
+                    return
+                }
+
+                if (openCashRegisterModal) {
+                    event.preventDefault()
+                    closeOpenCashRegisterModal()
                     return
                 }
 
@@ -1144,9 +1140,9 @@ export default function PosIndex({
                 return
             }
 
-            if (key === 'X' && cashRegisterState && !loadingClosePreview && !closingCashRegister) {
+            if (key === 'X' && !loadingClosePreview && !closingCashRegister && !openingCashRegister) {
                 event.preventDefault()
-                handleOpenCloseCashRegister()
+                handleOpenCashWorkflow()
             }
         }
 
@@ -1155,22 +1151,25 @@ export default function PosIndex({
         return () => window.removeEventListener('keydown', handleShortcuts)
     }, [
         cashReportModal,
+        openCashRegisterModal,
         closeCashRegisterModal,
         quickCustomerOpen,
         customerPickerOpen,
         discountModalOpen,
         handleFinalize,
+        handleOpenCashWorkflow,
         handleOpenCloseCashRegister,
         cashRegisterState,
         cart.length,
         submitting,
         loadingClosePreview,
         closingCashRegister,
+        openingCashRegister,
         openDiscountModal,
     ])
 
     return (
-        <AppLayout title="Caixa">
+        <AppLayout title="Checkout">
             <div className="pos-page">
                 <div className="pos-column">
                     <section className="pos-hero ui-card">
@@ -1180,9 +1179,9 @@ export default function PosIndex({
                                     <span className={`ui-badge ${cashRegisterState ? 'success' : 'danger'}`}>
                                         {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
-                                    <h1>Ponto de venda</h1>
+                                    <h1>Checkout</h1>
                                     <div className="pos-hero-shortcuts">
-                                        <span className="pos-hero-shortcuts-title">Atalhos rapidos do caixa e da venda</span>
+                                        <span className="pos-hero-shortcuts-title">Atalhos</span>
                                         <div className="pos-shortcut-list">
                                             {shortcutHints.map((shortcut) => (
                                                 <div key={shortcut.label} className="pos-shortcut-chip">
@@ -1272,9 +1271,10 @@ export default function PosIndex({
                     openingCashRegister={openingCashRegister}
                     loadingClosePreview={loadingClosePreview}
                     closingCashRegister={closingCashRegister}
-                    onOpenCashRegister={handleOpenCashRegister}
+                    onOpenCashWorkflow={handleOpenCashWorkflow}
                     onOpenCloseCashRegister={handleOpenCloseCashRegister}
                     requireCashClosingConference={requireCashClosingConference}
+                    cashShortcutLabel="Shift + X"
                     activeOrderDraftLabel={pendingOrderDrafts.find((orderDraft) => Number(orderDraft.id) === Number(activeOrderDraftId))?.label || null}
                     canResetSale={Boolean(cart.length || activeOrderDraftId)}
                     onResetSale={resetSale}
@@ -1452,6 +1452,55 @@ export default function PosIndex({
                 </div>
             ) : null}
 
+            {openCashRegisterModal ? (
+                <div className="pos-quick-customer" onClick={closeOpenCashRegisterModal}>
+                    <form className="pos-quick-customer-card" onSubmit={handleOpenCashRegister} onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Abrir caixa</h2>
+                                <p>Defina o valor inicial para iniciar o turno atual.</p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={closeOpenCashRegisterModal}>
+                                Cancelar
+                            </button>
+                        </div>
+
+                        <label className="pos-discount-form-field">
+                            Valor de abertura
+                            <input
+                                className="ui-input"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={openCashRegisterModal.openingAmount}
+                                onChange={(event) => handleOpenCashRegisterFieldChange('openingAmount', event.target.value)}
+                                autoFocus
+                            />
+                        </label>
+
+                        <label className="pos-discount-form-field">
+                            Observacao
+                            <textarea
+                                className="ui-input"
+                                rows="3"
+                                value={openCashRegisterModal.openingNotes}
+                                onChange={(event) => handleOpenCashRegisterFieldChange('openingNotes', event.target.value)}
+                            />
+                        </label>
+
+                        <div className="pos-quick-customer-actions">
+                            <button className="ui-button-ghost" type="button" onClick={closeOpenCashRegisterModal}>
+                                Voltar
+                            </button>
+                            <button className="pos-cash-register-button" type="submit" disabled={openingCashRegister}>
+                                <i className="fa-solid fa-lock-open" />
+                                {openingCashRegister ? 'Abrindo...' : 'Confirmar abertura'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ) : null}
+
             {closeCashRegisterModal ? (
                 <div className="pos-quick-customer" onClick={closeCloseCashRegisterModal}>
                     <form
@@ -1464,8 +1513,8 @@ export default function PosIndex({
                                 <h2>Fechar caixa</h2>
                                 <p>
                                     {requireCashClosingConference
-                                        ? 'Confira os valores por forma de pagamento antes de concluir o fechamento.'
-                                        : 'Informe o valor contado em dinheiro para concluir o fechamento rapidamente.'}
+                                        ? 'Confira os totais por forma de pagamento antes de concluir.'
+                                        : 'Informe o valor contado em dinheiro para concluir rapidamente.'}
                                 </p>
                             </div>
                             <button className="ui-button-ghost" type="button" onClick={closeCloseCashRegisterModal}>
@@ -1478,7 +1527,7 @@ export default function PosIndex({
                                 <div key={row.key} className="pos-cash-close-item">
                                     <div className="pos-cash-close-item-header">
                                         <strong>{row.label}</strong>
-                                        <span>{row.key === 'cash' ? 'Com abertura, sangrias e suprimentos' : 'Total da forma de pagamento'}</span>
+                                        <span>{row.key === 'cash' ? 'Com abertura, sangrias e suprimentos' : 'Total registrado nesta forma'}</span>
                                     </div>
                                     <div className="pos-cash-close-item-values">
                                         <label>
@@ -1524,78 +1573,7 @@ export default function PosIndex({
                 </div>
             ) : null}
 
-            {cashReportModal ? (
-                <div className="pos-quick-customer" onClick={closeCashReportModal}>
-                    <div className="pos-quick-customer-card pos-cash-report-card" onClick={(event) => event.stopPropagation()}>
-                        <div className="pos-quick-customer-header">
-                            <div>
-                                <h2>Relatorio do caixa</h2>
-                                <p>
-                                    Aberto em {formatDateTime(cashReportModal.cashRegister.opened_at)} e fechado em{' '}
-                                    {formatDateTime(cashReportModal.cashRegister.closed_at)}
-                                </p>
-                            </div>
-                            <button className="ui-button-ghost" type="button" onClick={closeCashReportModal}>
-                                Fechar
-                            </button>
-                        </div>
-
-                        <div className="pos-cash-report-grid">
-                            <div className="pos-cash-report-box">
-                                <span>Total vendido</span>
-                                <strong>{formatMoney(cashReportModal.total_sales)}</strong>
-                            </div>
-                            <div className="pos-cash-report-box">
-                                <span>Base de caixa</span>
-                                <strong>{formatMoney(cashReportModal.expected_cash)}</strong>
-                            </div>
-                            <div className="pos-cash-report-box">
-                                <span>Contado</span>
-                                <strong>{formatMoney(cashReportModal.cashRegister.closing_amount)}</strong>
-                            </div>
-                            <div className="pos-cash-report-box">
-                                <span>Diferenca</span>
-                                <strong>{formatMoney(cashReportModal.difference)}</strong>
-                            </div>
-                        </div>
-
-                        <div className="pos-cash-close-grid">
-                            {cashReportModal.closing_breakdown?.length ? (
-                                cashReportModal.closing_breakdown.map((row) => (
-                                    <div key={row.payment_method} className="pos-cash-close-item">
-                                        <div className="pos-cash-close-item-header">
-                                            <strong>{row.label}</strong>
-                                            <span>{row.recorded_at ? formatDateTime(row.recorded_at) : 'Sem data'}</span>
-                                        </div>
-                                        <div className="pos-cash-close-report-values">
-                                            <div>
-                                                <small>Esperado</small>
-                                                <strong>{formatMoney(row.expected)}</strong>
-                                            </div>
-                                            <div>
-                                                <small>Informado</small>
-                                                <strong>{row.informed === null ? 'Nao informado' : formatMoney(row.informed)}</strong>
-                                            </div>
-                                            <div className={Math.abs(row.difference || 0) > 0.009 ? 'alert' : ''}>
-                                                <small>Diferenca</small>
-                                                <strong>{row.difference === null ? 'Nao conferido' : formatMoney(row.difference)}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="pos-empty-state">Nenhuma conferencia detalhada foi salva neste fechamento.</div>
-                            )}
-                        </div>
-
-                        {cashReportModal.cashRegister.closing_notes ? (
-                            <div className="pos-empty-state">
-                                <strong>Observacao:</strong> {cashReportModal.cashRegister.closing_notes}
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-            ) : null}
+            <ClosingReportModal report={cashReportModal} onClose={closeCashReportModal} />
 
             {customerPickerOpen ? (
                 <div className="pos-quick-customer" onClick={closeCustomerPicker}>

@@ -25,14 +25,15 @@ export default function CheckoutPanel({
     cashChange,
     cashShortfall,
     openingCashRegister,
+    onOpenCashWorkflow,
     loadingClosePreview,
     closingCashRegister,
-    onOpenCashRegister,
     onOpenCloseCashRegister,
     disabled,
     onFinalize,
     cashRegister,
     requireCashClosingConference,
+    cashShortcutLabel,
     activeOrderDraftLabel,
     canResetSale,
     onResetSale,
@@ -46,11 +47,11 @@ export default function CheckoutPanel({
                     <span className={`ui-badge ${cashRegister ? 'success' : 'warning'}`}>
                         {cashRegister ? 'Caixa aberto' : 'Caixa fechado'}
                     </span>
-                    <strong>{cashRegister ? 'Caixa pronto para vender' : 'Abra o caixa antes de finalizar vendas'}</strong>
+                    <strong>{cashRegister ? 'Caixa pronto para vender' : 'Caixa indisponivel para vendas'}</strong>
                     <small>
                         {cashRegister
                             ? `Aberto em ${formatDateTime(cashRegister.opened_at)}`
-                            : 'Informe um valor inicial para iniciar a operacao no PDV.'}
+                            : `Use ${cashShortcutLabel} para abrir o caixa sem sair do checkout.`}
                     </small>
                 </div>
 
@@ -79,16 +80,16 @@ export default function CheckoutPanel({
                         </button>
                     </div>
                 ) : (
-                    <form className="pos-cash-register-form" onSubmit={onOpenCashRegister}>
-                        <label>
-                            Valor de abertura
-                            <input className="ui-input" name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />
-                        </label>
-                        <button type="submit" className="pos-cash-register-button" disabled={openingCashRegister}>
+                    <div className="pos-cash-register-actions">
+                        <div className="pos-cash-register-status">
+                            <span>Atalho exclusivo</span>
+                            <strong>{cashShortcutLabel}</strong>
+                        </div>
+                        <button type="button" className="pos-cash-register-button" onClick={onOpenCashWorkflow} disabled={openingCashRegister}>
                             <i className="fa-solid fa-lock-open" />
                             {openingCashRegister ? 'Abrindo...' : 'Abrir caixa'}
                         </button>
-                    </form>
+                    </div>
                 )}
             </div>
 

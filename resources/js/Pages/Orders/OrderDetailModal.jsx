@@ -58,7 +58,7 @@ export default function OrderDetailModal({
 
                 <section className="orders-detail-hero">
                     <div>
-                        <span className="orders-page-kicker">Popup da comanda</span>
+                        <span className="orders-page-kicker">Detalhes do atendimento</span>
                         <div className="orders-detail-title-row">
                             <h3>{draft.label}</h3>
                             <span className="orders-detail-secondary">{selectedCustomer?.name || 'Cliente nao identificado'}</span>
@@ -91,7 +91,7 @@ export default function OrderDetailModal({
                     </button>
                     <button type="button" className="ui-button-ghost" onClick={onOpenTransferModal}>
                         <i className="fa-solid fa-right-left" />
-                        Transferir comanda
+                        Reorganizar atendimento
                     </button>
                     <button type="button" className="ui-button-secondary" onClick={onOpenDiscountModal} disabled={!draft.items.length}>
                         <i className="fa-solid fa-badge-percent" />
@@ -116,7 +116,7 @@ export default function OrderDetailModal({
                     </button>
                     <button type="button" className="ui-button-danger" onClick={onDeleteDraft} disabled={deletingDraft}>
                         <i className="fa-solid fa-trash-can" />
-                        {deletingDraft ? 'Excluindo...' : 'Excluir comanda'}
+                        {deletingDraft ? 'Excluindo...' : 'Excluir atendimento'}
                     </button>
                 </section>
 
@@ -125,7 +125,7 @@ export default function OrderDetailModal({
                         <section className="orders-detail-panel">
                             <div className="orders-section-heading">
                                 <div>
-                                    <span className="orders-page-kicker">Dados da comanda</span>
+                                    <span className="orders-page-kicker">Dados do atendimento</span>
                                     <h4>Resumo rapido</h4>
                                 </div>
                                 <button type="button" className="ui-button-ghost" onClick={onOpenTransferModal}>
@@ -155,14 +155,14 @@ export default function OrderDetailModal({
 
                             <div className="orders-note-box">
                                 <span>Observacao</span>
-                                <p>{draft.notes.trim() || 'Nenhuma observacao registrada para esta comanda.'}</p>
+                                <p>{draft.notes.trim() || 'Nenhuma observacao registrada para este atendimento.'}</p>
                             </div>
                         </section>
 
                         <section className="orders-detail-panel">
                             <div className="orders-section-heading">
                                 <div>
-                                    <span className="orders-page-kicker">Itens da comanda</span>
+                                    <span className="orders-page-kicker">Itens do atendimento</span>
                                     <h4>Lista de produtos</h4>
                                 </div>
                                 <small>{selectedItem ? `Item em foco: ${selectedItem.name}` : 'Selecione um item para acoes rapidas.'}</small>
@@ -231,7 +231,7 @@ export default function OrderDetailModal({
                                 <div className="orders-inline-empty">
                                     <i className="fa-solid fa-box-open" />
                                     <div>
-                                        <strong>Sem produtos na comanda</strong>
+                                        <strong>Sem produtos no atendimento</strong>
                                         <p>Abra o popup de produtos para comecar a montar o pedido.</p>
                                     </div>
                                 </div>
@@ -299,7 +299,7 @@ export default function OrderDetailModal({
                                             </option>
                                         ))}
                                     </select>
-                                    <small>Voce pode informar ou trocar o cliente mesmo depois da comanda criada.</small>
+                                    <small>Voce pode informar ou trocar o cliente mesmo depois do atendimento criado.</small>
                                 </label>
 
                                 <div className="orders-side-chip">

@@ -39,68 +39,68 @@ class AdminPageController extends Controller
     {
         $pages = [
             'usuarios' => [
-                'title' => 'Usuários',
-                'description' => 'Gestão de usuários do admin central.',
+                'title' => 'UsuÃƒÂ¡rios',
+                'description' => 'GestÃƒÂ£o de usuÃƒÂ¡rios do admin central.',
                 'icon' => 'fa-user-gear',
             ],
             'fornecedores' => [
                 'title' => 'Fornecedores',
-                'description' => 'Cadastro e gestão de fornecedores (em construção).',
+                'description' => 'Cadastro e gestÃƒÂ£o de fornecedores (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-building',
             ],
             'categorias' => [
                 'title' => 'Categorias',
-                'description' => 'Cadastro e gestão de categorias (em construção).',
+                'description' => 'Cadastro e gestÃƒÂ£o de categorias (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-tags',
             ],
             'produtos' => [
                 'title' => 'Produtos',
-                'description' => 'Cadastro e gestão de produtos (em construção).',
+                'description' => 'Cadastro e gestÃƒÂ£o de produtos (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-boxes-stacked',
             ],
             'receitas-producao' => [
-                'title' => 'Receitas / Produção',
-                'description' => 'Módulos de receitas e produção (em construção).',
+                'title' => 'Receitas / ProduÃƒÂ§ÃƒÂ£o',
+                'description' => 'MÃƒÂ³dulos de receitas e produÃƒÂ§ÃƒÂ£o (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-gears',
             ],
             'estoque-entrada' => [
                 'title' => 'Entrada de estoque',
-                'description' => 'Entrada de estoque (em construção).',
+                'description' => 'Entrada de estoque (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-arrow-down',
             ],
             'estoque-conferencia' => [
-                'title' => 'Conferência de estoque',
-                'description' => 'Conferência e ajustes de estoque (em construção).',
+                'title' => 'ConferÃƒÂªncia de estoque',
+                'description' => 'ConferÃƒÂªncia e ajustes de estoque (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-list-check',
             ],
             'estoque-movimentacao' => [
-                'title' => 'Movimentação de estoque',
-                'description' => 'Movimentação e histórico (em construção).',
+                'title' => 'MovimentaÃƒÂ§ÃƒÂ£o de estoque',
+                'description' => 'MovimentaÃƒÂ§ÃƒÂ£o e histÃƒÂ³rico (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-timeline',
             ],
             'comandas' => [
-                'title' => 'Comandas',
-                'description' => 'Módulo de comandas (em construção).',
+                'title' => 'Atendimentos',
+                'description' => 'Modulo de atendimentos (em construcao).',
                 'icon' => 'fa-clipboard-list',
             ],
             'cozinha' => [
                 'title' => 'Cozinha',
-                'description' => 'Módulo de cozinha (em construção).',
+                'description' => 'MÃƒÂ³dulo de cozinha (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-utensils',
             ],
             'vendas' => [
                 'title' => 'Vendas',
-                'description' => 'Visões de vendas (em construção).',
+                'description' => 'VisÃƒÂµes de vendas (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-chart-line',
             ],
             'configuracoes' => [
-                'title' => 'Configurações gerais',
-                'description' => 'Configurações do admin central (em construção).',
+                'title' => 'ConfiguraÃƒÂ§ÃƒÂµes gerais',
+                'description' => 'ConfiguraÃƒÂ§ÃƒÂµes do admin central (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-sliders',
             ],
             'integracoes' => [
-                'title' => 'Integrações',
-                'description' => 'Integrações do admin central (em construção).',
+                'title' => 'IntegraÃƒÂ§ÃƒÂµes',
+                'description' => 'IntegraÃƒÂ§ÃƒÂµes do admin central (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-plug',
             ],
         ];

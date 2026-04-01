@@ -2,12 +2,12 @@ import { formatDateTime, formatMoney } from '@/lib/format'
 
 export const filterMetaByStatus = {
     draft: {
-        title: 'Comandas abertas',
-        description: 'Rascunhos em atendimento, prontos para ajustes, itens e envio ao caixa.',
+        title: 'Atendimentos abertos',
+        description: 'Rascunhos em andamento.',
     },
     sent_to_cashier: {
-        title: 'Comandas fechadas',
-        description: 'Pedidos encaminhados para cobranca, ainda disponiveis para revisao e finalizacao.',
+        title: 'Pendentes de cobranca',
+        description: 'Pedidos aguardando fechamento.',
     },
 }
 
@@ -15,7 +15,7 @@ export const paymentTabs = [
     { key: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave' },
     { key: 'card', label: 'Cartao', icon: 'fa-credit-card' },
     { key: 'pix', label: 'Pix', icon: 'fa-qrcode' },
-    { key: 'credit', label: 'Fiado', icon: 'fa-handshake' },
+    { key: 'credit', label: 'A Prazo', icon: 'fa-handshake' },
 ]
 
 export const cardPaymentOptions = [
@@ -134,7 +134,7 @@ export function resolvePricing(items, config, selectedItem) {
     let discountedItems = baseItems
     let summary = {
         title: 'Sem desconto aplicado',
-        description: 'A comanda segue com o total cheio ate que voce aplique um abatimento.',
+        description: 'O atendimento segue com o total cheio ate que voce aplique um abatimento.',
         itemHint: selectedItem ? `Item em foco: ${selectedItem.name}` : null,
     }
 
@@ -143,7 +143,7 @@ export function resolvePricing(items, config, selectedItem) {
         const totalDiscount = roundCurrency((subtotal * percent) / 100)
         discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
         summary = {
-            title: `${percent}% de desconto na comanda`,
+            title: `${percent}% de desconto no atendimento`,
             description: `Abatimento total de ${formatMoney(totalDiscount)} distribuido entre os itens.`,
             itemHint: null,
         }
@@ -154,7 +154,7 @@ export function resolvePricing(items, config, selectedItem) {
         const totalDiscount = roundCurrency(Math.max(0, subtotal - targetTotal))
         discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
         summary = {
-            title: `Comanda ajustada para ${formatMoney(targetTotal)}`,
+            title: `Atendimento ajustado para ${formatMoney(targetTotal)}`,
             description: `Desconto automatico de ${formatMoney(totalDiscount)} no fechamento.`,
             itemHint: null,
         }
@@ -298,14 +298,14 @@ export function sortDrafts(drafts) {
 
 export function getOrderTypeLabel(type) {
     if (type === 'mesa') {
-        return 'Mesa'
+        return 'Referencia'
     }
 
     if (type === 'pedido') {
         return 'Pedido'
     }
 
-    return 'Comanda'
+    return 'Atendimento'
 }
 
 export function getOrderStatusMeta(status) {
@@ -313,7 +313,7 @@ export function getOrderStatusMeta(status) {
         return {
             label: 'No caixa',
             badge: 'info',
-            description: 'Comanda enviada para cobranca e pronta para fechamento.',
+            description: 'Atendimento enviado para cobranca e pronto para fechamento.',
         }
     }
 
@@ -418,7 +418,7 @@ export function buildPrintMarkup({ draft, customer, statusLabel }) {
                 <div class="sheet">
                     <div class="header-top">
                         <div>
-                            <span class="eyebrow">Comanda / comprovante</span>
+                            <span class="eyebrow">Atendimento / comprovante</span>
                             <h1>${escapeHtml(draft.label)}</h1>
                         </div>
                         <span class="badge">${escapeHtml(statusLabel)}</span>

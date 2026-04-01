@@ -40,7 +40,7 @@ class PosService
             if (!empty($payload['order_draft_id'])) {
                 if (!$this->settingsService->isModuleEnabled('pedidos')) {
                     throw ValidationException::withMessages([
-                        'order_draft_id' => 'Comandas estao desativadas para este tipo de comercio.',
+                        'order_draft_id' => 'Pedidos estao desativados para esta operacao.',
                     ]);
                 }
 
@@ -132,10 +132,10 @@ class PosService
 
             if (
                 $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT)
-                && !$this->settingsService->isModuleEnabled('crediario')
+                && !$this->settingsService->isModuleEnabled('prazo')
             ) {
                 throw ValidationException::withMessages([
-                    'payments' => 'O fiado esta desativado para este tipo de comercio.',
+                    'payments' => 'O pagamento a prazo esta desativado para esta operacao.',
                 ]);
             }
 
@@ -154,7 +154,7 @@ class PosService
 
             if ($hasCredit && ! $customerId) {
                 throw ValidationException::withMessages([
-                    'customer_id' => 'Selecione um cliente para venda no crediario.',
+                    'customer_id' => 'Selecione um cliente para venda a prazo.',
                 ]);
             }
 
@@ -176,7 +176,7 @@ class PosService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor em crediario ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor a prazo ultrapassa o limite disponivel deste cliente.',
                     ]);
                 }
             }

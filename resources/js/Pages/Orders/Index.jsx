@@ -313,8 +313,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             ? 'Salvando alteracoes...'
             : currentDraft.updatedAt
                 ? `Ultima atualizacao em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(currentDraft.updatedAt))}`
-                : currentDraftStatus?.description || 'Comanda pronta para editar')
-        : 'Selecione ou crie uma comanda para comecar.'
+                : currentDraftStatus?.description || 'Atendimento pronto para editar')
+        : 'Selecione ou crie um atendimento para comecar.'
     const canOpenReports =
         moduleState.isCapabilityEnabled('relatorios')
         || moduleState.isCapabilityEnabled('vendas')
@@ -506,7 +506,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     }
 
     function handleAddProduct(product, quantity = 1) {
-        if (!currentDraft) return showFeedback('error', 'Crie ou selecione uma comanda antes de adicionar produtos.')
+        if (!currentDraft) return showFeedback('error', 'Crie ou selecione um atendimento antes de adicionar produtos.')
         const normalizedQty = normalizeQuantity(quantity, 1)
         setFeedback(null)
         setSelectedItemId(product.id)
@@ -556,7 +556,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
     async function handleDeleteDraft() {
         if (!currentDraft?.id) return
-        if (!window.confirm(`Remover a comanda "${currentDraft.label}"?`)) return
+        if (!window.confirm(`Remover o atendimento "${currentDraft.label}"?`)) return
 
         const draftId = Number(currentDraft.id)
         setDeletingDraft(true)
@@ -580,7 +580,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             setDeliveryModalOpen(false)
             updateDraftUrl(null)
             resetCheckoutState('')
-            showFeedback('success', 'Comanda removida com sucesso.')
+            showFeedback('success', 'Atendimento removido com sucesso.')
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -627,8 +627,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
     async function handleFinalizeCheckout() {
         if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
-        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar a comanda no fiado.')
-        if (resolvedPaymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total da comanda.')
+        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
+        if (resolvedPaymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total do atendimento.')
 
         setSubmittingCheckout(true)
         setFeedback(null)
@@ -666,7 +666,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     async function handleFinalizePartialCheckout({ resolvedPaymentMethod: method, cashShortfall: shortfall, cashReceived: received, pricing: partialPricing, items }) {
         if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
         if (!items?.length || partialPricing.total <= 0) return showFeedback('error', 'Selecione ao menos um item para cobrar.')
-        if (method === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar a comanda no fiado.')
+        if (method === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
         if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
 
         setSubmittingPartialCheckout(true)
@@ -738,15 +738,15 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             if (percent <= 0 || percent > 100) return showFeedback('error', 'Informe um percentual valido entre 0,01 e 100.')
             setDiscountConfig({ type: 'percent', percent: roundCurrency(percent) })
             setDiscountModalOpen(false)
-            return showFeedback('success', 'Desconto percentual aplicado na comanda.')
+            return showFeedback('success', 'Desconto percentual aplicado no atendimento.')
         }
 
         if (discountDraft.mode === 'target_total') {
             const targetTotal = roundCurrency(discountDraft.targetTotal)
-            if (targetTotal < 0 || targetTotal >= pricing.subtotal) return showFeedback('error', 'Informe um valor final menor que o subtotal atual da comanda.')
+            if (targetTotal < 0 || targetTotal >= pricing.subtotal) return showFeedback('error', 'Informe um valor final menor que o subtotal atual do atendimento.')
             setDiscountConfig({ type: 'target_total', targetTotal })
             setDiscountModalOpen(false)
-            return showFeedback('success', 'Desconto por valor final aplicado na comanda.')
+            return showFeedback('success', 'Desconto por valor final aplicado no atendimento.')
         }
 
         if (discountDraft.mode === 'item') {
@@ -789,8 +789,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             {!sidebarCollapsed ? (
                                 <div>
                                     <span className="orders-page-kicker">Ferramentas</span>
-                                    <strong>Pedidos e comandas</strong>
-                                    <small>Tudo o resto acontece em popup.</small>
+                                    <strong>Atendimentos</strong>
+                                    <small>Fluxo rapido e centralizado.</small>
                                 </div>
                             ) : null}
                             <button
@@ -806,7 +806,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         <div className="orders-tools-nav">
                             <SidebarToolButton
                                 icon="fa-plus"
-                                label="Nova Comanda"
+                                label="Novo atendimento"
                                 hint="Abrir cadastro rapido"
                                 active={newDraftModalOpen}
                                 collapsed={sidebarCollapsed}
@@ -818,7 +818,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             />
                             <SidebarToolButton
                                 icon="fa-magnifying-glass"
-                                label="Pesquisar Comanda"
+                                label="Pesquisar atendimento"
                                 hint="Buscar entre as ativas"
                                 active={searchModalOpen}
                                 collapsed={sidebarCollapsed}
@@ -827,7 +827,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             />
                             <SidebarToolButton
                                 icon="fa-list-check"
-                                label="Comandas Abertas"
+                                label="Abertos"
                                 hint={`${draftOnlyCount} em atendimento`}
                                 active={listFilter === 'draft'}
                                 collapsed={sidebarCollapsed}
@@ -836,7 +836,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             />
                             <SidebarToolButton
                                 icon="fa-receipt"
-                                label="Comandas Fechadas"
+                                label="Prontos"
                                 hint={`${cashierCount} no caixa`}
                                 active={listFilter === 'sent_to_cashier'}
                                 collapsed={sidebarCollapsed}
@@ -860,7 +860,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                                 <div className="orders-tools-foot-card">
                                     <span>Salvamento</span>
                                     <strong>{savingDraft ? 'Sincronizando...' : 'Automatico'}</strong>
-                                    <small>{currentDraft ? currentDraftSaveText : 'Abra uma comanda para editar.'}</small>
+                                    <small>{currentDraft ? currentDraftSaveText : 'Abra um atendimento para editar.'}</small>
                                 </div>
                             </div>
                         ) : null}
@@ -871,13 +871,12 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             <div>
                                 <span className="orders-page-kicker">Area principal</span>
                                 <h1>{activeFilterMeta.title}</h1>
-                                <p>{activeFilterMeta.description}</p>
                             </div>
                             <div className="orders-stage-stats">
                                 <div className="orders-stage-stat">
                                     <small>Ativas</small>
                                     <strong>{drafts.length}</strong>
-                                    <span>comandas em fluxo</span>
+                                    <span>registros em andamento</span>
                                 </div>
                                 <div className="orders-stage-stat">
                                     <small>Clientes</small>
@@ -951,16 +950,16 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             <section className="orders-empty-state ui-card">
                                 <div className="ui-card-body">
                                     <span className="orders-page-kicker">Fila vazia</span>
-                                    <h2>Nenhuma comanda neste recorte</h2>
+                                    <h2>Nenhum atendimento neste recorte</h2>
                                     <p>
                                         {listFilter === 'draft'
-                                            ? 'Abra uma nova comanda para iniciar o atendimento ou pesquise uma existente.'
-                                            : 'Nao ha comandas no caixa agora. Assim que alguma for enviada, ela aparece aqui.'}
+                                            ? 'Abra um novo atendimento ou pesquise um existente.'
+                                            : 'Nao ha itens aguardando cobranca agora.'}
                                     </p>
                                     <div className="orders-empty-state-actions">
                                         <button type="button" className="ui-button" onClick={() => setNewDraftModalOpen(true)}>
                                             <i className="fa-solid fa-plus" />
-                                            Nova comanda
+                                            Novo atendimento
                                         </button>
                                         <button type="button" className="ui-button-ghost" onClick={() => setSearchModalOpen(true)}>
                                             <i className="fa-solid fa-magnifying-glass" />
@@ -990,8 +989,8 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         sendingDraft={sendingDraft}
                         deletingDraft={deletingDraft}
                         onClose={() => setDraftModalOpen(false)}
-                        onOpenProductsModal={() => currentDraft ? setProductsModalOpen(true) : showFeedback('error', 'Crie ou selecione uma comanda antes de abrir os produtos.')}
-                        onOpenQuantityModal={() => selectedItem ? (setQuantityDraft(String(selectedItem.qty)), setQuantityModalOpen(true)) : showFeedback('error', 'Selecione um item da comanda para ajustar a quantidade.')}
+                        onOpenProductsModal={() => currentDraft ? setProductsModalOpen(true) : showFeedback('error', 'Crie ou selecione um atendimento antes de abrir os produtos.')}
+                        onOpenQuantityModal={() => selectedItem ? (setQuantityDraft(String(selectedItem.qty)), setQuantityModalOpen(true)) : showFeedback('error', 'Selecione um item do atendimento para ajustar a quantidade.')}
                         onOpenTransferModal={() => currentDraft && (setTransferForm({ type: currentDraft.type, reference: currentDraft.reference, customerId: currentDraft.customerId, notes: currentDraft.notes }), setTransferModalOpen(true))}
                         onOpenDiscountModal={() => currentDraft?.items?.length ? (setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft.items[0]?.id ?? ''))), setDiscountModalOpen(true)) : showFeedback('error', 'Adicione ao menos um produto antes de aplicar desconto.')}
                         onOpenCheckoutModal={() => currentDraft?.items?.length ? setCheckoutModalOpen(true) : showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')}
@@ -1068,7 +1067,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                             event.preventDefault()
                             updateDraft((current) => ({ ...current, type: transferForm.type, reference: transferForm.reference, customerId: transferForm.customerId, notes: transferForm.notes }))
                             setTransferModalOpen(false)
-                            showFeedback('success', 'Dados da comanda atualizados.')
+                            showFeedback('success', 'Dados do atendimento atualizados.')
                         }}
                     />
                 ) : null}

@@ -57,7 +57,7 @@ class PosApiController extends Controller
 
     public function customerCredit(Customer $customer): JsonResponse
     {
-        abort_unless(app(TenantSettingsService::class)->isModuleEnabled('crediario'), 404);
+        abort_unless(app(TenantSettingsService::class)->isModuleEnabled('prazo'), 404);
 
         $openCredit = (float) $customer->sales()
             ->where('status', 'finalized')

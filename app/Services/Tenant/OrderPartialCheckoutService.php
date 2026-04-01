@@ -71,13 +71,13 @@ class OrderPartialCheckoutService
                 $draftItem = $draftItemsByProduct->get($item['id']);
                 if (! $draftItem) {
                     throw ValidationException::withMessages([
-                        'items' => 'Um ou mais itens nao pertencem a esta comanda.',
+                        'items' => 'Um ou mais itens nao pertencem a este atendimento.',
                     ]);
                 }
 
                 if ($item['qty'] <= 0 || $item['qty'] - (float) $draftItem->quantity > 0.0001) {
                     throw ValidationException::withMessages([
-                        'items' => 'A quantidade selecionada nao pode ser maior que a quantidade na comanda.',
+                        'items' => 'A quantidade selecionada nao pode ser maior que a quantidade do atendimento.',
                     ]);
                 }
             }
@@ -171,10 +171,10 @@ class OrderPartialCheckoutService
 
             if (
                 $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT)
-                && ! $this->settingsService->isModuleEnabled('crediario')
+                && ! $this->settingsService->isModuleEnabled('prazo')
             ) {
                 throw ValidationException::withMessages([
-                    'payments' => 'O fiado esta desativado para este tipo de comercio.',
+                    'payments' => 'O pagamento a prazo esta desativado para esta operacao.',
                 ]);
             }
 
@@ -193,7 +193,7 @@ class OrderPartialCheckoutService
 
             if ($hasCredit && ! $customerId) {
                 throw ValidationException::withMessages([
-                    'customer_id' => 'Selecione um cliente para venda no crediario.',
+                    'customer_id' => 'Selecione um cliente para venda a prazo.',
                 ]);
             }
 
@@ -215,7 +215,7 @@ class OrderPartialCheckoutService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor em crediario ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor a prazo ultrapassa o limite disponivel deste cliente.',
                     ]);
                 }
             }
