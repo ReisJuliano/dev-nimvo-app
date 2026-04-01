@@ -33,7 +33,6 @@ class ProductsPageController extends Controller
                 'size' => $this->productColumnExists('size') ? $product->size : null,
                 'collection' => $this->productColumnExists('collection') ? $product->collection : null,
                 'catalog_visible' => $this->productColumnExists('catalog_visible') ? (bool) $product->catalog_visible : false,
-                'requires_preparation' => $this->productColumnExists('requires_preparation') ? (bool) $product->requires_preparation : true,
                 'active' => (bool) $product->active,
                 'unit' => $product->unit,
                 'cost_price' => (float) $product->cost_price,
@@ -77,7 +76,7 @@ class ProductsPageController extends Controller
             'active',
         ];
 
-        foreach (['internal_notes', 'style_reference', 'color', 'size', 'collection', 'catalog_visible', 'requires_preparation'] as $column) {
+        foreach (['internal_notes', 'style_reference', 'color', 'size', 'collection', 'catalog_visible'] as $column) {
             if ($this->productColumnExists($column)) {
                 $columns[] = $column;
             }

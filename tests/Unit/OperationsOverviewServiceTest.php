@@ -18,7 +18,7 @@ class OperationsOverviewServiceTest extends TestCase
             $this->createMock(UsersOverviewService::class),
         );
 
-        $module = $service->build('pesagem', ['section' => 'operacao']);
+        $module = $service->build('delivery', ['section' => 'operacao']);
 
         $this->assertSame('operacao', $module['activeSection']);
         $this->assertCount(2, $module['sections']);

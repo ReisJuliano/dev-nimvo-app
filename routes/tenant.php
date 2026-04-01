@@ -8,7 +8,6 @@ use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
-use App\Http\Controllers\Tenant\Operations\KitchenDisplayPageController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
@@ -48,15 +47,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
-        Route::get('/producao', OperationsPageController::class)->defaults('module', 'producao')->name('production.index');
-        Route::get('/fichas-tecnicas', OperationsPageController::class)->defaults('module', 'fichas-tecnicas')->name('recipes.index');
-        Route::get('/cozinha', OperationsPageController::class)->defaults('module', 'cozinha')->name('kitchen.index');
-        Route::get('/cozinha-tv', KitchenDisplayPageController::class)->name('kitchen.display');
-        Route::get('/perdas', OperationsPageController::class)->defaults('module', 'perdas')->name('losses.index');
-        Route::get('/pesagem', OperationsPageController::class)->defaults('module', 'pesagem')->name('weighing.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', OperationsPageController::class)->defaults('module', 'compras')->name('purchases.index');
-        Route::get('/ordens-servico', OperationsPageController::class)->defaults('module', 'ordens-servico')->name('service-orders.index');
         Route::get('/a-prazo', OperationsPageController::class)->defaults('module', 'a-prazo')->name('credit.index');
         Route::get('/fiado', function (Request $request) {
             return redirect()->route('credit.index', array_filter([
@@ -122,10 +114,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/operations/{module}/records', [OperationsApiController::class, 'store'])->name('api.operations.store');
             Route::put('/operations/{module}/records/{record}', [OperationsApiController::class, 'update'])->whereNumber('record')->name('api.operations.update');
             Route::delete('/operations/{module}/records/{record}', [OperationsApiController::class, 'destroy'])->whereNumber('record')->name('api.operations.destroy');
-            Route::post('/kitchen/tickets/{ticket}/items/{item}/toggle-done', [OperationsApiController::class, 'toggleKitchenItemDone'])
-                ->whereNumber('ticket')
-                ->whereNumber('item')
-                ->name('api.kitchen.items.toggle-done');
         });
     });
 });

@@ -136,7 +136,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 sale_price: form.sale_price === '' ? null : Number(form.sale_price),
                 stock_quantity: Number(form.stock_quantity || 0),
                 min_stock: Number(form.min_stock || 0),
-                requires_preparation: Boolean(form.requires_preparation),
                 active: Boolean(form.active),
             }
 
@@ -318,7 +317,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 product={selectedProduct}
                 categories={categoryOptions}
                 suppliers={supplierOptions}
-                products={collectionItems}
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
                 loading={saving}

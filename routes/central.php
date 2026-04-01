@@ -27,12 +27,10 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::get('/fornecedores', [AdminPageController::class, 'placeholder'])->defaults('section', 'fornecedores')->name('suppliers');
         Route::get('/categorias', [AdminPageController::class, 'placeholder'])->defaults('section', 'categorias')->name('categories');
         Route::get('/produtos', [AdminPageController::class, 'placeholder'])->defaults('section', 'produtos')->name('products');
-        Route::get('/receitas-producao', [AdminPageController::class, 'placeholder'])->defaults('section', 'receitas-producao')->name('recipes-production');
         Route::get('/estoque/entrada', [AdminPageController::class, 'placeholder'])->defaults('section', 'estoque-entrada')->name('stock.inbound');
         Route::get('/estoque/conferencia', [AdminPageController::class, 'placeholder'])->defaults('section', 'estoque-conferencia')->name('stock.conference');
         Route::get('/estoque/movimentacao', [AdminPageController::class, 'placeholder'])->defaults('section', 'estoque-movimentacao')->name('stock.movement');
         Route::get('/comandas', [AdminPageController::class, 'placeholder'])->defaults('section', 'comandas')->name('orders');
-        Route::get('/cozinha', [AdminPageController::class, 'placeholder'])->defaults('section', 'cozinha')->name('kitchen');
         Route::get('/vendas', [AdminPageController::class, 'placeholder'])->defaults('section', 'vendas')->name('sales');
         Route::get('/configuracoes', [AdminPageController::class, 'placeholder'])->defaults('section', 'configuracoes')->name('settings');
         Route::get('/integracoes', [AdminPageController::class, 'placeholder'])->defaults('section', 'integracoes')->name('integrations');

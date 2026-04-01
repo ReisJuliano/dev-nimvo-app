@@ -22,7 +22,6 @@ class Product extends Model
         'size',
         'collection',
         'catalog_visible',
-        'requires_preparation',
         'category_id',
         'supplier_id',
         'unit',
@@ -36,7 +35,6 @@ class Product extends Model
     protected $casts = [
         'active' => 'boolean',
         'catalog_visible' => 'boolean',
-        'requires_preparation' => 'boolean',
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'stock_quantity' => 'decimal:3',

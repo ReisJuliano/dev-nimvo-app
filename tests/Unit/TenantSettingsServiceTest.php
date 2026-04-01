@@ -16,18 +16,13 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertTrue($preset['modules']['comandas']);
         $this->assertTrue($preset['modules']['pdv_avancado']);
         $this->assertTrue($preset['modules']['mesas']);
-        $this->assertTrue($preset['modules']['fichas_tecnicas']);
-        $this->assertTrue($preset['modules']['cozinha']);
         $this->assertTrue($preset['modules']['delivery']);
-        $this->assertFalse($preset['modules']['pesagem']);
 
         $capabilities = $service->moduleCapabilities($preset['modules']);
 
         $this->assertTrue($capabilities['pdv']);
         $this->assertTrue($capabilities['pedidos']);
         $this->assertTrue($capabilities['caixa']);
-        $this->assertTrue($capabilities['fichas_tecnicas']);
-        $this->assertTrue($capabilities['cozinha']);
         $this->assertFalse($capabilities['prazo']);
         $this->assertFalse($capabilities['crediario']);
     }

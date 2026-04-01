@@ -58,11 +58,6 @@ class AdminPageController extends Controller
                 'description' => 'Cadastro e gestÃƒÂ£o de produtos (em construÃƒÂ§ÃƒÂ£o).',
                 'icon' => 'fa-boxes-stacked',
             ],
-            'receitas-producao' => [
-                'title' => 'Receitas / ProduÃƒÂ§ÃƒÂ£o',
-                'description' => 'MÃƒÂ³dulos de receitas e produÃƒÂ§ÃƒÂ£o (em construÃƒÂ§ÃƒÂ£o).',
-                'icon' => 'fa-gears',
-            ],
             'estoque-entrada' => [
                 'title' => 'Entrada de estoque',
                 'description' => 'Entrada de estoque (em construÃƒÂ§ÃƒÂ£o).',
@@ -82,11 +77,6 @@ class AdminPageController extends Controller
                 'title' => 'Atendimentos',
                 'description' => 'Modulo de atendimentos (em construcao).',
                 'icon' => 'fa-clipboard-list',
-            ],
-            'cozinha' => [
-                'title' => 'Cozinha',
-                'description' => 'MÃƒÂ³dulo de cozinha (em construÃƒÂ§ÃƒÂ£o).',
-                'icon' => 'fa-utensils',
             ],
             'vendas' => [
                 'title' => 'Vendas',

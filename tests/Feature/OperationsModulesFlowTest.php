@@ -15,66 +15,6 @@ class OperationsModulesFlowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_completed_production_consumes_recipe_items_and_adds_output_stock(): void
-    {
-        $user = $this->makeUser();
-        $ingredient = $this->makeProduct([
-            'code' => 'ING-001',
-            'name' => 'Farinha especial',
-            'cost_price' => 4,
-            'sale_price' => 7,
-            'stock_quantity' => 20,
-        ]);
-        $output = $this->makeProduct([
-            'code' => 'PRD-001',
-            'name' => 'Pao frances',
-            'cost_price' => 1.5,
-            'sale_price' => 2.5,
-            'stock_quantity' => 5,
-        ]);
-
-        $service = app(OperationsWorkspaceService::class);
-
-        $recipe = $service->store('fichas-tecnicas', [
-            'name' => 'Pao frances',
-            'product_id' => $output->id,
-            'yield_quantity' => 10,
-            'yield_unit' => 'UN',
-            'prep_time_minutes' => 45,
-            'instructions' => 'Misturar, sovar e assar.',
-            'active' => true,
-            'items' => [
-                [
-                    'product_id' => $ingredient->id,
-                    'quantity' => 4,
-                    'unit' => 'KG',
-                ],
-            ],
-        ], $user->id);
-
-        $service->store('producao', [
-            'recipe_id' => $recipe['record']['id'],
-            'status' => 'completed',
-            'planned_quantity' => 20,
-            'produced_quantity' => 20,
-            'unit' => 'UN',
-            'scheduled_for' => now()->format('Y-m-d'),
-            'notes' => 'Lote da manha',
-        ], $user->id);
-
-        $this->assertSame(12.0, (float) $ingredient->fresh()->stock_quantity);
-        $this->assertSame(25.0, (float) $output->fresh()->stock_quantity);
-        $this->assertDatabaseCount('inventory_movements', 2);
-        $this->assertDatabaseHas('inventory_movements', [
-            'product_id' => $ingredient->id,
-            'type' => 'production_consume',
-        ]);
-        $this->assertDatabaseHas('inventory_movements', [
-            'product_id' => $output->id,
-            'type' => 'production_output',
-        ]);
-    }
-
     public function test_received_purchase_updates_stock_and_logs_movement(): void
     {
         $user = $this->makeUser();

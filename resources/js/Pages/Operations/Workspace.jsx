@@ -1,7 +1,6 @@
 import AppLayout from '@/Layouts/AppLayout'
 import { CategoriesWorkspace, CustomersWorkspace, SuppliersWorkspace } from './workspaces/CatalogWorkspaces'
-import { DeliveryWorkspace, PurchasesWorkspace, ServiceOrdersWorkspace, WeighingWorkspace } from './workspaces/CommerceWorkspaces'
-import { KitchenWorkspace, LossesWorkspace, ProductionWorkspace, RecipesWorkspace } from './workspaces/ProductionWorkspaces'
+import { DeliveryWorkspace, PurchasesWorkspace } from './workspaces/CommerceWorkspaces'
 import { StockAdjustmentsWorkspace, StockInboundWorkspace, StockTransfersWorkspace } from './workspaces/InventoryWorkspaces'
 import './operations-workspace.css'
 
@@ -19,14 +18,8 @@ export default function OperationsWorkspace({ moduleKey, moduleTitle, moduleDesc
                 {moduleKey === 'clientes' ? <CustomersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'fornecedores' ? <SuppliersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'categorias' ? <CategoriesWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'fichas-tecnicas' ? <RecipesWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'producao' ? <ProductionWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'cozinha' ? <KitchenWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'perdas' ? <LossesWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'pesagem' ? <WeighingWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'delivery' ? <DeliveryWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'compras' ? <PurchasesWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'ordens-servico' ? <ServiceOrdersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'entrada-estoque' ? <StockInboundWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'ajuste-estoque' ? <StockAdjustmentsWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'movimentacao-estoque' ? <StockTransfersWorkspace moduleKey={moduleKey} payload={payload} /> : null}

@@ -268,7 +268,6 @@ export default function PosIndex({
     const [loadingProducts, setLoadingProducts] = useState(false)
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
-    const supportsWeighing = moduleState.isModuleEnabled('pesagem')
     const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const productSearchInputRef = useRef(null)
@@ -1227,11 +1226,7 @@ export default function PosIndex({
                         products={products}
                         loading={loadingProducts}
                         onAddProduct={handleAddProduct}
-                        subtitle={
-                            supportsWeighing
-                                ? 'Pesagem ativa: vendas podem trabalhar com quantidades fracionadas.'
-                                : 'Busque por nome, codigo, EAN ou descricao.'
-                        }
+                        subtitle="Busque por nome, codigo, EAN ou descricao."
                     />
 
                     <CartPanel

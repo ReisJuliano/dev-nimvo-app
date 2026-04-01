@@ -54,12 +54,4 @@ class OperationsApiController extends Controller
             'message' => $workspaceService->destroy($module, $record),
         ]);
     }
-
-    public function toggleKitchenItemDone(
-        OperationsWorkspaceService $workspaceService,
-        int $ticket,
-        int $item,
-    ): JsonResponse {
-        return response()->json($workspaceService->toggleKitchenItemDone($ticket, $item));
-    }
 }

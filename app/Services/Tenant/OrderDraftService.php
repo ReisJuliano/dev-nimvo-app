@@ -2,32 +2,15 @@
 
 namespace App\Services\Tenant;
 
-use App\Models\Tenant\KitchenTicket;
 use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\OrderDraftItem;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class OrderDraftService
 {
-    protected ?bool $kitchenSyncAvailable = null;
-
-    protected ?bool $kitchenTablesAvailable = null;
-
-    protected ?bool $kitchenItemDoneAtColumnAvailable = null;
-
-    protected array $productColumnCache = [];
-
-    public function __construct(
-        protected TenantSettingsService $settingsService,
-    ) {
-    }
-
     public function activeDrafts(array $channels = [OrderDraft::CHANNEL_STORE]): array
     {
         return OrderDraft::query()
@@ -185,8 +168,6 @@ class OrderDraftService
                 'profit' => round($subtotal - $costTotal, 2),
             ])->save();
 
-            $this->syncKitchenTicketFromDraft($draft, $itemsPayload, $products);
-
             return $draft->fresh(['customer:id,name,phone', 'user:id,name', 'items']);
         });
     }
@@ -230,15 +211,7 @@ class OrderDraftService
             ]);
         }
 
-        DB::transaction(function () use ($draft): void {
-            if ($this->hasKitchenTables()) {
-                KitchenTicket::query()
-                    ->where('order_draft_id', $draft->id)
-                    ->delete();
-            }
-
-            $draft->delete();
-        });
+        $draft->delete();
     }
 
     public function toSummary(OrderDraft $draft): array
@@ -297,211 +270,6 @@ class OrderDraftService
                 })
                 ->all(),
         ];
-    }
-
-    protected function syncKitchenTicketFromDraft(OrderDraft $draft, Collection $itemsPayload, Collection $products): void
-    {
-        if (!$this->canSyncKitchenTickets()) {
-            return;
-        }
-
-        $kitchenItems = $this->buildKitchenItems($itemsPayload, $products);
-        $ticket = KitchenTicket::query()
-            ->with('items')
-            ->firstWhere('order_draft_id', $draft->id);
-
-        if ($kitchenItems->isEmpty()) {
-            if ($ticket && $ticket->status !== 'completed') {
-                $ticket->delete();
-            }
-
-            return;
-        }
-
-        $draft->loadMissing('customer:id,name');
-
-        $ticket ??= new KitchenTicket();
-
-        $ticket->fill([
-            'order_draft_id' => $draft->id,
-            'user_id' => $ticket->user_id ?: $draft->user_id,
-            'reference' => $this->displayLabel($draft),
-            'channel' => $this->resolveKitchenChannelFromDraft($draft),
-            'status' => $ticket->status ?: 'queued',
-            'priority' => $this->resolveKitchenPriorityFromDraft($draft),
-            'customer_name' => $draft->customer?->name,
-            'notes' => $draft->notes,
-            'requested_at' => $ticket->requested_at ?: now(),
-        ]);
-
-        $this->applyKitchenTimelineFromStatus($ticket);
-        $ticket->save();
-
-        $canPersistItemDoneAt = $this->hasKitchenItemDoneAtColumn();
-        $doneAtByKey = $canPersistItemDoneAt
-            ? $ticket->items->mapWithKeys(fn ($item) => [
-                $this->kitchenItemKey($item->product_id, $item->item_name, $item->notes) => $item->done_at,
-            ])
-            : collect();
-
-        $ticket->items()->delete();
-
-        foreach ($kitchenItems as $kitchenItem) {
-            $payload = [
-                'product_id' => $kitchenItem['product_id'],
-                'item_name' => $kitchenItem['item_name'],
-                'quantity' => $kitchenItem['quantity'],
-                'unit' => $kitchenItem['unit'],
-                'notes' => $kitchenItem['notes'],
-            ];
-
-            if ($canPersistItemDoneAt) {
-                $payload['done_at'] = $doneAtByKey->get(
-                    $this->kitchenItemKey($kitchenItem['product_id'], $kitchenItem['item_name'], $kitchenItem['notes']),
-                );
-            }
-
-            $ticket->items()->create($payload);
-        }
-    }
-
-    protected function buildKitchenItems(Collection $itemsPayload, Collection $products): Collection
-    {
-        return $itemsPayload
-            ->map(function (array $item) use ($products): ?array {
-                /** @var Product|null $product */
-                $product = $products->get((int) ($item['id'] ?? 0));
-
-                if (!$product || !$this->productNeedsPreparation($product)) {
-                    return null;
-                }
-
-                return [
-                    'product_id' => (int) $product->id,
-                    'item_name' => (string) $product->name,
-                    'quantity' => round((float) ($item['qty'] ?? 0), 3),
-                    'unit' => (string) ($product->unit ?: 'UN'),
-                    'notes' => null,
-                ];
-            })
-            ->filter(fn (?array $item) => $item && $item['quantity'] > 0)
-            ->groupBy(fn (array $item) => (string) $item['product_id'])
-            ->map(function (Collection $group): array {
-                $first = $group->first();
-
-                return [
-                    'product_id' => $first['product_id'],
-                    'item_name' => $first['item_name'],
-                    'quantity' => round((float) $group->sum('quantity'), 3),
-                    'unit' => $first['unit'],
-                    'notes' => null,
-                ];
-            })
-            ->values();
-    }
-
-    protected function resolveKitchenChannelFromDraft(OrderDraft $draft): string
-    {
-        if (in_array($draft->channel, [OrderDraft::CHANNEL_SITE, OrderDraft::CHANNEL_WHATSAPP], true)) {
-            return 'delivery';
-        }
-
-        return $draft->type === 'mesa' ? 'mesa' : 'balcao';
-    }
-
-    protected function resolveKitchenPriorityFromDraft(OrderDraft $draft): string
-    {
-        $notes = Str::lower((string) $draft->notes);
-
-        if (Str::contains($notes, ['urgente', 'prioridade', 'vip'])) {
-            return 'urgent';
-        }
-
-        if (in_array($draft->channel, [OrderDraft::CHANNEL_SITE, OrderDraft::CHANNEL_WHATSAPP], true)) {
-            return 'urgent';
-        }
-
-        return 'normal';
-    }
-
-    protected function applyKitchenTimelineFromStatus(KitchenTicket $ticket): void
-    {
-        [$startedAt, $readyAt, $completedAt] = match ($ticket->status) {
-            'queued' => [null, null, null],
-            'in_preparation' => [$ticket->started_at ?: now(), null, null],
-            'ready' => [$ticket->started_at ?: now(), $ticket->ready_at ?: now(), null],
-            'completed' => [$ticket->started_at ?: now(), $ticket->ready_at ?: now(), $ticket->completed_at ?: now()],
-            default => [null, null, null],
-        };
-
-        $ticket->started_at = $startedAt;
-        $ticket->ready_at = $readyAt;
-        $ticket->completed_at = $completedAt;
-    }
-
-    protected function kitchenItemKey(?int $productId, string $itemName, ?string $notes): string
-    {
-        return implode('|', [
-            (string) ($productId ?: 0),
-            Str::lower(trim($itemName)),
-            Str::lower(trim((string) $notes)),
-        ]);
-    }
-
-    protected function productNeedsPreparation(Product $product): bool
-    {
-        if (!$this->productColumnExists('requires_preparation')) {
-            return true;
-        }
-
-        return (bool) $product->getAttribute('requires_preparation');
-    }
-
-    protected function canSyncKitchenTickets(): bool
-    {
-        if ($this->kitchenSyncAvailable !== null) {
-            return $this->kitchenSyncAvailable;
-        }
-
-        if (!$this->settingsService->isModuleEnabled('cozinha')) {
-            return $this->kitchenSyncAvailable = false;
-        }
-
-        return $this->kitchenSyncAvailable = $this->hasKitchenTables();
-    }
-
-    protected function productColumnExists(string $column): bool
-    {
-        return $this->productColumnCache[$column]
-            ??= Schema::connection((new Product())->getConnectionName())->hasColumn('products', $column);
-    }
-
-    protected function hasKitchenTables(): bool
-    {
-        if ($this->kitchenTablesAvailable !== null) {
-            return $this->kitchenTablesAvailable;
-        }
-
-        $connection = (new KitchenTicket())->getConnectionName();
-
-        return $this->kitchenTablesAvailable = Schema::connection($connection)->hasTable('kitchen_tickets')
-            && Schema::connection($connection)->hasTable('kitchen_ticket_items');
-    }
-
-    protected function hasKitchenItemDoneAtColumn(): bool
-    {
-        if ($this->kitchenItemDoneAtColumnAvailable !== null) {
-            return $this->kitchenItemDoneAtColumnAvailable;
-        }
-
-        if (!$this->hasKitchenTables()) {
-            return $this->kitchenItemDoneAtColumnAvailable = false;
-        }
-
-        $connection = (new KitchenTicket())->getConnectionName();
-
-        return $this->kitchenItemDoneAtColumnAvailable = Schema::connection($connection)
-            ->hasColumn('kitchen_ticket_items', 'done_at');
     }
 
     protected function displayLabel(OrderDraft $draft): string

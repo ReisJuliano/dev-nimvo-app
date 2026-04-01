@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Tenant\KitchenTicket;
 use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,7 +59,7 @@ class OrderDraftsApiTest extends TestCase
         ]);
     }
 
-    public function test_it_deletes_draft_and_related_kitchen_ticket(): void
+    public function test_it_deletes_draft(): void
     {
         $user = $this->actingOperator();
         $draft = $this->makeDraft($user, [
@@ -80,31 +79,13 @@ class OrderDraftsApiTest extends TestCase
             'total' => 10,
         ]);
 
-        $ticket = KitchenTicket::query()->create([
-            'order_draft_id' => $draft->id,
-            'reference' => 'Comanda 88',
-            'channel' => 'balcao',
-            'status' => 'queued',
-            'priority' => 'normal',
-            'requested_at' => now(),
-        ]);
-
-        $ticket->items()->create([
-            'product_id' => null,
-            'item_name' => 'Item teste',
-            'quantity' => 1,
-            'unit' => 'UN',
-            'notes' => null,
-        ]);
-
         $response = $this->deleteJson("/api/orders/{$draft->id}");
 
         $response->assertOk()
-            ->assertJsonPath('message', 'Comanda removida com sucesso.');
+            ->assertJsonPath('message', 'Atendimento removido com sucesso.');
 
         $this->assertDatabaseMissing('order_drafts', ['id' => $draft->id]);
         $this->assertDatabaseMissing('order_draft_items', ['order_draft_id' => $draft->id]);
-        $this->assertDatabaseMissing('kitchen_tickets', ['id' => $ticket->id]);
     }
 
     public function test_it_does_not_delete_completed_draft(): void
@@ -156,4 +137,3 @@ class OrderDraftsApiTest extends TestCase
         ], $attributes));
     }
 }
-

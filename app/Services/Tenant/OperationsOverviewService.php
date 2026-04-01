@@ -35,76 +35,6 @@ class OperationsOverviewService
             'demanda' => $this->sales->demand($filters),
             'faltas' => $this->inventory->shortages(),
             'usuarios' => $this->users->users($filters),
-            'producao' => $this->moduleWorkspace(
-                'Producao',
-                'Centralize a producao diaria e mantenha a reposicao integrada ao checkout.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Preparo interno', 'meta' => 'Bom para organizar lotes, rotinas e reposicao do estoque.'],
-                    ['label' => 'Conexao com estoque', 'value' => 'Entrada de itens prontos', 'meta' => 'Ajuda a transformar insumos em itens disponiveis para venda.'],
-                    ['label' => 'Rotina sugerida', 'value' => 'Planejamento por turno', 'meta' => 'Separe a producao por horario para evitar ruptura.'],
-                ],
-                [
-                    ['item' => 'Planejamento diario', 'status' => 'Pronto para configurar', 'observacao' => 'Organize o que sera produzido por turno, dia e equipe.'],
-                    ['item' => 'Apontamento de producao', 'status' => 'Pronto para configurar', 'observacao' => 'Registre quantidade prevista, produzida e disponivel para venda.'],
-                    ['item' => 'Transferencia para estoque/PDV', 'status' => 'Em evolucao', 'observacao' => 'Padronize quando a producao conclui e volta para o catalogo de venda.'],
-                ],
-            ),
-            'fichas-tecnicas' => $this->moduleWorkspace(
-                'Fichas tecnicas',
-                'Estruture composicao, rendimento e consumo dos itens com controle operacional.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Operacao com preparo interno', 'meta' => 'Ideal para itens compostos, rendimento e insumos base.'],
-                    ['label' => 'Conexao com estoque', 'value' => 'Baixa por insumo', 'meta' => 'Ajuda a relacionar consumo previsto com o item vendido ou produzido.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Padrao operacional', 'meta' => 'Reduz variacao de custo, rendimento e preparo.'],
-                ],
-                [
-                    ['item' => 'Receitas e rendimento', 'status' => 'Pronto para configurar', 'observacao' => 'Defina porcoes, peso final e margem de perda aceitavel.'],
-                    ['item' => 'Lista de insumos', 'status' => 'Pronto para configurar', 'observacao' => 'Relacione ingredientes, unidade e quantidade consumida por preparo.'],
-                    ['item' => 'Revisao de ficha', 'status' => 'Em evolucao', 'observacao' => 'Padronize revisoes quando custo, preparo ou rendimento mudarem.'],
-                ],
-            ),
-            'cozinha' => $this->moduleWorkspace(
-                'Cozinha',
-                'Crie uma fila operacional para acompanhar preparo, prioridade e expedicao antes da cobranca.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Filas operacionais e preparo', 'meta' => 'Bom para separar preparacao do momento de cobranca.'],
-                    ['label' => 'Conexao com pedidos', 'value' => 'Fila de producao', 'meta' => 'Ajuda a organizar referencias, retirada e entrega.'],
-                    ['label' => 'Rotina sugerida', 'value' => 'Status por etapa', 'meta' => 'Use estados como recebido, em preparo e pronto.'],
-                ],
-                [
-                    ['item' => 'Painel da cozinha', 'status' => 'Pronto para configurar', 'observacao' => 'Defina como os pedidos chegam e como a equipe muda o status.'],
-                    ['item' => 'Separacao por tipo', 'status' => 'Pronto para configurar', 'observacao' => 'Organize pedidos por referencia, retirada e entrega.'],
-                    ['item' => 'Conferencia de expedicao', 'status' => 'Em evolucao', 'observacao' => 'Padronize a saida do pedido pronto para retirada ou entrega.'],
-                ],
-            ),
-            'perdas' => $this->moduleWorkspace(
-                'Controle de perdas',
-                'Acompanhe quebras, vencimentos e perdas operacionais para entender o que sai do estoque sem virar venda.',
-                [
-                    ['label' => 'Uso recomendado', 'value' => 'Operacao com pereciveis', 'meta' => 'Importante para produto perecivel e preparos internos.'],
-                    ['label' => 'Conexao com estoque', 'value' => 'Saidas nao vendidas', 'meta' => 'Ajuda a separar perda de consumo real e de acerto de inventario.'],
-                    ['label' => 'Resultado esperado', 'value' => 'Menos desperdicio', 'meta' => 'Facilita investigar motivos e horarios de maior perda.'],
-                ],
-                [
-                    ['item' => 'Motivos padrao', 'status' => 'Pronto para configurar', 'observacao' => 'Use categorias como quebra, vencimento, teste e descarte.'],
-                    ['item' => 'Rotina de registro', 'status' => 'Pronto para configurar', 'observacao' => 'Defina quem aponta e em que momento a perda entra no fluxo.'],
-                    ['item' => 'Analise por periodo', 'status' => 'Em evolucao', 'observacao' => 'Cruze perdas com producao, vendas e validade para agir mais cedo.'],
-                ],
-            ),
-            'pesagem' => $this->moduleWorkspace(
-                'Pesagem',
-                'Destaque a operacao por peso para vendas fracionadas, balanca e produtos que exigem quantidade variavel.',
-                [
-                    ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece quando a pesagem esta liberada no tenant.'],
-                    ['label' => 'Uso recomendado', 'value' => 'Varejo por peso', 'meta' => 'Bom para produtos vendidos em KG ou fracionados.'],
-                    ['label' => 'Conexao com PDV', 'value' => 'Venda fracionada destacada', 'meta' => 'O PDV pode operar com quantidades decimais e leitura de peso.'],
-                ],
-                [
-                    ['item' => 'Produtos por peso', 'status' => 'Pronto para configuracao', 'observacao' => 'Cadastre itens com unidade adequada para pesagem.'],
-                    ['item' => 'Conferencia operacional', 'status' => 'Planejado', 'observacao' => 'Valide balancas e rotinas de atendimento.'],
-                    ['item' => 'Padrao de etiquetas', 'status' => 'Planejado', 'observacao' => 'Defina como o peso chega ao PDV.'],
-                ],
-            ),
             'delivery' => $this->moduleWorkspace(
                 'Delivery',
                 'Organize entrega e retirada sem misturar o atendimento externo com o fluxo direto.',
@@ -131,20 +61,6 @@ class OperationsOverviewService
                     ['item' => 'Planejamento de compras', 'status' => 'Pronto para configurar', 'observacao' => 'Monte listas por necessidade, validade e sazonalidade.'],
                     ['item' => 'Entrada prevista', 'status' => 'Pronto para configurar', 'observacao' => 'Use o modulo para registrar o que foi pedido e o que chegou.'],
                     ['item' => 'Historico de abastecimento', 'status' => 'Em evolucao', 'observacao' => 'Padronize comparacoes entre fornecedor, lote e preco medio.'],
-                ],
-            ),
-            'ordens-servico' => $this->moduleWorkspace(
-                'Ordens de servico',
-                'Separe atendimentos tecnicos e servicos recorrentes em um modulo proprio quando o negocio precisar.',
-                [
-                    ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece apenas para operacoes com OS.'],
-                    ['label' => 'Uso recomendado', 'value' => 'Assistencia e servicos', 'meta' => 'Bom para tecnico, oficina ou atendimento com checklist.'],
-                    ['label' => 'Conexao com clientes', 'value' => 'Historico organizado', 'meta' => 'Ajuda a manter chamados e entregas separados do PDV.'],
-                ],
-                [
-                    ['item' => 'Abertura de OS', 'status' => 'Planejado', 'observacao' => 'Defina entrada, responsavel e previsao de entrega.'],
-                    ['item' => 'Checklist tecnico', 'status' => 'Planejado', 'observacao' => 'Padronize diagnostico e execucao.'],
-                    ['item' => 'Fechamento e cobranca', 'status' => 'Planejado', 'observacao' => 'Amarre a conclusao ao faturamento do servico.'],
                 ],
             ),
             default => abort(404),
