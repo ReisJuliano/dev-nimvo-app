@@ -10,6 +10,10 @@
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
+        "mike42/escpos-php": "^4.0",
+        "nfephp-org/sped-da": "^1.1",
+        "nfephp-org/sped-nfe": "^5.2",
+        "nfephp-org/sped-pos": "dev-master",
         "stancl/tenancy": "^3.10"
     },
     "require-dev": {

@@ -1031,6 +1031,8 @@ export default function PosIndex({
                     customer_id: selectedCustomer || null,
                     discount: totals.discount,
                     notes,
+                    issue_fiscal: true,
+                    fiscal_mode: 'auto',
                     items: pricing.items.map((item) => ({
                         id: item.id,
                         qty: Number(item.qty),
@@ -1045,7 +1047,13 @@ export default function PosIndex({
                 setPendingOrderDrafts((current) => current.filter((orderDraft) => Number(orderDraft.id) !== Number(finalizedOrderDraftId)))
                 refreshPendingOrderDrafts({ quiet: true })
             }
-            showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.`)
+            const fiscalLabel =
+                response.fiscal_document?.mode === 'local_test'
+                    ? ' XML assinado localmente sera processado pelo agente.'
+                    : response.fiscal_document
+                      ? ' Documento fiscal enviado para emissao.'
+                      : ''
+            showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.${fiscalLabel}`)
         } catch (error) {
             showFeedback('error', error.message)
         } finally {

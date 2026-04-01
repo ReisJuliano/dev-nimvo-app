@@ -20,6 +20,8 @@ class FinalizeSaleRequest extends FormRequest
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
+            'issue_fiscal' => ['nullable', 'boolean'],
+            'fiscal_mode' => ['nullable', 'string', Rule::in(['auto', 'sefaz', 'local_test'])],
             'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],

@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Central\AdminPageController;
+use App\Http\Controllers\Central\Api\LocalAgentApiController;
 use App\Http\Controllers\Central\Auth\LoginController;
+use App\Http\Middleware\Central\AuthenticateLocalAgent;
 use App\Http\Controllers\Central\TenantManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,3 +44,12 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
     });
 });
+
+Route::prefix('api/local-agents')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->middleware(AuthenticateLocalAgent::class)
+    ->group(function () {
+        Route::post('/heartbeat', [LocalAgentApiController::class, 'heartbeat'])->name('central.api.local-agents.heartbeat');
+        Route::post('/commands/poll', [LocalAgentApiController::class, 'poll'])->name('central.api.local-agents.commands.poll');
+        Route::post('/commands/{command}/complete', [LocalAgentApiController::class, 'complete'])->name('central.api.local-agents.commands.complete');
+    });

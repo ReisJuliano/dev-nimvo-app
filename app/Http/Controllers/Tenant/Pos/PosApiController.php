@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\Pos\FinalizeSaleRequest;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
+use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\PosService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\Tenant\PaymentMethod;
@@ -97,13 +98,36 @@ class PosApiController extends Controller
         ], 201);
     }
 
-    public function finalize(FinalizeSaleRequest $request, PosService $posService): JsonResponse
+    public function finalize(
+        FinalizeSaleRequest $request,
+        PosService $posService,
+        FiscalDocumentService $fiscalDocumentService,
+    ): JsonResponse
     {
         $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
+        $document = null;
+
+        if ($request->boolean('issue_fiscal')) {
+            $document = $fiscalDocumentService->issueFromSale(
+                (int) $sale['sale_id'],
+                null,
+                $request->input('fiscal_mode'),
+            );
+        }
 
         return response()->json([
             'message' => 'Venda finalizada com sucesso.',
             'sale' => $sale,
+            'fiscal_document' => $document ? [
+                'id' => $document->id,
+                'status' => $document->status,
+                'type' => $document->type,
+                'mode' => data_get($document->payload, 'flags.mode'),
+                'series' => $document->series,
+                'number' => $document->number,
+                'agent_key' => $document->agent_key,
+                'agent_command_id' => $document->agent_command_id,
+            ] : null,
         ]);
     }
 }

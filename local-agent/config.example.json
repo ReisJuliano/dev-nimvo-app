@@ -1,0 +1,23 @@
+{
+  "backend": {
+    "base_url": "https://app.seudominio.com",
+    "timeout_seconds": 30
+  },
+  "agent": {
+    "key": "preencher-com-agent_key",
+    "secret": "preencher-com-agent_secret",
+    "poll_interval_seconds": 3
+  },
+  "certificate": {
+    "path": "C:\\certificados\\empresa.pfx",
+    "password": "alterar-aqui"
+  },
+  "printer": {
+    "enabled": true,
+    "connector": "windows",
+    "name": "POS-58",
+    "host": "127.0.0.1",
+    "port": 9100,
+    "logo_path": ""
+  }
+}

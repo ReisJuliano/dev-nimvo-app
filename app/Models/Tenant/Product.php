@@ -14,6 +14,13 @@ class Product extends Model
     protected $fillable = [
         'code',
         'barcode',
+        'ncm',
+        'cfop',
+        'cest',
+        'origin_code',
+        'icms_csosn',
+        'pis_cst',
+        'cofins_cst',
         'name',
         'description',
         'internal_notes',
