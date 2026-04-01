@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { router } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
 import { CUSTOM_PRESET } from '@/lib/modules'
 import { apiRequest } from '@/lib/http'
@@ -33,6 +34,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const moduleState = useModules(form)
+    useErrorFeedbackPopup(feedback)
     const enabledModulesCount = Object.values(moduleState.modules || {}).filter(Boolean).length
     const enabledCapabilitiesCount = Object.values(moduleState.capabilities || {}).filter(Boolean).length
     const activePreset = form.business?.preset || CUSTOM_PRESET

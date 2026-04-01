@@ -1,6 +1,7 @@
 import AuthAlert from '@/Components/Auth/AuthAlert'
 import AuthTextField from '@/Components/Auth/AuthTextField'
 import PasswordField from '@/Components/Auth/PasswordField'
+import { useErrorMapPopup } from '@/lib/errorPopup'
 
 export default function LoginForm({
     data,
@@ -11,6 +12,8 @@ export default function LoginForm({
     onFieldChange,
     onTogglePassword,
 }) {
+    useErrorMapPopup(errors)
+
     return (
         <>
             <AuthAlert message={errors.username} />

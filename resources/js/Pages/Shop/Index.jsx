@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react'
 import { useMemo, useState } from 'react'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import './shop.css'
@@ -46,6 +47,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
     const [feedback, setFeedback] = useState(null)
     const [lastOrder, setLastOrder] = useState(null)
     const showPrices = catalog.show_prices !== false
+    useErrorFeedbackPopup(feedback)
 
     const filteredProducts = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase()

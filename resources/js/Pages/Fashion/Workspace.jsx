@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import './fashion.css'
 
 function EmptyState({ title, text }) {
@@ -14,6 +15,8 @@ function EmptyState({ title, text }) {
 }
 
 function Feedback({ feedback }) {
+    useErrorFeedbackPopup(feedback)
+
     if (!feedback) {
         return null
     }

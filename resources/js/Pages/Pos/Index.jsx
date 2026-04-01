@@ -5,6 +5,7 @@ import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CheckoutPanel from '@/Components/Pos/CheckoutPanel'
 import PendingOrdersPanel from '@/Components/Pos/PendingOrdersPanel'
 import ProductSearchPanel from '@/Components/Pos/ProductSearchPanel'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { apiRequest } from '@/lib/http'
@@ -269,6 +270,7 @@ export default function PosIndex({
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
     const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
+    useErrorFeedbackPopup(feedback)
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const productSearchInputRef = useRef(null)
 

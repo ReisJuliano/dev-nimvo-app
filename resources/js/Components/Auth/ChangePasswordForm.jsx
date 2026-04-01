@@ -1,5 +1,6 @@
 import AuthAlert from '@/Components/Auth/AuthAlert'
 import PasswordField from '@/Components/Auth/PasswordField'
+import { useErrorMapPopup } from '@/lib/errorPopup'
 
 export default function ChangePasswordForm({
     data,
@@ -12,6 +13,8 @@ export default function ChangePasswordForm({
     onTogglePassword,
     onToggleConfirmation,
 }) {
+    useErrorMapPopup(errors)
+
     return (
         <>
             <AuthAlert message={errors.password} />

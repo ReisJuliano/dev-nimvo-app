@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/Layouts/AdminLayout'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import './admin-dashboard.css'
@@ -82,6 +83,7 @@ export default function AdminDashboard({
     const [creating, setCreating] = useState(false)
     const [savingTenantId, setSavingTenantId] = useState(null)
     const [statusTenantId, setStatusTenantId] = useState(null)
+    useErrorFeedbackPopup(feedback)
 
     useEffect(() => {
         setTenantForms(buildTenantForms(tenants))

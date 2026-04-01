@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { showErrorPopup } from '@/lib/errorPopup'
 
 const ADD_NEW_OPTION = '__add_new__'
 
@@ -202,20 +203,25 @@ export default function ProductFormModal({
         if (Object.keys(nextErrors).length > 0) {
             const firstField = Object.keys(nextErrors)[0]
             setActiveTab(fieldTabMap[firstField] ?? 'general')
+            showErrorPopup(nextErrors[firstField])
             return
         }
 
         try {
             await onSubmit(form)
         } catch (error) {
-            setSubmitError(error.message || 'Nao foi possivel salvar o produto.')
+            const message = error.message || 'Nao foi possivel salvar o produto.'
+            setSubmitError(message)
+            showErrorPopup(message)
         }
     }
 
     async function handleQuickCategoryCreate() {
         if (!onQuickCreateCategory) return
         if (!quickCategory.name.trim()) {
-            setQuickCategoryError('Informe o nome da categoria.')
+            const message = 'Informe o nome da categoria.'
+            setQuickCategoryError(message)
+            showErrorPopup(message)
             return
         }
 
@@ -231,7 +237,9 @@ export default function ProductFormModal({
             setShowQuickCategory(false)
             setQuickCategory({ name: '', description: '' })
         } catch (error) {
-            setQuickCategoryError(error.message || 'Falha ao criar categoria.')
+            const message = error.message || 'Falha ao criar categoria.'
+            setQuickCategoryError(message)
+            showErrorPopup(message)
         } finally {
             setCreatingCategory(false)
         }
@@ -240,7 +248,9 @@ export default function ProductFormModal({
     async function handleQuickSupplierCreate() {
         if (!onQuickCreateSupplier) return
         if (!quickSupplier.name.trim()) {
-            setQuickSupplierError('Informe o nome do fornecedor.')
+            const message = 'Informe o nome do fornecedor.'
+            setQuickSupplierError(message)
+            showErrorPopup(message)
             return
         }
 
@@ -257,7 +267,9 @@ export default function ProductFormModal({
             setShowQuickSupplier(false)
             setQuickSupplier({ name: '', phone: '', email: '' })
         } catch (error) {
-            setQuickSupplierError(error.message || 'Falha ao criar fornecedor.')
+            const message = error.message || 'Falha ao criar fornecedor.'
+            setQuickSupplierError(message)
+            showErrorPopup(message)
         } finally {
             setCreatingSupplier(false)
         }

@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/Layouts/AdminLayout'
+import { showErrorPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
@@ -428,6 +429,7 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
     const [deleteBusy, setDeleteBusy] = useState(false)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
+    useErrorFeedbackPopup(feedback)
 
     useEffect(() => {
         setTenantSettingsState(buildTenantSettingsState(tenants))
@@ -558,6 +560,7 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                 ...current,
                 [tenant.id]: previousState,
             }))
+            showErrorPopup(error.message)
 
             setRowState((current) => ({
                 ...current,

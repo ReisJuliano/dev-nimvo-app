@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import OrdersModal from './OrdersModal'
@@ -13,6 +14,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
     const [records, setRecords] = useState([])
     const [loading, setLoading] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    useErrorFeedbackPopup(feedback)
 
     const pending = useMemo(() => records.filter((r) => r.status === 'pending'), [records])
     const dispatched = useMemo(() => records.filter((r) => r.status === 'dispatched'), [records])

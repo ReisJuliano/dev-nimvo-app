@@ -1,3 +1,4 @@
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { formatMoney, formatNumber } from '@/lib/format'
 
 export function EmptyState({ title, text }) {
@@ -10,6 +11,8 @@ export function EmptyState({ title, text }) {
 }
 
 export function Feedback({ feedback }) {
+    useErrorFeedbackPopup(feedback)
+
     if (!feedback) {
         return null
     }
