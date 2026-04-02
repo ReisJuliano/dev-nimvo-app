@@ -1,7 +1,6 @@
 import { Head, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
-import PendingOrdersPanel from '@/Components/Pos/PendingOrdersPanel'
 import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import AppLayout from '@/Layouts/AppLayout'
@@ -250,7 +249,6 @@ export default function PosIndex({
     const [discountReason, setDiscountReason] = useState('')
 
     const productSearchInputRef = useRef(null)
-    const pendingOrdersPanelRef = useRef(null)
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const deferredRecipientSearch = useDeferredValue(recipientSearch)
 
@@ -2038,13 +2036,6 @@ export default function PosIndex({
         })
     }
 
-    function focusPendingOrdersPanel() {
-        pendingOrdersPanelRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-        })
-    }
-
     function openDiscountShortcut() {
         closeShortcutDrivenPanels()
         openDiscountModal()
@@ -2440,15 +2431,6 @@ export default function PosIndex({
                                         Novo cliente
                                     </button>
                                 </div>
-                                {supportsOrders ? (
-                                    <button type="button" className="pos-inline-button pos-review-pending-trigger" onClick={focusPendingOrdersPanel}>
-                                        <span className="pos-review-pending-trigger-copy">
-                                            <i className="fa-solid fa-receipt" />
-                                            Comandas disponiveis
-                                        </span>
-                                        <strong className="pos-review-pending-trigger-count">{pendingOrderDrafts.length}</strong>
-                                    </button>
-                                ) : null}
                             </article>
 
                             <article className="pos-review-highlight">
@@ -2512,16 +2494,14 @@ export default function PosIndex({
                     </section>
 
                     {supportsOrders ? (
-                        <div ref={pendingOrdersPanelRef}>
-                            <PendingOrdersPanel
-                                orders={pendingOrderDrafts}
-                                activeOrderDraftId={activeOrderDraftId}
-                                loadingOrderId={loadingOrderDraftId}
-                                refreshing={refreshingPendingOrders}
-                                onLoadOrder={handleLoadOrderDraft}
-                                onRefresh={() => refreshPendingOrderDrafts()}
-                            />
-                        </div>
+                        <PendingOrdersPanel
+                            orders={pendingOrderDrafts}
+                            activeOrderDraftId={activeOrderDraftId}
+                            loadingOrderId={loadingOrderDraftId}
+                            refreshing={refreshingPendingOrders}
+                            onLoadOrder={handleLoadOrderDraft}
+                            onRefresh={() => refreshPendingOrderDrafts()}
+                        />
                     ) : null}
                 </div>
 
