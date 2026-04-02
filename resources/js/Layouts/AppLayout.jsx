@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppSidebar from '@/Components/Layout/AppSidebar'
 import AppTopbar from '@/Components/Layout/AppTopbar'
@@ -6,6 +6,8 @@ import { buildNavigationGroups } from '@/Components/Layout/navigation'
 import useModules from '@/hooks/useModules'
 import { useFlashPopup } from '@/lib/errorPopup'
 import './app-layout.css'
+
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app-sidebar-collapsed'
 
 export default function AppLayout({
     children,
@@ -16,10 +18,43 @@ export default function AppLayout({
 }) {
     const { auth, flash, tenantNavigationCatalog, license } = usePage().props
     const currentUrl = usePage().url
+    const currentPath = currentUrl.split('?')[0]
+    const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const [collapsed, setCollapsed] = useState(false)
+    const [collapsed, setCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return isPosPage
+        }
+
+        if (isPosPage) {
+            return true
+        }
+
+        return window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
+    })
     const moduleState = useModules(settingsOverride)
     useFlashPopup(flash)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        if (isPosPage) {
+            setCollapsed(true)
+            return
+        }
+
+        setCollapsed(window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true')
+    }, [isPosPage])
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || isPosPage) {
+            return
+        }
+
+        window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
+    }, [collapsed, isPosPage])
 
     function handleLogout() {
         router.post('/logout')
