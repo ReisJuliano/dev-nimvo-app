@@ -1664,6 +1664,190 @@
     flex-shrink: 0;
 }
 
+.orders-modal-edit-terminal {
+    width: min(1100px, calc(100vw - 2rem));
+    border-radius: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.16);
+}
+
+.orders-modal-edit-terminal .orders-modal-header {
+    align-items: center;
+    padding: 0.95rem 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+    backdrop-filter: none;
+}
+
+.orders-modal-edit-terminal .orders-modal-header h2 {
+    margin-top: 0;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.orders-modal-edit-terminal .orders-modal-header p {
+    margin-top: 0.2rem;
+    font-size: 0.82rem;
+    color: #6b7280;
+}
+
+.orders-modal-edit-terminal .orders-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.orders-modal-edit-terminal-body {
+    padding: 0.9rem;
+    background: #f8fafc;
+}
+
+.orders-edit-terminal-form,
+.orders-edit-terminal-main {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.orders-edit-terminal-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    gap: 0.9rem;
+    align-items: start;
+}
+
+.orders-edit-terminal-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.orders-edit-terminal-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.orders-edit-terminal-type-card {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 12px;
+    background: var(--orders-terminal-surface-alt);
+    color: var(--orders-terminal-muted);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-edit-terminal-type-card span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--orders-terminal-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.orders-edit-terminal-type-card strong {
+    color: var(--orders-terminal-text);
+    font-size: 0.92rem;
+    line-height: 1.3;
+}
+
+.orders-edit-terminal-type-card.active {
+    border-color: rgba(24, 95, 165, 0.28);
+    background: rgba(24, 95, 165, 0.06);
+    color: var(--orders-terminal-blue);
+}
+
+.orders-edit-terminal-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.orders-edit-terminal-field {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.9rem;
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 14px;
+    background: var(--orders-terminal-surface-alt);
+}
+
+.orders-edit-terminal-field.span-2 {
+    grid-column: 1 / -1;
+}
+
+.orders-edit-terminal-field > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--orders-terminal-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.orders-edit-terminal-field .ui-input,
+.orders-edit-terminal-field .ui-select,
+.orders-edit-terminal-field .ui-textarea {
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.orders-edit-terminal-field .ui-textarea {
+    min-height: 124px;
+    resize: vertical;
+}
+
+.orders-edit-terminal-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.orders-edit-terminal-sidebar-icon {
+    width: 100%;
+    min-height: 64px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--orders-terminal-muted);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-edit-terminal-sidebar-icon:hover {
+    background: var(--orders-terminal-surface-alt);
+}
+
+.orders-edit-terminal-sidebar-icon i {
+    font-size: 1rem;
+}
+
+.orders-edit-terminal-sidebar-icon.confirm {
+    border-color: rgba(59, 109, 17, 0.22);
+    background: var(--orders-terminal-green);
+    color: #ffffff;
+}
+
+.orders-edit-terminal-sidebar-icon.confirm:hover {
+    background: #315b0f;
+}
+
 .orders-modal-product-picker .orders-modal-header,
 .orders-modal-product-picker .orders-modal-footer {
     background: rgba(255, 255, 255, 0.96);
@@ -2065,6 +2249,7 @@
 @media (max-width: 900px) {
     .orders-detail-terminal-shell,
     .orders-draft-terminal-shell,
+    .orders-edit-terminal-shell,
     .orders-detail-hero,
     .orders-detail-layout,
     .orders-checkout-summary,
@@ -2076,6 +2261,9 @@
     .orders-draft-terminal-stats,
     .orders-draft-terminal-type-grid,
     .orders-draft-terminal-fields,
+    .orders-edit-terminal-stats,
+    .orders-edit-terminal-type-grid,
+    .orders-edit-terminal-fields,
     .orders-terminal-metrics,
     .orders-detail-terminal-content,
     .orders-terminal-meta-grid {
@@ -2108,6 +2296,15 @@
         position: static;
         flex-direction: row;
         flex-wrap: wrap;
+    }
+
+    .orders-edit-terminal-sidebar {
+        position: static;
+        flex-direction: row;
+    }
+
+    .orders-edit-terminal-sidebar-icon {
+        flex: 1 1 0;
     }
 
     .orders-product-picker-main {
@@ -2172,6 +2369,10 @@
         padding: 0.7rem;
     }
 
+    .orders-modal-edit-terminal-body {
+        padding: 0.7rem;
+    }
+
     .orders-terminal-total-card,
     .orders-terminal-panel,
     .orders-terminal-stat-card {
@@ -2180,6 +2381,11 @@
     }
 
     .orders-draft-terminal-field {
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+    }
+
+    .orders-edit-terminal-field {
         padding-left: 0.85rem;
         padding-right: 0.85rem;
     }
@@ -2216,6 +2422,10 @@
     }
 
     .orders-modal-draft-terminal {
+        width: min(100%, 100vw - 1rem);
+    }
+
+    .orders-modal-edit-terminal {
         width: min(100%, 100vw - 1rem);
     }
 }
