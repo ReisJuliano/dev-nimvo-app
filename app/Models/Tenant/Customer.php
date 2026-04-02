@@ -10,7 +10,24 @@ class Customer extends Model
 {
     use UsesTenantConnection;
 
-    protected $fillable = ['name', 'phone', 'credit_limit', 'active'];
+    protected $fillable = [
+        'name',
+        'document',
+        'document_type',
+        'phone',
+        'email',
+        'state_registration',
+        'street',
+        'number',
+        'complement',
+        'district',
+        'city_name',
+        'city_code',
+        'state',
+        'zip_code',
+        'credit_limit',
+        'active',
+    ];
 
     protected $casts = [
         'active' => 'boolean',

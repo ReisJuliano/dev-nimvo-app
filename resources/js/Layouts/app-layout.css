@@ -398,6 +398,10 @@
     margin-left: var(--app-sidebar-width-collapsed);
 }
 
+.app-main.no-topbar {
+    min-height: 100vh;
+}
+
 .app-topbar {
     position: sticky;
     top: 0;
@@ -475,6 +479,14 @@
 
 .app-mobile-toggle:hover {
     background: white;
+}
+
+.app-mobile-toggle-floating {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1036;
+    display: none;
 }
 
 .app-topbar-heading {
@@ -568,6 +580,58 @@
     padding: 0 var(--app-content-gutter) 1.5rem;
 }
 
+.app-page-content.app-page-content-flush {
+    padding: 0;
+}
+
+.app-license-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0 var(--app-content-gutter) 1rem;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(226, 164, 28, 0.28);
+    background: linear-gradient(135deg, rgba(255, 244, 214, 0.94), rgba(255, 255, 255, 0.94));
+    box-shadow: var(--app-shadow-sm);
+}
+
+.app-license-banner.overdue,
+.app-license-banner.blocked {
+    border-color: rgba(216, 78, 97, 0.24);
+    background: linear-gradient(135deg, rgba(255, 232, 236, 0.96), rgba(255, 255, 255, 0.94));
+}
+
+.app-license-banner-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: rgba(226, 164, 28, 0.14);
+    color: #b17207;
+    flex-shrink: 0;
+}
+
+.app-license-banner.overdue .app-license-banner-icon,
+.app-license-banner.blocked .app-license-banner-icon {
+    background: rgba(216, 78, 97, 0.14);
+    color: #b53c51;
+}
+
+.app-license-banner-copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.app-license-banner-copy strong {
+    color: var(--app-text-primary);
+}
+
+.app-license-banner-copy span {
+    color: var(--app-text-secondary);
+}
+
 .app-page-content > * {
     animation: app-page-enter 0.32s ease;
 }
@@ -654,6 +718,12 @@
     }
 
     .app-mobile-toggle {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .app-mobile-toggle-floating {
         display: inline-flex !important;
         align-items: center;
         justify-content: center;

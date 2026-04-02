@@ -13,6 +13,15 @@ import {
     upsertRecord,
 } from './shared'
 
+function FieldLabel({ icon, text }) {
+    return (
+        <span className="ops-workspace-label-with-icon">
+            <i className={`fa-solid ${icon}`} />
+            {text}
+        </span>
+    )
+}
+
 export function ProducersWorkspace({ moduleKey, payload }) {
     const emptyForm = {
         id: null,
@@ -168,6 +177,219 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                             ) : null}
                             <button type="submit" className="ui-button" disabled={saving}>
                                 {saving ? 'Salvando...' : form.id ? 'Atualizar produtor' : 'Salvar produtor'}
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </div>
+    )
+}
+
+export function UsersWorkspace({ moduleKey, payload }) {
+    const emptyForm = {
+        id: null,
+        name: '',
+        username: '',
+        role: 'operator',
+        is_supervisor: false,
+        active: true,
+        must_change_password: false,
+        password: '',
+        discount_authorization_password: '',
+        has_discount_authorization_password: false,
+    }
+
+    const [records, setRecords] = useState(payload.records || [])
+    const [activeTab, setActiveTab] = useState('active')
+    const [form, setForm] = useState(emptyForm)
+    const [saving, setSaving] = useState(false)
+    const [feedback, setFeedback] = useState(null)
+
+    const filteredRecords = useMemo(
+        () => records.filter((record) => (activeTab === 'active' ? record.active : !record.active)),
+        [records, activeTab],
+    )
+
+    const metrics = useMemo(
+        () => [
+            { label: 'Usuarios', value: records.length, caption: 'Base total cadastrada' },
+            { label: 'Gerentes', value: records.filter((record) => record.role === 'manager').length, caption: 'Podem autorizar descontos' },
+            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edicao do fechamento' },
+            { label: 'Com senha gerencial', value: records.filter((record) => record.has_discount_authorization_password).length, caption: 'Senha dedicada cadastrada' },
+        ],
+        [records],
+    )
+
+    async function handleSubmit(event) {
+        event.preventDefault()
+        setSaving(true)
+        setFeedback(null)
+
+        try {
+            const response = form.id
+                ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
+                : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
+
+            setRecords((current) => upsertRecord(current, response.record))
+            setForm({
+                ...emptyForm,
+                ...response.record,
+            })
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    async function handleDelete() {
+        if (!form.id) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover usuario',
+            message: `Remover o usuario "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
+            setRecords((current) => current.filter((record) => record.id !== form.id))
+            setForm(emptyForm)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    return (
+        <div className="ops-workspace-stack">
+            <SectionTabs
+                tabs={[
+                    { key: 'active', label: 'Ativos', icon: 'fa-user-check' },
+                    { key: 'inactive', label: 'Inativos', icon: 'fa-user-slash' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+            <MetricGrid items={metrics} />
+            <div className="ops-workspace-grid two-columns">
+                <section className="ops-workspace-panel">
+                    <FeedbackHeader title="Usuarios" subtitle={`${filteredRecords.length} registro(s) no filtro`} />
+                    <Feedback feedback={feedback} />
+                    <div className="ops-workspace-list-stack">
+                        {filteredRecords.length ? (
+                            filteredRecords.map((record) => (
+                                <ListCard
+                                    key={record.id}
+                                    active={form.id === record.id}
+                                    onClick={() =>
+                                        setForm({
+                                            ...emptyForm,
+                                            ...record,
+                                            password: '',
+                                            discount_authorization_password: '',
+                                        })
+                                    }
+                                    title={record.name}
+                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.role}</Badge>}
+                                    description={`Usuario: ${record.username}`}
+                                    meta={[
+                                        record.must_change_password ? 'Troca obrigatoria de senha' : 'Senha livre',
+                                        record.is_supervisor ? 'Supervisor de fechamento' : 'Sem perfil de supervisor',
+                                        record.has_discount_authorization_password ? 'Senha gerencial ativa' : 'Sem senha gerencial',
+                                    ]}
+                                />
+                            ))
+                        ) : (
+                            <EmptyState title="Sem usuarios nesse recorte" text="Cadastre perfis para separar operacao, gerencia e administracao." />
+                        )}
+                    </div>
+                </section>
+
+                <section className="ops-workspace-panel">
+                    <FeedbackHeader title={form.id ? 'Editar usuario' : 'Novo usuario'} subtitle="Perfis, supervisor e senha de autorizacao" />
+                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                        <label>
+                            <FieldLabel icon="fa-user" text="Nome" />
+                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-at" text="Usuario" />
+                            <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-user-shield" text="Perfil" />
+                            <select value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
+                                {(payload.roles || []).map((role) => (
+                                    <option key={role.value} value={role.value}>
+                                        {role.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-key" text={form.id ? 'Nova senha de acesso' : 'Senha de acesso'} />
+                            <input
+                                type="password"
+                                value={form.password}
+                                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                                placeholder={form.id ? 'Preencha apenas para alterar' : 'Minimo de 4 caracteres'}
+                            />
+                        </label>
+                        <label className="span-2">
+                            <FieldLabel icon="fa-money-check-dollar" text="Senha de autorizacao gerencial" />
+                            <input
+                                type="password"
+                                value={form.discount_authorization_password}
+                                onChange={(event) => setForm((current) => ({ ...current, discount_authorization_password: event.target.value }))}
+                                placeholder={
+                                    form.has_discount_authorization_password
+                                        ? 'Preencha apenas para trocar a senha gerencial'
+                                        : 'Defina a senha usada para autorizar descontos'
+                                }
+                            />
+                        </label>
+                        <label className="ops-workspace-inline-toggle">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(form.is_supervisor)}
+                                onChange={(event) => setForm((current) => ({ ...current, is_supervisor: event.target.checked }))}
+                            />
+                            <span>Pode atuar como supervisor no fechamento de caixa</span>
+                        </label>
+                        <label className="ops-workspace-inline-toggle">
+                            <input type="checkbox" checked={Boolean(form.active)} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} />
+                            <span>Usuario ativo</span>
+                        </label>
+                        <label className="ops-workspace-inline-toggle">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(form.must_change_password)}
+                                onChange={(event) => setForm((current) => ({ ...current, must_change_password: event.target.checked }))}
+                            />
+                            <span>Exigir troca de senha no proximo login</span>
+                        </label>
+                        <div className="ops-workspace-actions span-2">
+                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                                Limpar
+                            </button>
+                            {form.id ? (
+                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                    Excluir
+                                </button>
+                            ) : null}
+                            <button type="submit" className="ui-button" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Atualizar usuario' : 'Salvar usuario'}
                             </button>
                         </div>
                     </form>

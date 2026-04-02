@@ -2,6 +2,7 @@ import AppLayout from '@/Layouts/AppLayout'
 import { CategoriesWorkspace, CustomersWorkspace, SuppliersWorkspace } from './workspaces/CatalogWorkspaces'
 import { DeliveryWorkspace, PurchasesWorkspace } from './workspaces/CommerceWorkspaces'
 import { StockAdjustmentsWorkspace, StockInboundWorkspace, StockTransfersWorkspace } from './workspaces/InventoryWorkspaces'
+import { UsersWorkspace } from './workspaces/PeopleWorkspaces'
 import './operations-workspace.css'
 
 export default function OperationsWorkspace({ moduleKey, moduleTitle, moduleDescription, payload }) {
@@ -23,6 +24,7 @@ export default function OperationsWorkspace({ moduleKey, moduleTitle, moduleDesc
                 {moduleKey === 'entrada-estoque' ? <StockInboundWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'ajuste-estoque' ? <StockAdjustmentsWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'movimentacao-estoque' ? <StockTransfersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
+                {moduleKey === 'usuarios' ? <UsersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
             </div>
         </AppLayout>
     )

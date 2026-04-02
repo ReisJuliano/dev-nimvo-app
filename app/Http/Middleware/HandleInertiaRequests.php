@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Services\Tenant\TenantNavigationService;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class HandleInertiaRequests extends Middleware
         $tenant = tenant();
         $settings = $tenant ? app(TenantSettingsService::class)->get() : null;
         $navigationCatalog = $tenant ? app(TenantNavigationService::class)->catalog() : null;
+        $licenseState = $tenant ? app(TenantLicenseService::class)->stateForTenant((string) $tenant->getTenantKey()) : null;
         $centralAdmin = auth('central_admin')->user();
 
         return [
@@ -46,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                 'email' => $tenant->email,
             ] : null,
             'appSettings' => $settings,
+            'license' => $licenseState,
             'tenantNavigationCatalog' => $navigationCatalog,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

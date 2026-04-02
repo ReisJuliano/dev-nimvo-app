@@ -10,12 +10,26 @@ class SaleItem extends Model
 {
     use UsesTenantConnection;
 
-    protected $fillable = ['sale_id', 'product_id', 'quantity', 'unit_cost', 'unit_price', 'total', 'profit'];
+    protected $fillable = [
+        'sale_id',
+        'product_id',
+        'quantity',
+        'unit_cost',
+        'unit_price',
+        'discount_amount',
+        'discount_percent',
+        'discount_authorized_by',
+        'discount_authorization_scope',
+        'total',
+        'profit',
+    ];
 
     protected $casts = [
         'quantity' => 'decimal:3',
         'unit_cost' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'discount_percent' => 'decimal:4',
         'total' => 'decimal:2',
         'profit' => 'decimal:2',
     ];
@@ -28,5 +42,10 @@ class SaleItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function discountAuthorizer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'discount_authorized_by');
     }
 }

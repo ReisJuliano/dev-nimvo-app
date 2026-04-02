@@ -14,6 +14,7 @@ class Sale extends Model
     protected $fillable = [
         'sale_number',
         'customer_id',
+        'company_id',
         'user_id',
         'cash_register_id',
         'subtotal',
@@ -22,8 +23,11 @@ class Sale extends Model
         'cost_total',
         'profit',
         'payment_method',
+        'requested_document_model',
         'status',
+        'fiscal_decision',
         'notes',
+        'recipient_payload',
     ];
 
     protected $casts = [
@@ -32,6 +36,7 @@ class Sale extends Model
         'total' => 'decimal:2',
         'cost_total' => 'decimal:2',
         'profit' => 'decimal:2',
+        'recipient_payload' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -39,6 +44,11 @@ class Sale extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function user(): BelongsTo

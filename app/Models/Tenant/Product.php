@@ -19,8 +19,13 @@ class Product extends Model
         'cest',
         'origin_code',
         'icms_csosn',
+        'icms_rate',
         'pis_cst',
+        'pis_rate',
         'cofins_cst',
+        'cofins_rate',
+        'ipi_rate',
+        'fiscal_enabled',
         'name',
         'description',
         'internal_notes',
@@ -32,6 +37,8 @@ class Product extends Model
         'category_id',
         'supplier_id',
         'unit',
+        'commercial_unit',
+        'taxable_unit',
         'cost_price',
         'sale_price',
         'stock_quantity',
@@ -42,10 +49,15 @@ class Product extends Model
     protected $casts = [
         'active' => 'boolean',
         'catalog_visible' => 'boolean',
+        'fiscal_enabled' => 'boolean',
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'stock_quantity' => 'decimal:3',
         'min_stock' => 'decimal:3',
+        'icms_rate' => 'decimal:4',
+        'pis_rate' => 'decimal:4',
+        'cofins_rate' => 'decimal:4',
+        'ipi_rate' => 'decimal:4',
     ];
 
     public function category(): BelongsTo

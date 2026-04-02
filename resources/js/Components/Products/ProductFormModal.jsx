@@ -7,6 +7,14 @@ const emptyForm = {
     id: null,
     code: '',
     barcode: '',
+    ncm: '',
+    cfop: '',
+    cest: '',
+    origin_code: '0',
+    icms_csosn: '102',
+    pis_cst: '49',
+    cofins_cst: '49',
+    fiscal_enabled: true,
     name: '',
     description: '',
     internal_notes: '',
@@ -19,10 +27,16 @@ const emptyForm = {
     category_id: '',
     supplier_id: '',
     unit: 'UN',
+    commercial_unit: 'UN',
+    taxable_unit: 'UN',
     cost_price: '',
     sale_price: '',
     stock_quantity: '',
     min_stock: '',
+    icms_rate: '',
+    pis_rate: '',
+    cofins_rate: '',
+    ipi_rate: '',
 }
 
 const tabs = [
@@ -30,6 +44,7 @@ const tabs = [
     { id: 'description', label: 'Descricao', icon: 'fa-solid fa-align-left' },
     { id: 'pricing', label: 'Precos', icon: 'fa-solid fa-tags' },
     { id: 'stock', label: 'Estoque', icon: 'fa-solid fa-boxes-stacked' },
+    { id: 'fiscal', label: 'Dados fiscais', icon: 'fa-solid fa-receipt' },
 ]
 
 const fieldTabMap = {
@@ -46,6 +61,19 @@ const fieldTabMap = {
     sale_price: 'pricing',
     stock_quantity: 'stock',
     min_stock: 'stock',
+    ncm: 'fiscal',
+    cfop: 'fiscal',
+    cest: 'fiscal',
+    origin_code: 'fiscal',
+    icms_csosn: 'fiscal',
+    pis_cst: 'fiscal',
+    cofins_cst: 'fiscal',
+    commercial_unit: 'fiscal',
+    taxable_unit: 'fiscal',
+    icms_rate: 'fiscal',
+    pis_rate: 'fiscal',
+    cofins_rate: 'fiscal',
+    ipi_rate: 'fiscal',
 }
 
 const numericFieldLabels = {
@@ -53,7 +81,27 @@ const numericFieldLabels = {
     sale_price: 'Preco de venda',
     stock_quantity: 'Estoque atual',
     min_stock: 'Estoque minimo',
+    icms_rate: 'Aliquota de ICMS',
+    pis_rate: 'Aliquota de PIS',
+    cofins_rate: 'Aliquota de COFINS',
+    ipi_rate: 'Aliquota de IPI',
 }
+
+const originOptions = [
+    { value: '0', label: '0 - Nacional' },
+    { value: '1', label: '1 - Estrangeira direta' },
+    { value: '2', label: '2 - Estrangeira adquirida no mercado interno' },
+    { value: '3', label: '3 - Nacional com conteudo de importacao acima de 40%' },
+    { value: '4', label: '4 - Nacional com processo produtivo basico' },
+    { value: '5', label: '5 - Nacional com conteudo de importacao ate 40%' },
+    { value: '6', label: '6 - Estrangeira direta sem similar nacional' },
+    { value: '7', label: '7 - Estrangeira adquirida no mercado interno sem similar nacional' },
+    { value: '8', label: '8 - Nacional com conteudo de importacao acima de 70%' },
+]
+
+const icmsOptions = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900']
+const pisOptions = ['01', '02', '04', '05', '06', '07', '08', '09', '49', '99']
+const cofinsOptions = ['01', '02', '04', '05', '06', '07', '08', '09', '49', '99']
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -68,6 +116,14 @@ function normalizeFormData(product) {
     return {
         ...emptyForm,
         ...product,
+        ncm: product.ncm ?? '',
+        cfop: product.cfop ?? '',
+        cest: product.cest ?? '',
+        origin_code: product.origin_code ?? '0',
+        icms_csosn: product.icms_csosn ?? '102',
+        pis_cst: product.pis_cst ?? '49',
+        cofins_cst: product.cofins_cst ?? '49',
+        fiscal_enabled: product.fiscal_enabled !== false,
         style_reference: product.style_reference ?? '',
         color: product.color ?? '',
         size: product.size ?? '',
@@ -76,6 +132,12 @@ function normalizeFormData(product) {
         category_id: product.category_id ? String(product.category_id) : '',
         supplier_id: product.supplier_id ? String(product.supplier_id) : '',
         active: product.active !== false,
+        commercial_unit: product.commercial_unit ?? product.unit ?? 'UN',
+        taxable_unit: product.taxable_unit ?? product.unit ?? 'UN',
+        icms_rate: product.icms_rate ?? '',
+        pis_rate: product.pis_rate ?? '',
+        cofins_rate: product.cofins_rate ?? '',
+        ipi_rate: product.ipi_rate ?? '',
     }
 }
 
@@ -91,6 +153,9 @@ function getNumberValue(value) {
 
 function validateForm(form) {
     const errors = {}
+    const ncm = String(form.ncm || '').trim()
+    const cfop = String(form.cfop || '').trim()
+    const cest = String(form.cest || '').trim()
 
     if (!String(form.name || '').trim()) errors.name = 'Informe o nome do produto.'
     if (!String(form.barcode || '').trim()) errors.barcode = 'Informe o EAN/codigo de barras.'
@@ -98,6 +163,9 @@ function validateForm(form) {
     if (form.sale_price === '' || form.sale_price === null || form.sale_price === undefined) errors.sale_price = 'Informe o preco de venda.'
     if (!String(form.category_id || '').trim()) errors.category_id = 'Selecione uma categoria.'
     if (!String(form.unit || '').trim()) errors.unit = 'Selecione a unidade.'
+    if (ncm !== '' && !/^\d{8}$/.test(ncm)) errors.ncm = 'NCM deve ter 8 digitos.'
+    if (cfop !== '' && !/^\d{4}$/.test(cfop)) errors.cfop = 'CFOP deve ter 4 digitos.'
+    if (cest !== '' && !/^\d{7}$/.test(cest)) errors.cest = 'CEST deve ter 7 digitos.'
 
     Object.entries(numericFieldLabels).forEach(([field, label]) => {
         const numericValue = getNumberValue(form[field])
@@ -108,6 +176,10 @@ function validateForm(form) {
 
         if (numericValue !== null && numericValue < 0) {
             errors[field] = `${label} nao pode ser negativo.`
+        }
+
+        if (numericValue !== null && ['icms_rate', 'pis_rate', 'cofins_rate', 'ipi_rate'].includes(field) && numericValue > 100) {
+            errors[field] = `${label} nao pode ser maior que 100%.`
         }
     })
 
@@ -492,6 +564,179 @@ export default function ProductFormModal({
                                         <input type="number" step="0.001" min="0" value={form.min_stock ?? ''} onChange={(event) => updateField('min_stock', event.target.value)} />
                                     </div>
                                     {renderFieldError('min_stock')}
+                                </label>
+                            </section>
+                        ) : null}
+
+                        {activeTab === 'fiscal' ? (
+                            <section className="products-editor-grid">
+                                <label className="products-editor-field span-2">
+                                    <span>Produto fiscal?</span>
+                                    <div className="products-editor-toggle-row">
+                                        <button
+                                            type="button"
+                                            className={`products-editor-toggle ${form.fiscal_enabled ? 'active' : ''}`}
+                                            onClick={() => updateField('fiscal_enabled', true)}
+                                        >
+                                            Fiscal
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`products-editor-toggle ${!form.fiscal_enabled ? 'active' : ''}`}
+                                            onClick={() => updateField('fiscal_enabled', false)}
+                                        >
+                                            Nao fiscal
+                                        </button>
+                                    </div>
+                                </label>
+
+                                <label className={`products-editor-field ${errors.ncm ? 'has-error' : ''}`}>
+                                    <span>NCM</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-barcode" />
+                                        <input value={form.ncm ?? ''} maxLength={8} onChange={(event) => updateField('ncm', event.target.value.replace(/\D/g, ''))} />
+                                    </div>
+                                    {renderFieldError('ncm')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.cfop ? 'has-error' : ''}`}>
+                                    <span>CFOP padrao</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-file-invoice" />
+                                        <input value={form.cfop ?? ''} maxLength={4} onChange={(event) => updateField('cfop', event.target.value.replace(/\D/g, ''))} />
+                                    </div>
+                                    {renderFieldError('cfop')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.cest ? 'has-error' : ''}`}>
+                                    <span>CEST</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-box-archive" />
+                                        <input value={form.cest ?? ''} maxLength={7} onChange={(event) => updateField('cest', event.target.value.replace(/\D/g, ''))} />
+                                    </div>
+                                    {renderFieldError('cest')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.origin_code ? 'has-error' : ''}`}>
+                                    <span>Origem</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-earth-americas" />
+                                        <select value={form.origin_code ?? '0'} onChange={(event) => updateField('origin_code', event.target.value)}>
+                                            {originOptions.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {renderFieldError('origin_code')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.icms_csosn ? 'has-error' : ''}`}>
+                                    <span>CST / CSOSN ICMS</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-shield-halved" />
+                                        <select value={form.icms_csosn ?? '102'} onChange={(event) => updateField('icms_csosn', event.target.value)}>
+                                            {icmsOptions.map((option) => (
+                                                <option key={option} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {renderFieldError('icms_csosn')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.pis_cst ? 'has-error' : ''}`}>
+                                    <span>CST PIS</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <select value={form.pis_cst ?? '49'} onChange={(event) => updateField('pis_cst', event.target.value)}>
+                                            {pisOptions.map((option) => (
+                                                <option key={option} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {renderFieldError('pis_cst')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.cofins_cst ? 'has-error' : ''}`}>
+                                    <span>CST COFINS</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <select value={form.cofins_cst ?? '49'} onChange={(event) => updateField('cofins_cst', event.target.value)}>
+                                            {cofinsOptions.map((option) => (
+                                                <option key={option} value={option}>
+                                                    {option}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {renderFieldError('cofins_cst')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.commercial_unit ? 'has-error' : ''}`}>
+                                    <span>Unidade comercial</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-scale-balanced" />
+                                        <input
+                                            maxLength={10}
+                                            value={form.commercial_unit ?? ''}
+                                            onChange={(event) => updateField('commercial_unit', event.target.value.toUpperCase())}
+                                        />
+                                    </div>
+                                    {renderFieldError('commercial_unit')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.taxable_unit ? 'has-error' : ''}`}>
+                                    <span>Unidade tributavel</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-scale-balanced" />
+                                        <input
+                                            maxLength={10}
+                                            value={form.taxable_unit ?? ''}
+                                            onChange={(event) => updateField('taxable_unit', event.target.value.toUpperCase())}
+                                        />
+                                    </div>
+                                    {renderFieldError('taxable_unit')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.icms_rate ? 'has-error' : ''}`}>
+                                    <span>Aliquota ICMS (%)</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <input type="number" min="0" max="100" step="0.0001" value={form.icms_rate ?? ''} onChange={(event) => updateField('icms_rate', event.target.value)} />
+                                    </div>
+                                    {renderFieldError('icms_rate')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.pis_rate ? 'has-error' : ''}`}>
+                                    <span>Aliquota PIS (%)</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <input type="number" min="0" max="100" step="0.0001" value={form.pis_rate ?? ''} onChange={(event) => updateField('pis_rate', event.target.value)} />
+                                    </div>
+                                    {renderFieldError('pis_rate')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.cofins_rate ? 'has-error' : ''}`}>
+                                    <span>Aliquota COFINS (%)</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <input type="number" min="0" max="100" step="0.0001" value={form.cofins_rate ?? ''} onChange={(event) => updateField('cofins_rate', event.target.value)} />
+                                    </div>
+                                    {renderFieldError('cofins_rate')}
+                                </label>
+
+                                <label className={`products-editor-field ${errors.ipi_rate ? 'has-error' : ''}`}>
+                                    <span>Aliquota IPI (%)</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-percent" />
+                                        <input type="number" min="0" max="100" step="0.0001" value={form.ipi_rate ?? ''} onChange={(event) => updateField('ipi_rate', event.target.value)} />
+                                    </div>
+                                    {renderFieldError('ipi_rate')}
                                 </label>
                             </section>
                         ) : null}

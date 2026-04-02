@@ -1,9 +1,9 @@
 export const CASH_REGISTER_PAYMENT_FIELDS = [
-    { key: 'cash', label: 'Dinheiro' },
-    { key: 'pix', label: 'Pix' },
-    { key: 'debit_card', label: 'Cartao de debito' },
-    { key: 'credit_card', label: 'Cartao de credito' },
-    { key: 'credit', label: 'A Prazo' },
+    { key: 'cash', label: 'Dinheiro', icon: 'cash', tone: 'cash' },
+    { key: 'pix', label: 'Pix', icon: 'pix', tone: 'pix' },
+    { key: 'debit_card', label: 'Cartao de debito', icon: 'card', tone: 'card' },
+    { key: 'credit_card', label: 'Cartao de credito', icon: 'card', tone: 'card' },
+    { key: 'credit', label: 'A Prazo', icon: 'wallet', tone: 'credit' },
 ]
 
 export function createOpenCashRegisterForm() {
@@ -14,18 +14,23 @@ export function createOpenCashRegisterForm() {
 }
 
 export function buildCloseCashRegisterModal(report) {
-    const paymentTotals = Object.fromEntries(report.payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
-
     return {
         report,
+        step: 'informing',
+        supervisorPromptOpen: false,
+        supervisorUserId: '',
+        supervisorPassword: '',
+        supervisorError: '',
+        supervisorAuthorizing: false,
+        supervisorName: '',
         form: {
             notes: report.cashRegister.closing_notes || '',
             amounts: {
                 cash: '',
-                pix: String(Number(paymentTotals.pix || 0).toFixed(2)),
-                debit_card: String(Number(paymentTotals.debit_card || 0).toFixed(2)),
-                credit_card: String(Number(paymentTotals.credit_card || 0).toFixed(2)),
-                credit: String(Number(paymentTotals.credit || 0).toFixed(2)),
+                pix: '',
+                debit_card: '',
+                credit_card: '',
+                credit: '',
             },
         },
     }
@@ -52,6 +57,7 @@ export function buildCloseCashRegisterRows(closeModal, requireConference) {
                 expected,
                 informed,
                 difference: informed === null ? null : informed - expected,
+                systemVisible: closeModal.step === 'revealed',
             }
         })
 }

@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'password.changed' => \App\Http\Middleware\Tenant\EnsurePasswordIsChanged::class,
+            'tenant.license' => \App\Http\Middleware\Tenant\EnsureTenantLicenseIsValid::class,
             'module.enabled' => \App\Http\Middleware\Tenant\EnsureModuleIsEnabled::class,
         ]);
     })

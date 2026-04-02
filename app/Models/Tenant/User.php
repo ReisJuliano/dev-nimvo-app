@@ -15,18 +15,22 @@ class User extends Authenticatable
         'name',
         'username',
         'password',
+        'discount_authorization_password',
         'role',
+        'is_supervisor',
         'active',
         'must_change_password',
     ];
 
     protected $hidden = [
         'password',
+        'discount_authorization_password',
         'remember_token',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'is_supervisor' => 'boolean',
         'must_change_password' => 'boolean',
     ];
 

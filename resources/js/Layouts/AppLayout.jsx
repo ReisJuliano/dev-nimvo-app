@@ -7,8 +7,14 @@ import useModules from '@/hooks/useModules'
 import { useFlashPopup } from '@/lib/errorPopup'
 import './app-layout.css'
 
-export default function AppLayout({ children, title = 'Inicio', settingsOverride = null }) {
-    const { auth, flash, tenantNavigationCatalog } = usePage().props
+export default function AppLayout({
+    children,
+    title = 'Inicio',
+    settingsOverride = null,
+    showTopbar = true,
+    contentClassName = '',
+}) {
+    const { auth, flash, tenantNavigationCatalog, license } = usePage().props
     const currentUrl = usePage().url
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
@@ -68,13 +74,31 @@ export default function AppLayout({ children, title = 'Inicio', settingsOverride
                         onLogout={handleLogout}
                     />
 
-                    <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
-                        <AppTopbar
-                            title={title}
-                            onToggleMobileSidebar={toggleMobileSidebar}
-                        />
+                    <div className={`app-main ${collapsed ? 'collapsed' : ''} ${showTopbar ? '' : 'no-topbar'}`}>
+                        {showTopbar ? (
+                            <AppTopbar
+                                title={title}
+                                onToggleMobileSidebar={toggleMobileSidebar}
+                            />
+                        ) : (
+                            <button className="app-mobile-toggle app-mobile-toggle-floating" onClick={toggleMobileSidebar} type="button">
+                                <i className="fas fa-bars" />
+                            </button>
+                        )}
 
-                        <main className="app-page-content">{children}</main>
+                        {license && license.status !== 'active' ? (
+                            <section className={`app-license-banner ${license.status}`}>
+                                <div className="app-license-banner-icon">
+                                    <i className={`fa-solid ${license.status === 'blocked' ? 'fa-lock' : 'fa-triangle-exclamation'}`} />
+                                </div>
+                                <div className="app-license-banner-copy">
+                                    <strong>{license.status === 'blocked' ? 'Licenca bloqueada' : 'Licenca requer atencao'}</strong>
+                                    <span>{license.message}</span>
+                                </div>
+                            </section>
+                        ) : null}
+
+                        <main className={`app-page-content ${contentClassName}`.trim()}>{children}</main>
                     </div>
                 </div>
             </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
@@ -108,14 +109,16 @@ class AdminPageController extends Controller
     protected function buildProps(TenantSettingsService $settingsService): array
     {
         $tenants = [];
+        $licenseService = app(TenantLicenseService::class);
 
         if (Schema::hasTable('tenants')) {
             $tenants = Tenant::query()
                 ->with(['client', 'domains'])
                 ->orderBy('name')
                 ->get()
-                ->map(function (Tenant $tenant) use ($settingsService): array {
+                ->map(function (Tenant $tenant) use ($settingsService, $licenseService): array {
                     $domain = $tenant->domains->first()?->domain ?? $tenant->client?->domain;
+                    $licenseState = $licenseService->stateForTenant((string) $tenant->id);
 
                     return [
                         'id' => (string) $tenant->id,
@@ -128,6 +131,7 @@ class AdminPageController extends Controller
                         'active' => (bool) ($tenant->client?->active ?? true),
                         'created_at' => optional($tenant->created_at)?->format('d/m/Y H:i'),
                         'settings' => $settingsService->get((string) $tenant->id),
+                        'license' => $licenseState,
                     ];
                 })
                 ->sortByDesc(fn (array $tenant): int => $tenant['active'] ? 1 : 0)

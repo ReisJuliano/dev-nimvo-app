@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Tenant\CashRegister;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\CashRegister\AuthorizeCashClosingSupervisorRequest;
 use App\Http\Requests\Tenant\CashRegister\CloseCashRegisterRequest;
 use App\Http\Requests\Tenant\CashRegister\OpenCashRegisterRequest;
 use App\Http\Requests\Tenant\CashRegister\RegisterCashMovementRequest;
 use App\Models\Tenant\CashRegister;
 use App\Services\Tenant\CashRegisterReportService;
+use App\Services\Tenant\SupervisorAuthorizationService;
 use Illuminate\Http\JsonResponse;
 
 class CashRegisterApiController extends Controller
@@ -99,6 +101,26 @@ class CashRegisterApiController extends Controller
         return response()->json([
             'message' => 'Caixa fechado com sucesso.',
             'report' => $reportService->build($cashRegister->fresh()),
+        ]);
+    }
+
+    public function authorizeSupervisor(
+        AuthorizeCashClosingSupervisorRequest $request,
+        SupervisorAuthorizationService $supervisorAuthorizationService,
+    ): JsonResponse {
+        $supervisor = $supervisorAuthorizationService->authorize(
+            $request->integer('supervisor_user_id'),
+            $request->string('supervisor_password')->toString(),
+        );
+
+        return response()->json([
+            'message' => 'Edicao liberada pelo supervisor.',
+            'supervisor' => [
+                'id' => $supervisor->id,
+                'name' => $supervisor->name,
+                'username' => $supervisor->username,
+                'role' => $supervisor->role,
+            ],
         ]);
     }
 

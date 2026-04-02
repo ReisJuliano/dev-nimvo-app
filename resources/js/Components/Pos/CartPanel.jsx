@@ -14,6 +14,7 @@ export default function CartPanel({
     activeActionLabel = 'Estoque',
     selectActionLabel = 'Ver estoque',
     removeLabel = 'Remover',
+    onDiscountItem = null,
     headerActions = null,
 }) {
     const selectedItem = useMemo(
@@ -115,7 +116,19 @@ export default function CartPanel({
                                     <small>Total</small>
                                     <strong>{formatMoney(item.lineTotal ?? item.sale_price * item.qty)}</strong>
                                 </div>
+                                {onDiscountItem ? (
+                                    <button
+                                        type="button"
+                                        className="ui-tooltip"
+                                        data-tooltip="Aplicar desconto"
+                                        onClick={() => onDiscountItem(item.id)}
+                                    >
+                                        <i className="fa-solid fa-money-bill-wave" />
+                                        Desconto
+                                    </button>
+                                ) : null}
                                 <button
+                                    type="button"
                                     className="ui-tooltip"
                                     data-tooltip="Remover item"
                                     onClick={() => onRemove(item.id)}

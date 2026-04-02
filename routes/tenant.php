@@ -42,7 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/change-password', [PasswordChangeController::class, 'update'])
         ->name('password.change.update');
 
-    Route::middleware([EnsurePasswordIsChanged::class, 'module.enabled'])->group(function () {
+    Route::middleware([EnsurePasswordIsChanged::class, 'tenant.license', 'module.enabled'])->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/pdv', PosPageController::class)->name('pos.index');
         Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
@@ -87,7 +87,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
             Route::get('/pdv/customers/{customer}/credit', [PosApiController::class, 'customerCredit'])->name('api.pos.customers.credit');
             Route::post('/pdv/customers/quick', [PosApiController::class, 'quickCustomer'])->name('api.pos.customers.quick');
+            Route::post('/pdv/companies/quick', [PosApiController::class, 'quickCompany'])->name('api.pos.companies.quick');
+            Route::post('/pdv/discounts/authorize', [PosApiController::class, 'authorizeDiscount'])->name('api.pos.discounts.authorize');
+            Route::get('/pdv/pending-sale', [PosApiController::class, 'currentPendingSale'])->name('api.pos.pending-sale.show');
+            Route::post('/pdv/pending-sale', [PosApiController::class, 'savePendingSale'])->name('api.pos.pending-sale.store');
+            Route::post('/pdv/pending-sale/restore', [PosApiController::class, 'restorePendingSale'])->name('api.pos.pending-sale.restore');
+            Route::delete('/pdv/pending-sale', [PosApiController::class, 'discardPendingSale'])->name('api.pos.pending-sale.destroy');
             Route::post('/pdv/sales', [PosApiController::class, 'finalize'])->name('api.pos.sales.store');
+            Route::post('/pdv/sales/{sale}/issue-fiscal', [PosApiController::class, 'issueFiscalDocument'])->name('api.pos.sales.issue-fiscal');
             Route::post('/fiscal/documents', [FiscalDocumentsApiController::class, 'store'])->name('api.fiscal.documents.store');
             Route::get('/fiscal/documents/{fiscalDocument}', [FiscalDocumentsApiController::class, 'show'])->name('api.fiscal.documents.show');
             Route::post('/fiscal/documents/{fiscalDocument}/retry', [FiscalDocumentsApiController::class, 'retry'])->name('api.fiscal.documents.retry');
@@ -100,6 +107,7 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/cash-registers', [CashRegisterApiController::class, 'open'])->name('api.cash-registers.open');
             Route::post('/cash-registers/{cashRegister}/movements', [CashRegisterApiController::class, 'movement'])->name('api.cash-registers.movements.store');
+            Route::post('/cash-registers/supervisor-authorize', [CashRegisterApiController::class, 'authorizeSupervisor'])->name('api.cash-registers.supervisor-authorize');
             Route::post('/cash-registers/{cashRegister}/close', [CashRegisterApiController::class, 'close'])->name('api.cash-registers.close');
             Route::get('/cash-registers/{cashRegister}/report', [CashRegisterApiController::class, 'report'])->name('api.cash-registers.report');
 

@@ -10,15 +10,22 @@ use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
+use App\Models\Tenant\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OperationsWorkspaceService
 {
+    protected array $schemaTableCache = [];
+
+    protected array $schemaColumnCache = [];
+
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
     ) {
@@ -35,6 +42,7 @@ class OperationsWorkspaceService
             'entrada-estoque',
             'ajuste-estoque',
             'movimentacao-estoque',
+            'usuarios',
         ];
     }
 
@@ -94,6 +102,12 @@ class OperationsWorkspaceService
                 'moduleDescription' => 'Registro de transferencia entre locais internos com historico e rastreabilidade.',
                 'payload' => $this->stockTransfersPayload(),
             ],
+            'usuarios' => [
+                'moduleKey' => 'usuarios',
+                'moduleTitle' => 'Usuarios',
+                'moduleDescription' => 'Perfis de acesso, senha de autorizacao gerencial e status operacional.',
+                'payload' => $this->usersPayload(),
+            ],
             default => abort(404),
         };
     }
@@ -109,6 +123,7 @@ class OperationsWorkspaceService
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockInbound($input, $userId))],
             'ajuste-estoque' => ['message' => 'Conferencia registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockAdjustment($input, $userId))],
             'movimentacao-estoque' => ['message' => 'Movimentacao registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockTransfer($input, $userId))],
+            'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
             default => abort(404),
         };
     }
@@ -131,6 +146,7 @@ class OperationsWorkspaceService
             'entrada-estoque', 'ajuste-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser alterados. Crie um novo lancamento.',
             ]),
+            'usuarios' => ['message' => 'Usuario atualizado com sucesso.', 'record' => $this->serializeUser($this->saveUser($this->findRecord(User::class, $recordId), $input))],
             default => abort(404),
         };
     }
@@ -143,6 +159,7 @@ class OperationsWorkspaceService
             'categorias' => tap($this->findRecord(Category::class, $recordId))->delete() ? 'Categoria removida com sucesso.' : 'Categoria removida com sucesso.',
             'delivery' => tap($this->findRecord(DeliveryOrder::class, $recordId))->delete() ? 'Entrega removida com sucesso.' : 'Entrega removida com sucesso.',
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
+            'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
             'entrada-estoque', 'ajuste-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser excluidos para preservar a rastreabilidade.',
             ]),
@@ -259,6 +276,24 @@ class OperationsWorkspaceService
         ];
     }
 
+    protected function usersPayload(): array
+    {
+        return [
+            'records' => User::query()
+                ->orderByRaw("CASE WHEN role = 'admin' THEN 0 WHEN role = 'manager' THEN 1 ELSE 2 END")
+                ->orderBy('name')
+                ->get()
+                ->map(fn (User $user) => $this->serializeUser($user))
+                ->values()
+                ->all(),
+            'roles' => [
+                ['value' => 'admin', 'label' => 'Administrador'],
+                ['value' => 'manager', 'label' => 'Gerente'],
+                ['value' => 'operator', 'label' => 'Operador'],
+            ],
+        ];
+    }
+
     protected function saveCustomer(?Customer $customer, array $input): Customer
     {
         $validated = Validator::make($input, [
@@ -306,6 +341,49 @@ class OperationsWorkspaceService
         $category->fill($validated)->save();
 
         return $category->fresh();
+    }
+
+    protected function saveUser(?User $user, array $input): User
+    {
+        $isCreate = !$user;
+
+        $validated = Validator::make($input, [
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user?->id)],
+            'role' => ['required', Rule::in(['admin', 'manager', 'operator'])],
+            'is_supervisor' => ['nullable', 'boolean'],
+            'active' => ['required', 'boolean'],
+            'must_change_password' => ['nullable', 'boolean'],
+            'password' => [$isCreate ? 'required' : 'nullable', 'string', 'min:4'],
+            'discount_authorization_password' => ['nullable', 'string', 'min:4'],
+        ])->validate();
+
+        $user ??= new User();
+
+        $payload = [
+            'name' => $validated['name'],
+            'username' => $validated['username'],
+            'role' => $validated['role'],
+            'is_supervisor' => $this->hasColumn('users', 'is_supervisor')
+                ? (bool) ($validated['is_supervisor'] ?? false)
+                : false,
+            'active' => $validated['active'],
+            'must_change_password' => (bool) ($validated['must_change_password'] ?? false),
+        ];
+
+        if (filled($validated['password'] ?? null)) {
+            $payload['password'] = Hash::make((string) $validated['password']);
+        }
+
+        if ($this->hasColumn('users', 'discount_authorization_password') && array_key_exists('discount_authorization_password', $validated)) {
+            $payload['discount_authorization_password'] = filled($validated['discount_authorization_password'] ?? null)
+                ? Hash::make((string) $validated['discount_authorization_password'])
+                : null;
+        }
+
+        $user->fill($payload)->save();
+
+        return $user->fresh();
     }
 
     protected function saveStockInbound(array $input, int $userId): InventoryMovement
@@ -785,6 +863,40 @@ class OperationsWorkspaceService
             'active' => (bool) $category->active,
             'created_at' => $category->created_at?->toIso8601String(),
         ];
+    }
+
+    protected function serializeUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'role' => $user->role,
+            'is_supervisor' => $this->hasColumn('users', 'is_supervisor')
+                ? (bool) $user->is_supervisor
+                : false,
+            'active' => (bool) $user->active,
+            'must_change_password' => (bool) $user->must_change_password,
+            'has_discount_authorization_password' => $this->hasColumn('users', 'discount_authorization_password')
+                ? filled($user->discount_authorization_password)
+                : false,
+            'created_at' => $user->created_at?->toIso8601String(),
+        ];
+    }
+
+    protected function hasTable(string $table): bool
+    {
+        return $this->schemaTableCache[$table]
+            ??= Schema::connection((new User())->getConnectionName())->hasTable($table);
+    }
+
+    protected function hasColumn(string $table, string $column): bool
+    {
+        $cacheKey = "{$table}.{$column}";
+
+        return $this->schemaColumnCache[$cacheKey]
+            ??= $this->hasTable($table)
+                && Schema::connection((new User())->getConnectionName())->hasColumn($table, $column);
     }
 
     protected function serializeStockMovement(InventoryMovement $movement): array

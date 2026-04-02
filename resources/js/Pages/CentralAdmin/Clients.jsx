@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/Layouts/AdminLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
+import { formatMoney } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
@@ -42,6 +43,36 @@ function buildTenantForm(tenant = null) {
         client_document: tenant.document || '',
         active: Boolean(tenant.active),
     }
+}
+
+function buildLicenseForm(tenant = null) {
+    return {
+        starts_at: tenant?.license?.starts_at || new Date().toISOString().slice(0, 10),
+        cycle_days: String(tenant?.license?.cycle_days || 30),
+        grace_days: String(tenant?.license?.grace_days || 10),
+        amount: tenant?.license?.amount == null ? '' : String(tenant.license.amount),
+        status: tenant?.license?.status === 'warning' || tenant?.license?.status === 'overdue'
+            ? 'active'
+            : (tenant?.license?.status || 'active'),
+    }
+}
+
+function getLicenseTone(status) {
+    if (!status) return 'is-muted'
+    if (status === 'blocked') return 'is-inactive'
+    if (status === 'overdue') return 'is-danger'
+    if (status === 'paused') return 'is-info'
+    if (status === 'warning') return 'is-info'
+    return 'is-active'
+}
+
+function getLicenseLabel(status) {
+    if (!status) return 'Sem licenca'
+    if (status === 'blocked') return 'Bloqueada'
+    if (status === 'overdue') return 'Vencida'
+    if (status === 'paused') return 'Pausada'
+    if (status === 'warning') return 'A vencer'
+    return 'Ativa'
 }
 
 function buildTenantSummaries(tenants, settingsState) {
@@ -266,7 +297,172 @@ function ConfirmModal({ open, tenant, busy, onClose, onConfirm }) {
     )
 }
 
-function TenantsTable({ tenants, onCreate, onEdit, onDelete }) {
+function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChange, onSubmit, onInvoiceStatusChange }) {
+    const invoice = tenant?.license?.invoice
+
+    return (
+        <ModalFrame
+            open={open}
+            icon="fa-file-invoice-dollar"
+            title={tenant ? `Licenca de ${tenant.name}` : 'Licenca'}
+            description="Controle o ciclo, tolerancia e a fatura ativa da licenca deste tenant."
+            onClose={onClose}
+        >
+            <form onSubmit={onSubmit}>
+                <div className="central-admin-modal-body">
+                    <div className="central-admin-form-grid">
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Inicio da licenca</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-calendar-day" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    type="date"
+                                    value={form.starts_at}
+                                    onChange={(event) => onChange('starts_at', event.target.value)}
+                                    required
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Ciclo em dias</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-repeat" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    type="number"
+                                    min="1"
+                                    max="365"
+                                    value={form.cycle_days}
+                                    onChange={(event) => onChange('cycle_days', event.target.value)}
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Tolerancia</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-hourglass-half" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    type="number"
+                                    min="0"
+                                    max="90"
+                                    value={form.grace_days}
+                                    onChange={(event) => onChange('grace_days', event.target.value)}
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Valor da fatura</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-money-bill-wave" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={form.amount}
+                                    onChange={(event) => onChange('amount', event.target.value)}
+                                    placeholder="0,00"
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field is-full">
+                            <span className="central-admin-field-label">Status base</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-shield-halved" />
+                                </span>
+                                <select
+                                    className="central-admin-field-input"
+                                    value={form.status}
+                                    onChange={(event) => onChange('status', event.target.value)}
+                                >
+                                    <option value="active">Ativa</option>
+                                    <option value="paused">Pausada</option>
+                                    <option value="blocked">Bloqueada</option>
+                                </select>
+                            </span>
+                        </label>
+                    </div>
+
+                    {tenant?.license ? (
+                        <div className="central-admin-note-card central-admin-license-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Estado atual</h3>
+                                <span className={`central-admin-status-pill ${getLicenseTone(tenant.license.status)}`}>
+                                    {getLicenseLabel(tenant.license.status)}
+                                </span>
+                            </div>
+                            <p>{tenant.license.message}</p>
+                            <div className="central-admin-pill-row">
+                                {tenant.license.due_date ? <span className="central-admin-badge">Vence em {tenant.license.due_date}</span> : null}
+                                {tenant.license.days_remaining != null ? <span className="central-admin-badge is-info">{tenant.license.days_remaining} dia(s)</span> : null}
+                                {tenant.license.amount != null ? <span className="central-admin-badge">{formatMoney(tenant.license.amount)}</span> : null}
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {invoice ? (
+                        <div className="central-admin-note-card central-admin-license-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Fatura atual</h3>
+                                <span className={`central-admin-status-pill ${invoice.status === 'paid' ? 'is-active' : 'is-inactive'}`}>
+                                    {invoice.status === 'paid' ? 'Paga' : 'Pendente'}
+                                </span>
+                            </div>
+                            <div className="central-admin-pill-row">
+                                <span className="central-admin-badge">{invoice.reference}</span>
+                                <span className="central-admin-badge is-info">Vencimento {invoice.due_date}</span>
+                                <span className="central-admin-badge">{formatMoney(invoice.amount || 0)}</span>
+                            </div>
+                            <div className="central-admin-table-actions">
+                                <button
+                                    type="button"
+                                    className="central-admin-secondary-button"
+                                    onClick={() => onInvoiceStatusChange(invoice, invoice.status === 'paid' ? 'pending' : 'paid')}
+                                    disabled={invoiceBusyId === invoice.id}
+                                >
+                                    <i className={`fa-solid ${invoice.status === 'paid' ? 'fa-rotate-left' : 'fa-circle-check'}`} />
+                                    <span>{invoiceBusyId === invoice.id ? 'Salvando...' : invoice.status === 'paid' ? 'Marcar pendente' : 'Marcar paga'}</span>
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="central-admin-note-card central-admin-license-card">
+                            <h3>Fatura atual</h3>
+                            <p>A fatura sera gerada automaticamente assim que a licenca for salva.</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="central-admin-modal-footer">
+                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
+                        Cancelar
+                    </button>
+                    <button type="submit" className="central-admin-primary-button" disabled={busy}>
+                        <i className="fa-solid fa-floppy-disk" />
+                        <span>{busy ? 'Salvando...' : 'Salvar licenca'}</span>
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    )
+}
+
+function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onDelete }) {
     return (
         <section className="central-admin-card">
             <div className="central-admin-section-head">
@@ -294,6 +490,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onDelete }) {
                                 <th>Nome do tenant</th>
                                 <th>ID</th>
                                 <th>Status</th>
+                                <th>Licenca</th>
                                 <th>Acoes</th>
                             </tr>
                         </thead>
@@ -313,7 +510,16 @@ function TenantsTable({ tenants, onCreate, onEdit, onDelete }) {
                                         </span>
                                     </td>
                                     <td>
+                                        <span className={`central-admin-status-pill ${getLicenseTone(tenant.license?.status)}`}>
+                                            {getLicenseLabel(tenant.license?.status)}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <div className="central-admin-table-actions">
+                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageLicense(tenant)}>
+                                                <i className="fa-solid fa-file-invoice-dollar" />
+                                                <span>Licenca</span>
+                                            </button>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onEdit(tenant)}>
                                                 <i className="fa-solid fa-pen" />
                                                 <span>Editar</span>
@@ -421,6 +627,10 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
     const [tenantForm, setTenantForm] = useState({ ...INITIAL_TENANT_FORM })
     const [tenantToDelete, setTenantToDelete] = useState(null)
     const [deleteBusy, setDeleteBusy] = useState(false)
+    const [licenseTenant, setLicenseTenant] = useState(null)
+    const [licenseForm, setLicenseForm] = useState(buildLicenseForm())
+    const [licenseBusy, setLicenseBusy] = useState(false)
+    const [invoiceBusyId, setInvoiceBusyId] = useState(null)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
@@ -459,6 +669,11 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
         setFormMode('edit')
         setTenantForm(buildTenantForm(tenant))
         setFormOpen(true)
+    }
+
+    function openLicenseModal(tenant) {
+        setLicenseTenant(tenant)
+        setLicenseForm(buildLicenseForm(tenant))
     }
 
     async function handleSubmitTenant(event) {
@@ -565,6 +780,67 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
         }
     }
 
+    function handleLicenseFieldChange(field, value) {
+        setLicenseForm((current) => ({
+            ...current,
+            [field]: value,
+        }))
+    }
+
+    async function handleSubmitLicense(event) {
+        event.preventDefault()
+
+        if (!licenseTenant) {
+            return
+        }
+
+        setLicenseBusy(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${licenseTenant.id}/license`, {
+                method: 'put',
+                data: {
+                    ...licenseForm,
+                    cycle_days: Number(licenseForm.cycle_days || 30),
+                    grace_days: Number(licenseForm.grace_days || 10),
+                    amount: licenseForm.amount === '' ? null : Number(licenseForm.amount),
+                },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            setLicenseTenant(null)
+            refresh()
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLicenseBusy(false)
+        }
+    }
+
+    async function handleLicenseInvoiceStatusChange(invoice, status) {
+        if (!invoice) {
+            return
+        }
+
+        setInvoiceBusyId(invoice.id)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenant-license-invoices/${invoice.id}/status`, {
+                method: 'patch',
+                data: { status },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            refresh()
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setInvoiceBusyId(null)
+        }
+    }
+
     return (
         <AdminLayout title={isFeatureFlagsPage ? 'Configuracoes' : 'Tenants'}>
             <div className="central-admin-page">
@@ -658,6 +934,7 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                         tenants={tenantSummaries}
                         onCreate={openCreateModal}
                         onEdit={openEditModal}
+                        onManageLicense={openLicenseModal}
                         onDelete={setTenantToDelete}
                     />
                 )}
@@ -679,6 +956,18 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                 busy={deleteBusy}
                 onClose={() => setTenantToDelete(null)}
                 onConfirm={handleConfirmDelete}
+            />
+
+            <LicenseModal
+                open={Boolean(licenseTenant)}
+                tenant={licenseTenant}
+                form={licenseForm}
+                busy={licenseBusy}
+                invoiceBusyId={invoiceBusyId}
+                onClose={() => setLicenseTenant(null)}
+                onChange={handleLicenseFieldChange}
+                onSubmit={handleSubmitLicense}
+                onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
             />
         </AdminLayout>
     )

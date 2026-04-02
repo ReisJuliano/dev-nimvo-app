@@ -25,6 +25,8 @@ class ProductService
             $data['code'] = $product->exists ? $product->code : $this->nextCode();
         }
 
+        $baseUnit = strtoupper((string) ($data['unit'] ?? $product->unit ?? 'UN'));
+
         $product->fill([
             'code' => $data['code'],
             'barcode' => $data['barcode'] ?? null,
@@ -32,7 +34,7 @@ class ProductService
             'description' => $data['description'] ?? null,
             'category_id' => $data['category_id'] ?? null,
             'supplier_id' => $data['supplier_id'] ?? null,
-            'unit' => $data['unit'],
+            'unit' => $baseUnit,
             'cost_price' => $data['cost_price'] ?? 0,
             'sale_price' => $data['sale_price'] ?? 0,
             'stock_quantity' => $data['stock_quantity'] ?? ($product->exists ? $product->stock_quantity : 0),
@@ -64,6 +66,64 @@ class ProductService
 
         if ($this->productColumnExists('catalog_visible')) {
             $product->catalog_visible = (bool) ($data['catalog_visible'] ?? false);
+        }
+
+        if ($this->productColumnExists('ncm')) {
+            $product->ncm = $data['ncm'] ?? null;
+        }
+
+        if ($this->productColumnExists('cfop')) {
+            $product->cfop = $data['cfop'] ?? null;
+        }
+
+        if ($this->productColumnExists('cest')) {
+            $product->cest = $data['cest'] ?? null;
+        }
+
+        if ($this->productColumnExists('origin_code')) {
+            $product->origin_code = $data['origin_code'] ?? '0';
+        }
+
+        if ($this->productColumnExists('icms_csosn')) {
+            $product->icms_csosn = $data['icms_csosn'] ?? '102';
+        }
+
+        if ($this->productColumnExists('pis_cst')) {
+            $product->pis_cst = $data['pis_cst'] ?? '49';
+        }
+
+        if ($this->productColumnExists('cofins_cst')) {
+            $product->cofins_cst = $data['cofins_cst'] ?? '49';
+        }
+
+        if ($this->productColumnExists('fiscal_enabled')) {
+            $product->fiscal_enabled = array_key_exists('fiscal_enabled', $data)
+                ? (bool) $data['fiscal_enabled']
+                : ($product->exists ? (bool) $product->fiscal_enabled : true);
+        }
+
+        if ($this->productColumnExists('commercial_unit')) {
+            $product->commercial_unit = strtoupper((string) ($data['commercial_unit'] ?? $baseUnit)) ?: $baseUnit;
+        }
+
+        if ($this->productColumnExists('taxable_unit')) {
+            $product->taxable_unit = strtoupper((string) ($data['taxable_unit'] ?? $data['commercial_unit'] ?? $baseUnit)) ?: $baseUnit;
+        }
+
+        if ($this->productColumnExists('icms_rate')) {
+            $product->icms_rate = $data['icms_rate'] ?? null;
+        }
+
+        if ($this->productColumnExists('pis_rate')) {
+            $product->pis_rate = $data['pis_rate'] ?? null;
+        }
+
+        if ($this->productColumnExists('cofins_rate')) {
+            $product->cofins_rate = $data['cofins_rate'] ?? null;
+        }
+
+        if ($this->productColumnExists('ipi_rate')) {
+            $product->ipi_rate = $data['ipi_rate'] ?? null;
         }
 
         $product->save();

@@ -9,14 +9,20 @@ use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class PosService
 {
+    protected array $schemaTableCache = [];
+
+    protected array $schemaColumnCache = [];
+
     public function __construct(
         protected OrderDraftService $orderDraftService,
         protected TenantSettingsService $settingsService,
         protected InventoryMovementService $inventoryMovementService,
+        protected PendingSaleService $pendingSaleService,
     ) {
     }
 
@@ -75,7 +81,29 @@ class PosService
                     ]);
                 }
 
-                return compact('product', 'quantity', 'lineSubtotal', 'lineDiscount');
+                $discountPercent = array_key_exists('discount_percent', $item)
+                    ? round((float) ($item['discount_percent'] ?? 0), 4)
+                    : ($lineSubtotal > 0 && $lineDiscount > 0 ? round(($lineDiscount / $lineSubtotal) * 100, 4) : null);
+
+                $discountAuthorizer = $lineDiscount > 0
+                    ? ($item['discount_authorized_by'] ?? null)
+                    : null;
+
+                if ($lineDiscount > 0 && !$discountAuthorizer) {
+                    throw ValidationException::withMessages([
+                        'items' => "O desconto do produto {$product->name} precisa de autorizacao gerencial.",
+                    ]);
+                }
+
+                return [
+                    'product' => $product,
+                    'quantity' => $quantity,
+                    'lineSubtotal' => $lineSubtotal,
+                    'lineDiscount' => $lineDiscount,
+                    'discountPercent' => $discountPercent,
+                    'discountScope' => $item['discount_scope'] ?? ($lineDiscount > 0 ? 'item' : null),
+                    'discountAuthorizedBy' => $discountAuthorizer,
+                ];
             });
 
             $subtotal = round($items->sum('lineSubtotal'), 2);
@@ -148,8 +176,13 @@ class PosService
 
             $paymentMethods = $resolvedPayments->pluck('method')->unique()->values();
             $paymentMethod = $paymentMethods->count() === 1 ? $paymentMethods->first() : PaymentMethod::MIXED;
-
-            $customerId = $payload['customer_id'] ?? $orderDraft?->customer_id;
+            $recipientPayload = $this->normalizeRecipientPayload($payload['recipient_payload'] ?? null);
+            $customerId = $payload['customer_id'] ?? $recipientPayload['customer_id'] ?? $orderDraft?->customer_id;
+            $companyId = $this->hasTable('companies')
+                ? ($payload['company_id'] ?? $recipientPayload['company_id'] ?? null)
+                : null;
+            $requestedDocumentModel = (string) ($payload['requested_document_model'] ?? '65');
+            $fiscalDecision = $payload['fiscal_decision'] ?? null;
             $hasCredit = $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT);
 
             if ($hasCredit && ! $customerId) {
@@ -181,7 +214,7 @@ class PosService
                 }
             }
 
-            $sale = Sale::query()->create([
+            $saleAttributes = [
                 'sale_number' => $this->nextSaleNumber(),
                 'customer_id' => $customerId,
                 'user_id' => $userId,
@@ -194,7 +227,25 @@ class PosService
                 'payment_method' => $paymentMethod,
                 'status' => 'finalized',
                 'notes' => $payload['notes'] ?? $orderDraft?->notes,
-            ]);
+            ];
+
+            if ($this->hasColumn('sales', 'company_id')) {
+                $saleAttributes['company_id'] = $companyId;
+            }
+
+            if ($this->hasColumn('sales', 'requested_document_model')) {
+                $saleAttributes['requested_document_model'] = $requestedDocumentModel;
+            }
+
+            if ($this->hasColumn('sales', 'fiscal_decision')) {
+                $saleAttributes['fiscal_decision'] = $fiscalDecision;
+            }
+
+            if ($this->hasColumn('sales', 'recipient_payload')) {
+                $saleAttributes['recipient_payload'] = $recipientPayload;
+            }
+
+            $sale = Sale::query()->create($saleAttributes);
 
             foreach ($items as $entry) {
                 /** @var Product $product */
@@ -203,14 +254,32 @@ class PosService
                 $lineTotal = round(max(0, $entry['lineSubtotal'] - $entry['lineDiscount']), 2);
                 $unitPrice = $quantity > 0 ? round($lineTotal / $quantity, 2) : 0;
 
-                $sale->items()->create([
+                $saleItemAttributes = [
                     'product_id' => $product->id,
                     'quantity' => $quantity,
                     'unit_cost' => $product->cost_price,
                     'unit_price' => $unitPrice,
                     'total' => $lineTotal,
                     'profit' => round($lineTotal - ((float) $product->cost_price * $quantity), 2),
-                ]);
+                ];
+
+                if ($this->hasColumn('sale_items', 'discount_amount')) {
+                    $saleItemAttributes['discount_amount'] = $entry['lineDiscount'];
+                }
+
+                if ($this->hasColumn('sale_items', 'discount_percent')) {
+                    $saleItemAttributes['discount_percent'] = $entry['discountPercent'];
+                }
+
+                if ($this->hasColumn('sale_items', 'discount_authorized_by')) {
+                    $saleItemAttributes['discount_authorized_by'] = $entry['discountAuthorizedBy'];
+                }
+
+                if ($this->hasColumn('sale_items', 'discount_authorization_scope')) {
+                    $saleItemAttributes['discount_authorization_scope'] = $entry['discountScope'];
+                }
+
+                $sale->items()->create($saleItemAttributes);
 
                 $this->inventoryMovementService->apply($product, -$quantity, 'sale', [
                     'user_id' => $userId,
@@ -232,12 +301,46 @@ class PosService
                 $this->orderDraftService->markAsCompleted($orderDraft, $sale);
             }
 
+            $this->pendingSaleService->discard($userId);
+
             return [
                 'sale_id' => $sale->id,
                 'sale_number' => $sale->sale_number,
                 'total' => (float) $sale->total,
+                'subtotal' => (float) $sale->subtotal,
+                'discount' => (float) $sale->discount,
+                'payment_method' => $sale->payment_method,
+                'requested_document_model' => $this->hasColumn('sales', 'requested_document_model')
+                    ? $sale->requested_document_model
+                    : $requestedDocumentModel,
+                'fiscal_decision' => $this->hasColumn('sales', 'fiscal_decision')
+                    ? $sale->fiscal_decision
+                    : $fiscalDecision,
+                'payments' => $resolvedPayments->values()->all(),
             ];
         });
+    }
+
+    protected function normalizeRecipientPayload(mixed $payload): ?array
+    {
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $normalized = [
+            'type' => $payload['type'] ?? null,
+            'name' => filled($payload['name'] ?? null) ? trim((string) $payload['name']) : null,
+            'document' => filled($payload['document'] ?? null)
+                ? preg_replace('/\D+/', '', (string) $payload['document'])
+                : null,
+            'customer_id' => filled($payload['customer_id'] ?? null) ? (int) $payload['customer_id'] : null,
+            'company_id' => filled($payload['company_id'] ?? null) ? (int) $payload['company_id'] : null,
+            'email' => filled($payload['email'] ?? null) ? trim((string) $payload['email']) : null,
+        ];
+
+        $normalized = array_filter($normalized, fn ($value) => $value !== null && $value !== '');
+
+        return $normalized === [] ? null : $normalized;
     }
 
     protected function nextSaleNumber(): string
@@ -246,5 +349,20 @@ class PosService
         $count = Sale::query()->whereDate('created_at', now())->count() + 1;
 
         return sprintf('VND-%s-%04d', $prefix, $count);
+    }
+
+    protected function hasTable(string $table): bool
+    {
+        return $this->schemaTableCache[$table]
+            ??= Schema::connection((new Sale())->getConnectionName())->hasTable($table);
+    }
+
+    protected function hasColumn(string $table, string $column): bool
+    {
+        $cacheKey = "{$table}.{$column}";
+
+        return $this->schemaColumnCache[$cacheKey]
+            ??= $this->hasTable($table)
+                && Schema::connection((new Sale())->getConnectionName())->hasColumn($table, $column);
     }
 }
