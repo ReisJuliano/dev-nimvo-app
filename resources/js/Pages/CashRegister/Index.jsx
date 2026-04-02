@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react'
 import { useState } from 'react'
 import ActiveRegisterPanel from '@/Components/CashRegister/ActiveRegisterPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
@@ -199,17 +200,6 @@ export default function CashRegisterIndex({ openRegister, history, pendingOrderD
                                     <small>Conferencia guiada</small>
                                     <strong>{requireConference ? 'Obrigatoria' : 'Opcional'}</strong>
                                 </div>
-                                <button
-                                    type="button"
-                                    className="cash-register-primary-button cash-register-hero-action"
-                                    onClick={() => setPendingOrdersModalOpen(true)}
-                                >
-                                    <span className="cash-register-hero-action-label">
-                                        <i className="fa-solid fa-receipt" />
-                                        Comandas disponiveis
-                                    </span>
-                                    <strong className="cash-register-hero-action-count">{pendingOrdersCount}</strong>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -234,23 +224,61 @@ export default function CashRegisterIndex({ openRegister, history, pendingOrderD
                     </button>
                 </section>
 
-                {activeTab === 'active' ? (
-                    openRegister ? (
-                        <ActiveRegisterPanel
-                            report={openRegister}
-                            onMovement={handleMovement}
-                            onClose={handleClose}
-                            onStartCloseConference={handleStartCloseConference}
-                            requireConference={requireConference}
-                        />
-                    ) : (
-                        <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
-                    )
-                ) : null}
+                <div className="cash-register-workspace">
+                    <div className="cash-register-main-column">
+                        {activeTab === 'active' ? (
+                            openRegister ? (
+                                <ActiveRegisterPanel
+                                    report={openRegister}
+                                    onMovement={handleMovement}
+                                    onClose={handleClose}
+                                    onStartCloseConference={handleStartCloseConference}
+                                    requireConference={requireConference}
+                                />
+                            ) : (
+                                <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
+                            )
+                        ) : null}
 
-                {activeTab === 'history' ? (
-                    <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
-                ) : null}
+                        {activeTab === 'history' ? (
+                            <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
+                        ) : null}
+                    </div>
+
+                    <aside className="cash-register-side-rail">
+                        <section className="cash-register-card cash-register-side-card">
+                            <div className="cash-register-section-header">
+                                <div>
+                                    <span className="cash-register-section-kicker">Acesso rapido</span>
+                                    <h2>Atalhos laterais</h2>
+                                    <p>Abra o PDV ou confira as comandas prontas para cobranca sem sair do caixa.</p>
+                                </div>
+                            </div>
+
+                            <div className="cash-register-side-actions">
+                                <Link href="/pdv" className="cash-register-primary-button cash-register-side-action">
+                                    <span className="cash-register-side-action-copy">
+                                        <i className="fa-solid fa-cash-register" />
+                                        <span>Abrir PDV</span>
+                                    </span>
+                                    <small>Ir para vendas</small>
+                                </Link>
+
+                                <button
+                                    type="button"
+                                    className="cash-register-side-action cash-register-side-action-secondary"
+                                    onClick={() => setPendingOrdersModalOpen(true)}
+                                >
+                                    <span className="cash-register-side-action-copy">
+                                        <i className="fa-solid fa-receipt" />
+                                        <span>Comandas disponiveis</span>
+                                    </span>
+                                    <strong className="cash-register-side-action-count">{pendingOrdersCount}</strong>
+                                </button>
+                            </div>
+                        </section>
+                    </aside>
+                </div>
             </div>
 
             {closeConferenceModal ? (
