@@ -1074,8 +1074,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         onCustomerInput={handleNewDraftCustomerInput}
                         onPickCustomer={(customer) => setNewDraftForm((current) => ({ ...current, customerName: customer.name, customerId: String(customer.id) }))}
                         onClose={() => setNewDraftModalOpen(false)}
-                        onSubmit={handleCreateDraft}
-                        onSubmitAndAddProducts={() => handleCreateDraft(null, { openProductsAfter: true })}
+                        onSubmit={(event) => handleCreateDraft(event, { openProductsAfter: true })}
                     />
                 ) : null}
 

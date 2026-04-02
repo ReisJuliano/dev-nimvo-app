@@ -29,7 +29,6 @@ export default function OrderDraftFormModal({
     onPickCustomer,
     onClose,
     onSubmit,
-    onSubmitAndAddProducts,
 }) {
     const activeTypeMeta = TYPE_META[form.type] || TYPE_META.comanda
     const quickStats = [
@@ -228,13 +227,8 @@ export default function OrderDraftFormModal({
                             <span>Fechar</span>
                         </button>
 
-                        <button type="button" className="orders-terminal-sidebar-action" onClick={onSubmitAndAddProducts} disabled={creatingDraft}>
-                            <i className="fa-solid fa-box-open" />
-                            <span>Produtos</span>
-                        </button>
-
                         <button type="submit" className="orders-terminal-sidebar-action" disabled={creatingDraft}>
-                            <i className="fa-solid fa-plus" />
+                            <i className="fa-solid fa-box-open" />
                             <span>{creatingDraft ? 'Criando' : 'Criar'}</span>
                         </button>
                     </aside>
