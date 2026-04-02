@@ -648,27 +648,211 @@
     padding: 1rem;
 }
 
-.orders-discount-mode-grid {
+.orders-modal-action-compact {
+    width: min(760px, calc(100vw - 2rem));
+    border-radius: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #ffffff;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.16);
+}
+
+.orders-modal-action-compact .orders-page-kicker {
+    display: none;
+}
+
+.orders-modal-action-compact .orders-modal-header {
+    align-items: center;
+    padding: 0.95rem 1rem;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+    backdrop-filter: none;
+}
+
+.orders-modal-action-compact .orders-modal-header h2 {
+    margin-top: 0;
+    font-size: 1.02rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.orders-modal-action-compact .orders-modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.orders-modal-action-compact-body {
+    padding: 0.9rem;
+    background: #f8fafc;
+}
+
+.orders-action-compact-form {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.85rem;
 }
 
-.orders-discount-mode {
+.orders-action-toggle-grid,
+.orders-action-field-grid,
+.orders-action-metrics {
     display: grid;
-    gap: 0.25rem;
-    padding: 0.95rem 1rem;
-    border-radius: 20px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(255, 255, 255, 0.78);
-    color: var(--app-text-secondary);
-    cursor: pointer;
-    text-align: left;
+    gap: 0.75rem;
 }
 
-.orders-discount-mode.active {
-    border-color: rgba(47, 124, 246, 0.18);
-    color: var(--app-primary-dark);
+.orders-action-toggle-grid.cols-3,
+.orders-action-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.orders-action-toggle-grid.cols-2,
+.orders-action-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.orders-action-toggle-grid.wide,
+.orders-action-field.wide {
+    grid-column: 1 / -1;
+}
+
+.orders-action-toggle,
+.orders-action-field,
+.orders-action-metric,
+.orders-action-button {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: #ffffff;
+}
+
+.orders-action-toggle {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 0.45rem;
+    min-height: 88px;
+    padding: 0.95rem;
+    border-radius: 16px;
+    color: var(--orders-terminal-muted);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-action-toggle i {
+    font-size: 1rem;
+}
+
+.orders-action-toggle span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.orders-action-toggle.active {
+    border-color: rgba(24, 95, 165, 0.2);
+    background: rgba(24, 95, 165, 0.06);
+    color: var(--orders-terminal-blue);
+}
+
+.orders-action-field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0 0.95rem;
+    border-radius: 14px;
+}
+
+.orders-action-field i {
+    width: 16px;
+    flex-shrink: 0;
+    color: var(--orders-terminal-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.orders-action-field .ui-input,
+.orders-action-field .ui-select,
+.orders-action-field .ui-textarea {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.orders-action-field .ui-input:focus,
+.orders-action-field .ui-select:focus,
+.orders-action-field .ui-textarea:focus {
+    outline: none;
+}
+
+.orders-action-field .ui-textarea {
+    min-height: 84px;
+    padding: 0;
+    resize: vertical;
+}
+
+.orders-action-metric {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.9rem;
+    border-radius: 14px;
+}
+
+.orders-action-metric span {
+    color: var(--orders-terminal-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.orders-action-metric strong {
+    color: var(--orders-terminal-text);
+    font-size: 0.98rem;
+}
+
+.orders-action-metric.total {
+    border-color: rgba(24, 95, 165, 0.14);
+    background: rgba(24, 95, 165, 0.05);
+}
+
+.orders-action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.orders-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-height: 48px;
+    padding: 0 1rem;
+    border-radius: 14px;
+    color: var(--orders-terminal-text);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-action-button span {
+    font-weight: 700;
+}
+
+.orders-action-button.muted {
+    color: var(--orders-terminal-muted);
+}
+
+.orders-action-button.primary {
+    border-color: rgba(24, 95, 165, 0.18);
+    background: var(--orders-terminal-blue);
+    color: #ffffff;
+}
+
+.orders-action-button.primary:hover {
+    background: #154f86;
 }
 
 .orders-product-skeleton {
@@ -2392,7 +2576,10 @@
     .orders-detail-layout,
     .orders-checkout-summary,
     .orders-credit-grid,
-    .orders-discount-mode-grid,
+    .orders-action-toggle-grid.cols-3,
+    .orders-action-toggle-grid.cols-2,
+    .orders-action-field-grid,
+    .orders-action-metrics,
     .orders-product-picker-shell,
     .orders-product-compact-topline,
     .orders-product-compact-summary,
@@ -2468,6 +2655,7 @@
     .orders-product-card-footer,
     .orders-search-result,
     .orders-edit-customer-toolbar,
+    .orders-action-buttons,
     .orders-product-picker-results-header,
     .orders-product-picker-card-head,
     .orders-product-picker-card-price,

@@ -46,7 +46,7 @@ export default function OrderDetailModal({
     const sidebarActions = [
         { key: 'products', label: 'Produtos', icon: 'fa-box-open', onClick: onOpenProductsModal },
         { key: 'quantity', label: 'Quantidade', icon: 'fa-arrows-up-down', onClick: onOpenQuantityModal, disabled: !selectedItem },
-        { key: 'discount', label: 'Desconto', icon: 'fa-badge-percent', onClick: onOpenDiscountModal, disabled: !draft.items.length },
+        { key: 'discount', label: 'Desconto', icon: 'fa-percent', onClick: onOpenDiscountModal, disabled: !draft.items.length },
         { key: 'delivery', label: 'Entrega', icon: 'fa-motorcycle', onClick: onOpenDeliveryModal },
         { key: 'customer', label: 'Cliente', icon: 'fa-user-pen', onClick: onOpenTransferModal },
         { key: 'print', label: printingDraft ? 'Imprimindo' : 'Imprimir', icon: 'fa-print', onClick: onPrintDraft, disabled: printingDraft },
@@ -227,7 +227,7 @@ export default function OrderDetailModal({
                                             <h4>Total do atendimento</h4>
                                         </div>
                                         <span className="orders-terminal-inline-chip soft">
-                                            <i className="fa-solid fa-badge-percent" />
+                                            <i className="fa-solid fa-percent" />
                                             {pricing.summary.title}
                                         </span>
                                     </div>

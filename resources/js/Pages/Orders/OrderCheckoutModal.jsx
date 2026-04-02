@@ -165,7 +165,7 @@ export default function OrderCheckoutModal({
                         Pagamento parcial
                     </button>
                     <button type="button" className="ui-button-secondary" onClick={onOpenDiscountModal}>
-                        <i className="fa-solid fa-badge-percent" />
+                        <i className="fa-solid fa-percent" />
                         Desconto
                     </button>
                     <button type="button" className="ui-button" onClick={onConfirm} disabled={submittingCheckout}>
