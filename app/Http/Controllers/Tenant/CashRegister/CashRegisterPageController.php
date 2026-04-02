@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant\CashRegister;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\CashRegister;
 use App\Services\Tenant\CashRegisterReportService;
+use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\TenantSettingsService;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,6 +14,7 @@ class CashRegisterPageController extends Controller
 {
     public function __invoke(
         CashRegisterReportService $reportService,
+        OrderDraftService $orderDraftService,
         TenantSettingsService $settingsService,
     ): Response
     {
@@ -51,6 +53,7 @@ class CashRegisterPageController extends Controller
         return Inertia::render('CashRegister/Index', [
             'openRegister' => $openRegister ? $reportService->build($openRegister) : null,
             'history' => $history,
+            'pendingOrderDrafts' => $orderDraftService->pendingCheckoutDrafts(),
             'settings' => $settingsService->get(),
         ]);
     }
