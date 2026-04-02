@@ -34,7 +34,6 @@ export default function OrderDetailModal({
     }
 
     const sentToCashier = draft.status === 'sent_to_cashier'
-    const cashierActionLabel = sendingDraft ? 'Enviando' : sentToCashier ? 'No caixa' : 'Enviar ao caixa'
     const elapsedLabel = formatElapsedTime(draft.updatedAt, clock)
     const customerName = selectedCustomer?.name || 'Nao identificado'
     const referenceLabel = draft.reference?.trim() || getDraftNumberLabel(draft)
@@ -53,7 +52,7 @@ export default function OrderDetailModal({
         { key: 'print', label: printingDraft ? 'Imprimindo' : 'Imprimir', icon: 'fa-print', onClick: onPrintDraft, disabled: printingDraft },
         {
             key: 'cashier',
-            label: cashierActionLabel,
+            label: sendingDraft ? 'Enviando' : sentToCashier ? 'No caixa' : 'Caixa',
             icon: 'fa-cash-register',
             onClick: onSendToCashier,
             disabled: sendingDraft || !draft.items.length || sentToCashier,
