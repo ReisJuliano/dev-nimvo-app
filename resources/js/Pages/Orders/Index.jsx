@@ -1031,6 +1031,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         onResetProductFilters={() => {
                             setSearchTerm('')
                             setSelectedCategory('')
+                            setProductQuickQty('1')
                             setProducts([])
                         }}
                         onAddProduct={(product) => handleAddProduct(product, productQuickQty)}
