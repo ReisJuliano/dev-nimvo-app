@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { formatMoney } from '@/lib/format'
 import OrdersModal from './OrdersModal'
 
 export default function OrderDeliveryModal({ draft, selectedCustomer, submitting, onClose, onSubmit }) {
@@ -21,23 +20,19 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
 
     const isPickup = form.channel === 'retirada'
     const draftLabel = form.reference || draft.reference || `Pedido #${draft.id}`
-    const customerLabel = form.recipient_name || selectedCustomer?.name || 'Cliente nao identificado'
-    const itemCount = Array.isArray(draft.items) ? draft.items.length : 0
-    const deliveryFee = isPickup ? 0 : Number(form.delivery_fee || 0)
-    const projectedTotal = Number(draft.total || 0) + deliveryFee
     const channelMeta = isPickup
         ? {
               icon: 'fa-bag-shopping',
               label: 'Retirada',
               description: 'Separe o pedido para retirada no balcao com identificacao clara do cliente.',
-              kicker: 'Fluxo de retirada',
-          }
+            kicker: 'Fluxo de retirada',
+        }
         : {
-              icon: 'fa-motorcycle',
-              label: 'Delivery',
-              description: 'Confirme destino, taxa e contato antes de enviar o pedido para a fila externa.',
-              kicker: 'Fluxo de entrega',
-          }
+            icon: 'fa-motorcycle',
+            label: 'Delivery',
+            description: 'Confirme destino, taxa e contato antes de enviar o pedido para a fila externa.',
+            kicker: 'Fluxo de entrega',
+        }
 
     return (
         <OrdersModal
@@ -58,7 +53,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                 className="orders-action-compact-form"
                 onSubmit={(event) => {
                     event.preventDefault()
-                    onSubmit({
+                onSubmit({
                         ...form,
                         courier_name: isPickup ? '' : form.courier_name,
                         address: isPickup ? 'Retirada no balcao' : form.address,
@@ -67,32 +62,6 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                     })
                 }}
             >
-                <div className="orders-delivery-hero">
-                    <div className="orders-delivery-hero-copy">
-                        <span className="orders-delivery-hero-kicker">
-                            <i className={`fa-solid ${channelMeta.icon}`} />
-                            {channelMeta.kicker}
-                        </span>
-                        <strong>{draftLabel}</strong>
-                        <p>{channelMeta.description}</p>
-                    </div>
-
-                    <div className="orders-delivery-hero-metrics">
-                        <article>
-                            <span>Cliente</span>
-                            <strong>{customerLabel}</strong>
-                        </article>
-                        <article>
-                            <span>Itens</span>
-                            <strong>{itemCount}</strong>
-                        </article>
-                        <article>
-                            <span>Total previsto</span>
-                            <strong>{formatMoney(projectedTotal)}</strong>
-                        </article>
-                    </div>
-                </div>
-
                 <div className="orders-action-toggle-grid cols-2">
                     <button
                         type="button"
@@ -236,4 +205,3 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
         </OrdersModal>
     )
 }
-
