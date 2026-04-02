@@ -4,18 +4,18 @@ import { getOrderTypeLabel } from './orderUtils'
 const TYPE_META = {
     comanda: {
         icon: 'fa-receipt',
-        hint: 'Fluxo rapido',
-        description: 'Atendimento tradicional para consumo e fechamento direto no caixa.',
+        hint: 'Balcao',
+        description: 'Consumo rapido',
     },
     mesa: {
         icon: 'fa-table-cells-large',
-        hint: 'Por referencia',
-        description: 'Organiza itens por mesa, ambiente ou outro ponto de atendimento.',
+        hint: 'Mesa',
+        description: 'Atendimento por ponto',
     },
     pedido: {
         icon: 'fa-bag-shopping',
-        hint: 'Entrega ou retirada',
-        description: 'Separado para retirada no balcao, entrega ou pedido externo.',
+        hint: 'Entrega',
+        description: 'Retirada ou delivery',
     },
 }
 
@@ -33,82 +33,59 @@ export default function OrderDraftFormModal({
 }) {
     const activeTypeMeta = TYPE_META[form.type] || TYPE_META.comanda
     const quickStats = [
-        { icon: 'fa-layer-group', label: 'Tipo', value: getOrderTypeLabel(form.type) },
-        { icon: 'fa-user', label: 'Cliente', value: form.customerName.trim() || 'Nao identificado' },
-        { icon: 'fa-hashtag', label: 'Referencia', value: form.reference.trim() || 'Livre' },
+        { icon: activeTypeMeta.icon, label: 'Tipo', value: getOrderTypeLabel(form.type) },
+        { icon: 'fa-user', label: 'Cliente', value: form.customerName.trim() || 'Avulso' },
+        { icon: 'fa-hashtag', label: 'Ref.', value: form.reference.trim() || 'Livre' },
+        { icon: 'fa-circle-dot', label: 'Status', value: 'Aberta' },
     ]
 
     return (
         <OrdersModal
             title="Nova comanda"
-            subtitle="Abra um novo atendimento no mesmo padrao visual do PDV."
+            subtitle="Abrir atendimento."
             size="xl"
             className="orders-modal-draft-terminal"
             bodyClassName="orders-modal-draft-terminal-body"
-            badge={<span className="orders-modal-badge orders-modal-badge-status">{getOrderTypeLabel(form.type)}</span>}
+            badge={
+                <span className="orders-modal-badge orders-modal-badge-status">
+                    <i className={`fa-solid ${activeTypeMeta.icon}`} />
+                    <span>{getOrderTypeLabel(form.type)}</span>
+                </span>
+            }
             onClose={onClose}
         >
             <form className="orders-draft-terminal-form" onSubmit={onSubmit}>
                 <div className="orders-draft-terminal-shell">
                     <div className="orders-draft-terminal-main">
-                        <section className="orders-terminal-hero">
-                            <div className="orders-terminal-hero-copy">
-                                <div className="orders-terminal-hero-kicker">
-                                    <i className={`fa-solid ${activeTypeMeta.icon}`} />
-                                    <span>Novo atendimento</span>
-                                </div>
-
-                                <div className="orders-terminal-title-row">
-                                    <h3>{getOrderTypeLabel(form.type)}</h3>
-                                    <span className="orders-terminal-inline-chip">
-                                        <i className="fa-solid fa-bolt" />
-                                        {activeTypeMeta.hint}
-                                    </span>
-                                </div>
-
-                                <p>{activeTypeMeta.description}</p>
-
-                                <div className="orders-terminal-hero-meta">
-                                    <span>
-                                        <i className="fa-solid fa-user" />
-                                        {form.customerName.trim() || 'Cliente opcional'}
-                                    </span>
-                                    <span>
-                                        <i className="fa-solid fa-note-sticky" />
-                                        {form.notes.trim() ? 'Com observacao' : 'Sem observacao'}
-                                    </span>
-                                </div>
+                        <section className="orders-terminal-panel orders-draft-terminal-summary-panel">
+                            <div className="orders-draft-terminal-stats">
+                                {quickStats.map((card) => (
+                                    <article key={card.label} className="orders-draft-terminal-stat-card">
+                                        <div className="orders-draft-terminal-stat-icon">
+                                            <i className={`fa-solid ${card.icon}`} />
+                                        </div>
+                                        <div className="orders-draft-terminal-stat-copy">
+                                            <span>{card.label}</span>
+                                            <strong>{card.value}</strong>
+                                        </div>
+                                    </article>
+                                ))}
                             </div>
-
-                            <div className="orders-terminal-total-card">
-                                <span>Status inicial</span>
-                                <strong>Em aberto</strong>
-                                <small>Depois de criar, a comanda ja fica pronta para receber itens.</small>
-                            </div>
-                        </section>
-
-                        <section className="orders-terminal-metrics orders-draft-terminal-stats">
-                            {quickStats.map((card) => (
-                                <article key={card.label} className="orders-terminal-stat-card">
-                                    <span>
-                                        <i className={`fa-solid ${card.icon}`} />
-                                        {card.label}
-                                    </span>
-                                    <strong>{card.value}</strong>
-                                </article>
-                            ))}
                         </section>
 
                         <section className="orders-terminal-panel">
-                            <div className="orders-terminal-panel-heading">
+                            <div className="orders-terminal-panel-heading compact">
                                 <div>
                                     <span className="orders-terminal-panel-kicker">
                                         <i className="fa-solid fa-sliders" />
-                                        Tipo de atendimento
+                                        Tipo
                                     </span>
-                                    <h4>Escolha o fluxo da comanda</h4>
+                                    <h4>Escolha</h4>
                                 </div>
-                                <small>Todos seguem a mesma operacao, mudando apenas o contexto do atendimento.</small>
+                                <span className="orders-terminal-inline-chip">
+                                    <i className="fa-solid fa-bolt" />
+                                    {activeTypeMeta.description}
+                                </span>
                             </div>
 
                             <div className="orders-draft-terminal-type-grid">
@@ -121,13 +98,14 @@ export default function OrderDraftFormModal({
                                             type="button"
                                             className={`orders-draft-terminal-type-card ${form.type === type ? 'active' : ''}`}
                                             onClick={() => setForm((current) => ({ ...current, type }))}
+                                            title={getOrderTypeLabel(type)}
                                         >
-                                            <span>
+                                            <div className="orders-draft-terminal-type-icon">
                                                 <i className={`fa-solid ${meta.icon}`} />
-                                                {meta.hint}
-                                            </span>
+                                            </div>
                                             <strong>{getOrderTypeLabel(type)}</strong>
                                             <small>{meta.description}</small>
+                                            <span>{meta.hint}</span>
                                         </button>
                                     )
                                 })}
@@ -135,28 +113,31 @@ export default function OrderDraftFormModal({
                         </section>
 
                         <section className="orders-terminal-panel">
-                            <div className="orders-terminal-panel-heading">
+                            <div className="orders-terminal-panel-heading compact">
                                 <div>
                                     <span className="orders-terminal-panel-kicker">
                                         <i className="fa-solid fa-pen-to-square" />
-                                        Dados da comanda
+                                        Dados
                                     </span>
-                                    <h4>Preencha os campos principais</h4>
+                                    <h4>Preencha</h4>
                                 </div>
-                                <small>Cliente, referencia e observacao podem ser ajustados depois.</small>
+                                <span className="orders-terminal-inline-chip soft">
+                                    <i className="fa-solid fa-pen" />
+                                    Editavel depois
+                                </span>
                             </div>
 
                             <div className="orders-draft-terminal-fields">
                                 <label className="orders-draft-terminal-field span-2">
                                     <span>
                                         <i className="fa-solid fa-user" />
-                                        Nome do cliente
+                                        Cliente
                                     </span>
                                     <input
                                         ref={customerInputRef}
                                         className="ui-input"
                                         value={form.customerName}
-                                        placeholder="Digite para localizar ou criar um cliente"
+                                        placeholder="Buscar cliente"
                                         onChange={(event) => onCustomerInput(event.target.value)}
                                     />
                                 </label>
@@ -164,34 +145,34 @@ export default function OrderDraftFormModal({
                                 <label className="orders-draft-terminal-field">
                                     <span>
                                         <i className="fa-solid fa-hashtag" />
-                                        Referencia
+                                        Ref.
                                     </span>
                                     <input
                                         className="ui-input"
                                         value={form.reference}
-                                        placeholder="Ex.: 12, varanda, retirada"
+                                        placeholder="Ex.: 12 ou varanda"
                                         onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
                                     />
                                 </label>
 
-                                <div className="orders-draft-terminal-field orders-draft-terminal-field-hint">
+                                <div className="orders-draft-terminal-field orders-draft-terminal-field-readonly">
                                     <span>
-                                        <i className="fa-solid fa-circle-info" />
-                                        Dica
+                                        <i className="fa-solid fa-bolt" />
+                                        Modo
                                     </span>
-                                    <p>Use uma referencia curta para facilitar a busca e o envio ao caixa.</p>
+                                    <strong>{activeTypeMeta.description}</strong>
                                 </div>
 
                                 <label className="orders-draft-terminal-field span-2">
                                     <span>
                                         <i className="fa-solid fa-note-sticky" />
-                                        Observacao
+                                        Obs.
                                     </span>
                                     <textarea
                                         className="ui-textarea"
-                                        rows="4"
+                                        rows="3"
                                         value={form.notes}
-                                        placeholder="Recados para preparo, entrega ou cobranca"
+                                        placeholder="Recado interno"
                                         onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                                     />
                                 </label>
@@ -200,15 +181,18 @@ export default function OrderDraftFormModal({
 
                         {customerSuggestions.length ? (
                             <section className="orders-terminal-panel">
-                                <div className="orders-terminal-panel-heading">
+                                <div className="orders-terminal-panel-heading compact">
                                     <div>
                                         <span className="orders-terminal-panel-kicker">
                                             <i className="fa-solid fa-address-book" />
-                                            Clientes sugeridos
+                                            Clientes
                                         </span>
-                                        <h4>Selecione um cadastro existente</h4>
+                                        <h4>Sugestoes</h4>
                                     </div>
-                                    <small>{customerSuggestions.length} opcao(oes) encontradas.</small>
+                                    <span className="orders-terminal-inline-chip">
+                                        <i className="fa-solid fa-users" />
+                                        {customerSuggestions.length}
+                                    </span>
                                 </div>
 
                                 <div className="orders-draft-terminal-suggestions">
@@ -219,13 +203,17 @@ export default function OrderDraftFormModal({
                                             className={`orders-draft-terminal-suggestion ${String(customer.id) === form.customerId ? 'active' : ''}`}
                                             onClick={() => onPickCustomer(customer)}
                                         >
-                                            <div>
-                                                <strong>{customer.name}</strong>
-                                                <small>{customer.phone || 'Sem telefone informado'}</small>
+                                            <div className="orders-draft-terminal-suggestion-main">
+                                                <div className="orders-draft-terminal-suggestion-icon">
+                                                    <i className="fa-solid fa-user" />
+                                                </div>
+                                                <div>
+                                                    <strong>{customer.name}</strong>
+                                                    <small>{customer.phone || 'Sem telefone informado'}</small>
+                                                </div>
                                             </div>
                                             <span>
                                                 <i className="fa-solid fa-check" />
-                                                Usar
                                             </span>
                                         </button>
                                     ))}
@@ -237,17 +225,17 @@ export default function OrderDraftFormModal({
                     <aside className="orders-terminal-sidebar orders-draft-terminal-sidebar">
                         <button type="button" className="orders-terminal-sidebar-action" onClick={onClose}>
                             <i className="fa-solid fa-xmark" />
-                            <span>Cancelar</span>
+                            <span>Fechar</span>
                         </button>
 
                         <button type="button" className="orders-terminal-sidebar-action" onClick={onSubmitAndAddProducts} disabled={creatingDraft}>
                             <i className="fa-solid fa-box-open" />
-                            <span>Salvar + Produtos</span>
+                            <span>Produtos</span>
                         </button>
 
-                        <button type="submit" className="orders-terminal-sidebar-finalize" disabled={creatingDraft}>
+                        <button type="submit" className="orders-terminal-sidebar-action" disabled={creatingDraft}>
                             <i className="fa-solid fa-plus" />
-                            <span>{creatingDraft ? 'Criando' : 'Criar comanda'}</span>
+                            <span>{creatingDraft ? 'Criando' : 'Criar'}</span>
                         </button>
                     </aside>
                 </div>

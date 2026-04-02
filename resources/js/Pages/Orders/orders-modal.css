@@ -2266,6 +2266,10 @@
     gap: 0.85rem;
 }
 
+.orders-draft-terminal-summary-panel {
+    padding: 0.8rem;
+}
+
 .orders-draft-terminal-shell {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 112px;
@@ -2274,7 +2278,57 @@
 }
 
 .orders-draft-terminal-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.orders-draft-terminal-stat-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    padding: 0.8rem 0.85rem;
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 14px;
+    background: var(--orders-terminal-surface-alt);
+}
+
+.orders-draft-terminal-stat-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+}
+
+.orders-draft-terminal-stat-copy {
+    min-width: 0;
+    display: grid;
+    gap: 0.2rem;
+}
+
+.orders-draft-terminal-stat-copy span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--orders-terminal-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.orders-draft-terminal-stat-copy strong {
+    margin: 0;
+    color: var(--orders-terminal-text);
+    font-size: 0.92rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .orders-draft-terminal-type-grid {
@@ -2285,15 +2339,28 @@
 
 .orders-draft-terminal-type-card {
     display: grid;
-    gap: 0.35rem;
-    padding: 0.9rem;
+    gap: 0.4rem;
+    align-content: start;
+    justify-items: start;
+    padding: 0.95rem;
     border: 1px solid var(--orders-terminal-border);
     border-radius: 14px;
-    background: var(--orders-terminal-surface-alt);
+    background: linear-gradient(180deg, #ffffff, #f5f8fc);
     color: var(--orders-terminal-muted);
     cursor: pointer;
     text-align: left;
-    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.orders-draft-terminal-type-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+    font-size: 1rem;
 }
 
 .orders-draft-terminal-type-card span,
@@ -2326,6 +2393,7 @@
     border-color: rgba(24, 95, 165, 0.28);
     background: rgba(24, 95, 165, 0.06);
     color: var(--orders-terminal-blue);
+    box-shadow: inset 2px 0 0 rgba(24, 95, 165, 0.35);
 }
 
 .orders-draft-terminal-fields {
@@ -2340,7 +2408,7 @@
     padding: 0.9rem;
     border: 1px solid var(--orders-terminal-border);
     border-radius: 14px;
-    background: var(--orders-terminal-surface-alt);
+    background: #ffffff;
 }
 
 .orders-draft-terminal-field.span-2 {
@@ -2362,28 +2430,26 @@
 .orders-draft-terminal-field .ui-textarea {
     border: 1px solid var(--orders-terminal-border);
     border-radius: 10px;
-    background: #ffffff;
+    background: #f8fafc;
     box-shadow: none;
 }
 
 .orders-draft-terminal-field .ui-textarea {
-    min-height: 112px;
+    min-height: 92px;
     resize: vertical;
 }
 
-.orders-draft-terminal-field-hint {
-    align-content: start;
-}
-
-.orders-draft-terminal-field-hint p {
+.orders-draft-terminal-field-readonly strong {
     margin: 0;
     color: var(--orders-terminal-text);
     font-size: 0.9rem;
+    line-height: 1.45;
 }
 
 .orders-draft-terminal-suggestions {
     display: grid;
-    gap: 0.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
 }
 
 .orders-draft-terminal-suggestion {
@@ -2394,7 +2460,7 @@
     padding: 0.85rem 0.95rem;
     border: 1px solid var(--orders-terminal-border);
     border-radius: 12px;
-    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    background: linear-gradient(180deg, #ffffff, #f5f8fc);
     color: var(--orders-terminal-text);
     cursor: pointer;
     text-align: left;
@@ -2408,6 +2474,36 @@
 
 .orders-draft-terminal-suggestion span {
     flex-shrink: 0;
+}
+
+.orders-draft-terminal-suggestion-main {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.orders-draft-terminal-suggestion-main > div {
+    min-width: 0;
+}
+
+.orders-draft-terminal-suggestion-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+}
+
+.orders-draft-terminal-suggestion-main strong,
+.orders-draft-terminal-suggestion-main small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .orders-modal-edit-terminal {
@@ -3091,6 +3187,7 @@
     .orders-draft-terminal-stats,
     .orders-draft-terminal-type-grid,
     .orders-draft-terminal-fields,
+    .orders-draft-terminal-suggestions,
     .orders-edit-terminal-stats,
     .orders-edit-terminal-type-grid,
     .orders-edit-terminal-fields,
