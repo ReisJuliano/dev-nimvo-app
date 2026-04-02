@@ -40,6 +40,26 @@
     background: linear-gradient(180deg, rgba(243, 247, 255, 0.96), rgba(249, 251, 255, 0.94));
 }
 
+.cash-register-hero-action {
+    width: 100%;
+    justify-content: space-between;
+    padding-inline: 1.1rem;
+}
+
+.cash-register-hero-action-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.cash-register-hero-action-count {
+    min-width: 2.4rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    text-align: center;
+}
+
 .cash-register-hero-metrics small {
     color: var(--app-text-muted);
     text-transform: uppercase;
@@ -568,6 +588,98 @@
     padding: 0 1.2rem 1.2rem;
 }
 
+.cash-register-orders-modal {
+    width: min(960px, 100%);
+}
+
+.cash-register-orders-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.cash-register-order-card {
+    border: 1px solid var(--app-border);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.08), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
+    padding: 1rem 1.05rem;
+}
+
+.cash-register-order-card-top,
+.cash-register-order-card-body,
+.cash-register-order-card-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.cash-register-order-card-top {
+    align-items: center;
+    margin-bottom: 0.85rem;
+}
+
+.cash-register-order-card-body {
+    align-items: flex-start;
+}
+
+.cash-register-order-card-copy {
+    display: grid;
+    gap: 0.55rem;
+    flex: 1;
+}
+
+.cash-register-order-card-copy strong {
+    color: var(--app-text-primary);
+    font-size: 1.05rem;
+}
+
+.cash-register-order-card-copy small,
+.cash-register-order-card-meta span {
+    color: var(--app-text-secondary);
+}
+
+.cash-register-order-card-meta {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.cash-register-order-card-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.cash-register-order-open-button {
+    flex-shrink: 0;
+}
+
+.cash-register-empty-modal {
+    margin: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem;
+}
+
+.cash-register-empty-modal i {
+    font-size: 1.2rem;
+    color: var(--app-primary);
+}
+
+.cash-register-empty-modal div {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.cash-register-empty-modal p {
+    margin: 0;
+}
+
 .cash-register-report-grid {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
@@ -609,6 +721,14 @@
 
     .cash-register-hero-meta {
         min-width: 0;
+        width: 100%;
+    }
+
+    .cash-register-order-card-body {
+        flex-direction: column;
+    }
+
+    .cash-register-order-open-button {
         width: 100%;
     }
 }

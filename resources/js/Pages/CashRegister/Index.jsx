@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ActiveRegisterPanel from '@/Components/CashRegister/ActiveRegisterPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import OpenRegisterCard from '@/Components/CashRegister/OpenRegisterCard'
+import PendingOrderDraftsModal from '@/Components/CashRegister/PendingOrderDraftsModal'
 import RegisterHistoryTable from '@/Components/CashRegister/RegisterHistoryTable'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
@@ -9,14 +10,16 @@ import { buildCloseCashRegisterModal, buildCloseCashRegisterRows } from '@/lib/c
 import { formatMoney } from '@/lib/format'
 import './cash-register.css'
 
-export default function CashRegisterIndex({ openRegister, history, settings }) {
+export default function CashRegisterIndex({ openRegister, history, pendingOrderDrafts = [], settings }) {
     const [loading, setLoading] = useState(false)
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [reportModal, setReportModal] = useState(null)
     const [closeConferenceModal, setCloseConferenceModal] = useState(null)
+    const [pendingOrdersModalOpen, setPendingOrdersModalOpen] = useState(false)
     const [refreshAfterClose, setRefreshAfterClose] = useState(false)
     const [activeTab, setActiveTab] = useState(openRegister ? 'active' : 'history')
     const requireConference = settings?.cash_closing?.require_conference !== false
+    const pendingOrdersCount = pendingOrderDrafts.length
 
     function closeReportModal() {
         setReportModal(null)
@@ -196,6 +199,17 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                     <small>Conferencia guiada</small>
                                     <strong>{requireConference ? 'Obrigatoria' : 'Opcional'}</strong>
                                 </div>
+                                <button
+                                    type="button"
+                                    className="cash-register-primary-button cash-register-hero-action"
+                                    onClick={() => setPendingOrdersModalOpen(true)}
+                                >
+                                    <span className="cash-register-hero-action-label">
+                                        <i className="fa-solid fa-receipt" />
+                                        Comandas disponiveis
+                                    </span>
+                                    <strong className="cash-register-hero-action-count">{pendingOrdersCount}</strong>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -306,6 +320,11 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             ) : null}
 
             <ClosingReportModal report={reportModal} onClose={closeReportModal} />
+            <PendingOrderDraftsModal
+                open={pendingOrdersModalOpen}
+                orders={pendingOrderDrafts}
+                onClose={() => setPendingOrdersModalOpen(false)}
+            />
         </AppLayout>
     )
 }
