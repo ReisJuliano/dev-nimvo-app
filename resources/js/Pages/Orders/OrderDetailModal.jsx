@@ -142,20 +142,21 @@ export default function OrderDetailModal({
                                         </span>
                                         <h4>Produtos</h4>
                                     </div>
-                                    <small>{selectedItem ? `Selecionado: ${selectedItem.name}` : `${draft.items.length} item(ns)`}</small>
+                                    <small>{formatNumber(draft.items.length)} item(ns)</small>
                                 </div>
 
                                 {pricing.items.length ? (
-                                    <div className="orders-terminal-item-list">
-                                        {pricing.items.map((item) => {
-                                            const itemMeta = [
-                                                item.code ? `Cod. ${item.code}` : null,
-                                                item.barcode ? `EAN ${item.barcode}` : null,
-                                                item.unit ? `Un. ${item.unit}` : null,
-                                                `Estoque ${formatNumber(item.stock_quantity)}`,
-                                            ].filter(Boolean).join(' | ')
+                                    <div className="orders-terminal-item-table">
+                                        <div className="orders-terminal-item-columns" aria-hidden="true">
+                                            <span>Descricao</span>
+                                            <span>EAN</span>
+                                            <span>Preco un.</span>
+                                            <span>Quantidade</span>
+                                            <span />
+                                        </div>
 
-                                            return (
+                                        <div className="orders-terminal-item-list">
+                                            {pricing.items.map((item) => (
                                                 <article
                                                     key={item.id}
                                                     className={`orders-terminal-item-row ${selectedItemId === item.id ? 'active' : ''}`}
@@ -169,49 +170,40 @@ export default function OrderDetailModal({
                                                     role="button"
                                                     tabIndex={0}
                                                 >
-                                                    <div className="orders-terminal-item-main">
-                                                        <div className="orders-terminal-item-head">
-                                                            <div className="orders-terminal-item-copy">
-                                                                <strong>{item.name}</strong>
-                                                                <small>{itemMeta}</small>
-                                                            </div>
-                                                            <span className="orders-terminal-item-unit-price">{formatMoney(item.sale_price)}</span>
-                                                        </div>
+                                                    <div className="orders-terminal-item-copy">
+                                                        <strong>{item.name}</strong>
                                                     </div>
+
+                                                    <span className="orders-terminal-item-barcode">{item.barcode || '-'}</span>
+
+                                                    <span className="orders-terminal-item-unit-price">{formatMoney(item.sale_price)}</span>
 
                                                     <div className="orders-terminal-item-controls" onClick={(event) => event.stopPropagation()}>
-                                                        <label className="orders-terminal-item-field">
-                                                            <span>Qtd</span>
-                                                            <input
-                                                                className="ui-input"
-                                                                type="number"
-                                                                min="0.001"
-                                                                step="0.001"
-                                                                value={item.qty}
-                                                                onChange={(event) => onQuantityChange(item.id, event.target.value)}
-                                                            />
-                                                        </label>
-
-                                                        <div className="orders-terminal-item-total">
-                                                            <span>Total</span>
-                                                            <strong>{formatMoney(item.lineTotal)}</strong>
-                                                        </div>
-
-                                                        <button
-                                                            type="button"
-                                                            className="orders-terminal-item-remove"
-                                                            onClick={() => {
-                                                                setSelectedItemId(item.id)
-                                                                onRemoveItem(item.id)
-                                                            }}
-                                                            aria-label={`Remover ${item.name}`}
-                                                        >
-                                                            <i className="fa-solid fa-trash-can" />
-                                                        </button>
+                                                        <input
+                                                            className="ui-input"
+                                                            type="number"
+                                                            min="0.001"
+                                                            step="0.001"
+                                                            value={item.qty}
+                                                            onChange={(event) => onQuantityChange(item.id, event.target.value)}
+                                                            aria-label={`Quantidade de ${item.name}`}
+                                                        />
                                                     </div>
+
+                                                    <button
+                                                        type="button"
+                                                        className="orders-terminal-item-remove"
+                                                        onClick={() => {
+                                                            setSelectedItemId(item.id)
+                                                            onRemoveItem(item.id)
+                                                        }}
+                                                        aria-label={`Remover ${item.name}`}
+                                                    >
+                                                        <i className="fa-solid fa-trash-can" />
+                                                    </button>
                                                 </article>
-                                            )
-                                        })}
+                                            ))}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="orders-terminal-empty">
