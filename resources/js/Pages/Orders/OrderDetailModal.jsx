@@ -37,11 +37,17 @@ export default function OrderDetailModal({
 
     const sentToCashier = draft.status === 'sent_to_cashier'
     const elapsedLabel = formatElapsedTime(draft.updatedAt, clock)
+    const customerName = selectedCustomer?.name || 'Nao identificado'
+    const customerPhone = selectedCustomer?.phone || 'Sem telefone'
+    const referenceLabel = draft.reference?.trim() || getDraftNumberLabel(draft)
+    const noteLabel = draft.notes.trim() || 'Sem observacao'
+    const selectedItemLabel = selectedItem?.name || 'Nenhum item'
+    const selectedItemMeta = selectedItem ? `${formatNumber(selectedItem.qty)} x ${formatMoney(selectedItem.sale_price)}` : 'Selecione na lista'
     const detailCards = [
         { icon: 'fa-layer-group', label: 'Tipo', value: getOrderTypeLabel(draft.type) },
-        { icon: 'fa-hashtag', label: 'Numero', value: getDraftNumberLabel(draft) },
-        { icon: 'fa-user', label: 'Cliente', value: selectedCustomer?.name || 'Nao identificado' },
-        { icon: 'fa-clock', label: 'Atualizacao', value: elapsedLabel },
+        { icon: 'fa-hashtag', label: 'Ref.', value: referenceLabel },
+        { icon: 'fa-user', label: 'Cliente', value: customerName },
+        { icon: 'fa-circle-dot', label: 'Status', value: currentDraftStatus?.label || 'Em aberto' },
     ]
     const sidebarActions = [
         { key: 'products', label: 'Produtos', icon: 'fa-box-open', onClick: onOpenProductsModal },
@@ -96,29 +102,32 @@ export default function OrderDetailModal({
                                         <i className="fa-solid fa-store" />
                                         {getOrderTypeLabel(draft.type)}
                                     </span>
+                                    <span className="orders-terminal-inline-chip soft">
+                                        <i className="fa-solid fa-circle-dot" />
+                                        {currentDraftStatus?.label || 'Em aberto'}
+                                    </span>
                                 </div>
-
-                                <p>
-                                    {draft.reference ? `Referencia ${draft.reference}. ` : `Numero ${getDraftNumberLabel(draft)}. `}
-                                    Aberta ha {elapsedLabel}.
-                                </p>
 
                                 <div className="orders-terminal-hero-meta">
                                     <span>
-                                        <i className="fa-solid fa-user" />
-                                        {selectedCustomer?.name || 'Cliente nao identificado'}
+                                        <i className="fa-solid fa-hashtag" />
+                                        {referenceLabel}
                                     </span>
                                     <span>
-                                        <i className="fa-solid fa-floppy-disk" />
-                                        {currentDraftSaveText}
+                                        <i className="fa-solid fa-clock" />
+                                        {elapsedLabel}
+                                    </span>
+                                    <span>
+                                        <i className="fa-solid fa-user" />
+                                        {customerName}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="orders-terminal-total-card">
-                                <span>Total atual</span>
+                                <span>Total</span>
                                 <strong>{formatMoney(pricing.total)}</strong>
-                                <small>{draft.items.length} item(ns) no atendimento</small>
+                                <small>{draft.items.length} item(ns) • {pricing.summary.title}</small>
                             </div>
                         </section>
 
@@ -140,11 +149,11 @@ export default function OrderDetailModal({
                                     <div>
                                         <span className="orders-terminal-panel-kicker">
                                             <i className="fa-solid fa-box-open" />
-                                            Itens da comanda
+                                            Itens
                                         </span>
-                                        <h4>Lista de produtos</h4>
+                                        <h4>Produtos</h4>
                                     </div>
-                                    <small>{selectedItem ? `Item em foco: ${selectedItem.name}` : 'Selecione um item para acoes rapidas.'}</small>
+                                    <small>{selectedItem ? `Selecionado: ${selectedItem.name}` : `${draft.items.length} item(ns)`}</small>
                                 </div>
 
                                 {pricing.items.length ? (
@@ -220,22 +229,26 @@ export default function OrderDetailModal({
                                         <i className="fa-solid fa-box-open" />
                                         <div>
                                             <strong>Sem produtos no atendimento</strong>
-                                            <p>Use a sidebar para abrir o catalogo e comecar a montar a comanda.</p>
+                                            <p>Abra o catalogo na sidebar para adicionar itens.</p>
                                         </div>
                                     </div>
                                 )}
                             </section>
 
                             <div className="orders-terminal-side-stack">
-                                <section className="orders-terminal-panel">
-                                    <div className="orders-terminal-panel-heading">
+                                <section className="orders-terminal-panel orders-terminal-panel-compact">
+                                    <div className="orders-terminal-panel-heading compact">
                                         <div>
                                             <span className="orders-terminal-panel-kicker">
                                                 <i className="fa-solid fa-wallet" />
-                                                Fechamento
+                                                Resumo
                                             </span>
-                                            <h4>Resumo financeiro</h4>
+                                            <h4>Total do atendimento</h4>
                                         </div>
+                                        <span className="orders-terminal-inline-chip soft">
+                                            <i className="fa-solid fa-badge-percent" />
+                                            {pricing.summary.title}
+                                        </span>
                                     </div>
 
                                     <div className="orders-terminal-summary-box">
@@ -252,72 +265,56 @@ export default function OrderDetailModal({
                                             <strong>{formatMoney(pricing.total)}</strong>
                                         </div>
                                     </div>
-
-                                    <div className="orders-terminal-note-box">
-                                        <span>
-                                            <i className="fa-solid fa-badge-percent" />
-                                            Desconto ativo
-                                        </span>
-                                        <p>{pricing.summary.title}</p>
-                                        <small>{pricing.summary.description}</small>
-                                    </div>
                                 </section>
 
-                                <section className="orders-terminal-panel">
-                                    <div className="orders-terminal-panel-heading">
+                                <section className="orders-terminal-panel orders-terminal-panel-compact">
+                                    <div className="orders-terminal-panel-heading compact">
                                         <div>
                                             <span className="orders-terminal-panel-kicker">
-                                                <i className="fa-solid fa-clipboard-list" />
-                                                Atendimento
+                                                <i className="fa-solid fa-id-card-clip" />
+                                                Dados
                                             </span>
-                                            <h4>Dados da comanda</h4>
+                                            <h4>Comanda</h4>
                                         </div>
                                     </div>
 
-                                    <div className="orders-terminal-meta-grid">
-                                        <article className="orders-terminal-meta-card">
-                                            <span>Tipo</span>
+                                    <div className="orders-terminal-compact-grid">
+                                        <article className="orders-terminal-compact-card">
+                                            <span>
+                                                <i className="fa-solid fa-layer-group" />
+                                                Tipo
+                                            </span>
                                             <strong>{getOrderTypeLabel(draft.type)}</strong>
                                         </article>
-                                        <article className="orders-terminal-meta-card">
-                                            <span>Status</span>
+                                        <article className="orders-terminal-compact-card">
+                                            <span>
+                                                <i className="fa-solid fa-circle-dot" />
+                                                Status
+                                            </span>
                                             <strong>{currentDraftStatus?.label || 'Em aberto'}</strong>
+                                        </article>
+                                        <article className="orders-terminal-compact-card">
+                                            <span>
+                                                <i className="fa-solid fa-user" />
+                                                Cliente
+                                            </span>
+                                            <strong>{customerName}</strong>
+                                            <small>{customerPhone}</small>
+                                        </article>
+                                        <article className="orders-terminal-compact-card">
+                                            <span>
+                                                <i className="fa-solid fa-crosshairs" />
+                                                Item
+                                            </span>
+                                            <strong>{selectedItemLabel}</strong>
+                                            <small>{selectedItemMeta}</small>
                                         </article>
                                     </div>
 
-                                    <div className="orders-terminal-note-box">
-                                        <span>
-                                            <i className="fa-solid fa-note-sticky" />
-                                            Observacao
-                                        </span>
-                                        <p>{draft.notes.trim() || 'Nenhuma observacao registrada para este atendimento.'}</p>
-                                    </div>
-                                </section>
-
-                                <section className="orders-terminal-panel">
-                                    <div className="orders-terminal-panel-heading">
-                                        <div>
-                                            <span className="orders-terminal-panel-kicker">
-                                                <i className="fa-solid fa-user-group" />
-                                                Cliente e foco
-                                            </span>
-                                            <h4>Contexto atual</h4>
-                                        </div>
-                                    </div>
-
-                                    <div className="orders-terminal-chip">
-                                        <span>
-                                            <i className="fa-solid fa-user" />
-                                            Cliente
-                                        </span>
-                                        <strong>{selectedCustomer?.name || 'Nao identificado'}</strong>
-                                        <small>{selectedCustomer?.phone || 'Sem telefone informado'}</small>
-                                    </div>
-
-                                    <label className="orders-terminal-field">
+                                    <label className="orders-terminal-select-row">
                                         <span>
                                             <i className="fa-solid fa-address-book" />
-                                            Vincular cliente
+                                            Cliente
                                         </span>
                                         <select
                                             className="ui-select"
@@ -331,20 +328,14 @@ export default function OrderDetailModal({
                                                 </option>
                                             ))}
                                         </select>
-                                        <small>Voce pode informar ou trocar o cliente mesmo depois do atendimento criado.</small>
                                     </label>
 
-                                    <div className="orders-terminal-chip">
+                                    <div className="orders-terminal-note-box compact">
                                         <span>
-                                            <i className="fa-solid fa-crosshairs" />
-                                            Item selecionado
+                                            <i className="fa-solid fa-note-sticky" />
+                                            Obs.
                                         </span>
-                                        <strong>{selectedItem?.name || 'Nenhum item em foco'}</strong>
-                                        <small>
-                                            {selectedItem
-                                                ? `${formatNumber(selectedItem.qty)} x ${formatMoney(selectedItem.sale_price)}`
-                                                : 'Clique em um item da lista para agir rapido.'}
-                                        </small>
+                                        <p>{noteLabel}</p>
                                     </div>
                                 </section>
                             </div>

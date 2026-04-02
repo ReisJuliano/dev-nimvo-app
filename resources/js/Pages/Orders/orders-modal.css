@@ -1143,6 +1143,12 @@
     font-weight: 700;
 }
 
+.orders-terminal-inline-chip.soft {
+    border-color: rgba(24, 95, 165, 0.14);
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+}
+
 .orders-terminal-hero p,
 .orders-terminal-note-box p,
 .orders-terminal-note-box small,
@@ -1227,6 +1233,11 @@
 .orders-terminal-panel-heading h4 {
     margin-top: 0.2rem;
     font-size: 1rem;
+}
+
+.orders-terminal-panel-heading.compact {
+    align-items: center;
+    margin-bottom: 0.75rem;
 }
 
 .orders-terminal-item-list {
@@ -1358,6 +1369,52 @@
 
 .orders-terminal-note-box p {
     color: var(--orders-terminal-text);
+}
+
+.orders-terminal-compact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0.75rem;
+}
+
+.orders-terminal-compact-card,
+.orders-terminal-select-row {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.82rem 0.88rem;
+    border: 1px solid var(--orders-terminal-border);
+    border-radius: 12px;
+    background: var(--orders-terminal-surface-alt);
+}
+
+.orders-terminal-compact-card strong {
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.orders-terminal-compact-card small {
+    margin: 0;
+    color: var(--orders-terminal-muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.orders-terminal-select-row .ui-select {
+    min-height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--orders-terminal-border);
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.orders-terminal-note-box.compact {
+    padding: 0.82rem 0.88rem;
+}
+
+.orders-terminal-note-box.compact p {
+    font-size: 0.84rem;
+    line-height: 1.45;
 }
 
 .orders-terminal-meta-grid {
@@ -2266,6 +2323,7 @@
     .orders-edit-terminal-fields,
     .orders-terminal-metrics,
     .orders-detail-terminal-content,
+    .orders-terminal-compact-grid,
     .orders-terminal-meta-grid {
         grid-template-columns: 1fr;
     }
