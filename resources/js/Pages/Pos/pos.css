@@ -877,6 +877,161 @@
     background: var(--pos-surface-alt);
 }
 
+.pos-cashier-drafts-modal {
+    width: min(420px, 100%);
+    padding: 12px;
+}
+
+.pos-cashier-drafts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 10px;
+}
+
+.pos-cashier-drafts-header strong {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.pos-cashier-drafts-toolbar {
+    display: flex;
+    gap: 8px;
+}
+
+.pos-cashier-drafts-toolbar button {
+    width: 34px;
+    height: 34px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 10px;
+    background: var(--pos-surface-alt);
+    color: var(--pos-text-muted);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.pos-cashier-drafts-toolbar button:hover {
+    background: var(--pos-surface-soft);
+    color: var(--pos-text);
+}
+
+.pos-cashier-drafts-toolbar button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.pos-cashier-drafts-list {
+    display: grid;
+    gap: 8px;
+    max-height: min(60dvh, 520px);
+    overflow: auto;
+}
+
+.pos-cashier-draft-card {
+    width: 100%;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 12px;
+    background: var(--pos-surface-alt);
+    color: var(--pos-text);
+    display: grid;
+    gap: 7px;
+    padding: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.pos-cashier-draft-card:hover {
+    border-color: var(--pos-border-strong);
+    background: var(--pos-surface);
+    transform: translateY(-1px);
+}
+
+.pos-cashier-draft-card.active {
+    border-color: rgba(15, 23, 42, 0.34);
+    background: var(--pos-surface);
+}
+
+.pos-cashier-draft-card:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pos-cashier-draft-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.pos-cashier-draft-label {
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pos-cashier-draft-icon {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 9px;
+    background: var(--pos-surface);
+    color: var(--pos-text-muted);
+    display: grid;
+    place-items: center;
+}
+
+.pos-cashier-draft-card.active .pos-cashier-draft-icon {
+    color: var(--pos-text);
+}
+
+.pos-cashier-draft-customer {
+    min-width: 0;
+    color: var(--pos-text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pos-cashier-draft-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.pos-cashier-draft-meta span {
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--pos-text-muted);
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.pos-cashier-draft-empty {
+    min-height: 180px;
+    border: 0.5px dashed var(--pos-border-strong);
+    border-radius: 12px;
+    background: var(--pos-surface-alt);
+    color: var(--pos-text-muted);
+    display: grid;
+    place-items: center;
+    gap: 0.65rem;
+    padding: 1rem;
+    text-align: center;
+}
+
+.pos-cashier-draft-empty i {
+    font-size: 20px;
+}
+
 .pos-modal-form {
     display: grid;
     gap: 12px;

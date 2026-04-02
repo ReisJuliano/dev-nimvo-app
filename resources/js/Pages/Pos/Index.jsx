@@ -1,6 +1,7 @@
 import { Head, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
+import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
 import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import AppLayout from '@/Layouts/AppLayout'
@@ -241,6 +242,7 @@ export default function PosIndex({
     const [pendingSaleResolved, setPendingSaleResolved] = useState(supportsPendingSales ? (!initialPendingSale || Boolean(preloadedOrderDraft)) : true)
     const [pendingSaleActionBusy, setPendingSaleActionBusy] = useState(false)
     const [customerModalOpen, setCustomerModalOpen] = useState(false)
+    const [cashierDraftsModalOpen, setCashierDraftsModalOpen] = useState(false)
     const [customerLinkForm, setCustomerLinkForm] = useState(initialCustomerLinkForm)
     const [linkingCustomer, setLinkingCustomer] = useState(false)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
@@ -274,6 +276,7 @@ export default function PosIndex({
             paymentModalOpen
             || discountModalOpen
             || customerModalOpen
+            || cashierDraftsModalOpen
             || invoiceModalOpen
             || cancelModalOpen
             || openCashRegisterModal
@@ -295,6 +298,7 @@ export default function PosIndex({
         paymentModalOpen,
         discountModalOpen,
         customerModalOpen,
+        cashierDraftsModalOpen,
         invoiceModalOpen,
         cancelModalOpen,
         openCashRegisterModal,
@@ -773,6 +777,7 @@ export default function PosIndex({
         setPendingSaleServerState(null)
         setCustomerLinkForm(initialCustomerLinkForm)
         setCustomerModalOpen(false)
+        setCashierDraftsModalOpen(false)
         setInvoiceChoice('65')
         setInvoiceModalOpen(false)
         setCancelModalOpen(false)
@@ -864,11 +869,22 @@ export default function PosIndex({
         try {
             const response = await apiRequest(`/api/orders/${orderDraftId}`)
             applyOrderDraftToSale(response.order)
+            setCashierDraftsModalOpen(false)
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
             setLoadingOrderDraftId(null)
         }
+    }
+
+    function openCashierDraftsModal() {
+        if (!supportsOrders) {
+            showFeedback('error', 'Pedidos estao desativados nesta conta.')
+            return
+        }
+
+        setCashierDraftsModalOpen(true)
+        refreshPendingOrderDrafts()
     }
 
     function handleAddProduct(product) {
@@ -2022,6 +2038,7 @@ export default function PosIndex({
         setFiscalDecisionOpen(false)
         setRecipientModalOpen(false)
         setCustomerModalOpen(false)
+        setCashierDraftsModalOpen(false)
         setInvoiceModalOpen(false)
         setCancelModalOpen(false)
         setOpenCashRegisterModal(null)
@@ -2081,6 +2098,7 @@ export default function PosIndex({
                 || fiscalDecisionOpen
                 || recipientModalOpen
                 || customerModalOpen
+                || cashierDraftsModalOpen
                 || invoiceModalOpen
                 || cancelModalOpen
                 || pendingSalePromptOpen,
@@ -2102,6 +2120,7 @@ export default function PosIndex({
                 if (fiscalDecisionOpen) return void (event.preventDefault(), setFiscalDecisionOpen(false))
                 if (recipientModalOpen) return void (event.preventDefault(), setRecipientModalOpen(false))
                 if (customerModalOpen) return void (event.preventDefault(), setCustomerModalOpen(false))
+                if (cashierDraftsModalOpen) return void (event.preventDefault(), setCashierDraftsModalOpen(false))
                 if (invoiceModalOpen) return void (event.preventDefault(), setInvoiceModalOpen(false))
                 if (cancelModalOpen) return void (event.preventDefault(), setCancelModalOpen(false))
                 return
@@ -2160,6 +2179,7 @@ export default function PosIndex({
         fiscalDecisionOpen,
         recipientModalOpen,
         customerModalOpen,
+        cashierDraftsModalOpen,
         invoiceModalOpen,
         cancelModalOpen,
         pendingSalePromptOpen,
@@ -2208,9 +2228,19 @@ export default function PosIndex({
         openPaymentStep,
         openDiscountModal,
         openCustomerModal,
+        openCashierDraftsModal,
         openInvoiceStep,
         openFinalizeStep,
         onOpenCancel: () => setCancelModalOpen(true),
+        supportsOrders,
+        pendingOrderDrafts,
+        activeOrderDraftId,
+        loadingOrderDraftId,
+        refreshingPendingOrders,
+        cashierDraftsModalOpen,
+        onCloseCashierDraftsModal: () => setCashierDraftsModalOpen(false),
+        onRefreshCashierDrafts: () => refreshPendingOrderDrafts(),
+        onLoadOrderDraft: handleLoadOrderDraft,
         paymentModalOpen,
         onClosePaymentModal: () => setPaymentModalOpen(false),
         paymentGridOptions,
@@ -2813,9 +2843,19 @@ function PosWorkspace({
     openPaymentStep,
     openDiscountModal,
     openCustomerModal,
+    openCashierDraftsModal,
     openInvoiceStep,
     openFinalizeStep,
     onOpenCancel,
+    supportsOrders,
+    pendingOrderDrafts,
+    activeOrderDraftId,
+    loadingOrderDraftId,
+    refreshingPendingOrders,
+    cashierDraftsModalOpen,
+    onCloseCashierDraftsModal,
+    onRefreshCashierDrafts,
+    onLoadOrderDraft,
     paymentModalOpen,
     onClosePaymentModal,
     paymentGridOptions,
@@ -3067,6 +3107,7 @@ function PosWorkspace({
                     <PosSidebarAction label="Pagamento" icon="card" onClick={openPaymentStep} />
                     <PosSidebarAction label="Desconto" icon="discount" onClick={() => openDiscountModal()} />
                     <PosSidebarAction label="Cliente" icon="user" onClick={openCustomerModal} />
+                    {supportsOrders ? <PosSidebarAction label="Comandas" icon="cart" onClick={openCashierDraftsModal} /> : null}
                     <div className="pos-sidebar-separator" />
                     <PosSidebarAction label="NF-e" icon="document" onClick={openInvoiceStep} />
                     <PosSidebarAction label="Cancelar" icon="cancel" tone="danger" onClick={onOpenCancel} />
@@ -3082,6 +3123,18 @@ function PosWorkspace({
                     </button>
                 </aside>
             </div>
+
+            <CashierDraftPullModal
+                open={cashierDraftsModalOpen}
+                orders={pendingOrderDrafts}
+                activeOrderDraftId={activeOrderDraftId}
+                loadingOrderId={loadingOrderDraftId}
+                refreshing={refreshingPendingOrders}
+                cartHasItems={cartLength > 0}
+                onClose={onCloseCashierDraftsModal}
+                onRefresh={onRefreshCashierDrafts}
+                onLoadOrder={onLoadOrderDraft}
+            />
 
             <PosModal open={paymentModalOpen} title="Pagamento" onClose={onClosePaymentModal}>
                 <div className="pos-modal-total">{formatMoney(totals.total)}</div>
@@ -3733,6 +3786,14 @@ function PosIcon({ name }) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="8" r="3.5" />
                     <path d="M5 19a7 7 0 0 1 14 0" />
+                </svg>
+            )
+        case 'cart':
+            return (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="19" r="1.5" />
+                    <circle cx="17" cy="19" r="1.5" />
+                    <path d="M4 5h2l2.2 9.5h9.9L20 8H7.2" />
                 </svg>
             )
         case 'document':
