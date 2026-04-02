@@ -10,6 +10,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\User;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PendingSaleService;
+use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
@@ -24,9 +25,9 @@ class PosPageController extends Controller
     public function __invoke(
         OrderDraftService $orderDraftService,
         PendingSaleService $pendingSaleService,
+        PosRecommendationService $recommendationService,
         TenantSettingsService $settingsService,
-    ): Response
-    {
+    ): Response {
         $userId = auth()->user()?->getKey();
         $requestedOrderDraftId = request()->integer('orderDraft');
         $ordersEnabled = $settingsService->isModuleEnabled('pedidos');
@@ -55,6 +56,7 @@ class PosPageController extends Controller
             'pendingOrderDrafts' => $ordersEnabled ? $orderDraftService->pendingCheckoutDrafts() : [],
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'pendingSale' => $pendingSaleService->serialize($pendingSale),
+            'recommendations' => $recommendationService->build(),
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,
                 'status' => $cashRegister->status,
@@ -70,7 +72,7 @@ class PosPageController extends Controller
 
     protected function customersPayload(): array
     {
-        if (!$this->hasTable('customers')) {
+        if (! $this->hasTable('customers')) {
             return [];
         }
 
@@ -127,7 +129,7 @@ class PosPageController extends Controller
 
     protected function companiesPayload(): array
     {
-        if (!$this->hasTable('companies')) {
+        if (! $this->hasTable('companies')) {
             return [];
         }
 
@@ -168,7 +170,7 @@ class PosPageController extends Controller
     protected function hasTable(string $table): bool
     {
         return $this->schemaTableCache[$table]
-            ??= Schema::connection((new Customer())->getConnectionName())->hasTable($table);
+            ??= Schema::connection((new Customer)->getConnectionName())->hasTable($table);
     }
 
     protected function hasColumn(string $table, string $column): bool
@@ -177,6 +179,6 @@ class PosPageController extends Controller
 
         return $this->schemaColumnCache[$cacheKey]
             ??= $this->hasTable($table)
-                && Schema::connection((new Customer())->getConnectionName())->hasColumn($table, $column);
+                && Schema::connection((new Customer)->getConnectionName())->hasColumn($table, $column);
     }
 }

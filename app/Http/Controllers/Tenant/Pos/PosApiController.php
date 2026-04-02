@@ -14,6 +14,7 @@ use App\Models\Tenant\Sale;
 use App\Services\Tenant\DiscountAuthorizationService;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\PendingSaleService;
+use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\Tenant\PaymentMethod;
@@ -68,6 +69,24 @@ class PosApiController extends Controller
             ]);
 
         return response()->json(['products' => $products]);
+    }
+
+    public function recommendations(
+        Request $request,
+        PosRecommendationService $recommendationService,
+    ): JsonResponse {
+        $validated = $request->validate([
+            'anchor_product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'exclude_product_ids' => ['nullable', 'array'],
+            'exclude_product_ids.*' => ['integer', 'exists:products,id'],
+        ]);
+
+        return response()->json([
+            'recommendations' => $recommendationService->build(
+                anchorProductId: $validated['anchor_product_id'] ?? null,
+                excludeProductIds: $validated['exclude_product_ids'] ?? [],
+            ),
+        ]);
     }
 
     public function customerCredit(Customer $customer): JsonResponse
@@ -134,7 +153,7 @@ class PosApiController extends Controller
 
     public function quickCompany(Request $request): JsonResponse
     {
-        if (!$this->hasTable('companies')) {
+        if (! $this->hasTable('companies')) {
             throw ValidationException::withMessages([
                 'company' => 'O cadastro de empresas ainda nao esta habilitado neste tenant. Rode as migrations pendentes para usar esse recurso.',
             ]);
@@ -221,7 +240,7 @@ class PosApiController extends Controller
     ): JsonResponse {
         $pendingSale = $pendingSaleService->currentForUser((int) auth()->id());
 
-        if (!$pendingSale) {
+        if (! $pendingSale) {
             throw ValidationException::withMessages([
                 'pending_sale' => 'Nenhuma venda pendente foi encontrada para restaurar.',
             ]);
@@ -250,8 +269,7 @@ class PosApiController extends Controller
     public function finalize(
         FinalizeSaleRequest $request,
         PosService $posService,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $this->validateDiscountAuthorizations($request);
 
         $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
@@ -320,7 +338,7 @@ class PosApiController extends Controller
             $authorizerId = (int) ($item['discount_authorized_by'] ?? 0);
             $authorizedAt = $authorizations[$authorizerId] ?? null;
 
-            if (!$authorizerId || !$authorizedAt) {
+            if (! $authorizerId || ! $authorizedAt) {
                 throw ValidationException::withMessages([
                     'items' => 'Todo desconto aplicado no PDV precisa de autorizacao gerencial valida.',
                 ]);
@@ -332,7 +350,7 @@ class PosApiController extends Controller
                 $authorizedAtDate = null;
             }
 
-            if (!$authorizedAtDate || $authorizedAtDate->lt($minimumAuthorizedAt)) {
+            if (! $authorizedAtDate || $authorizedAtDate->lt($minimumAuthorizedAt)) {
                 throw ValidationException::withMessages([
                     'items' => 'A autorizacao do desconto expirou. Solicite a senha gerencial novamente.',
                 ]);
@@ -342,7 +360,7 @@ class PosApiController extends Controller
 
     protected function serializeFiscalDocument(mixed $document): ?array
     {
-        if (!$document) {
+        if (! $document) {
             return null;
         }
 
@@ -361,7 +379,7 @@ class PosApiController extends Controller
 
     protected function documentTypeFor(?string $document): ?string
     {
-        if (!$document) {
+        if (! $document) {
             return null;
         }
 
@@ -371,7 +389,7 @@ class PosApiController extends Controller
     protected function hasTable(string $table): bool
     {
         return $this->schemaTableCache[$table]
-            ??= Schema::connection((new Sale())->getConnectionName())->hasTable($table);
+            ??= Schema::connection((new Sale)->getConnectionName())->hasTable($table);
     }
 
     protected function hasColumn(string $table, string $column): bool
@@ -380,6 +398,6 @@ class PosApiController extends Controller
 
         return $this->schemaColumnCache[$cacheKey]
             ??= $this->hasTable($table)
-                && Schema::connection((new Sale())->getConnectionName())->hasColumn($table, $column);
+                && Schema::connection((new Sale)->getConnectionName())->hasColumn($table, $column);
     }
 }

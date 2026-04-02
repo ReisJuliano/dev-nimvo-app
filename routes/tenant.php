@@ -9,8 +9,8 @@ use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
-use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
+use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
@@ -85,6 +85,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
         Route::prefix('/api')->group(function () {
             Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
+            Route::get('/pdv/recommendations', [PosApiController::class, 'recommendations'])->name('api.pos.recommendations');
             Route::get('/pdv/customers/{customer}/credit', [PosApiController::class, 'customerCredit'])->name('api.pos.customers.credit');
             Route::post('/pdv/customers/quick', [PosApiController::class, 'quickCustomer'])->name('api.pos.customers.quick');
             Route::post('/pdv/companies/quick', [PosApiController::class, 'quickCompany'])->name('api.pos.companies.quick');
