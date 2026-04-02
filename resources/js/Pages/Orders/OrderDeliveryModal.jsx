@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatMoney } from '@/lib/format'
 import OrdersModal from './OrdersModal'
 
 export default function OrderDeliveryModal({ draft, selectedCustomer, submitting, onClose, onSubmit }) {
@@ -7,6 +8,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
         reference: draft?.reference || '',
         recipient_name: selectedCustomer?.name || '',
         phone: selectedCustomer?.phone || '',
+        courier_name: '',
         address: '',
         neighborhood: '',
         delivery_fee: '0',
@@ -17,21 +19,80 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
         return null
     }
 
+    const isPickup = form.channel === 'retirada'
+    const draftLabel = form.reference || draft.reference || `Pedido #${draft.id}`
+    const customerLabel = form.recipient_name || selectedCustomer?.name || 'Cliente nao identificado'
+    const itemCount = Array.isArray(draft.items) ? draft.items.length : 0
+    const deliveryFee = isPickup ? 0 : Number(form.delivery_fee || 0)
+    const projectedTotal = Number(draft.total || 0) + deliveryFee
+    const channelMeta = isPickup
+        ? {
+              icon: 'fa-bag-shopping',
+              label: 'Retirada',
+              description: 'Separe o pedido para retirada no balcao com identificacao clara do cliente.',
+              kicker: 'Fluxo de retirada',
+          }
+        : {
+              icon: 'fa-motorcycle',
+              label: 'Delivery',
+              description: 'Confirme destino, taxa e contato antes de enviar o pedido para a fila externa.',
+              kicker: 'Fluxo de entrega',
+          }
+
     return (
         <OrdersModal
-            title="Entrega"
+            title={channelMeta.label}
+            subtitle={channelMeta.description}
             size="lg"
-            className="orders-modal-action-compact"
-            bodyClassName="orders-modal-action-compact-body"
+            className="orders-modal-action-compact orders-modal-delivery-compact"
+            bodyClassName="orders-modal-action-compact-body orders-modal-delivery-compact-body"
+            badge={
+                <span className="orders-modal-badge orders-modal-delivery-badge">
+                    <i className={`fa-solid ${channelMeta.icon}`} />
+                    <span>{draftLabel}</span>
+                </span>
+            }
             onClose={onClose}
         >
             <form
                 className="orders-action-compact-form"
                 onSubmit={(event) => {
                     event.preventDefault()
-                    onSubmit(form)
+                    onSubmit({
+                        ...form,
+                        courier_name: isPickup ? '' : form.courier_name,
+                        address: isPickup ? 'Retirada no balcao' : form.address,
+                        neighborhood: isPickup ? '' : form.neighborhood,
+                        delivery_fee: isPickup ? '0' : form.delivery_fee,
+                    })
                 }}
             >
+                <div className="orders-delivery-hero">
+                    <div className="orders-delivery-hero-copy">
+                        <span className="orders-delivery-hero-kicker">
+                            <i className={`fa-solid ${channelMeta.icon}`} />
+                            {channelMeta.kicker}
+                        </span>
+                        <strong>{draftLabel}</strong>
+                        <p>{channelMeta.description}</p>
+                    </div>
+
+                    <div className="orders-delivery-hero-metrics">
+                        <article>
+                            <span>Cliente</span>
+                            <strong>{customerLabel}</strong>
+                        </article>
+                        <article>
+                            <span>Itens</span>
+                            <strong>{itemCount}</strong>
+                        </article>
+                        <article>
+                            <span>Total previsto</span>
+                            <strong>{formatMoney(projectedTotal)}</strong>
+                        </article>
+                    </div>
+                </div>
+
                 <div className="orders-action-toggle-grid cols-2">
                     <button
                         type="button"
@@ -42,6 +103,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                     >
                         <i className="fa-solid fa-motorcycle" />
                         <span>Delivery</span>
+                        <small>Enviar com endereco, taxa e contato definidos.</small>
                     </button>
                     <button
                         type="button"
@@ -52,6 +114,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                     >
                         <i className="fa-solid fa-bag-shopping" />
                         <span>Retirada</span>
+                        <small>Registrar como retirada no balcao sem taxa de entrega.</small>
                     </button>
                 </div>
 
@@ -89,6 +152,16 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
 
                     {form.channel === 'delivery' ? (
                         <>
+                            <label className="orders-action-field">
+                                <i className="fa-solid fa-id-badge" />
+                                <input
+                                    className="ui-input"
+                                    value={form.courier_name}
+                                    placeholder="Entregador"
+                                    onChange={(event) => setForm((current) => ({ ...current, courier_name: event.target.value }))}
+                                    aria-label="Entregador"
+                                />
+                            </label>
                             <label className="orders-action-field wide">
                                 <i className="fa-solid fa-location-dot" />
                                 <input
@@ -126,17 +199,37 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                                 />
                             </label>
                         </>
-                    ) : null}
+                    ) : (
+                        <div className="orders-delivery-inline-note wide">
+                            <i className="fa-solid fa-store" />
+                            <div>
+                                <strong>Retirada no balcao</strong>
+                                <p>O sistema vai registrar um endereco interno padrao para manter o fluxo consistente.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <label className="orders-action-field wide textarea">
+                        <i className="fa-solid fa-file-lines" />
+                        <textarea
+                            className="ui-textarea"
+                            value={form.notes}
+                            placeholder="Observacoes para entrega, retirada ou conferencia"
+                            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                            aria-label="Observacoes"
+                            rows={3}
+                        />
+                    </label>
                 </div>
 
                 <div className="orders-action-buttons">
                     <button type="button" className="orders-action-button muted" onClick={onClose}>
-                        <i className="fa-solid fa-xmark" />
+                        <i className="fa-solid fa-arrow-left" />
                         <span>Voltar</span>
                     </button>
                     <button type="submit" className="orders-action-button primary" disabled={submitting}>
                         <i className={`fa-solid ${form.channel === 'delivery' ? 'fa-motorcycle' : 'fa-bag-shopping'}`} />
-                        <span>{submitting ? 'Salvando' : 'Criar'}</span>
+                        <span>{submitting ? 'Salvando' : form.channel === 'delivery' ? 'Criar entrega' : 'Registrar retirada'}</span>
                     </button>
                 </div>
             </form>
