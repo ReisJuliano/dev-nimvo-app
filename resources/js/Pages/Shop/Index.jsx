@@ -47,7 +47,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
     const [feedback, setFeedback] = useState(null)
     const [lastOrder, setLastOrder] = useState(null)
     const showPrices = catalog.show_prices !== false
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     const filteredProducts = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase()

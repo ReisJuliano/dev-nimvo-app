@@ -34,7 +34,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const moduleState = useModules(form)
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
     const enabledModulesCount = Object.values(moduleState.modules || {}).filter(Boolean).length
     const enabledCapabilitiesCount = Object.values(moduleState.capabilities || {}).filter(Boolean).length
     const activePreset = form.business?.preset || CUSTOM_PRESET

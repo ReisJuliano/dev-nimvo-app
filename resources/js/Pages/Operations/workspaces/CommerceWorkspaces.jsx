@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import {
@@ -99,7 +100,17 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover a entrega "${form.reference || form.recipient_name}"?`)) return
+        if (!form.id) return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover entrega',
+            message: `Remover a entrega "${form.reference || form.recipient_name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
@@ -191,7 +202,17 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover a compra "${form.code || form.id}"?`)) return
+        if (!form.id) return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover compra',
+            message: `Remover a compra "${form.code || form.id}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))

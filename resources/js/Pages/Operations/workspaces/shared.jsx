@@ -13,11 +13,7 @@ export function EmptyState({ title, text }) {
 export function Feedback({ feedback }) {
     useErrorFeedbackPopup(feedback)
 
-    if (!feedback) {
-        return null
-    }
-
-    return <div className={`ops-workspace-feedback ${feedback.type}`}>{feedback.text}</div>
+    return null
 }
 
 export function SectionTabs({ tabs, activeTab, onChange }) {

@@ -4,14 +4,16 @@ import AppSidebar from '@/Components/Layout/AppSidebar'
 import AppTopbar from '@/Components/Layout/AppTopbar'
 import { buildNavigationGroups } from '@/Components/Layout/navigation'
 import useModules from '@/hooks/useModules'
+import { useFlashPopup } from '@/lib/errorPopup'
 import './app-layout.css'
 
 export default function AppLayout({ children, title = 'Inicio', settingsOverride = null }) {
-    const { auth, tenantNavigationCatalog } = usePage().props
+    const { auth, flash, tenantNavigationCatalog } = usePage().props
     const currentUrl = usePage().url
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(false)
     const moduleState = useModules(settingsOverride)
+    useFlashPopup(flash)
 
     function handleLogout() {
         router.post('/logout')

@@ -83,7 +83,7 @@ export default function AdminDashboard({
     const [creating, setCreating] = useState(false)
     const [savingTenantId, setSavingTenantId] = useState(null)
     const [statusTenantId, setStatusTenantId] = useState(null)
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     useEffect(() => {
         setTenantForms(buildTenantForms(tenants))

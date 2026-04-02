@@ -8,7 +8,6 @@ export default function AuthTextField({
     autoComplete,
     autoFocus = false,
     icon,
-    error,
 }) {
     return (
         <div className="guest-form-group">
@@ -30,8 +29,6 @@ export default function AuthTextField({
                     required
                 />
             </div>
-
-            {error && <div className="guest-field-error">{error}</div>}
         </div>
     )
 }

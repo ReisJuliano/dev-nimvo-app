@@ -7,7 +7,6 @@ export default function PasswordField({
     autoComplete,
     showPassword,
     onToggleVisibility,
-    error,
 }) {
     const toggleLabel = showPassword ? 'Ocultar senha' : 'Exibir senha'
     const toggleIcon = showPassword ? 'fa-eye' : 'fa-eye-slash'
@@ -40,8 +39,6 @@ export default function PasswordField({
                     <i className={`fas ${toggleIcon}`} />
                 </button>
             </div>
-
-            {error && <div className="guest-field-error">{error}</div>}
         </div>
     )
 }

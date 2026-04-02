@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react'
 import CentralAdminSidebar from '@/Components/CentralAdmin/CentralAdminSidebar'
 import CentralAdminTopbar from '@/Components/CentralAdmin/CentralAdminTopbar'
 import { CENTRAL_ADMIN_NAVIGATION } from '@/Components/CentralAdmin/navigation'
+import { useFlashPopup } from '@/lib/errorPopup'
 import './admin-layout.css'
 
 export default function AdminLayout({ title = 'Admin', subtitle = '', children }) {
-    const { centralAuth } = usePage().props
+    const { centralAuth, flash } = usePage().props
     const currentUrl = usePage().url
     const [mobileOpen, setMobileOpen] = useState(false)
+    useFlashPopup(flash)
 
     useEffect(() => {
         setMobileOpen(false)

@@ -1,29 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ERROR_POPUP_EVENT, getErrorMessages, normalizeErrorPopupPayload } from '@/lib/errorPopup'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ERROR_POPUP_EVENT, POPUP_TYPE_META, getErrorMessages, normalizePopupPayload } from '@/lib/errorPopup'
 
 function buildEventSignature(payload) {
-    return JSON.stringify([payload.title, payload.message, payload.details])
+    return JSON.stringify([payload.mode, payload.type, payload.title, payload.message, payload.details])
 }
 
 export default function GlobalErrorPopup() {
-    const [currentError, setCurrentError] = useState(null)
+    const [currentPopup, setCurrentPopup] = useState(null)
     const [queueSize, setQueueSize] = useState(0)
     const queueRef = useRef([])
-    const currentErrorRef = useRef(null)
+    const currentPopupRef = useRef(null)
     const lastEventRef = useRef({ signature: '', timestamp: 0 })
 
     function enqueue(payload) {
-        const nextError = normalizeErrorPopupPayload(payload)
+        const nextPopup = {
+            ...normalizePopupPayload(payload, payload?.type || 'error'),
+            resolve: payload?.resolve,
+        }
 
-        if (!nextError.message && !nextError.details.length) {
+        if (!nextPopup.message && !nextPopup.details.length) {
             return
         }
 
-        const signature = buildEventSignature(nextError)
+        const signature = buildEventSignature(nextPopup)
         const timestamp = Date.now()
 
         if (
-            currentErrorRef.current
+            currentPopupRef.current
             && signature === lastEventRef.current.signature
             && timestamp - lastEventRef.current.timestamp < 250
         ) {
@@ -32,27 +35,43 @@ export default function GlobalErrorPopup() {
 
         lastEventRef.current = { signature, timestamp }
 
-        if (!currentErrorRef.current) {
-            setCurrentError(nextError)
+        if (!currentPopupRef.current) {
+            setCurrentPopup(nextPopup)
             setQueueSize(queueRef.current.length)
             return
         }
 
-        queueRef.current = [...queueRef.current, nextError]
+        queueRef.current = [...queueRef.current, nextPopup]
         setQueueSize(queueRef.current.length)
     }
 
-    function closeCurrentError() {
-        const nextError = queueRef.current.shift() || null
+    function advanceQueue() {
+        const nextPopup = queueRef.current.shift() || null
         setQueueSize(queueRef.current.length)
-        setCurrentError(nextError)
+        setCurrentPopup(nextPopup)
+    }
+
+    function resolveCurrentPopup(confirmed = false) {
+        if (currentPopupRef.current?.mode === 'confirm') {
+            currentPopupRef.current.resolve?.(confirmed)
+        }
+
+        advanceQueue()
+    }
+
+    function closeCurrentPopup() {
+        resolveCurrentPopup(false)
+    }
+
+    function confirmCurrentPopup() {
+        resolveCurrentPopup(true)
     }
 
     useEffect(() => {
-        currentErrorRef.current = currentError
-    }, [currentError])
+        currentPopupRef.current = currentPopup
+    }, [currentPopup])
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         function handlePopupEvent(event) {
             enqueue(event.detail)
         }
@@ -65,6 +84,7 @@ export default function GlobalErrorPopup() {
             }
 
             enqueue({
+                type: 'error',
                 title: 'Erro inesperado na tela',
                 message: messages[0],
             })
@@ -82,6 +102,7 @@ export default function GlobalErrorPopup() {
             }
 
             enqueue({
+                type: 'error',
                 title: 'Erro inesperado na tela',
                 message: messages[0],
                 details: messages.slice(1),
@@ -100,7 +121,7 @@ export default function GlobalErrorPopup() {
     }, [])
 
     useEffect(() => {
-        if (!currentError) {
+        if (!currentPopup) {
             return undefined
         }
 
@@ -108,7 +129,7 @@ export default function GlobalErrorPopup() {
 
         function handleKeyDown(event) {
             if (event.key === 'Escape') {
-                closeCurrentError()
+                closeCurrentPopup()
             }
         }
 
@@ -119,53 +140,60 @@ export default function GlobalErrorPopup() {
             document.body.style.overflow = previousOverflow
             window.removeEventListener('keydown', handleKeyDown)
         }
-    }, [currentError])
+    }, [currentPopup])
 
     const headingId = useMemo(
-        () => `app-error-popup-title-${currentError ? 'open' : 'closed'}`,
-        [currentError],
+        () => `app-error-popup-title-${currentPopup ? 'open' : 'closed'}`,
+        [currentPopup],
     )
 
-    if (!currentError) {
+    if (!currentPopup) {
         return null
     }
 
+    const popupMeta = POPUP_TYPE_META[currentPopup.type] || POPUP_TYPE_META.error
+    const queueText = queueSize > 0
+        ? `${queueSize} mensagem(ns) aguardando`
+        : currentPopup.mode === 'confirm'
+            ? 'Revise a mensagem antes de confirmar'
+            : 'Revise a mensagem antes de continuar'
+
     return (
-        <div className="app-error-popup-backdrop" onClick={closeCurrentError}>
+        <div className={`app-error-popup-backdrop is-${currentPopup.type}`} onClick={closeCurrentPopup}>
             <div
-                className="app-error-popup"
-                role="alertdialog"
+                className={`app-error-popup is-${currentPopup.type}`}
+                role={currentPopup.mode === 'confirm' ? 'alertdialog' : 'dialog'}
                 aria-modal="true"
                 aria-labelledby={headingId}
                 onClick={(event) => event.stopPropagation()}
             >
                 <div className="app-error-popup-header">
                     <div className="app-error-popup-titlebox">
-                        <div className="app-error-popup-icon" aria-hidden="true">
-                            <i className="fa-solid fa-triangle-exclamation" />
+                        <div className={`app-error-popup-icon is-${currentPopup.type}`} aria-hidden="true">
+                            <i className={popupMeta.icon} />
                         </div>
                         <div>
-                            <span className="app-error-popup-kicker">Erro</span>
-                            <h2 id={headingId}>{currentError.title}</h2>
+                            <span className={`app-error-popup-kicker is-${currentPopup.type}`}>{popupMeta.kicker}</span>
+                            <h2 id={headingId}>{currentPopup.title}</h2>
                         </div>
                     </div>
 
                     <button
                         type="button"
                         className="app-error-popup-close"
-                        onClick={closeCurrentError}
-                        aria-label="Fechar popup de erro"
+                        onClick={closeCurrentPopup}
+                        aria-label={currentPopup.mode === 'confirm' ? 'Cancelar popup' : 'Fechar popup'}
                     >
                         <i className="fa-solid fa-xmark" />
                     </button>
                 </div>
 
                 <div className="app-error-popup-body">
-                    <p>{currentError.message}</p>
+                    <p>{currentPopup.message}</p>
 
-                    {currentError.details.length ? (
+                    {currentPopup.details.length ? (
                         <ul className="app-error-popup-list">
-                            {currentError.details.map((detail, index) => (
+                            {currentPopup.details.map((detail, index) => (
                                 <li key={`${detail}-${index}`}>{detail}</li>
                             ))}
                         </ul>
@@ -173,14 +201,21 @@ export default function GlobalErrorPopup() {
                 </div>
 
                 <div className="app-error-popup-footer">
-                    <span className="app-error-popup-queue">
-                        {queueSize > 0 ? `${queueSize} erro(s) aguardando` : 'Revise a mensagem antes de continuar'}
-                    </span>
+                    <span className="app-error-popup-queue">{queueText}</span>
 
-                    <button type="button" className="ui-button-danger" onClick={closeCurrentError}>
-                        <i className="fa-solid fa-check" />
-                        {currentError.confirmLabel}
-                    </button>
+                    <div className="app-error-popup-actions">
+                        {currentPopup.mode === 'confirm' ? (
+                            <button type="button" className="ui-button-ghost" onClick={closeCurrentPopup}>
+                                <i className="fa-solid fa-xmark" />
+                                {currentPopup.cancelLabel}
+                            </button>
+                        ) : null}
+
+                        <button type="button" className={popupMeta.actionClassName} onClick={currentPopup.mode === 'confirm' ? confirmCurrentPopup : closeCurrentPopup}>
+                            <i className={`fa-solid ${currentPopup.mode === 'confirm' ? 'fa-check' : 'fa-check-double'}`} />
+                            {currentPopup.confirmLabel}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

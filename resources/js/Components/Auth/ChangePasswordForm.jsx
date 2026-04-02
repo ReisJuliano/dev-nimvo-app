@@ -1,4 +1,3 @@
-import AuthAlert from '@/Components/Auth/AuthAlert'
 import PasswordField from '@/Components/Auth/PasswordField'
 import { useErrorMapPopup } from '@/lib/errorPopup'
 
@@ -17,8 +16,6 @@ export default function ChangePasswordForm({
 
     return (
         <>
-            <AuthAlert message={errors.password} />
-
             <form className="guest-form" onSubmit={onSubmit}>
                 <PasswordField
                     id="password"

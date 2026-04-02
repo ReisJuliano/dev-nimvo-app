@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
 import ProductToolbar from '@/Components/Products/ProductToolbar'
+import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import './products.css'
@@ -113,12 +114,29 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     }
 
     async function handleDelete(product) {
-        if (!window.confirm(`Deseja desativar o produto "${product.name}"?`)) {
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Desativar produto',
+            message: `Deseja desativar o produto "${product.name}"?`,
+            confirmLabel: 'Desativar',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
             return
         }
 
-        await apiRequest(`/api/products/${product.id}`, { method: 'delete' })
-        setCollectionItems((current) => current.filter((entry) => entry.id !== product.id))
+        try {
+            const response = await apiRequest(`/api/products/${product.id}`, { method: 'delete' })
+            setCollectionItems((current) => current.filter((entry) => entry.id !== product.id))
+            showPopup({
+                type: 'success',
+                title: 'Produto desativado',
+                message: response.message || `O produto "${product.name}" foi desativado com sucesso.`,
+            })
+        } catch (error) {
+            showErrorPopup(error.message)
+        }
     }
 
     async function handleSubmit(form) {

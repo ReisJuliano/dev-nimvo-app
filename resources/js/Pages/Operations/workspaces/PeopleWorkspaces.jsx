@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import {
     Badge,
@@ -65,7 +66,19 @@ export function ProducersWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover o produtor "${form.name}"?`)) {
+        if (!form.id) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover produtor',
+            message: `Remover o produtor "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
             return
         }
 

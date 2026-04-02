@@ -14,7 +14,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
     const [records, setRecords] = useState([])
     const [loading, setLoading] = useState(false)
     const [feedback, setFeedback] = useState(null)
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     const pending = useMemo(() => records.filter((r) => r.status === 'pending'), [records])
     const dispatched = useMemo(() => records.filter((r) => r.status === 'dispatched'), [records])

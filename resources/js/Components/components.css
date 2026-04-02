@@ -296,6 +296,12 @@
     color: #0b8098;
 }
 
+.ui-alert.warning {
+    background: #fff8eb;
+    border-color: rgba(244, 161, 0, 0.22);
+    color: #b67b00;
+}
+
 .app-error-popup-backdrop {
     position: fixed;
     inset: 0;
@@ -304,20 +310,61 @@
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+.app-error-popup-backdrop.is-error {
     background:
         radial-gradient(circle at top, rgba(216, 78, 97, 0.12), transparent 32%),
         rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(10px);
+}
+
+.app-error-popup-backdrop.is-success {
+    background:
+        radial-gradient(circle at top, rgba(26, 168, 111, 0.14), transparent 32%),
+        rgba(15, 23, 42, 0.5);
+}
+
+.app-error-popup-backdrop.is-warning {
+    background:
+        radial-gradient(circle at top, rgba(244, 161, 0, 0.14), transparent 32%),
+        rgba(15, 23, 42, 0.5);
+}
+
+.app-error-popup-backdrop.is-info {
+    background:
+        radial-gradient(circle at top, rgba(7, 165, 201, 0.14), transparent 32%),
+        rgba(15, 23, 42, 0.5);
 }
 
 .app-error-popup {
     width: min(560px, calc(100vw - 3rem));
     border-radius: 28px;
-    border: 1px solid rgba(216, 78, 97, 0.16);
-    background:
-        linear-gradient(180deg, rgba(255, 244, 246, 0.96), rgba(255, 255, 255, 0.98));
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: linear-gradient(180deg, rgba(248, 250, 253, 0.98), rgba(255, 255, 255, 0.98));
     box-shadow: 0 34px 90px rgba(15, 23, 42, 0.28);
     animation: app-error-popup-enter 0.22s ease;
+}
+
+.app-error-popup.is-error {
+    border-color: rgba(216, 78, 97, 0.16);
+    background: linear-gradient(180deg, rgba(255, 244, 246, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+.app-error-popup.is-success {
+    border-color: rgba(26, 168, 111, 0.18);
+    background: linear-gradient(180deg, rgba(240, 255, 247, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+.app-error-popup.is-warning {
+    border-color: rgba(244, 161, 0, 0.2);
+    background: linear-gradient(180deg, rgba(255, 249, 237, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+.app-error-popup.is-info {
+    border-color: rgba(7, 165, 201, 0.18);
+    background: linear-gradient(180deg, rgba(239, 249, 253, 0.96), rgba(255, 255, 255, 0.98));
 }
 
 .app-error-popup-header,
@@ -335,11 +382,11 @@
 }
 
 .app-error-popup-header {
-    border-bottom: 1px solid rgba(216, 78, 97, 0.12);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .app-error-popup-footer {
-    border-top: 1px solid rgba(216, 78, 97, 0.12);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .app-error-popup-titlebox {
@@ -360,9 +407,29 @@
 }
 
 .app-error-popup-icon {
-    background: linear-gradient(135deg, #d84e61, #f47c58);
+    background: linear-gradient(135deg, #5b708f, #7e95b4);
     color: #fff;
+    box-shadow: 0 18px 32px rgba(91, 112, 143, 0.22);
+}
+
+.app-error-popup-icon.is-error {
+    background: linear-gradient(135deg, #d84e61, #f47c58);
     box-shadow: 0 18px 32px rgba(216, 78, 97, 0.24);
+}
+
+.app-error-popup-icon.is-success {
+    background: linear-gradient(135deg, #1aa86f, #46cf88);
+    box-shadow: 0 18px 32px rgba(26, 168, 111, 0.24);
+}
+
+.app-error-popup-icon.is-warning {
+    background: linear-gradient(135deg, #f4a100, #f5c14d);
+    box-shadow: 0 18px 32px rgba(244, 161, 0, 0.24);
+}
+
+.app-error-popup-icon.is-info {
+    background: linear-gradient(135deg, #07a5c9, #47c9e7);
+    box-shadow: 0 18px 32px rgba(7, 165, 201, 0.24);
 }
 
 .app-error-popup-close {
@@ -382,11 +449,27 @@
     align-items: center;
     gap: 0.35rem;
     margin-bottom: 0.35rem;
-    color: #bc314c;
+    color: var(--app-text-secondary);
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.app-error-popup-kicker.is-error {
+    color: #bc314c;
+}
+
+.app-error-popup-kicker.is-success {
+    color: #0f7f52;
+}
+
+.app-error-popup-kicker.is-warning {
+    color: #b67b00;
+}
+
+.app-error-popup-kicker.is-info {
+    color: #0b8098;
 }
 
 .app-error-popup-header h2,
@@ -419,6 +502,14 @@
     color: var(--app-text-muted);
     font-size: 0.86rem;
     font-weight: 700;
+}
+
+.app-error-popup-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 @keyframes app-error-popup-enter {
@@ -536,6 +627,10 @@
     .app-error-popup-footer {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .app-error-popup-actions {
+        width: 100%;
     }
 
     .app-error-popup-close {

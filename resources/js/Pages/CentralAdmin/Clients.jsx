@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
 import AdminLayout from '@/Layouts/AdminLayout'
-import { showErrorPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
+import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
@@ -377,12 +377,6 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
                                         <span className="central-admin-badge">{tenant.activeModules} modulos</span>
                                         <span className="central-admin-badge is-info">{tenant.presetLabel}</span>
                                     </div>
-                                    {state ? (
-                                        <span className={`central-admin-inline-feedback is-${state.type}`}>
-                                            <i className={`fa-solid ${state.type === 'error' ? 'fa-circle-xmark' : state.type === 'success' ? 'fa-circle-check' : 'fa-arrows-rotate'}`} />
-                                            <span>{state.text}</span>
-                                        </span>
-                                    ) : null}
                                 </div>
 
                                 <div className="central-admin-feature-modules">
@@ -429,7 +423,7 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
     const [deleteBusy, setDeleteBusy] = useState(false)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     useEffect(() => {
         setTenantSettingsState(buildTenantSettingsState(tenants))
@@ -551,21 +545,23 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                 [tenant.id]: normalizeSettings(response.settings || nextState),
             }))
 
-            setRowState((current) => ({
-                ...current,
-                [tenant.id]: { type: 'success', text: 'Salvo', saving: false },
-            }))
+            setFeedback({ type: 'success', text: response.message || `Configuracoes de ${tenant.name} atualizadas.` })
+            setRowState((current) => {
+                const next = { ...current }
+                delete next[tenant.id]
+                return next
+            })
         } catch (error) {
             setTenantSettingsState((current) => ({
                 ...current,
                 [tenant.id]: previousState,
             }))
-            showErrorPopup(error.message)
-
-            setRowState((current) => ({
-                ...current,
-                [tenant.id]: { type: 'error', text: error.message, saving: false },
-            }))
+            setFeedback({ type: 'error', text: error.message })
+            setRowState((current) => {
+                const next = { ...current }
+                delete next[tenant.id]
+                return next
+            })
         }
     }
 

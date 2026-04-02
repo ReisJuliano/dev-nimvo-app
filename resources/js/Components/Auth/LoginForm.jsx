@@ -1,4 +1,3 @@
-import AuthAlert from '@/Components/Auth/AuthAlert'
 import AuthTextField from '@/Components/Auth/AuthTextField'
 import PasswordField from '@/Components/Auth/PasswordField'
 import { useErrorMapPopup } from '@/lib/errorPopup'
@@ -16,8 +15,6 @@ export default function LoginForm({
 
     return (
         <>
-            <AuthAlert message={errors.username} />
-
             <form className="guest-form" onSubmit={onSubmit}>
                 <AuthTextField
                     id="username"

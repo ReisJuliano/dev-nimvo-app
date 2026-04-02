@@ -270,7 +270,7 @@ export default function PosIndex({
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
     const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
     const deferredCustomerSearch = useDeferredValue(customerSearch)
     const productSearchInputRef = useRef(null)
 

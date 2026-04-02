@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import { Badge, buildRecordsUrl, EmptyState, Feedback, FeedbackHeader, ListCard, MetricGrid, SectionTabs, upsertRecord } from './shared'
@@ -52,7 +53,19 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover a categoria "${form.name}"?`)) {
+        if (!form.id) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover categoria',
+            message: `Remover a categoria "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
             return
         }
 
@@ -171,7 +184,19 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover o fornecedor "${form.name}"?`)) {
+        if (!form.id) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover fornecedor',
+            message: `Remover o fornecedor "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
             return
         }
 
@@ -302,7 +327,19 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover o cliente "${form.name}"?`)) {
+        if (!form.id) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover cliente',
+            message: `Remover o cliente "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
             return
         }
 

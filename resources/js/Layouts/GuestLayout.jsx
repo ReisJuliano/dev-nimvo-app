@@ -1,5 +1,6 @@
-import { Head } from '@inertiajs/react'
+import { Head, usePage } from '@inertiajs/react'
 import GuestBrandPanel from '@/Components/Auth/GuestBrandPanel'
+import { useFlashPopup } from '@/lib/errorPopup'
 import './guest-layout.css'
 
 export default function GuestLayout({
@@ -9,6 +10,9 @@ export default function GuestLayout({
     children,
     centered = false,
 }) {
+    const { flash } = usePage().props
+    useFlashPopup(flash)
+
     return (
         <>
             <Head title={title} />

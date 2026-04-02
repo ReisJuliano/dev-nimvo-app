@@ -2,7 +2,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import useModules from '@/hooks/useModules'
-import { useErrorFeedbackPopup } from '@/lib/errorPopup'
+import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import SidebarToolButton from './SidebarToolButton'
@@ -95,7 +95,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const [creditStatus, setCreditStatus] = useState(null)
     const [quantityDraft, setQuantityDraft] = useState(String(initialDraftState?.items?.[0]?.qty ?? '1'))
     const [clock, setClock] = useState(Date.now())
-    useErrorFeedbackPopup(feedback)
+    useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
     const saveTimeoutRef = useRef(null)
     const searchInputRef = useRef(null)
     const searchDraftInputRef = useRef(null)
@@ -558,7 +558,16 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
     async function handleDeleteDraft() {
         if (!currentDraft?.id) return
-        if (!window.confirm(`Remover o atendimento "${currentDraft.label}"?`)) return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover atendimento',
+            message: `Remover o atendimento "${currentDraft.label}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
 
         const draftId = Number(currentDraft.id)
         setDeletingDraft(true)

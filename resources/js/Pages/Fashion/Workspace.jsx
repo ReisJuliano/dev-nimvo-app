@@ -2,7 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
-import { useErrorFeedbackPopup } from '@/lib/errorPopup'
+import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import './fashion.css'
 
 function EmptyState({ title, text }) {
@@ -17,11 +17,7 @@ function EmptyState({ title, text }) {
 function Feedback({ feedback }) {
     useErrorFeedbackPopup(feedback)
 
-    if (!feedback) {
-        return null
-    }
-
-    return <div className={`fashion-feedback ${feedback.type}`}>{feedback.text}</div>
+    return null
 }
 
 function SectionTabs({ tabs, activeTab, onChange }) {
@@ -136,7 +132,17 @@ function PromotionsWorkspace({ payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover a promocao "${form.name}"?`)) return
+        if (!form.id) return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover promocao',
+            message: `Remover a promocao "${form.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
 
         try {
             const response = await apiRequest(`/api/fashion/promotions/${form.id}`, { method: 'delete' })
@@ -264,7 +270,17 @@ function ReturnsWorkspace({ payload }) {
     }
 
     async function handleDelete() {
-        if (!form.id || !window.confirm(`Remover o atendimento de ${form.product_name}?`)) return
+        if (!form.id) return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover atendimento',
+            message: `Remover o atendimento de ${form.product_name}?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
 
         try {
             const response = await apiRequest(`/api/fashion/returns/${form.id}`, { method: 'delete' })
