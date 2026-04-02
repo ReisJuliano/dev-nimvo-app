@@ -40,6 +40,26 @@
     background: linear-gradient(180deg, rgba(243, 247, 255, 0.96), rgba(249, 251, 255, 0.94));
 }
 
+.cash-register-hero-action {
+    width: 100%;
+    justify-content: space-between;
+    padding-inline: 1.1rem;
+}
+
+.cash-register-hero-action-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.cash-register-hero-action-count {
+    min-width: 2.4rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    text-align: center;
+}
+
 .cash-register-hero-metrics small {
     color: var(--app-text-muted);
     text-transform: uppercase;
@@ -80,25 +100,6 @@
 
 .cash-register-card.open {
     max-width: 640px;
-}
-
-.cash-register-workspace {
-    display: grid;
-    gap: 1.1rem;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    align-items: start;
-}
-
-.cash-register-main-column,
-.cash-register-side-rail,
-.cash-register-side-actions {
-    display: grid;
-    gap: 1.1rem;
-}
-
-.cash-register-side-card {
-    position: sticky;
-    top: 1rem;
 }
 
 .cash-register-section-header,
@@ -313,10 +314,6 @@
     box-shadow: 0 18px 30px rgba(47, 124, 246, 0.2);
 }
 
-.cash-register-primary-button {
-    text-decoration: none;
-}
-
 .cash-register-primary-button:hover,
 .cash-register-actions-grid button:hover,
 .cash-register-history-table button:hover {
@@ -333,62 +330,6 @@
 .cash-register-danger-button:hover {
     transform: translateY(-1px);
     box-shadow: 0 22px 34px rgba(216, 78, 97, 0.22);
-}
-
-.cash-register-side-actions {
-    padding: 1.2rem;
-}
-
-.cash-register-side-action {
-    width: 100%;
-    border: 1px solid transparent;
-    border-radius: 20px;
-    padding: 0.95rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.85rem;
-    cursor: pointer;
-    transition: var(--app-transition);
-    text-decoration: none;
-}
-
-.cash-register-side-action:hover {
-    transform: translateY(-2px);
-}
-
-.cash-register-side-action-copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.7rem;
-    font-weight: 700;
-}
-
-.cash-register-side-action small,
-.cash-register-side-action-count {
-    flex-shrink: 0;
-}
-
-.cash-register-side-action-secondary {
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.1), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.94));
-    border-color: var(--app-border);
-    color: var(--app-text-primary);
-    box-shadow: var(--app-shadow-sm);
-}
-
-.cash-register-side-action-secondary:hover {
-    box-shadow: var(--app-shadow);
-}
-
-.cash-register-side-action-count {
-    min-width: 2.5rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    background: rgba(47, 124, 246, 0.12);
-    color: var(--app-primary-dark);
-    text-align: center;
 }
 
 .cash-register-summary-grid,
@@ -754,8 +695,7 @@
 
 @media (max-width: 920px) {
     .cash-register-hero-grid,
-    .cash-register-actions-grid,
-    .cash-register-workspace {
+    .cash-register-actions-grid {
         grid-template-columns: 1fr;
     }
 
@@ -784,20 +724,11 @@
         width: 100%;
     }
 
-    .cash-register-side-card {
-        position: static;
-    }
-
     .cash-register-order-card-body {
         flex-direction: column;
     }
 
     .cash-register-order-open-button {
         width: 100%;
-    }
-
-    .cash-register-side-action {
-        flex-direction: column;
-        align-items: flex-start;
     }
 }
