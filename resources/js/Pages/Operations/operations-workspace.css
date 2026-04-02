@@ -257,6 +257,91 @@
     gap: 0.75rem;
 }
 
+.ops-nfe-status-card,
+.ops-nfe-item-card {
+    border: 1px solid rgba(27, 71, 96, 0.12);
+    border-radius: 20px;
+    background: rgba(248, 251, 253, 0.96);
+    padding: 1rem;
+}
+
+.ops-nfe-status-card strong,
+.ops-nfe-item-head strong {
+    color: #173041;
+}
+
+.ops-nfe-status-card p {
+    margin: 0.35rem 0 0.75rem;
+    color: #60717c;
+}
+
+.ops-nfe-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ops-nfe-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.ops-nfe-summary-grid article {
+    padding: 0.95rem 1rem;
+    border-radius: 18px;
+    border: 1px solid rgba(27, 71, 96, 0.1);
+    background: linear-gradient(180deg, #fdfcf8 0%, #f5f8fb 100%);
+}
+
+.ops-nfe-summary-grid span,
+.ops-nfe-item-head small,
+.ops-nfe-item-warnings span {
+    color: #60717c;
+}
+
+.ops-nfe-summary-grid strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: #173041;
+    font-size: 1.2rem;
+}
+
+.ops-nfe-alert-list,
+.ops-nfe-item-grid,
+.ops-nfe-item-warnings {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.ops-nfe-alert {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.85rem 0.95rem;
+    border-radius: 16px;
+    background: rgba(219, 160, 63, 0.12);
+    color: #8a5c0e;
+}
+
+.ops-nfe-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.ops-nfe-item-warnings {
+    margin: 0.8rem 0;
+}
+
+.ops-nfe-item-warnings span {
+    padding: 0.6rem 0.75rem;
+    border-radius: 14px;
+    background: rgba(255, 244, 230, 0.8);
+}
+
 .ops-kitchen-queue {
     border: 1px solid rgba(28, 50, 66, 0.12);
     border-radius: 28px;
@@ -693,7 +778,8 @@
     }
 
     .ops-recipe-metrics,
-    .ops-recipe-items {
+    .ops-recipe-items,
+    .ops-nfe-summary-grid {
         grid-template-columns: 1fr;
     }
 }

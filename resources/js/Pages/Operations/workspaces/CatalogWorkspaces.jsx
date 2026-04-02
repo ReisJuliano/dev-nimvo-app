@@ -145,7 +145,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 }
 
 export function SuppliersWorkspace({ moduleKey, payload }) {
-    const emptyForm = { id: null, name: '', phone: '', email: '', active: true }
+    const emptyForm = { id: null, name: '', document: '', trade_name: '', state_registration: '', city_name: '', state: '', phone: '', email: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('active')
     const [form, setForm] = useState(emptyForm)
@@ -234,7 +234,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                     onClick={() => setForm({ ...emptyForm, ...record })}
                                     title={record.name}
                                     badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                    description={record.email || 'Sem e-mail'}
+                                    description={record.document || record.email || 'Sem documento fiscal'}
                                     meta={[record.phone || 'Sem telefone', `${record.products_count || 0} produto(s)`]}
                                 />
                             ))
@@ -250,6 +250,26 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                         <label>
                             <FieldLabel icon="fa-building" text="Nome" />
                             <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />
+                            <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente numeros ou formatado" />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-store" text="Nome fantasia" />
+                            <input value={form.trade_name || ''} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
+                            <input value={form.state_registration || ''} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-city" text="Cidade" />
+                            <input value={form.city_name || ''} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
+                        </label>
+                        <label>
+                            <FieldLabel icon="fa-map-location-dot" text="UF" />
+                            <input maxLength="2" value={form.state || ''} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
                         </label>
                         <label>
                             <FieldLabel icon="fa-phone" text="Telefone" />

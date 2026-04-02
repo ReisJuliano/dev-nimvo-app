@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import IncomingNfeWorkspace from './IncomingNfeWorkspace'
 import {
     Badge,
     buildRecordsUrl,
@@ -17,6 +18,15 @@ import {
     SectionTabs,
     upsertRecord,
 } from './shared'
+
+function FieldLabel({ icon, text }) {
+    return (
+        <span className="ops-workspace-label-with-icon">
+            <i className={`fa-solid ${icon}`} />
+            {text}
+        </span>
+    )
+}
 
 function PurchaseItemsEditor({ products, items, onChange }) {
     const [draft, setDraft] = useState({ product_id: '', quantity: '1', unit_cost: '0' })
@@ -171,6 +181,7 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, supplier_id: '', status: 'draft', expected_at: '', freight: '0', notes: '', items: [] }
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('draft')
+    const [workspaceMode, setWorkspaceMode] = useState('manual')
     const [form, setForm] = useState(emptyForm)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
@@ -225,42 +236,47 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack">
-            <SectionTabs tabs={[{ key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' }, { key: 'ordered', label: 'Solicitadas', icon: 'fa-cart-shopping' }, { key: 'received', label: 'Recebidas', icon: 'fa-box-open' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Compras" subtitle={`${filteredRecords.length} registro(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? filteredRecords.map((record) => (
-                            <ListCard
-                                key={record.id}
-                                active={form.id === record.id}
-                                onClick={() => setForm({ ...emptyForm, ...record, supplier_id: record.supplier_id ? String(record.supplier_id) : '', expected_at: ensureDate(record.expected_at), freight: String(record.freight || 0), items: (record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })}
-                                title={record.code}
-                                badge={<Badge tone={record.stock_applied_at ? 'success' : record.status === 'received' ? 'info' : 'warning'}>{record.status}</Badge>}
-                                description={record.supplier_name || 'Sem origem definida'}
-                                meta={[`${record.items?.length || 0} item(ns)`, formatMoney(record.total || 0)]}
-                            />
-                        )) : <EmptyState title="Sem compras nesse status" text="Cadastre entradas planejadas e receba itens direto no estoque." />}
+            <SectionTabs tabs={[{ key: 'manual', label: 'Planejamento', icon: 'fa-cart-shopping' }, { key: 'incoming_nfe', label: 'NF-e recebidas', icon: 'fa-file-invoice' }]} activeTab={workspaceMode} onChange={setWorkspaceMode} />
+            {workspaceMode === 'incoming_nfe' ? <IncomingNfeWorkspace payload={payload} /> : null}
+            {workspaceMode !== 'manual' ? null : (
+                <>
+                    <SectionTabs tabs={[{ key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' }, { key: 'ordered', label: 'Solicitadas', icon: 'fa-cart-shopping' }, { key: 'received', label: 'Recebidas', icon: 'fa-box-open' }]} activeTab={activeTab} onChange={setActiveTab} />
+                    <MetricGrid items={metrics} />
+                    <div className="ops-workspace-grid two-columns">
+                        <section className="ops-workspace-panel">
+                            <FeedbackHeader title="Compras" subtitle={`${filteredRecords.length} registro(s)`} />
+                            <Feedback feedback={feedback} />
+                            <div className="ops-workspace-list-stack">
+                                {filteredRecords.length ? filteredRecords.map((record) => (
+                                    <ListCard
+                                        key={record.id}
+                                        active={form.id === record.id}
+                                        onClick={() => setForm({ ...emptyForm, ...record, supplier_id: record.supplier_id ? String(record.supplier_id) : '', expected_at: ensureDate(record.expected_at), freight: String(record.freight || 0), items: (record.items || []).map((item) => ({ ...item, product_id: String(item.product_id), quantity: String(item.quantity), unit_cost: String(item.unit_cost) })) })}
+                                        title={record.code}
+                                        badge={<Badge tone={record.stock_applied_at ? 'success' : record.status === 'received' ? 'info' : 'warning'}>{record.status}</Badge>}
+                                        description={record.supplier_name || 'Sem origem definida'}
+                                        meta={[`${record.items?.length || 0} item(ns)`, formatMoney(record.total || 0)]}
+                                    />
+                                )) : <EmptyState title="Sem compras nesse status" text="Cadastre entradas planejadas e receba itens direto no estoque." />}
+                            </div>
+                        </section>
+                        <section className="ops-workspace-panel">
+                            <FeedbackHeader title={form.id ? 'Editar compra' : 'Nova compra'} subtitle="Pedido com entrada automatica no estoque" />
+                            <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                                <label><FieldLabel icon="fa-truck-ramp-box" text="Fornecedor" /><select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}><option value="">Nao informado</option>{payload.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
+                                <label><FieldLabel icon="fa-flag" text="Status" /><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Rascunho</option><option value="ordered">Solicitada</option><option value="received">Recebida</option></select></label>
+                                <label><FieldLabel icon="fa-calendar-day" text="Previsao" /><input type="date" value={form.expected_at} onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))} /></label>
+                                <label className="span-2"><FieldLabel icon="fa-note-sticky" text="Observacoes" /><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
+                                <PurchaseItemsEditor products={payload.products} items={form.items} onChange={(items) => setForm((current) => ({ ...current, items }))} />
+                                <label><FieldLabel icon="fa-truck-fast" text="Frete" /><input type="number" min="0" step="0.01" value={form.freight} onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))} /></label>
+                                <div className="ops-workspace-total-bar"><span>Subtotal / Total</span><strong>{`${formatMoney(subtotalPreview)} / ${formatMoney(totalPreview)}`}</strong></div>
+                                {form.stock_applied_at ? <div className="ops-workspace-inline-alert span-2">Esta compra ja entrou no estoque e nao pode mais ser alterada.</div> : null}
+                                <div className="ops-workspace-actions span-2"><button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>Limpar</button>{form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}<button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar compra' : 'Salvar compra'}</button></div>
+                            </form>
+                        </section>
                     </div>
-                </section>
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar compra' : 'Nova compra'} subtitle="Pedido com entrada automatica no estoque" />
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                        <label><span>Fornecedor</span><select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}><option value="">Nao informado</option>{payload.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
-                        <label><span>Status</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Rascunho</option><option value="ordered">Solicitada</option><option value="received">Recebida</option></select></label>
-                        <label><span>Previsao</span><input type="date" value={form.expected_at} onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))} /></label>
-                        <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
-                        <PurchaseItemsEditor products={payload.products} items={form.items} onChange={(items) => setForm((current) => ({ ...current, items }))} />
-                        <label><span>Frete</span><input type="number" min="0" step="0.01" value={form.freight} onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))} /></label>
-                        <div className="ops-workspace-total-bar"><span>Subtotal / Total</span><strong>{`${formatMoney(subtotalPreview)} · ${formatMoney(totalPreview)}`}</strong></div>
-                        {form.stock_applied_at ? <div className="ops-workspace-inline-alert span-2">Esta compra ja entrou no estoque e nao pode mais ser alterada.</div> : null}
-                        <div className="ops-workspace-actions span-2"><button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>Limpar</button>{form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}<button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar compra' : 'Salvar compra'}</button></div>
-                    </form>
-                </section>
-            </div>
+                </>
+            )}
         </div>
     )
 }
-
