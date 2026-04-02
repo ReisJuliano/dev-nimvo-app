@@ -10,6 +10,18 @@
 }
 
 .orders-modal {
+    --orders-terminal-surface: #ffffff;
+    --orders-terminal-surface-alt: #f5f7fa;
+    --orders-terminal-border: rgba(15, 23, 42, 0.1);
+    --orders-terminal-border-strong: rgba(15, 23, 42, 0.15);
+    --orders-terminal-text: #0f172a;
+    --orders-terminal-muted: #6b7280;
+    --orders-terminal-blue: #185fa5;
+    --orders-terminal-blue-soft: rgba(24, 95, 165, 0.08);
+    --orders-terminal-green: #3b6d11;
+    --orders-terminal-green-soft: rgba(59, 109, 17, 0.12);
+    --orders-terminal-danger: #d85a30;
+    --orders-terminal-danger-soft: rgba(216, 90, 48, 0.12);
     width: min(100%, 920px);
     max-height: calc(100dvh - 2rem);
     display: grid;
@@ -95,10 +107,10 @@
 .orders-modal-close {
     width: 44px;
     height: 44px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(24, 95, 165, 0.12);
     border-radius: 16px;
-    background: linear-gradient(180deg, #ffffff, #f3f6fb);
-    color: var(--app-text-secondary);
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
+    color: var(--orders-terminal-text);
     cursor: pointer;
 }
 
@@ -678,8 +690,9 @@
 .orders-modal-action-compact .orders-modal-close {
     width: 34px;
     height: 34px;
+    border-color: rgba(24, 95, 165, 0.12);
     border-radius: 10px;
-    background: transparent;
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
     box-shadow: none;
 }
 
@@ -731,13 +744,16 @@
     min-height: 88px;
     padding: 0.95rem;
     border-radius: 16px;
-    color: var(--orders-terminal-muted);
+    border-color: rgba(24, 95, 165, 0.1);
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    color: var(--orders-terminal-text);
     cursor: pointer;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .orders-action-toggle i {
     font-size: 1rem;
+    color: var(--orders-terminal-blue);
 }
 
 .orders-action-toggle span {
@@ -748,7 +764,7 @@
 
 .orders-action-toggle.active {
     border-color: rgba(24, 95, 165, 0.2);
-    background: rgba(24, 95, 165, 0.06);
+    background: rgba(24, 95, 165, 0.12);
     color: var(--orders-terminal-blue);
 }
 
@@ -831,9 +847,9 @@
     gap: 0.55rem;
     min-height: 48px;
     padding: 0 1rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(24, 95, 165, 0.12);
     border-radius: 14px;
-    background: #ffffff;
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
     color: var(--orders-terminal-text);
     cursor: pointer;
     font: inherit;
@@ -851,7 +867,7 @@
 }
 
 .orders-action-button.muted {
-    color: var(--orders-terminal-muted);
+    color: var(--orders-terminal-text);
 }
 
 .orders-action-button.primary {
@@ -917,8 +933,8 @@
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    border-color: rgba(15, 23, 42, 0.1);
-    background: transparent;
+    border-color: rgba(24, 95, 165, 0.12);
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
     font-size: 0.85rem;
 }
 
@@ -1214,7 +1230,8 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: transparent;
+    border-color: rgba(24, 95, 165, 0.12);
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
     box-shadow: none;
 }
 
@@ -1545,9 +1562,9 @@
 .orders-terminal-item-remove {
     width: 34px;
     height: 34px;
-    border: 1px solid transparent;
+    border: 1px solid rgba(216, 90, 48, 0.14);
     border-radius: 9px;
-    background: transparent;
+    background: var(--orders-terminal-danger-soft);
     color: var(--orders-terminal-danger);
     cursor: pointer;
 }
@@ -1697,15 +1714,15 @@
     padding: 0.45rem;
     border: 1px solid var(--orders-terminal-border);
     border-radius: 12px;
-    background: var(--orders-terminal-surface);
-    color: var(--orders-terminal-muted);
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    color: var(--orders-terminal-text);
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .orders-terminal-sidebar-action:hover,
 .orders-terminal-sidebar-finalize:hover {
-    background: var(--orders-terminal-surface-alt);
+    background: rgba(24, 95, 165, 0.1);
 }
 
 .orders-terminal-sidebar-action i,
@@ -1723,7 +1740,7 @@
 
 .orders-terminal-sidebar-action.danger {
     color: var(--orders-terminal-danger);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--orders-terminal-danger-soft);
 }
 
 .orders-terminal-sidebar-action:disabled,
@@ -1779,7 +1796,8 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: transparent;
+    border-color: rgba(24, 95, 165, 0.12);
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
     box-shadow: none;
 }
 
@@ -1922,8 +1940,8 @@
     padding: 0.85rem 0.95rem;
     border: 1px solid var(--orders-terminal-border);
     border-radius: 12px;
-    background: var(--orders-terminal-surface);
-    color: var(--orders-terminal-muted);
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    color: var(--orders-terminal-text);
     cursor: pointer;
     text-align: left;
     transition: border-color 0.2s ease, background-color 0.2s ease;
@@ -1975,7 +1993,8 @@
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: transparent;
+    border-color: rgba(24, 95, 165, 0.12);
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
     box-shadow: none;
 }
 
@@ -2040,17 +2059,17 @@
     display: grid;
     place-items: center;
     min-height: 56px;
-    border: 1px solid var(--orders-terminal-border);
+    border: 1px solid rgba(24, 95, 165, 0.12);
     border-radius: 14px;
-    background: #ffffff;
-    color: var(--orders-terminal-muted);
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    color: var(--orders-terminal-text);
     cursor: pointer;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
 .orders-edit-customer-quick.create {
     border-color: rgba(24, 95, 165, 0.18);
-    background: rgba(24, 95, 165, 0.08);
+    background: rgba(24, 95, 165, 0.12);
     color: var(--orders-terminal-blue);
 }
 
@@ -2080,7 +2099,9 @@
     gap: 0.75rem;
     align-items: center;
     padding: 0.85rem 0.9rem;
+    border: 1px solid rgba(24, 95, 165, 0.1);
     border-radius: 14px;
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
     color: var(--orders-terminal-text);
     cursor: pointer;
     text-align: left;
@@ -2166,17 +2187,17 @@
     min-height: 64px;
     display: grid;
     place-items: center;
-    border: 1px solid var(--orders-terminal-border);
+    border: 1px solid rgba(24, 95, 165, 0.12);
     border-radius: 12px;
-    background: #ffffff;
-    color: var(--orders-terminal-muted);
+    background: linear-gradient(180deg, #f7fbff, #edf4fb);
+    color: var(--orders-terminal-text);
     cursor: pointer;
     font: inherit;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .orders-edit-terminal-sidebar-icon:hover {
-    background: var(--orders-terminal-surface-alt);
+    background: rgba(24, 95, 165, 0.1);
 }
 
 .orders-edit-terminal-sidebar-icon i {
@@ -2224,8 +2245,9 @@
 .orders-modal-product-picker .orders-modal-close {
     width: 40px;
     height: 40px;
+    border-color: rgba(24, 95, 165, 0.12);
     border-radius: 12px;
-    background: #fff;
+    background: linear-gradient(180deg, #f7fbff, #eaf1f8);
 }
 
 .orders-modal-product-picker-body {
