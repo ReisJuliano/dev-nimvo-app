@@ -75,6 +75,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const [quantityModalOpen, setQuantityModalOpen] = useState(false)
     const [deliveryModalOpen, setDeliveryModalOpen] = useState(false)
     const [deliveriesModalOpen, setDeliveriesModalOpen] = useState(false)
+    const [creatingTransferCustomer, setCreatingTransferCustomer] = useState(false)
     const [newDraftForm, setNewDraftForm] = useState(getInitialNewDraftForm())
     const [searchDraftTerm, setSearchDraftTerm] = useState('')
     const [feedback, setFeedback] = useState(null)
@@ -471,6 +472,32 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: { name: typedName, phone: null } })
         setCustomerOptions((current) => sortCustomerOptions([...current, response.customer]))
         return Number(response.customer.id)
+    }
+
+    async function handleCreateTransferCustomer(name) {
+        const typedName = String(name || '').trim()
+        if (!typedName) return
+
+        const existing = customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === typedName.toLowerCase())
+        if (existing) {
+            setTransferForm((current) => ({ ...current, customerId: String(existing.id) }))
+            showFeedback('success', 'Cliente selecionado.')
+            return existing
+        }
+
+        setCreatingTransferCustomer(true)
+        try {
+            const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: { name: typedName, phone: null } })
+            setCustomerOptions((current) => sortCustomerOptions([...current, response.customer]))
+            setTransferForm((current) => ({ ...current, customerId: String(response.customer.id) }))
+            showFeedback('success', 'Cliente criado.')
+            return response.customer
+        } catch (error) {
+            showFeedback('error', error.message)
+            return null
+        } finally {
+            setCreatingTransferCustomer(false)
+        }
     }
 
     async function handleCreateDraft(event, options = {}) {
@@ -1072,12 +1099,14 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         form={transferForm}
                         setForm={setTransferForm}
                         customers={customerOptions}
+                        creatingCustomer={creatingTransferCustomer}
+                        onCreateCustomer={handleCreateTransferCustomer}
                         onClose={() => setTransferModalOpen(false)}
                         onSubmit={(event) => {
                             event.preventDefault()
-                            updateDraft((current) => ({ ...current, type: transferForm.type, reference: transferForm.reference, customerId: transferForm.customerId, notes: transferForm.notes }))
+                            updateDraft((current) => ({ ...current, customerId: transferForm.customerId }))
                             setTransferModalOpen(false)
-                            showFeedback('success', 'Dados do atendimento atualizados.')
+                            showFeedback('success', 'Cliente atualizado.')
                         }}
                     />
                 ) : null}

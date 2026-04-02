@@ -831,10 +831,19 @@
     gap: 0.55rem;
     min-height: 48px;
     padding: 0 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 14px;
+    background: #ffffff;
     color: var(--orders-terminal-text);
     cursor: pointer;
+    font: inherit;
+    appearance: none;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-action-button span,
+.orders-action-button i {
+    color: inherit;
 }
 
 .orders-action-button span {
@@ -847,12 +856,13 @@
 
 .orders-action-button.primary {
     border-color: rgba(24, 95, 165, 0.18);
-    background: var(--orders-terminal-blue);
+    background-color: var(--orders-terminal-blue);
     color: #ffffff;
+    box-shadow: 0 10px 24px rgba(24, 95, 165, 0.18);
 }
 
 .orders-action-button.primary:hover {
-    background: #154f86;
+    background-color: #154f86;
 }
 
 .orders-product-skeleton {
@@ -1989,7 +1999,7 @@
 
 .orders-edit-customer-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 56px;
+    grid-template-columns: minmax(0, 1fr) 56px 56px;
     gap: 0.75rem;
 }
 
@@ -2030,10 +2040,23 @@
     display: grid;
     place-items: center;
     min-height: 56px;
+    border: 1px solid var(--orders-terminal-border);
     border-radius: 14px;
+    background: #ffffff;
     color: var(--orders-terminal-muted);
     cursor: pointer;
     transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.orders-edit-customer-quick.create {
+    border-color: rgba(24, 95, 165, 0.18);
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+}
+
+.orders-edit-customer-quick:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .orders-edit-customer-quick.active {
@@ -2148,6 +2171,7 @@
     background: #ffffff;
     color: var(--orders-terminal-muted);
     cursor: pointer;
+    font: inherit;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
@@ -2160,13 +2184,18 @@
 }
 
 .orders-edit-terminal-sidebar-icon.confirm {
-    border-color: rgba(59, 109, 17, 0.22);
-    background: var(--orders-terminal-green);
+    border-color: rgba(24, 95, 165, 0.24);
+    background: var(--orders-terminal-blue);
     color: #ffffff;
+    box-shadow: 0 10px 24px rgba(24, 95, 165, 0.18);
 }
 
 .orders-edit-terminal-sidebar-icon.confirm:hover {
-    background: #315b0f;
+    background: #154f86;
+}
+
+.orders-edit-terminal-sidebar-icon.confirm i {
+    color: inherit;
 }
 
 .orders-modal-product-picker .orders-modal-header,

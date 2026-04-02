@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
 import OrdersModal from './OrdersModal'
 
-export default function OrderTransferModal({ form, setForm, customers, onClose, onSubmit }) {
+export default function OrderTransferModal({ form, setForm, customers, creatingCustomer = false, onCreateCustomer, onClose, onSubmit }) {
     const [search, setSearch] = useState('')
-    const selectedCustomer = customers.find((customer) => String(customer.id) === String(form.customerId))
     const normalizedSearch = search.trim().toLowerCase()
+    const exactMatch = normalizedSearch
+        ? customers.find((customer) => String(customer.name || '').trim().toLowerCase() === normalizedSearch)
+        : null
     const visibleCustomers = useMemo(() => {
-        const matches = normalizedSearch
-            ? customers.filter((customer) => [customer.name, customer.phone].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedSearch)))
-            : customers
+        if (!normalizedSearch) {
+            return []
+        }
+
+        const matches = customers.filter((customer) => [customer.name, customer.phone].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedSearch)))
 
         return [...matches].sort((left, right) => {
             const leftSelected = String(left.id) === String(form.customerId)
@@ -47,6 +51,17 @@ export default function OrderTransferModal({ form, setForm, customers, onClose, 
 
                             <button
                                 type="button"
+                                className="orders-edit-customer-quick create"
+                                onClick={() => onCreateCustomer?.(search)}
+                                aria-label="Criar cliente"
+                                title="Criar cliente"
+                                disabled={!normalizedSearch || Boolean(exactMatch) || creatingCustomer}
+                            >
+                                <i className={`fa-solid ${creatingCustomer ? 'fa-spinner fa-spin' : 'fa-user-plus'}`} />
+                            </button>
+
+                            <button
+                                type="button"
                                 className={`orders-edit-customer-quick ${!form.customerId ? 'active' : ''}`}
                                 onClick={() => setForm((current) => ({ ...current, customerId: '' }))}
                                 aria-label="Remover cliente"
@@ -57,7 +72,7 @@ export default function OrderTransferModal({ form, setForm, customers, onClose, 
                         </div>
 
                         <div className="orders-edit-customer-grid">
-                            {visibleCustomers.length ? (
+                            {normalizedSearch && visibleCustomers.length ? (
                                 visibleCustomers.map((customer) => {
                                     const isActive = String(customer.id) === String(form.customerId)
 
@@ -85,12 +100,11 @@ export default function OrderTransferModal({ form, setForm, customers, onClose, 
                                         </button>
                                     )
                                 })
-                            ) : (
+                            ) : normalizedSearch ? (
                                 <div className="orders-edit-customer-empty">
                                     <i className="fa-solid fa-user-xmark" />
-                                    <span>Sem resultado</span>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                     </div>
 
