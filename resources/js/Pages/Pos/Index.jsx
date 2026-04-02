@@ -892,6 +892,26 @@ export default function PosIndex({
         setCart((current) => current.map((item) => (item.id === productId ? { ...item, qty } : item)))
     }
 
+    function handleStepQuantity(productId, direction) {
+        setSelectedCartItemId(productId)
+        setCart((current) => current.flatMap((item) => {
+            if (item.id !== productId) {
+                return [item]
+            }
+
+            const nextQty = Number(item.qty || 0) + direction
+
+            if (nextQty <= 0) {
+                return []
+            }
+
+            return [{
+                ...item,
+                qty: Number(nextQty.toFixed(3)),
+            }]
+        }))
+    }
+
     function handleRemove(productId) {
         setCart((current) => current.filter((item) => item.id !== productId))
     }
@@ -2173,6 +2193,7 @@ export default function PosIndex({
         pricing,
         selectedCartItemId,
         onSelectItem: setSelectedCartItemId,
+        onAdjustItemQuantity: handleStepQuantity,
         onRemoveItem: handleRemove,
         totals,
         shortcutButtons: footerShortcutHints,
@@ -2777,6 +2798,7 @@ function PosWorkspace({
     pricing,
     selectedCartItemId,
     onSelectItem,
+    onAdjustItemQuantity,
     onRemoveItem,
     totals,
     shortcutButtons,
@@ -2932,16 +2954,49 @@ function PosWorkspace({
                                     : null
 
                             return (
-                                <button
+                                <div
                                     key={`${item.id}-${index}`}
-                                    type="button"
+                                    role="button"
+                                    tabIndex={0}
                                     className={`pos-item-row ${selectedCartItemId === item.id ? 'selected' : ''}`}
                                     onClick={() => onSelectItem(item.id)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault()
+                                            onSelectItem(item.id)
+                                        }
+                                    }}
                                 >
                                     <span className="pos-item-index">{index + 1}</span>
                                     <span className="pos-item-name">{item.name}</span>
                                     <span className="pos-item-divider" aria-hidden="true" />
-                                    <span className="pos-item-qty">{formatNumber(item.qty, { maximumFractionDigits: 3 })}x</span>
+                                    <div className="pos-item-qty-controls">
+                                        <button
+                                            type="button"
+                                            className="pos-item-qty-button"
+                                            onClick={(event) => {
+                                                event.stopPropagation()
+                                                onAdjustItemQuantity(item.id, -1)
+                                            }}
+                                            aria-label={`Diminuir quantidade de ${item.name}`}
+                                            title="Diminuir quantidade"
+                                        >
+                                            <PosIcon name="minus" />
+                                        </button>
+                                        <span className="pos-item-qty">{formatNumber(item.qty, { maximumFractionDigits: 3 })}x</span>
+                                        <button
+                                            type="button"
+                                            className="pos-item-qty-button"
+                                            onClick={(event) => {
+                                                event.stopPropagation()
+                                                onAdjustItemQuantity(item.id, 1)
+                                            }}
+                                            aria-label={`Aumentar quantidade de ${item.name}`}
+                                            title="Aumentar quantidade"
+                                        >
+                                            <PosIcon name="plus" />
+                                        </button>
+                                    </div>
                                     <span className="pos-item-divider" aria-hidden="true" />
                                     <span className="pos-item-badge-cell">
                                         {badge ? <span className={`pos-item-badge ${badge.tone}`}>{badge.label}</span> : <span className="pos-item-badge empty">Sem ajuste</span>}
@@ -2960,7 +3015,7 @@ function PosWorkspace({
                                     >
                                         <PosIcon name="trash" />
                                     </button>
-                                </button>
+                                </div>
                             )
                         }) : (
                             <div className="pos-empty-sale">
@@ -3709,6 +3764,14 @@ function PosIcon({ name }) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" />
                     <path d="M8 12h8" />
+                </svg>
+            )
+        case 'plus':
+            return (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M8 12h8" />
+                    <path d="M12 8v8" />
                 </svg>
             )
         case 'cancel':

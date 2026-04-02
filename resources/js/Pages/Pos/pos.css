@@ -513,7 +513,7 @@
 .pos-item-row {
     width: 100%;
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) 1px 64px 1px 104px 1px 112px 34px;
+    grid-template-columns: 28px minmax(0, 1fr) 1px 120px 1px 104px 1px 112px 34px;
     align-items: center;
     gap: 0.65rem;
     border: 0;
@@ -553,6 +553,36 @@
 .pos-item-qty {
     color: var(--pos-text-muted);
     text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.pos-item-qty-controls {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pos-item-qty-button {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: var(--pos-surface-alt);
+    color: var(--pos-text-muted);
+    cursor: pointer;
+}
+
+.pos-item-qty-button:hover {
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--pos-blue);
+}
+
+.pos-item-qty-button svg {
+    width: 14px;
+    height: 14px;
 }
 
 .pos-item-badge-cell {
@@ -1423,7 +1453,7 @@
     }
 
     .pos-item-row {
-        grid-template-columns: 24px minmax(0, 1fr) 1px 52px 1px 88px 1px 96px 30px;
+        grid-template-columns: 24px minmax(0, 1fr) 1px 102px 1px 88px 1px 96px 30px;
         gap: 0.45rem;
         padding-inline: 12px;
     }
