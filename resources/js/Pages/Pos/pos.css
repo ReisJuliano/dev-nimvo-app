@@ -787,6 +787,18 @@
     text-align: center;
 }
 
+.pos-sidebar-badge {
+    min-width: 24px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(24, 95, 165, 0.12);
+    color: var(--pos-blue);
+    font-size: 10px;
+    font-family: 'Space Grotesk', ui-monospace, monospace;
+    font-weight: 600;
+    text-align: center;
+}
+
 .pos-sidebar-separator {
     height: 0.5px;
     margin: 0.35rem 12px;
@@ -832,6 +844,10 @@
     color: var(--pos-text, #1f2937);
     border: 0.5px solid var(--pos-border-strong, rgba(15, 23, 42, 0.15));
     padding: 14px;
+}
+
+.pos-modal-card.wide {
+    width: min(760px, 100%);
 }
 
 .pos-modal-card.danger .pos-modal-header h2 {
