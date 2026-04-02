@@ -4,7 +4,6 @@ import { formatElapsedTime, getDraftNumberLabel, getOrderTypeLabel } from './ord
 
 export default function OrderDetailModal({
     draft,
-    customers,
     feedback,
     selectedCustomer,
     selectedItem,
@@ -29,7 +28,6 @@ export default function OrderDetailModal({
     onDeleteDraft,
     onQuantityChange,
     onRemoveItem,
-    onCustomerChange,
 }) {
     if (!draft) {
         return null
@@ -38,11 +36,7 @@ export default function OrderDetailModal({
     const sentToCashier = draft.status === 'sent_to_cashier'
     const elapsedLabel = formatElapsedTime(draft.updatedAt, clock)
     const customerName = selectedCustomer?.name || 'Nao identificado'
-    const customerPhone = selectedCustomer?.phone || 'Sem telefone'
     const referenceLabel = draft.reference?.trim() || getDraftNumberLabel(draft)
-    const noteLabel = draft.notes.trim() || 'Sem observacao'
-    const selectedItemLabel = selectedItem?.name || 'Nenhum item'
-    const selectedItemMeta = selectedItem ? `${formatNumber(selectedItem.qty)} x ${formatMoney(selectedItem.sale_price)}` : 'Selecione na lista'
     const detailCards = [
         { icon: 'fa-layer-group', label: 'Tipo', value: getOrderTypeLabel(draft.type) },
         { icon: 'fa-hashtag', label: 'Ref.', value: referenceLabel },
@@ -54,7 +48,7 @@ export default function OrderDetailModal({
         { key: 'quantity', label: 'Quantidade', icon: 'fa-arrows-up-down', onClick: onOpenQuantityModal, disabled: !selectedItem },
         { key: 'discount', label: 'Desconto', icon: 'fa-badge-percent', onClick: onOpenDiscountModal, disabled: !draft.items.length },
         { key: 'delivery', label: 'Entrega', icon: 'fa-motorcycle', onClick: onOpenDeliveryModal },
-        { key: 'edit', label: 'Editar', icon: 'fa-pen', onClick: onOpenTransferModal },
+        { key: 'customer', label: 'Cliente', icon: 'fa-user-pen', onClick: onOpenTransferModal },
         { key: 'print', label: printingDraft ? 'Imprimindo' : 'Imprimir', icon: 'fa-print', onClick: onPrintDraft, disabled: printingDraft },
         {
             key: 'cashier',
@@ -124,11 +118,6 @@ export default function OrderDetailModal({
                                 </div>
                             </div>
 
-                            <div className="orders-terminal-total-card">
-                                <span>Total</span>
-                                <strong>{formatMoney(pricing.total)}</strong>
-                                <small>{draft.items.length} item(ns) | {pricing.summary.title}</small>
-                            </div>
                         </section>
 
                         <section className="orders-terminal-metrics">
@@ -264,78 +253,6 @@ export default function OrderDetailModal({
                                             <span>Total</span>
                                             <strong>{formatMoney(pricing.total)}</strong>
                                         </div>
-                                    </div>
-                                </section>
-
-                                <section className="orders-terminal-panel orders-terminal-panel-compact">
-                                    <div className="orders-terminal-panel-heading compact">
-                                        <div>
-                                            <span className="orders-terminal-panel-kicker">
-                                                <i className="fa-solid fa-id-card-clip" />
-                                                Dados
-                                            </span>
-                                            <h4>Comanda</h4>
-                                        </div>
-                                    </div>
-
-                                    <div className="orders-terminal-compact-grid">
-                                        <article className="orders-terminal-compact-card">
-                                            <span>
-                                                <i className="fa-solid fa-layer-group" />
-                                                Tipo
-                                            </span>
-                                            <strong>{getOrderTypeLabel(draft.type)}</strong>
-                                        </article>
-                                        <article className="orders-terminal-compact-card">
-                                            <span>
-                                                <i className="fa-solid fa-circle-dot" />
-                                                Status
-                                            </span>
-                                            <strong>{currentDraftStatus?.label || 'Em aberto'}</strong>
-                                        </article>
-                                        <article className="orders-terminal-compact-card">
-                                            <span>
-                                                <i className="fa-solid fa-user" />
-                                                Cliente
-                                            </span>
-                                            <strong>{customerName}</strong>
-                                            <small>{customerPhone}</small>
-                                        </article>
-                                        <article className="orders-terminal-compact-card">
-                                            <span>
-                                                <i className="fa-solid fa-crosshairs" />
-                                                Item
-                                            </span>
-                                            <strong>{selectedItemLabel}</strong>
-                                            <small>{selectedItemMeta}</small>
-                                        </article>
-                                    </div>
-
-                                    <label className="orders-terminal-select-row">
-                                        <span>
-                                            <i className="fa-solid fa-address-book" />
-                                            Cliente
-                                        </span>
-                                        <select
-                                            className="ui-select"
-                                            value={draft.customerId}
-                                            onChange={(event) => onCustomerChange(event.target.value)}
-                                        >
-                                            <option value="">Nao identificado</option>
-                                            {customers.map((customer) => (
-                                                <option key={customer.id} value={customer.id}>
-                                                    {customer.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-
-                                    <div className="orders-terminal-note-box compact">
-                                        <span>
-                                            <i className="fa-solid fa-note-sticky" />
-                                            Obs.
-                                        </span>
-                                        <p>{noteLabel}</p>
                                     </div>
                                 </section>
                             </div>

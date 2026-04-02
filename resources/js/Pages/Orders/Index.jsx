@@ -986,7 +986,6 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                 {draftModalOpen ? (
                     <OrderDetailModal
                         draft={currentDraft}
-                        customers={customerOptions}
                         feedback={feedback}
                         selectedCustomer={selectedCustomer}
                         selectedItem={selectedItem}
@@ -1011,7 +1010,6 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         onDeleteDraft={handleDeleteDraft}
                         onQuantityChange={handleQuantityChange}
                         onRemoveItem={handleRemove}
-                        onCustomerChange={(value) => updateDraft((current) => ({ ...current, customerId: value }))}
                     />
                 ) : null}
 
