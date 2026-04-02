@@ -2,6 +2,7 @@ import { Head, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
+import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
@@ -45,6 +46,29 @@ const initialQuickCustomerForm = { name: '', phone: '', document: '', email: '' 
 const initialQuickCompanyForm = { name: '', trade_name: '', document: '', email: '', state_registration: '' }
 const initialManualRecipient = { name: '', document: '', email: '' }
 const initialCustomerLinkForm = { name: '', document: '', email: '' }
+
+function createEmptyRecommendations() {
+    return {
+        generated_at: null,
+        top_sellers_context: { mode: 'recent', window_days: 30 },
+        top_sellers: [],
+        association_context: null,
+        associations: [],
+    }
+}
+
+function normalizeRecommendations(payload) {
+    const defaults = createEmptyRecommendations()
+
+    return {
+        ...defaults,
+        ...payload,
+        top_sellers_context: payload?.top_sellers_context || defaults.top_sellers_context,
+        top_sellers: Array.isArray(payload?.top_sellers) ? payload.top_sellers : [],
+        association_context: payload?.association_context || null,
+        associations: Array.isArray(payload?.associations) ? payload.associations : [],
+    }
+}
 
 function normalizeDocument(value) {
     return String(value || '').replace(/\D/g, '')
@@ -148,6 +172,7 @@ export default function PosIndex({
     pendingOrderDrafts: initialPendingOrderDrafts,
     preloadedOrderDraft,
     pendingSale: initialPendingSale,
+    recommendations: initialRecommendations,
     posCapabilities = {},
 }) {
     const { tenant } = usePage().props
@@ -172,6 +197,8 @@ export default function PosIndex({
     const [searchTerm, setSearchTerm] = useState('')
     const [products, setProducts] = useState([])
     const [loadingProducts, setLoadingProducts] = useState(false)
+    const [recommendations, setRecommendations] = useState(normalizeRecommendations(initialRecommendations))
+    const [loadingRecommendations, setLoadingRecommendations] = useState(false)
     const [cart, setCart] = useState([])
     const [selectedCartItemId, setSelectedCartItemId] = useState(null)
     const [selectedCustomer, setSelectedCustomer] = useState('')
@@ -279,6 +306,10 @@ export default function PosIndex({
     useEffect(() => {
         setPendingOrderDrafts(initialPendingOrderDrafts || [])
     }, [initialPendingOrderDrafts])
+
+    useEffect(() => {
+        setRecommendations(normalizeRecommendations(initialRecommendations))
+    }, [initialRecommendations])
 
     useEffect(() => {
         setSearchTerm(normalizeSearchValue(searchTerm))
@@ -410,6 +441,26 @@ export default function PosIndex({
         [cart, selectedCartItemId],
     )
 
+    const recommendationProductIds = useMemo(
+        () => [...new Set(cart.map((item) => Number(item.id)).filter(Boolean))],
+        [cart],
+    )
+
+    const recommendationSignature = useMemo(
+        () => recommendationProductIds.join(','),
+        [recommendationProductIds],
+    )
+
+    const recommendationAnchorProductId = useMemo(() => {
+        const selectedId = Number(selectedCartItemId || 0)
+
+        if (selectedId && recommendationProductIds.includes(selectedId)) {
+            return selectedId
+        }
+
+        return recommendationProductIds.at(-1) ?? null
+    }, [selectedCartItemId, recommendationProductIds])
+
     const pricing = useMemo(() => resolvePricing(cart, discountConfig, selectedCartItem), [cart, discountConfig, selectedCartItem])
 
     const discountPreview = useMemo(() => {
@@ -495,6 +546,48 @@ export default function PosIndex({
             return []
         }
     }, [paymentMethod, paymentOptions, mixedPayments, totals.total])
+
+    useEffect(() => {
+        let ignore = false
+
+        async function fetchRecommendations({ silent = false } = {}) {
+            if (!silent) {
+                setLoadingRecommendations(true)
+            }
+
+            try {
+                const response = await apiRequest('/api/pdv/recommendations', {
+                    params: {
+                        anchor_product_id: recommendationAnchorProductId || undefined,
+                        exclude_product_ids: recommendationProductIds,
+                    },
+                })
+
+                if (!ignore) {
+                    setRecommendations(normalizeRecommendations(response.recommendations))
+                }
+            } catch {
+                if (!ignore && !silent) {
+                    setRecommendations((current) => normalizeRecommendations(current))
+                }
+            } finally {
+                if (!ignore && !silent) {
+                    setLoadingRecommendations(false)
+                }
+            }
+        }
+
+        fetchRecommendations()
+
+        const interval = setInterval(() => {
+            fetchRecommendations({ silent: true })
+        }, 30000)
+
+        return () => {
+            ignore = true
+            clearInterval(interval)
+        }
+    }, [recommendationAnchorProductId, recommendationSignature])
 
     const linkedCustomerSummary = useMemo(() => {
         if (selectedCustomerData) {
@@ -780,6 +873,7 @@ export default function PosIndex({
 
     function handleAddProduct(product) {
         setFeedback(null)
+        setSelectedCartItemId(product.id)
         setCart((current) => {
             const existing = current.find((item) => item.id === product.id)
 
@@ -2072,6 +2166,8 @@ export default function PosIndex({
         barcodeHelperText,
         products,
         loadingProducts,
+        recommendations,
+        loadingRecommendations,
         onSelectSuggestedProduct: handleSelectSuggestedProduct,
         paymentReady,
         pricing,
@@ -2674,6 +2770,8 @@ function PosWorkspace({
     barcodeHelperText,
     products,
     loadingProducts,
+    recommendations,
+    loadingRecommendations,
     onSelectSuggestedProduct,
     paymentReady,
     pricing,
@@ -2807,6 +2905,15 @@ function PosWorkspace({
                             )}
                         </div>
                     ) : null}
+
+                    <RecommendationRail
+                        topSellers={recommendations.top_sellers}
+                        topSellersContext={recommendations.top_sellers_context}
+                        associations={recommendations.associations}
+                        associationContext={recommendations.association_context}
+                        loading={loadingRecommendations}
+                        onAddProduct={onSelectSuggestedProduct}
+                    />
 
                     <div className="pos-toolbar-status">
                         <span>{barcodeHelperText}</span>
