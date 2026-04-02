@@ -104,6 +104,50 @@ class OrderDraftsApiTest extends TestCase
         $this->assertDatabaseHas('order_drafts', ['id' => $draft->id]);
     }
 
+    public function test_it_sends_draft_to_cashier_and_lists_it_for_pending_checkout(): void
+    {
+        $user = $this->actingOperator();
+        $draft = $this->makeDraft($user, [
+            'type' => 'comanda',
+            'reference' => '101',
+            'subtotal' => 18,
+            'total' => 18,
+        ]);
+
+        $draft->items()->create([
+            'product_id' => null,
+            'product_name' => 'Cafe grande',
+            'product_code' => 'CAFE-G',
+            'product_barcode' => null,
+            'unit' => 'UN',
+            'quantity' => 2,
+            'unit_cost' => 3,
+            'unit_price' => 9,
+            'total' => 18,
+        ]);
+
+        $response = $this->postJson("/api/orders/{$draft->id}/send-to-cashier");
+
+        $response->assertOk()
+            ->assertJsonPath('message', 'Pedido enviado para o caixa.')
+            ->assertJsonPath('order.id', $draft->id)
+            ->assertJsonPath('order.status', OrderDraft::STATUS_SENT_TO_CASHIER)
+            ->assertJsonPath('order.reference', '101');
+
+        $this->assertDatabaseHas('order_drafts', [
+            'id' => $draft->id,
+            'status' => OrderDraft::STATUS_SENT_TO_CASHIER,
+        ]);
+
+        $pendingResponse = $this->getJson('/api/orders/pending-checkout');
+
+        $pendingResponse->assertOk()
+            ->assertJsonCount(1, 'orders')
+            ->assertJsonPath('orders.0.id', $draft->id)
+            ->assertJsonPath('orders.0.status', OrderDraft::STATUS_SENT_TO_CASHIER)
+            ->assertJsonPath('orders.0.total', 18);
+    }
+
     protected function actingOperator(): User
     {
         $user = User::query()->create([
