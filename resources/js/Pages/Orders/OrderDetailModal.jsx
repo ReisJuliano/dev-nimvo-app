@@ -127,7 +127,7 @@ export default function OrderDetailModal({
                             <div className="orders-terminal-total-card">
                                 <span>Total</span>
                                 <strong>{formatMoney(pricing.total)}</strong>
-                                <small>{draft.items.length} item(ns) • {pricing.summary.title}</small>
+                                <small>{draft.items.length} item(ns) | {pricing.summary.title}</small>
                             </div>
                         </section>
 
