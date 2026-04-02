@@ -10,7 +10,18 @@ class Supplier extends Model
 {
     use UsesTenantConnection;
 
-    protected $fillable = ['name', 'phone', 'email', 'active'];
+    protected $fillable = [
+        'name',
+        'document',
+        'document_type',
+        'phone',
+        'email',
+        'trade_name',
+        'state_registration',
+        'city_name',
+        'state',
+        'active',
+    ];
 
     protected $casts = [
         'active' => 'boolean',
@@ -19,5 +30,10 @@ class Supplier extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function incomingNfeDocuments(): HasMany
+    {
+        return $this->hasMany(IncomingNfeDocument::class);
     }
 }

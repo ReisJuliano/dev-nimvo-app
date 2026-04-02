@@ -5,6 +5,7 @@ namespace App\Models\Tenant;
 use App\Models\Tenant\Concerns\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PurchaseItem extends Model
 {
@@ -33,5 +34,10 @@ class PurchaseItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function incomingNfeItem(): HasOne
+    {
+        return $this->hasOne(IncomingNfeItem::class);
     }
 }
