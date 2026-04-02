@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'nfe_receiving' => [
+        'enabled' => (bool) env('NFE_RECEIVING_ENABLED', false),
+        'environment' => env('NFE_RECEIVING_ENVIRONMENT'),
+        'certificate_path' => env('NFE_RECEIVING_CERTIFICATE_PATH'),
+        'certificate_password' => env('NFE_RECEIVING_CERTIFICATE_PASSWORD'),
+        'manifest_on_download' => (bool) env('NFE_RECEIVING_MANIFEST_ON_DOWNLOAD', true),
+    ],
+
 ];

@@ -5,12 +5,14 @@ namespace App\Services\Tenant;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\DeliveryOrder;
+use App\Models\Tenant\IncomingNfeDocument;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
 use App\Models\Tenant\User;
+use App\Services\Tenant\Purchases\IncomingNfeService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +30,7 @@ class OperationsWorkspaceService
 
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
+        protected IncomingNfeService $incomingNfeService,
     ) {
     }
 
@@ -206,6 +209,20 @@ class OperationsWorkspaceService
                 ->all(),
             'suppliers' => $this->supplierOptions(),
             'products' => $this->productOptions(),
+            'incoming_nfe_documents' => IncomingNfeDocument::query()
+                ->with(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price'])
+                ->orderByDesc('issued_at')
+                ->orderByDesc('id')
+                ->limit(80)
+                ->get()
+                ->map(fn (IncomingNfeDocument $document) => $this->incomingNfeService->serializeDocument($document))
+                ->values()
+                ->all(),
+            'incoming_nfe_status' => $this->incomingNfeService->integrationStatus(),
+            'cost_methods' => [
+                ['value' => 'last_cost', 'label' => 'Ultima compra'],
+                ['value' => 'average_cost', 'label' => 'Custo medio'],
+            ],
         ];
     }
 
@@ -318,13 +335,33 @@ class OperationsWorkspaceService
     {
         $validated = Validator::make($input, [
             'name' => ['required', 'string', 'max:255', Rule::unique('suppliers', 'name')->ignore($supplier?->id)],
+            'document' => ['nullable', 'string', 'max:30'],
             'phone' => ['nullable', 'string', 'max:60'],
             'email' => ['nullable', 'email', 'max:255'],
+            'trade_name' => ['nullable', 'string', 'max:255'],
+            'state_registration' => ['nullable', 'string', 'max:30'],
+            'city_name' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'size:2'],
             'active' => ['required', 'boolean'],
         ])->validate();
 
         $supplier ??= new Supplier();
-        $supplier->fill($validated)->save();
+        $document = filled($validated['document'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['document'])
+            : null;
+
+        $supplier->fill([
+            'name' => $validated['name'],
+            'document' => $document,
+            'document_type' => $document ? (strlen($document) === 14 ? 'cnpj' : 'cpf') : null,
+            'phone' => $validated['phone'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'trade_name' => $validated['trade_name'] ?? null,
+            'state_registration' => $validated['state_registration'] ?? null,
+            'city_name' => $validated['city_name'] ?? null,
+            'state' => isset($validated['state']) ? strtoupper((string) $validated['state']) : null,
+            'active' => $validated['active'],
+        ])->save();
 
         return $supplier->fresh();
     }
@@ -764,11 +801,14 @@ class OperationsWorkspaceService
         return Product::query()
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'code', 'unit', 'cost_price', 'sale_price', 'stock_quantity'])
+            ->get(['id', 'name', 'code', 'barcode', 'ncm', 'cfop', 'unit', 'cost_price', 'sale_price', 'stock_quantity'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'code' => $product->code,
+                'barcode' => $product->barcode,
+                'ncm' => $product->ncm,
+                'cfop' => $product->cfop,
                 'unit' => $product->unit,
                 'cost_price' => (float) $product->cost_price,
                 'sale_price' => (float) $product->sale_price,
@@ -799,10 +839,11 @@ class OperationsWorkspaceService
         return Supplier::query()
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name'])
+            ->get(['id', 'name', 'document'])
             ->map(fn (Supplier $supplier) => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
+                'document' => $supplier->document,
             ])
             ->values()
             ->all();
@@ -834,8 +875,13 @@ class OperationsWorkspaceService
         return [
             'id' => $supplier->id,
             'name' => $supplier->name,
+            'document' => $supplier->document,
             'phone' => $supplier->phone,
             'email' => $supplier->email,
+            'trade_name' => $supplier->trade_name,
+            'state_registration' => $supplier->state_registration,
+            'city_name' => $supplier->city_name,
+            'state' => $supplier->state,
             'products_count' => (int) ($supplier->products_count ?? 0),
             'active' => (bool) $supplier->active,
             'created_at' => $supplier->created_at?->toIso8601String(),
