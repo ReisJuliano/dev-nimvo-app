@@ -18,7 +18,8 @@ class LocalFiscalAgentRunner
     public function run(string $configPath, bool $once, callable $output): int
     {
         $config = $this->loadConfig($configPath);
-        $interval = (int) ($config['agent']['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3));
+        $runtimeConfig = $config;
+        $interval = (int) ($runtimeConfig['agent']['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3));
         $baseUrl = rtrim((string) ($config['backend']['base_url'] ?? ''), '/');
 
         $output('info', sprintf('Agente fiscal iniciado para %s.', $baseUrl));
@@ -26,8 +27,10 @@ class LocalFiscalAgentRunner
 
         do {
             try {
-                $this->post($config, '/api/local-agents/heartbeat');
-                $polled = $this->post($config, '/api/local-agents/commands/poll');
+                $heartbeat = $this->post($config, '/api/local-agents/heartbeat', $this->heartbeatPayload($config, $configPath));
+                $runtimeConfig = $this->mergeRuntimeConfig($config, (array) ($heartbeat['config'] ?? []));
+                $interval = (int) ($runtimeConfig['agent']['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3));
+                $polled = $this->post($runtimeConfig, '/api/local-agents/commands/poll');
                 $command = $polled['command'] ?? null;
             } catch (Throwable $exception) {
                 Log::error('Falha de comunicacao com o backend fiscal.', [
@@ -64,11 +67,11 @@ class LocalFiscalAgentRunner
             try {
                 $isLocalTest = (bool) data_get($command, 'payload.flags.local_test', false);
                 $result = $isLocalTest
-                    ? $this->emitter->emitLocalTest($command['payload'], $config)
-                    : $this->emitter->emit($command['payload'], $config);
+                    ? $this->emitter->emitLocalTest($command['payload'], $runtimeConfig)
+                    : $this->emitter->emit($command['payload'], $runtimeConfig);
 
                 $this->post(
-                    $config,
+                    $runtimeConfig,
                     sprintf('/api/local-agents/commands/%s/complete', $command['id']),
                     array_merge(['successful' => true], $result),
                 );
@@ -77,7 +80,7 @@ class LocalFiscalAgentRunner
                 Log::info('Comando fiscal concluido.', ['command_id' => $command['id']]);
             } catch (Throwable $exception) {
                 $this->post(
-                    $config,
+                    $runtimeConfig,
                     sprintf('/api/local-agents/commands/%s/complete', $command['id']),
                     [
                         'successful' => false,
@@ -153,5 +156,51 @@ class LocalFiscalAgentRunner
         $response->throw();
 
         return $response->json() ?: [];
+    }
+
+    protected function heartbeatPayload(array $config, string $configPath): array
+    {
+        return [
+            'machine' => [
+                'name' => php_uname('n'),
+                'user' => get_current_user() ?: null,
+            ],
+            'certificate' => [
+                'path' => (string) data_get($config, 'certificate.path', ''),
+            ],
+            'printer' => [
+                'enabled' => (bool) data_get($config, 'printer.enabled', true),
+                'connector' => (string) data_get($config, 'printer.connector', 'windows'),
+                'name' => (string) data_get($config, 'printer.name', ''),
+                'host' => (string) data_get($config, 'printer.host', '127.0.0.1'),
+                'port' => (int) data_get($config, 'printer.port', 9100),
+                'logo_path' => (string) data_get($config, 'printer.logo_path', ''),
+            ],
+            'software' => [
+                'version' => 'nimvo-php-agent',
+                'project_root' => base_path(),
+                'php_path' => PHP_BINARY,
+                'installed_at' => date(DATE_ATOM, filemtime($configPath) ?: time()),
+                'config_path' => $configPath,
+            ],
+        ];
+    }
+
+    protected function mergeRuntimeConfig(array $localConfig, array $runtimeConfig): array
+    {
+        $merged = $localConfig;
+
+        if (isset($runtimeConfig['poll_interval_seconds'])) {
+            $merged['agent']['poll_interval_seconds'] = max(1, (int) $runtimeConfig['poll_interval_seconds']);
+        }
+
+        if (is_array($runtimeConfig['printer'] ?? null)) {
+            $merged['printer'] = array_replace_recursive(
+                is_array($localConfig['printer'] ?? null) ? $localConfig['printer'] : [],
+                $runtimeConfig['printer'],
+            );
+        }
+
+        return $merged;
     }
 }

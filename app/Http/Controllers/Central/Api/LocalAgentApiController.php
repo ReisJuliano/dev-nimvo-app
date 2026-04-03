@@ -6,16 +6,38 @@ use App\Http\Controllers\Controller;
 use App\Models\Central\LocalAgent;
 use App\Models\Central\LocalAgentCommand;
 use App\Services\Central\LocalAgentCommandService;
+use App\Services\Central\LocalAgentConfigService;
 use App\Services\Tenant\Fiscal\FiscalDocumentResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LocalAgentApiController extends Controller
 {
-    public function heartbeat(Request $request): JsonResponse
+    public function heartbeat(Request $request, LocalAgentConfigService $configService): JsonResponse
     {
         /** @var LocalAgent $agent */
         $agent = $request->attributes->get('localAgent');
+        $payload = $request->validate([
+            'machine' => ['nullable', 'array'],
+            'machine.name' => ['nullable', 'string', 'max:255'],
+            'machine.user' => ['nullable', 'string', 'max:255'],
+            'certificate' => ['nullable', 'array'],
+            'certificate.path' => ['nullable', 'string', 'max:1024'],
+            'printer' => ['nullable', 'array'],
+            'printer.enabled' => ['nullable', 'boolean'],
+            'printer.connector' => ['nullable', 'string', 'max:30'],
+            'printer.name' => ['nullable', 'string', 'max:255'],
+            'printer.host' => ['nullable', 'string', 'max:255'],
+            'printer.port' => ['nullable', 'integer', 'between:1,65535'],
+            'printer.logo_path' => ['nullable', 'string', 'max:1024'],
+            'software' => ['nullable', 'array'],
+            'software.version' => ['nullable', 'string', 'max:255'],
+            'software.project_root' => ['nullable', 'string', 'max:1024'],
+            'software.php_path' => ['nullable', 'string', 'max:1024'],
+            'software.installed_at' => ['nullable', 'date'],
+            'software.config_path' => ['nullable', 'string', 'max:1024'],
+        ]);
+        $agent = $configService->syncInstallation($agent, $payload);
 
         return response()->json([
             'agent' => [
@@ -24,6 +46,7 @@ class LocalAgentApiController extends Controller
                 'name' => $agent->name,
                 'last_seen_at' => optional($agent->last_seen_at)->toIso8601String(),
             ],
+            'config' => $configService->buildRuntimeConfig($agent),
         ]);
     }
 

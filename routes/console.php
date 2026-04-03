@@ -68,12 +68,27 @@ $loadJsonFile = function (string $path): array {
 
 Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert-path=C:\\Users\\PC-RESERVA\\Downloads\\certificado-a1-homologacao.pfx} {--cert-password=123456} {--connector=windows} {--printer-name=POS-58} {--write-config=}', function (string $tenantId, string $name) use ($resolveOutputPath) {
     $secret = Str::random(48);
+    $pollInterval = (int) config('fiscal.agents.poll_interval_seconds', 3);
+    $runtimePrinter = [
+        'enabled' => true,
+        'connector' => $this->option('connector'),
+        'name' => $this->option('printer-name'),
+        'host' => '127.0.0.1',
+        'port' => 9100,
+        'logo_path' => '',
+    ];
     $agent = LocalAgent::query()->create([
         'tenant_id' => $tenantId,
         'name' => $name,
         'agent_key' => Str::lower(Str::random(24)),
         'secret_hash' => Hash::make($secret),
         'active' => true,
+        'metadata' => [
+            'runtime_config' => [
+                'poll_interval_seconds' => $pollInterval,
+                'printer' => $runtimePrinter,
+            ],
+        ],
     ]);
 
     $this->line('Agente local criado com sucesso.');
@@ -93,20 +108,13 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
         'agent' => [
             'key' => $agent->agent_key,
             'secret' => $secret,
-            'poll_interval_seconds' => config('fiscal.agents.poll_interval_seconds', 3),
+            'poll_interval_seconds' => $pollInterval,
         ],
         'certificate' => [
-            'path' => $this->option('cert-path'),
-            'password' => $this->option('cert-password'),
+            'path' => '',
+            'password' => '',
         ],
-        'printer' => [
-            'enabled' => true,
-            'connector' => $this->option('connector'),
-            'name' => $this->option('printer-name'),
-            'host' => '127.0.0.1',
-            'port' => 9100,
-            'logo_path' => '',
-        ],
+        'printer' => $runtimePrinter,
     ];
     $this->line(json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
