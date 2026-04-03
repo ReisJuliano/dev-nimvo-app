@@ -254,14 +254,14 @@ func setStartupEntry(vbsPath string) error {
 }
 
 func removeStartupEntry() error {
+	if _, exists := readStartupEntry(); !exists {
+		return nil
+	}
+
 	cmd := exec.Command("reg", "delete", `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, "/v", runEntryName, "/f")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		trimmed := strings.TrimSpace(string(output))
-		if trimmed == "" || strings.Contains(strings.ToLower(trimmed), "unable to find") || strings.Contains(strings.ToLower(trimmed), "n") {
-			return nil
-		}
-
 		return fmt.Errorf("nao foi possivel remover a inicializacao automatica: %s", trimmed)
 	}
 

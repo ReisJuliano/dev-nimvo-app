@@ -68,6 +68,24 @@ Para teste unitario de um ciclo:
 php artisan fiscal:agent:run C:\caminho\agent-config.json --once
 ```
 
+## Instalador Windows do agente
+
+Para gerar um `.exe` instalavel do agente local:
+
+1. Crie a configuracao base do tenant:
+
+```bash
+php artisan fiscal:agent:create tenant-fiscal "PDV Loja 1" --write-config=storage/app/fiscal-agent/tenant-fiscal.json
+```
+
+2. Monte o instalador:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\local-agent\build-installer.ps1 -SeedConfigPath .\storage\app\fiscal-agent\tenant-fiscal.json
+```
+
+O script recompila `local-agent/bin/nimvo-fiscal-agent.exe` e gera um `setup.exe` em `local-agent/dist/`. Esse pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicializacao automatica no Windows e usa a configuracao base informada no build.
+
 ## Emissao via API tenant
 
 Exemplo:
@@ -84,4 +102,4 @@ POST /api/fiscal/documents
 
 - O projeto esta pronto para usar a fila atual do Laravel. Hoje ele funciona com `database` e pode ser trocado para `redis` sem alterar codigo.
 - O lock principal esta em tres camadas: `idempotency_key` unico, reserva transacional de numero fiscal e job unico por documento.
-- O agente local atual foi implementado como worker PHP real para acelerar teste e homologacao. Se voce quiser empacotar depois em C# ou Go, o instalador pode apenas distribuir PHP + config e rodar `php artisan fiscal:agent:run`.
+- O agente local atual foi implementado como wrapper Windows para rodar `php artisan fiscal:agent:run`, mantendo o certificado e a impressora apenas no PC do cliente.

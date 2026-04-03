@@ -1,7 +1,9 @@
 {
   "backend": {
     "base_url": "https://app.seudominio.com",
-    "timeout_seconds": 30
+    "timeout_seconds": 30,
+    "retry_times": 3,
+    "retry_sleep_ms": 500
   },
   "agent": {
     "key": "preencher-com-agent_key",
