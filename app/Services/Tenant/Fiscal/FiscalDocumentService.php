@@ -276,6 +276,27 @@ class FiscalDocumentService
             $missing[] = 'Configure CSC ID e CSC Token do ambiente NFC-e antes de emitir.';
         }
 
+        if ($requireCsc) {
+            foreach ([
+                'technical_contact_name' => 'nome do responsavel tecnico',
+                'technical_contact_email' => 'email do responsavel tecnico',
+                'technical_contact_phone' => 'telefone do responsavel tecnico',
+                'technical_contact_cnpj' => 'CNPJ do responsavel tecnico',
+            ] as $field => $label) {
+                if (blank($profile->{$field})) {
+                    $missing[] = "Configure {$label} no perfil fiscal.";
+                }
+            }
+
+            if (filled($profile->technical_contact_cnpj) && !preg_match('/^\d{14}$/', (string) $profile->technical_contact_cnpj)) {
+                $missing[] = 'O CNPJ do responsavel tecnico precisa ter 14 digitos numericos.';
+            }
+
+            if (filled($profile->technical_contact_phone) && !preg_match('/^\d{10,11}$/', (string) $profile->technical_contact_phone)) {
+                $missing[] = 'O telefone do responsavel tecnico precisa ter 10 ou 11 digitos.';
+            }
+        }
+
         if ($missing !== []) {
             throw ValidationException::withMessages([
                 'fiscal_profile' => implode(' ', array_unique($missing)),
