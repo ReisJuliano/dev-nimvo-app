@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -64,7 +65,12 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	config, err := resolveSeedConfig(*configSource, sourceDir)
+	config, selectedConfigPath, err := resolveInstallSeedConfig(*configSource, sourceDir)
+	if err != nil {
+		return err
+	}
+
+	config, err = completeInstallationConfig(config)
 	if err != nil {
 		return err
 	}
@@ -107,6 +113,7 @@ func runInstall(args []string) error {
 		"install_dir":  installRoot,
 		"project_root": projectRootPath,
 		"config":       targetConfig,
+		"seed_config":  selectedConfigPath,
 		"log":          targetLog,
 		"startup":      fmt.Sprintf("%t", *enableStartup),
 	}
@@ -114,7 +121,7 @@ func runInstall(args []string) error {
 	payload, _ := json.MarshalIndent(summary, "", "  ")
 	fmt.Println("Agente instalado com sucesso.")
 	fmt.Println(string(payload))
-	fmt.Println("Edite o arquivo de configuracao se precisar trocar backend, credenciais, certificado ou impressora.")
+	fmt.Println("As configuracoes centrais passam a vir do Nimvo. O arquivo local fica somente com os dados da maquina.")
 
 	return nil
 }
@@ -231,9 +238,10 @@ func buildReadme(configPath, projectRoot, installDir string) string {
 		fmt.Sprintf("Instalacao: %s", installDir),
 		"",
 		"Fluxo sugerido:",
-		"1. Edite o JSON de configuracao com backend, agent_key, agent_secret, certificado e impressora.",
-		"2. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"3. O agente grava o loop em logs\\agent.log.",
+		"1. O instalador coleta o JSON base do agente, o certificado A1 e a impressora.",
+		"2. O agente sincroniza as configuracoes centrais com o Nimvo a cada heartbeat.",
+		"3. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
+		"4. O agente grava o loop em logs\\agent.log.",
 		"",
 		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
 		"",
@@ -297,4 +305,152 @@ func launchAgent(vbsPath string) error {
 
 	cmd := exec.Command("wscript.exe", "//B", "//Nologo", vbsPath)
 	return cmd.Start()
+}
+
+func resolveInstallSeedConfig(configSource, sourceDir string) (AgentConfig, string, error) {
+	defaultPath := strings.TrimSpace(configSource)
+	if defaultPath == "" {
+		for _, candidate := range []string{
+			filepath.Join(sourceDir, "agent.seed.json"),
+			filepath.Join(sourceDir, "config.example.json"),
+		} {
+			if fileExists(candidate) {
+				defaultPath = candidate
+				break
+			}
+		}
+	}
+
+	for {
+		selectedPath, err := promptSeedConfigPath(defaultPath)
+		if err != nil {
+			return AgentConfig{}, "", err
+		}
+
+		config, err := loadAgentConfig(selectedPath)
+		if err != nil {
+			fmt.Printf("Nao foi possivel ler o JSON do agente: %s\n", err.Error())
+			defaultPath = ""
+			continue
+		}
+
+		config = normalizeAgentConfig(config)
+		reason := ""
+		if err := ensureBootstrapConfig(config); err != nil {
+			reason = err.Error()
+		} else if isPlaceholderConfig(config) {
+			reason = "o arquivo ainda contem valores de exemplo"
+		}
+
+		if reason != "" {
+			fmt.Printf("O JSON selecionado nao esta pronto para instalar este cliente: %s.\n", reason)
+			fmt.Println("Selecione o JSON real gerado pelo Nimvo para esse tenant.")
+			defaultPath = ""
+			continue
+		}
+
+		return config, selectedPath, nil
+	}
+}
+
+func promptSeedConfigPath(defaultPath string) (string, error) {
+	defaultPath = strings.TrimSpace(defaultPath)
+	if defaultPath != "" && fileExists(defaultPath) {
+		value, err := promptText("JSON base do agente (Enter para usar, B para procurar)", defaultPath)
+		if err != nil {
+			return "", err
+		}
+
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "":
+			return defaultPath, nil
+		case "b", "browse", "procurar":
+			picked, err := openFileDialog("Selecione o JSON do agente Nimvo", "Arquivos JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*")
+			if err != nil {
+				return "", err
+			}
+			if strings.TrimSpace(picked) != "" {
+				return picked, nil
+			}
+		default:
+			return strings.TrimSpace(value), nil
+		}
+	}
+
+	return promptFilePath(
+		"Informe o JSON do agente Nimvo",
+		"",
+		"Selecione o JSON do agente Nimvo",
+		"Arquivos JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*",
+	)
+}
+
+func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
+	var err error
+
+	config = normalizeAgentConfig(config)
+	if isPlaceholderValue(config.Certificate.Path) {
+		config.Certificate.Path = ""
+	}
+	if isPlaceholderValue(config.Certificate.Password) {
+		config.Certificate.Password = ""
+	}
+
+	config.Certificate.Path, err = promptFilePath(
+		"Certificado A1 da empresa",
+		config.Certificate.Path,
+		"Selecione o certificado A1",
+		"Certificados A1 (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
+	)
+	if err != nil {
+		return config, err
+	}
+
+	config.Certificate.Password, err = promptRequired("Senha do certificado", config.Certificate.Password)
+	if err != nil {
+		return config, err
+	}
+
+	config.Printer.Enabled, err = promptBool("Ativar impressao automatica do cupom", config.Printer.Enabled)
+	if err != nil {
+		return config, err
+	}
+
+	if !config.Printer.Enabled {
+		return config, nil
+	}
+
+	config.Printer.Connector, err = promptChoice("Conector da impressora [windows/tcp]", []string{"windows", "tcp"}, config.Printer.Connector)
+	if err != nil {
+		return config, err
+	}
+
+	if config.Printer.Connector == "tcp" {
+		config.Printer.Host, err = promptRequired("IP ou hostname da impressora", config.Printer.Host)
+		if err != nil {
+			return config, err
+		}
+
+		port, err := promptRequired("Porta TCP da impressora", fmt.Sprintf("%d", config.Printer.Port))
+		if err != nil {
+			return config, err
+		}
+
+		parsedPort, err := strconv.Atoi(strings.TrimSpace(port))
+		if err != nil || parsedPort <= 0 {
+			return config, errors.New("porta TCP invalida")
+		}
+
+		config.Printer.Port = parsedPort
+		config.Printer.Name = ""
+
+		return config, nil
+	}
+
+	config.Printer.Name, err = promptPrinterName(config.Printer.Name)
+	if err != nil {
+		return config, err
+	}
+
+	return config, nil
 }

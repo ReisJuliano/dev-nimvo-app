@@ -118,6 +118,38 @@ func resolveSeedConfig(configSource, sourceDir string) (AgentConfig, error) {
 	return defaultAgentConfig(), nil
 }
 
+func normalizeAgentConfig(config AgentConfig) AgentConfig {
+	if strings.TrimSpace(config.Backend.BaseURL) == "" {
+		config.Backend.BaseURL = defaultAgentConfig().Backend.BaseURL
+	}
+
+	if config.Backend.Timeout <= 0 {
+		config.Backend.Timeout = 30
+	}
+
+	if config.Backend.RetryTimes <= 0 {
+		config.Backend.RetryTimes = 3
+	}
+
+	if config.Backend.RetrySleepMS <= 0 {
+		config.Backend.RetrySleepMS = 500
+	}
+
+	if config.Agent.PollInterval <= 0 {
+		config.Agent.PollInterval = 3
+	}
+
+	if strings.TrimSpace(config.Printer.Connector) == "" {
+		config.Printer.Connector = "windows"
+	}
+
+	if config.Printer.Port <= 0 {
+		config.Printer.Port = 9100
+	}
+
+	return config
+}
+
 func ensureDir(path string) error {
 	if strings.TrimSpace(path) == "" {
 		return nil

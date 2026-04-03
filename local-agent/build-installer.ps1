@@ -94,7 +94,8 @@ echo ========================================
 echo Nimvo Fiscal Agent Setup
 echo ========================================
 echo.
-echo O instalador pode pedir a pasta raiz do Nimvo se nao conseguir localizar o arquivo artisan.
+echo O instalador vai validar o JSON do agente e pedir os dados locais da maquina.
+echo Ele pode pedir a pasta raiz do Nimvo se nao conseguir localizar o arquivo artisan.
 echo.
 "%~dp0nimvo-fiscal-agent.exe" install -config "%~dp0agent.seed.json"
 set "EXIT_CODE=%ERRORLEVEL%"

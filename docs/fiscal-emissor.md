@@ -54,7 +54,7 @@ Sem `ncm` e `cfop`, a emissao nao e enfileirada.
 php artisan fiscal:agent:create tenant-fiscal "PDV Loja 1"
 ```
 
-2. Gerar o arquivo de configuracao do agente a partir do template em `local-agent/config.example.json`.
+2. Gerar o arquivo de bootstrap do agente a partir do template em `local-agent/config.example.json`.
 
 3. Rodar o agente:
 
@@ -84,7 +84,7 @@ php artisan fiscal:agent:create tenant-fiscal "PDV Loja 1" --write-config=storag
 powershell -ExecutionPolicy Bypass -File .\local-agent\build-installer.ps1 -SeedConfigPath .\storage\app\fiscal-agent\tenant-fiscal.json
 ```
 
-O script recompila `local-agent/bin/nimvo-fiscal-agent.exe` e gera um `setup.exe` em `local-agent/dist/`. Esse pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicializacao automatica no Windows e usa a configuracao base informada no build.
+O script recompila `local-agent/bin/nimvo-fiscal-agent.exe` e gera um `setup.exe` em `local-agent/dist/`. Esse pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicializacao automatica no Windows, usa o JSON base informado no build e coleta durante a instalacao os dados locais da maquina, como certificado A1 e impressora.
 
 ## Emissao via API tenant
 
@@ -102,4 +102,6 @@ POST /api/fiscal/documents
 
 - O projeto esta pronto para usar a fila atual do Laravel. Hoje ele funciona com `database` e pode ser trocado para `redis` sem alterar codigo.
 - O lock principal esta em tres camadas: `idempotency_key` unico, reserva transacional de numero fiscal e job unico por documento.
+- O bootstrap local do agente guarda apenas o necessario para a maquina cliente, como certificado A1 e impressora.
+- A configuracao central do agente e sincronizada com o Nimvo via `local_agents.metadata`, evitando editar JSON por cliente depois da instalacao.
 - O agente local atual foi implementado como wrapper Windows para rodar `php artisan fiscal:agent:run`, mantendo o certificado e a impressora apenas no PC do cliente.
