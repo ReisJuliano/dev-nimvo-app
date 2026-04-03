@@ -21,8 +21,23 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+	case "install":
+		if err := runInstall(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	case "local-test":
 		if err := runLocalTest(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+	case "status":
+		if err := runStatus(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+	case "uninstall":
+		if err := runUninstall(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
@@ -150,10 +165,14 @@ func printUsage() {
 	fmt.Println("nimvo-fiscal-agent")
 	fmt.Println("")
 	fmt.Println("Comandos:")
+	fmt.Println("  install    Instala o agente no Windows e configura a inicializacao automatica")
 	fmt.Println("  run        Executa o agente fiscal client-side")
 	fmt.Println("  local-test Faz um ensaio local da NFC-e a partir de uma venda")
+	fmt.Println("  status     Mostra o estado da instalacao local")
+	fmt.Println("  uninstall  Remove a inicializacao automatica do agente")
 	fmt.Println("")
 	fmt.Println("Exemplos:")
+	fmt.Println(`  nimvo-fiscal-agent install -project-root "D:\nimvo"`)
 	fmt.Println(`  nimvo-fiscal-agent run -config "D:\app\agent.json"`)
 	fmt.Println(`  nimvo-fiscal-agent local-test -config "D:\app\agent.json" -tenant tenant-teste -sale 6`)
 }
