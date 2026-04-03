@@ -5,6 +5,7 @@ namespace App\Services\Central;
 use App\Models\Central\Client;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ProvisionTenantService
@@ -24,14 +25,16 @@ class ProvisionTenantService
             'domain' => $data['domain'],
         ]);
 
-        Client::create([
-            'tenant_id' => $tenant->id,
-            'name' => $data['client_name'],
-            'email' => $data['client_email'] ?? null,
-            'document' => $data['client_document'] ?? null,
-            'domain' => $data['domain'],
-            'active' => $data['active'] ?? true,
-        ]);
+        if ($this->clientsTableExists()) {
+            Client::create([
+                'tenant_id' => $tenant->id,
+                'name' => $data['client_name'],
+                'email' => $data['client_email'] ?? null,
+                'document' => $data['client_document'] ?? null,
+                'domain' => $data['domain'],
+                'active' => $data['active'] ?? true,
+            ]);
+        }
 
         if (!config('tenancy.dev_single_database')) {
             tenancy()->initialize($tenant);
@@ -45,6 +48,11 @@ class ProvisionTenantService
         }
 
         return $tenant->fresh(['domains', 'client']);
+    }
+
+    protected function clientsTableExists(): bool
+    {
+        return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
     }
 
     protected function resolveTenantId(array $data): string

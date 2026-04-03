@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Central;
 
+use App\Models\Central\Client;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -34,14 +36,25 @@ class StoreTenantRequest extends FormRequest
 
     public function rules(): array
     {
+        $domainRules = ['required', 'string', 'max:255', Rule::unique('domains', 'domain')];
+
+        if ($this->clientsTableExists()) {
+            $domainRules[] = Rule::unique('clients', 'domain');
+        }
+
         return [
             'client_name' => ['required', 'string', 'max:120'],
             'tenant_name' => ['nullable', 'string', 'max:120'],
             'tenant_id' => ['required', 'string', 'max:60', Rule::unique('tenants', 'id')],
-            'domain' => ['required', 'string', 'max:255', Rule::unique('domains', 'domain'), Rule::unique('clients', 'domain')],
+            'domain' => $domainRules,
             'client_email' => ['nullable', 'email', 'max:120'],
             'client_document' => ['nullable', 'string', 'max:30'],
             'active' => ['required', 'boolean'],
         ];
+    }
+
+    protected function clientsTableExists(): bool
+    {
+        return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
     }
 }

@@ -21,6 +21,11 @@ use Illuminate\Validation\Rule;
 
 class TenantManagementController extends Controller
 {
+    protected function clientsTableExists(): bool
+    {
+        return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
+    }
+
     public function store(
         StoreTenantRequest $request,
         ProvisionTenantService $provisionTenantService,
@@ -47,19 +52,26 @@ class TenantManagementController extends Controller
             'active' => $request->boolean('active', true),
         ]);
 
-        $client = Client::query()->firstWhere('tenant_id', $tenant->id);
+        $client = $this->clientsTableExists()
+            ? Client::query()->firstWhere('tenant_id', $tenant->id)
+            : null;
         $tenantDomain = $tenant->domains()->orderBy('id')->first();
+
+        $domainRules = [
+            'required',
+            'string',
+            'max:255',
+            Rule::unique('domains', 'domain')->ignore($tenantDomain?->getKey()),
+        ];
+
+        if ($this->clientsTableExists()) {
+            $domainRules[] = Rule::unique('clients', 'domain')->ignore($client?->getKey());
+        }
 
         $data = $request->validate([
             'client_name' => ['required', 'string', 'max:120'],
             'tenant_name' => ['nullable', 'string', 'max:120'],
-            'domain' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('domains', 'domain')->ignore($tenantDomain?->getKey()),
-                Rule::unique('clients', 'domain')->ignore($client?->getKey()),
-            ],
+            'domain' => $domainRules,
             'client_email' => ['nullable', 'email', 'max:120'],
             'client_document' => ['nullable', 'string', 'max:30'],
             'active' => ['required', 'boolean'],
@@ -83,16 +95,18 @@ class TenantManagementController extends Controller
                 ]);
             }
 
-            Client::query()->updateOrCreate(
-                ['tenant_id' => $tenant->id],
-                [
-                    'name' => $data['client_name'],
-                    'email' => $data['client_email'] ?? null,
-                    'document' => $data['client_document'] ?? null,
-                    'domain' => $data['domain'],
-                    'active' => $data['active'],
-                ],
-            );
+            if ($this->clientsTableExists()) {
+                Client::query()->updateOrCreate(
+                    ['tenant_id' => $tenant->id],
+                    [
+                        'name' => $data['client_name'],
+                        'email' => $data['client_email'] ?? null,
+                        'document' => $data['client_document'] ?? null,
+                        'domain' => $data['domain'],
+                        'active' => $data['active'],
+                    ],
+                );
+            }
         });
 
         return response()->json([
@@ -104,7 +118,9 @@ class TenantManagementController extends Controller
         UpdateTenantStatusRequest $request,
         Tenant $tenant,
     ): JsonResponse {
-        $client = Client::query()->firstWhere('tenant_id', $tenant->id);
+        $client = $this->clientsTableExists()
+            ? Client::query()->firstWhere('tenant_id', $tenant->id)
+            : null;
 
         if ($client) {
             $client->update([
@@ -122,10 +138,12 @@ class TenantManagementController extends Controller
     public function destroy(Tenant $tenant): JsonResponse
     {
         $tenantName = $tenant->name
-            ?: Client::query()->where('tenant_id', $tenant->id)->value('name')
+            ?: ($this->clientsTableExists() ? Client::query()->where('tenant_id', $tenant->id)->value('name') : null)
             ?: (string) $tenant->id;
 
-        Client::query()->where('tenant_id', $tenant->id)->delete();
+        if ($this->clientsTableExists()) {
+            Client::query()->where('tenant_id', $tenant->id)->delete();
+        }
 
         if (Schema::connection((new TenantSetting())->getConnectionName())->hasTable('tenant_settings')) {
             TenantSetting::query()->where('tenant_id', $tenant->id)->delete();

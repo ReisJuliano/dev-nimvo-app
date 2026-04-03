@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Central;
 
+use App\Models\Central\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Services\Central\TenantLicenseService;
@@ -12,6 +13,11 @@ use Inertia\Response;
 
 class AdminPageController extends Controller
 {
+    protected function clientsTableExists(): bool
+    {
+        return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
+    }
+
     public function dashboard(TenantSettingsService $settingsService): Response
     {
         return Inertia::render('CentralAdmin/Dashboard', [
@@ -112,9 +118,16 @@ class AdminPageController extends Controller
         $licenseService = app(TenantLicenseService::class);
 
         if (Schema::hasTable('tenants')) {
-            $tenants = Tenant::query()
-                ->with(['client', 'domains'])
+            $query = Tenant::query()
+                ->with(['domains'])
                 ->orderBy('name')
+                ;
+
+            if ($this->clientsTableExists()) {
+                $query->with('client');
+            }
+
+            $tenants = $query
                 ->get()
                 ->map(function (Tenant $tenant) use ($settingsService, $licenseService): array {
                     $domain = $tenant->domains->first()?->domain ?? $tenant->client?->domain;
