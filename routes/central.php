@@ -42,6 +42,8 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::delete('/tenants/{tenant}', [TenantManagementController::class, 'destroy'])->name('tenants.destroy');
         Route::patch('/tenants/{tenant}/status', [TenantManagementController::class, 'updateStatus'])->name('tenants.status');
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
+        Route::put('/tenants/{tenant}/local-agent', [TenantManagementController::class, 'upsertLocalAgent'])->name('tenants.local-agent.upsert');
+        Route::post('/tenants/{tenant}/local-agent/bootstrap', [TenantManagementController::class, 'downloadLocalAgentBootstrap'])->name('tenants.local-agent.bootstrap');
         Route::put('/tenants/{tenant}/license', [TenantManagementController::class, 'updateLicense'])->name('tenants.license.update');
         Route::patch('/tenant-license-invoices/{invoice}/status', [TenantManagementController::class, 'updateLicenseInvoiceStatus'])->name('tenant-license-invoices.status');
     });

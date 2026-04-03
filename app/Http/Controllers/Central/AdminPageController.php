@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Central;
 
+use App\Models\Central\LocalAgent;
 use App\Models\Central\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Services\Central\LocalAgentBootstrapService;
+use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
@@ -16,6 +19,11 @@ class AdminPageController extends Controller
     protected function clientsTableExists(): bool
     {
         return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
+    }
+
+    protected function localAgentsTableExists(): bool
+    {
+        return Schema::connection((new LocalAgent())->getConnectionName())->hasTable('local_agents');
     }
 
     public function dashboard(TenantSettingsService $settingsService): Response
@@ -116,6 +124,14 @@ class AdminPageController extends Controller
     {
         $tenants = [];
         $licenseService = app(TenantLicenseService::class);
+        $localAgentConfigService = app(LocalAgentConfigService::class);
+        $localAgentBootstrapService = app(LocalAgentBootstrapService::class);
+        $agentStats = [
+            'total' => 0,
+            'online' => 0,
+            'offline' => 0,
+        ];
+        $agentLookup = collect();
 
         if (Schema::hasTable('tenants')) {
             $query = Tenant::query()
@@ -127,11 +143,23 @@ class AdminPageController extends Controller
                 $query->with('client');
             }
 
-            $tenants = $query
-                ->get()
+            $tenantModels = $query->get();
+
+            if ($this->localAgentsTableExists()) {
+                $agentLookup = LocalAgent::query()
+                    ->whereIn('tenant_id', $tenantModels->pluck('id'))
+                    ->orderByDesc('last_seen_at')
+                    ->orderByDesc('id')
+                    ->get()
+                    ->unique('tenant_id')
+                    ->keyBy('tenant_id');
+            }
+
+            $tenants = $tenantModels
                 ->map(function (Tenant $tenant) use ($settingsService, $licenseService): array {
                     $domain = $tenant->domains->first()?->domain ?? $tenant->client?->domain;
                     $licenseState = $licenseService->stateForTenant((string) $tenant->id);
+                    $agent = $agentLookup->get((string) $tenant->id);
 
                     return [
                         'id' => (string) $tenant->id,
@@ -145,11 +173,22 @@ class AdminPageController extends Controller
                         'created_at' => optional($tenant->created_at)?->format('d/m/Y H:i'),
                         'settings' => $settingsService->get((string) $tenant->id),
                         'license' => $licenseState,
+                        'local_agent' => $this->serializeLocalAgent(
+                            $agent,
+                            $localAgentConfigService,
+                            $localAgentBootstrapService,
+                        ),
                     ];
                 })
                 ->sortByDesc(fn (array $tenant): int => $tenant['active'] ? 1 : 0)
                 ->values()
                 ->all();
+
+            $agentStats = [
+                'total' => count(array_filter($tenants, fn (array $tenant): bool => filled($tenant['local_agent']))),
+                'online' => count(array_filter($tenants, fn (array $tenant): bool => data_get($tenant, 'local_agent.status') === 'online')),
+                'offline' => count(array_filter($tenants, fn (array $tenant): bool => data_get($tenant, 'local_agent.status') === 'offline')),
+            ];
         }
 
         return [
@@ -158,6 +197,7 @@ class AdminPageController extends Controller
                 'active' => count(array_filter($tenants, fn (array $tenant): bool => $tenant['active'])),
                 'inactive' => count(array_filter($tenants, fn (array $tenant): bool => !$tenant['active'])),
             ],
+            'agentStats' => $agentStats,
             'tenants' => $tenants,
             'businessPresets' => $settingsService->businessPresets(),
             'generalOptions' => $settingsService->generalOptions(),
@@ -178,5 +218,52 @@ class AdminPageController extends Controller
         $scheme = request()->isSecure() ? 'https' : 'http';
 
         return sprintf('%s://%s', $scheme, $domain);
+    }
+
+    protected function serializeLocalAgent(
+        ?LocalAgent $agent,
+        LocalAgentConfigService $configService,
+        LocalAgentBootstrapService $bootstrapService,
+    ): ?array {
+        if (!$agent) {
+            return null;
+        }
+
+        $runtime = $configService->buildRuntimeConfig($agent);
+        $pollInterval = max(1, (int) ($runtime['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)));
+        $heartbeatWindowSeconds = max(90, $pollInterval * 20);
+        $isOnline = $agent->active
+            && $agent->last_seen_at
+            && $agent->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($heartbeatWindowSeconds));
+        $status = !$agent->active ? 'inactive' : ($isOnline ? 'online' : 'offline');
+
+        return [
+            'id' => $agent->id,
+            'name' => $agent->name,
+            'active' => (bool) $agent->active,
+            'status' => $status,
+            'last_ip' => $agent->last_ip,
+            'last_seen_at' => optional($agent->last_seen_at)?->toIso8601String(),
+            'last_seen_label' => optional($agent->last_seen_at)?->format('d/m/Y H:i'),
+            'bootstrap_available' => $bootstrapService->bootstrapAvailable($agent),
+            'runtime_config' => $runtime,
+            'device' => [
+                'machine_name' => data_get($agent->metadata, 'device.machine.name'),
+                'machine_user' => data_get($agent->metadata, 'device.machine.user'),
+                'certificate_path' => data_get($agent->metadata, 'device.certificate.path'),
+                'printer_enabled' => data_get($agent->metadata, 'device.printer.enabled'),
+                'printer_connector' => data_get($agent->metadata, 'device.printer.connector'),
+                'printer_name' => data_get($agent->metadata, 'device.printer.name'),
+                'printer_host' => data_get($agent->metadata, 'device.printer.host'),
+                'printer_port' => data_get($agent->metadata, 'device.printer.port'),
+                'logo_path' => data_get($agent->metadata, 'device.printer.logo_path'),
+                'project_root' => data_get($agent->metadata, 'device.software.project_root'),
+                'php_path' => data_get($agent->metadata, 'device.software.php_path'),
+                'version' => data_get($agent->metadata, 'device.software.version'),
+                'config_path' => data_get($agent->metadata, 'device.software.config_path'),
+                'installed_at' => data_get($agent->metadata, 'device.software.installed_at'),
+                'last_sync_at' => data_get($agent->metadata, 'device.last_sync_at'),
+            ],
+        ];
     }
 }

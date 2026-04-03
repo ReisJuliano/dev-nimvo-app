@@ -8,35 +8,23 @@ class LocalAgentConfigService
 {
     public function buildRuntimeConfig(LocalAgent $agent): array
     {
-        $runtime = $this->runtimeMetadata($agent);
+        return $this->normalizeRuntimeConfig($this->runtimeMetadata($agent));
+    }
 
-        return [
-            'poll_interval_seconds' => max(
-                1,
-                (int) ($runtime['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
-            ),
-            'printer' => [
-                'enabled' => (bool) ($runtime['printer']['enabled'] ?? true),
-                'connector' => (string) ($runtime['printer']['connector'] ?? 'windows'),
-                'name' => (string) ($runtime['printer']['name'] ?? ''),
-                'host' => (string) ($runtime['printer']['host'] ?? '127.0.0.1'),
-                'port' => max(1, (int) ($runtime['printer']['port'] ?? 9100)),
-                'logo_path' => (string) ($runtime['printer']['logo_path'] ?? ''),
-            ],
-        ];
+    public function updateRuntimeConfig(LocalAgent $agent, array $runtime): LocalAgent
+    {
+        $metadata = is_array($agent->metadata) ? $agent->metadata : [];
+        $metadata['runtime_config'] = $this->normalizeRuntimeConfig($runtime);
+
+        $agent->forceFill(['metadata' => $metadata])->save();
+
+        return $agent->refresh();
     }
 
     public function syncInstallation(LocalAgent $agent, array $payload): LocalAgent
     {
         $metadata = is_array($agent->metadata) ? $agent->metadata : [];
         $device = is_array($metadata['device'] ?? null) ? $metadata['device'] : [];
-        $runtime = $this->runtimeMetadata($agent);
-
-        if (is_array($payload['printer'] ?? null) && $this->hasMeaningfulPrinterData($payload['printer'])) {
-            $runtime['printer'] = array_replace($runtime['printer'] ?? [], $payload['printer']);
-        }
-
-        $metadata['runtime_config'] = $runtime;
         $metadata['device'] = array_filter(array_replace_recursive($device, [
             'machine' => array_filter([
                 'name' => $payload['machine']['name'] ?? null,
@@ -77,14 +65,22 @@ class LocalAgentConfigService
             : [];
     }
 
-    protected function hasMeaningfulPrinterData(array $printer): bool
+    public function normalizeRuntimeConfig(array $runtime): array
     {
-        return array_key_exists('enabled', $printer)
-            || trim((string) ($printer['connector'] ?? '')) !== ''
-            || trim((string) ($printer['name'] ?? '')) !== ''
-            || trim((string) ($printer['host'] ?? '')) !== ''
-            || array_key_exists('port', $printer)
-            || trim((string) ($printer['logo_path'] ?? '')) !== '';
+        return [
+            'poll_interval_seconds' => max(
+                1,
+                (int) ($runtime['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
+            ),
+            'printer' => [
+                'enabled' => (bool) ($runtime['printer']['enabled'] ?? true),
+                'connector' => (string) ($runtime['printer']['connector'] ?? 'windows'),
+                'name' => (string) ($runtime['printer']['name'] ?? ''),
+                'host' => (string) ($runtime['printer']['host'] ?? '127.0.0.1'),
+                'port' => max(1, (int) ($runtime['printer']['port'] ?? 9100)),
+                'logo_path' => (string) ($runtime['printer']['logo_path'] ?? ''),
+            ],
+        ];
     }
 
     protected function filledValue(mixed $value): bool

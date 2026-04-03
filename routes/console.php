@@ -5,6 +5,7 @@ use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\FiscalProfile;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\User;
+use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalFiscalAgentRunner;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\PosService;
@@ -14,8 +15,6 @@ use App\Support\Tenant\TenantContext;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -67,7 +66,6 @@ $loadJsonFile = function (string $path): array {
 };
 
 Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert-path=C:\\Users\\PC-RESERVA\\Downloads\\certificado-a1-homologacao.pfx} {--cert-password=123456} {--connector=windows} {--printer-name=POS-58} {--write-config=}', function (string $tenantId, string $name) use ($resolveOutputPath) {
-    $secret = Str::random(48);
     $pollInterval = (int) config('fiscal.agents.poll_interval_seconds', 3);
     $runtimePrinter = [
         'enabled' => true,
@@ -77,19 +75,16 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
         'port' => 9100,
         'logo_path' => '',
     ];
-    $agent = LocalAgent::query()->create([
-        'tenant_id' => $tenantId,
+    $agent = app(LocalAgentBootstrapService::class)->upsertForTenant($tenantId, [
         'name' => $name,
-        'agent_key' => Str::lower(Str::random(24)),
-        'secret_hash' => Hash::make($secret),
         'active' => true,
-        'metadata' => [
-            'runtime_config' => [
-                'poll_interval_seconds' => $pollInterval,
-                'printer' => $runtimePrinter,
-            ],
+        'backend_url' => $this->option('backend-url') ?: config('app.url'),
+        'runtime_config' => [
+            'poll_interval_seconds' => $pollInterval,
+            'printer' => $runtimePrinter,
         ],
     ]);
+    $secret = app(LocalAgentBootstrapService::class)->secret($agent);
 
     $this->line('Agente local criado com sucesso.');
     $this->newLine();

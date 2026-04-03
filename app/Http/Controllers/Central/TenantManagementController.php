@@ -7,9 +7,12 @@ use App\Http\Requests\Central\StoreTenantRequest;
 use App\Http\Requests\Central\UpdateTenantSettingsRequest;
 use App\Http\Requests\Central\UpdateTenantStatusRequest;
 use App\Models\Central\Client;
+use App\Models\Central\LocalAgent;
 use App\Models\Central\TenantLicenseInvoice;
 use App\Models\Central\TenantSetting;
 use App\Models\Tenant;
+use App\Services\Central\LocalAgentBootstrapService;
+use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\ProvisionTenantService;
 use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
@@ -24,6 +27,11 @@ class TenantManagementController extends Controller
     protected function clientsTableExists(): bool
     {
         return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
+    }
+
+    protected function localAgentsTableExists(): bool
+    {
+        return Schema::connection((new LocalAgent())->getConnectionName())->hasTable('local_agents');
     }
 
     public function store(
@@ -149,6 +157,10 @@ class TenantManagementController extends Controller
             TenantSetting::query()->where('tenant_id', $tenant->id)->delete();
         }
 
+        if ($this->localAgentsTableExists()) {
+            LocalAgent::query()->where('tenant_id', $tenant->id)->delete();
+        }
+
         $tenant->delete();
 
         return response()->json([
@@ -241,5 +253,122 @@ class TenantManagementController extends Controller
                 'pix_payload' => $invoice->pix_payload,
             ],
         ]);
+    }
+
+    public function upsertLocalAgent(
+        Request $request,
+        Tenant $tenant,
+        LocalAgentBootstrapService $bootstrapService,
+        LocalAgentConfigService $configService,
+    ): JsonResponse {
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+
+        $existingAgent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:120'],
+            'active' => ['required', 'boolean'],
+            'poll_interval_seconds' => ['nullable', 'integer', 'min:1', 'max:300'],
+            'printer' => ['required', 'array'],
+            'printer.enabled' => ['required', 'boolean'],
+            'printer.connector' => ['required', Rule::in(['windows', 'tcp'])],
+            'printer.name' => ['nullable', 'string', 'max:255'],
+            'printer.host' => ['nullable', 'string', 'max:255'],
+            'printer.port' => ['nullable', 'integer', 'between:1,65535'],
+            'printer.logo_path' => ['nullable', 'string', 'max:1024'],
+        ]);
+
+        $agent = $bootstrapService->upsertForTenant((string) $tenant->id, [
+            'name' => trim((string) ($data['name'] ?? '')) ?: sprintf('Agente fiscal %s', $tenant->id),
+            'active' => $data['active'],
+            'runtime_config' => [
+                'poll_interval_seconds' => (int) ($data['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
+                'printer' => [
+                    'enabled' => (bool) data_get($data, 'printer.enabled', true),
+                    'connector' => (string) data_get($data, 'printer.connector', 'windows'),
+                    'name' => (string) data_get($data, 'printer.name', ''),
+                    'host' => (string) data_get($data, 'printer.host', '127.0.0.1'),
+                    'port' => (int) data_get($data, 'printer.port', 9100),
+                    'logo_path' => (string) data_get($data, 'printer.logo_path', ''),
+                ],
+            ],
+        ]);
+
+        return response()->json([
+            'message' => $existingAgent
+                ? 'Agente fiscal atualizado com sucesso.'
+                : 'Agente fiscal criado com sucesso.',
+            'agent' => $this->serializeLocalAgent($agent, $configService, $bootstrapService),
+        ]);
+    }
+
+    public function downloadLocalAgentBootstrap(
+        Request $request,
+        Tenant $tenant,
+        LocalAgentBootstrapService $bootstrapService,
+        LocalAgentConfigService $configService,
+    ): JsonResponse {
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+
+        $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
+        abort_unless($agent, 404, 'Nenhum agente fiscal foi cadastrado para este tenant.');
+
+        $rotateSecret = $request->boolean('rotate_secret');
+
+        if ($rotateSecret) {
+            $agent = $bootstrapService->rotateSecret($agent);
+        }
+
+        $bootstrap = $bootstrapService->bootstrapFile($agent);
+
+        return response()->json([
+            'message' => $rotateSecret
+                ? 'Bootstrap regenerado. Reinstale ou reconfigure o agente da maquina com este novo arquivo.'
+                : 'Bootstrap do agente pronto para download.',
+            'bootstrap' => $bootstrap,
+            'agent' => $this->serializeLocalAgent($agent, $configService, $bootstrapService),
+        ]);
+    }
+
+    protected function serializeLocalAgent(
+        LocalAgent $agent,
+        LocalAgentConfigService $configService,
+        LocalAgentBootstrapService $bootstrapService,
+    ): array {
+        $runtime = $configService->buildRuntimeConfig($agent);
+        $pollInterval = max(1, (int) ($runtime['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)));
+        $heartbeatWindowSeconds = max(90, $pollInterval * 20);
+        $isOnline = $agent->active
+            && $agent->last_seen_at
+            && $agent->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($heartbeatWindowSeconds));
+        $status = !$agent->active ? 'inactive' : ($isOnline ? 'online' : 'offline');
+
+        return [
+            'id' => $agent->id,
+            'name' => $agent->name,
+            'active' => (bool) $agent->active,
+            'status' => $status,
+            'last_ip' => $agent->last_ip,
+            'last_seen_at' => optional($agent->last_seen_at)?->toIso8601String(),
+            'last_seen_label' => optional($agent->last_seen_at)?->format('d/m/Y H:i'),
+            'bootstrap_available' => $bootstrapService->bootstrapAvailable($agent),
+            'runtime_config' => $runtime,
+            'device' => [
+                'machine_name' => data_get($agent->metadata, 'device.machine.name'),
+                'machine_user' => data_get($agent->metadata, 'device.machine.user'),
+                'certificate_path' => data_get($agent->metadata, 'device.certificate.path'),
+                'printer_enabled' => data_get($agent->metadata, 'device.printer.enabled'),
+                'printer_connector' => data_get($agent->metadata, 'device.printer.connector'),
+                'printer_name' => data_get($agent->metadata, 'device.printer.name'),
+                'printer_host' => data_get($agent->metadata, 'device.printer.host'),
+                'printer_port' => data_get($agent->metadata, 'device.printer.port'),
+                'logo_path' => data_get($agent->metadata, 'device.printer.logo_path'),
+                'project_root' => data_get($agent->metadata, 'device.software.project_root'),
+                'php_path' => data_get($agent->metadata, 'device.software.php_path'),
+                'version' => data_get($agent->metadata, 'device.software.version'),
+                'config_path' => data_get($agent->metadata, 'device.software.config_path'),
+                'installed_at' => data_get($agent->metadata, 'device.software.installed_at'),
+                'last_sync_at' => data_get($agent->metadata, 'device.last_sync_at'),
+            ],
+        ];
     }
 }
