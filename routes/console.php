@@ -8,6 +8,7 @@ use App\Models\Tenant\User;
 use App\Services\Central\LocalFiscalAgentRunner;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\PosService;
+use App\Support\Pkcs12CertificateReader;
 use App\Support\SpedNfeNfceEmitter;
 use App\Support\Tenant\TenantContext;
 use Illuminate\Foundation\Inspiring;
@@ -25,14 +26,16 @@ $readCertificateSubject = function (?string $path, string $password): array {
         return [];
     }
 
-    $content = file_get_contents($path);
-    $certificates = [];
-
-    if ($content === false || !openssl_pkcs12_read($content, $certificates, $password)) {
+    try {
+        $inspection = app(Pkcs12CertificateReader::class)->inspect($path, $password);
+    } catch (Throwable) {
         return [];
     }
 
-    return openssl_x509_parse($certificates['cert'])['subject'] ?? [];
+    return array_merge(
+        $inspection['subject'] ?? [],
+        ['serialNumber' => $inspection['cnpj'] ?? null],
+    );
 };
 
 $resolveOutputPath = function (string $path): string {
@@ -341,22 +344,20 @@ Artisan::command('fiscal:cert:inspect {path} {--password=123456}', function (str
         return 1;
     }
 
-    $certificates = [];
-    $content = file_get_contents($path);
-
-    if ($content === false || !openssl_pkcs12_read($content, $certificates, (string) $this->option('password'))) {
+    try {
+        $inspection = app(Pkcs12CertificateReader::class)->inspect($path, (string) $this->option('password'));
+    } catch (Throwable) {
         $this->error('Nao foi possivel abrir o PFX com a senha informada.');
 
         return 1;
     }
 
-    $parsed = openssl_x509_parse($certificates['cert']);
-    $subject = $parsed['subject'] ?? [];
-
     $this->info('Certificado lido com sucesso.');
-    $this->line('Requerente: '.json_encode($subject, JSON_UNESCAPED_SLASHES));
-    $this->line('Valido de: '.date('Y-m-d H:i:s', (int) ($parsed['validFrom_time_t'] ?? 0)));
-    $this->line('Valido ate: '.date('Y-m-d H:i:s', (int) ($parsed['validTo_time_t'] ?? 0)));
+    $this->line('Requerente: '.json_encode($inspection['subject'] ?? [], JSON_UNESCAPED_SLASHES));
+    $this->line('Empresa: '.($inspection['company_name'] ?? ''));
+    $this->line('CNPJ: '.($inspection['cnpj'] ?? ''));
+    $this->line('Valido de: '.($inspection['valid_from'] ?? ''));
+    $this->line('Valido ate: '.($inspection['valid_to'] ?? ''));
 
     return 0;
 })->purpose('Inspeciona um certificado PFX para homologacao');

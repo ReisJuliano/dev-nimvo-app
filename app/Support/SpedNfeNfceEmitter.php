@@ -6,7 +6,6 @@ use DOMDocument;
 use Illuminate\Support\Carbon;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
-use NFePHP\Common\Certificate;
 use NFePHP\NFe\Common\Standardize;
 use NFePHP\NFe\Complements;
 use NFePHP\NFe\Tools;
@@ -18,6 +17,7 @@ class SpedNfeNfceEmitter
     public function __construct(
         protected NfceLayoutBuilder $layoutBuilder,
         protected ThermalSaleReceiptPrinter $thermalReceiptPrinter,
+        protected Pkcs12CertificateReader $certificateReader,
     ) {
     }
 
@@ -146,12 +146,6 @@ class SpedNfeNfceEmitter
             throw new RuntimeException("Certificado nao encontrado em {$certificatePath}.");
         }
 
-        $pfx = file_get_contents($certificatePath);
-
-        if ($pfx === false) {
-            throw new RuntimeException('Nao foi possivel ler o certificado PFX.');
-        }
-
         $config = [
             'atualizacao' => now()->format('Y-m-d H:i:s'),
             'tpAmb' => (int) $payload['profile']['environment'],
@@ -168,7 +162,7 @@ class SpedNfeNfceEmitter
         }
 
         $configJson = json_encode($config, JSON_THROW_ON_ERROR);
-        $certificate = Certificate::readPfx($pfx, $certificatePassword);
+        $certificate = $this->certificateReader->readCertificate($certificatePath, $certificatePassword);
 
         return new Tools($configJson, $certificate);
     }

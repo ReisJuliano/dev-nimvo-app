@@ -3,14 +3,19 @@
 namespace App\Services\Tenant\Purchases;
 
 use App\Models\Tenant\FiscalProfile;
+use App\Support\Pkcs12CertificateReader;
 use DOMDocument;
 use DOMXPath;
-use NFePHP\Common\Certificate;
 use NFePHP\NFe\Tools;
 use RuntimeException;
 
 class IncomingNfeSefazGateway
 {
+    public function __construct(
+        protected Pkcs12CertificateReader $certificateReader,
+    ) {
+    }
+
     public function status(?FiscalProfile $profile): array
     {
         $config = $this->config();
@@ -73,12 +78,6 @@ class IncomingNfeSefazGateway
             throw new RuntimeException("Certificado A1 nao encontrado em {$certificatePath}.");
         }
 
-        $pfx = file_get_contents($certificatePath);
-
-        if ($pfx === false) {
-            throw new RuntimeException('Nao foi possivel ler o certificado configurado para NF-e recebida.');
-        }
-
         $payload = [
             'atualizacao' => now()->format('Y-m-d H:i:s'),
             'tpAmb' => (int) ($config['environment'] ?? $profile->environment ?? 2),
@@ -89,7 +88,7 @@ class IncomingNfeSefazGateway
             'versao' => '4.00',
         ];
 
-        $certificate = Certificate::readPfx($pfx, $certificatePassword);
+        $certificate = $this->certificateReader->readCertificate($certificatePath, $certificatePassword);
 
         return new Tools((string) json_encode($payload, JSON_UNESCAPED_UNICODE), $certificate);
     }
