@@ -316,6 +316,8 @@ class TenantManagementController extends Controller
 
         if ($rotateSecret) {
             $agent = $bootstrapService->rotateSecret($agent);
+        } elseif (!$bootstrapService->bootstrapAvailable($agent)) {
+            abort(422, 'Este agente ainda nao possui um bootstrap recuperavel. Gere um novo bootstrap para reinstalar o cliente.');
         }
 
         $bootstrap = $bootstrapService->bootstrapFile($agent);

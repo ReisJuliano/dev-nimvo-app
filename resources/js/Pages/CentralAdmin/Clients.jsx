@@ -57,6 +57,22 @@ function buildLicenseForm(tenant = null) {
     }
 }
 
+function buildLocalAgentForm(tenant = null) {
+    const agent = tenant?.local_agent
+
+    return {
+        name: agent?.name || `Agente fiscal ${tenant?.id || ''}`.trim(),
+        active: agent?.active ?? true,
+        poll_interval_seconds: String(agent?.runtime_config?.poll_interval_seconds || 3),
+        printer_enabled: agent?.runtime_config?.printer?.enabled ?? true,
+        printer_connector: agent?.runtime_config?.printer?.connector || 'windows',
+        printer_name: agent?.runtime_config?.printer?.name || '',
+        printer_host: agent?.runtime_config?.printer?.host || '127.0.0.1',
+        printer_port: String(agent?.runtime_config?.printer?.port || 9100),
+        printer_logo_path: agent?.runtime_config?.printer?.logo_path || '',
+    }
+}
+
 function getLicenseTone(status) {
     if (!status) return 'is-muted'
     if (status === 'blocked') return 'is-inactive'
@@ -73,6 +89,48 @@ function getLicenseLabel(status) {
     if (status === 'paused') return 'Pausada'
     if (status === 'warning') return 'A vencer'
     return 'Ativa'
+}
+
+function getLocalAgentTone(status) {
+    if (!status) return 'is-muted'
+    if (status === 'online') return 'is-active'
+    if (status === 'inactive') return 'is-inactive'
+    return 'is-info'
+}
+
+function getLocalAgentLabel(status) {
+    if (!status) return 'Sem agente'
+    if (status === 'online') return 'Online'
+    if (status === 'inactive') return 'Inativo'
+    return 'Offline'
+}
+
+function formatDateTime(value) {
+    if (!value) {
+        return 'Nao informado'
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        return value
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(date)
+}
+
+function downloadTextFile(filename, content, type = 'application/json;charset=utf-8') {
+    const blob = new Blob([content], { type })
+    const objectUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(objectUrl)
 }
 
 function buildTenantSummaries(tenants, settingsState) {
@@ -462,7 +520,326 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
     )
 }
 
-function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onDelete }) {
+function LocalAgentModal({
+    open,
+    tenant,
+    form,
+    busy,
+    bootstrapBusyMode,
+    onClose,
+    onChange,
+    onSubmit,
+    onDownloadBootstrap,
+}) {
+    const agent = tenant?.local_agent
+    const hasAgent = Boolean(agent)
+    const connector = form.printer_connector || 'windows'
+
+    return (
+        <ModalFrame
+            open={open}
+            icon="fa-desktop"
+            title={tenant ? `Agente fiscal de ${tenant.name}` : 'Agente fiscal'}
+            description="Gerencie o bootstrap do instalador e a configuracao central sincronizada do agente local."
+            onClose={onClose}
+        >
+            <form onSubmit={onSubmit}>
+                <div className="central-admin-modal-body">
+                    <div className="central-admin-agent-grid">
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Status do agente</h3>
+                                <span className={`central-admin-status-pill ${getLocalAgentTone(agent?.status)}`}>
+                                    {getLocalAgentLabel(agent?.status)}
+                                </span>
+                            </div>
+                            <div className="central-admin-pill-row">
+                                <span className="central-admin-badge">
+                                    <i className="fa-solid fa-fingerprint" />
+                                    <span>{tenant?.id || 'Tenant'}</span>
+                                </span>
+                                {agent?.last_seen_label ? (
+                                    <span className="central-admin-badge is-info">
+                                        <i className="fa-solid fa-clock-rotate-left" />
+                                        <span>{agent.last_seen_label}</span>
+                                    </span>
+                                ) : null}
+                                {agent?.last_ip ? (
+                                    <span className="central-admin-badge">
+                                        <i className="fa-solid fa-network-wired" />
+                                        <span>{agent.last_ip}</span>
+                                    </span>
+                                ) : null}
+                            </div>
+                            <p>
+                                {hasAgent
+                                    ? 'Esse registro central controla o bootstrap e a configuracao sincronizada do agente instalado no cliente.'
+                                    : 'Salve este cadastro para gerar o primeiro bootstrap do agente fiscal deste tenant.'}
+                            </p>
+                        </article>
+
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Bootstrap do instalador</h3>
+                                <span className={`central-admin-status-pill ${agent?.bootstrap_available ? 'is-active' : 'is-muted'}`}>
+                                    {agent?.bootstrap_available ? 'Disponivel' : 'Pendente'}
+                                </span>
+                            </div>
+                            <p>
+                                Baixe o JSON bootstrap e entregue junto com o instalador `nimvo-fiscal-agent-setup.exe`. O setup vai pedir esse
+                                arquivo, o certificado A1 e a impressora do cliente.
+                            </p>
+                            <div className="central-admin-table-actions">
+                                <button
+                                    type="button"
+                                    className="central-admin-secondary-button"
+                                    disabled={!hasAgent || bootstrapBusyMode !== null}
+                                    onClick={() => onDownloadBootstrap(false)}
+                                >
+                                    <i className="fa-solid fa-file-arrow-down" />
+                                    <span>{bootstrapBusyMode === 'download' ? 'Baixando...' : 'Baixar JSON'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="central-admin-secondary-button"
+                                    disabled={!hasAgent || bootstrapBusyMode !== null}
+                                    onClick={() => onDownloadBootstrap(true)}
+                                >
+                                    <i className="fa-solid fa-rotate" />
+                                    <span>{bootstrapBusyMode === 'rotate' ? 'Gerando...' : 'Regenerar bootstrap'}</span>
+                                </button>
+                            </div>
+                            {hasAgent && !agent?.bootstrap_available ? (
+                                <p className="central-admin-field-note">
+                                    Este agente foi criado sem bootstrap recuperavel. Use “Regenerar bootstrap” e reinstale no cliente.
+                                </p>
+                            ) : null}
+                        </article>
+                    </div>
+
+                    <div className="central-admin-agent-device-grid">
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Ultima maquina conectada</h3>
+                                <span className="central-admin-badge is-info">
+                                    <i className="fa-solid fa-display" />
+                                    <span>{agent?.device?.machine_name || 'Sem heartbeat'}</span>
+                                </span>
+                            </div>
+                            <div className="central-admin-agent-list">
+                                <div className="central-admin-agent-item">
+                                    <strong>Usuario</strong>
+                                    <span>{agent?.device?.machine_user || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Ultima sincronizacao</strong>
+                                    <span>{formatDateTime(agent?.device?.last_sync_at)}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Projeto Nimvo</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.project_root || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>PHP</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.php_path || 'Nao informado'}</span>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Dispositivos locais</h3>
+                                <span className="central-admin-badge">
+                                    <i className="fa-solid fa-print" />
+                                    <span>{agent?.device?.printer_name || agent?.device?.printer_host || 'Sem impressora detectada'}</span>
+                                </span>
+                            </div>
+                            <div className="central-admin-agent-list">
+                                <div className="central-admin-agent-item">
+                                    <strong>Certificado</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.certificate_path || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Conector</strong>
+                                    <span>{agent?.device?.printer_connector || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Impressao local</strong>
+                                    <span>{agent?.device?.printer_enabled ? 'Ativa' : 'Desativada'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Config local</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.config_path || 'Nao informado'}</span>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div className="central-admin-form-grid">
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Nome do agente</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-desktop" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    value={form.name}
+                                    onChange={(event) => onChange('name', event.target.value)}
+                                    placeholder="PDV Loja Centro"
+                                    required
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Polling em segundos</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-stopwatch" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    type="number"
+                                    min="1"
+                                    max="300"
+                                    value={form.poll_interval_seconds}
+                                    onChange={(event) => onChange('poll_interval_seconds', event.target.value)}
+                                    required
+                                />
+                            </span>
+                        </label>
+
+                        <div className="central-admin-field is-full">
+                            <span className="central-admin-field-label">Agente ativo</span>
+                            <div className="central-admin-list-row">
+                                <div className="central-admin-list-copy">
+                                    <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
+                                    <small>Quando inativo, o backend deixa de aceitar heartbeat e comandos desse agente.</small>
+                                </div>
+                                <AdminSwitch
+                                    checked={form.active}
+                                    ariaLabel="Alternar status do agente fiscal"
+                                    onChange={() => onChange('active', !form.active)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="central-admin-field is-full">
+                            <span className="central-admin-field-label">Impressao automatica</span>
+                            <div className="central-admin-list-row">
+                                <div className="central-admin-list-copy">
+                                    <strong>{form.printer_enabled ? 'Ativa' : 'Desativada'}</strong>
+                                    <small>Esse ajuste fica centralizado no banco e o agente aplica no proximo heartbeat.</small>
+                                </div>
+                                <AdminSwitch
+                                    checked={form.printer_enabled}
+                                    ariaLabel="Alternar impressao automatica"
+                                    onChange={() => onChange('printer_enabled', !form.printer_enabled)}
+                                />
+                            </div>
+                        </div>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Conector da impressora</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-print" />
+                                </span>
+                                <select
+                                    className="central-admin-field-input"
+                                    value={form.printer_connector}
+                                    onChange={(event) => onChange('printer_connector', event.target.value)}
+                                >
+                                    <option value="windows">Windows</option>
+                                    <option value="tcp">TCP</option>
+                                </select>
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">Logo no cupom</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-image" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    value={form.printer_logo_path}
+                                    onChange={(event) => onChange('printer_logo_path', event.target.value)}
+                                    placeholder="C:\\logos\\cupom.png"
+                                />
+                            </span>
+                        </label>
+
+                        {connector === 'tcp' ? (
+                            <>
+                                <label className="central-admin-field">
+                                    <span className="central-admin-field-label">Host da impressora</span>
+                                    <span className="central-admin-field-shell">
+                                        <span className="central-admin-field-icon">
+                                            <i className="fa-solid fa-network-wired" />
+                                        </span>
+                                        <input
+                                            className="central-admin-field-input"
+                                            value={form.printer_host}
+                                            onChange={(event) => onChange('printer_host', event.target.value)}
+                                            placeholder="192.168.0.50"
+                                        />
+                                    </span>
+                                </label>
+
+                                <label className="central-admin-field">
+                                    <span className="central-admin-field-label">Porta TCP</span>
+                                    <span className="central-admin-field-shell">
+                                        <span className="central-admin-field-icon">
+                                            <i className="fa-solid fa-ethernet" />
+                                        </span>
+                                        <input
+                                            className="central-admin-field-input"
+                                            type="number"
+                                            min="1"
+                                            max="65535"
+                                            value={form.printer_port}
+                                            onChange={(event) => onChange('printer_port', event.target.value)}
+                                        />
+                                    </span>
+                                </label>
+                            </>
+                        ) : (
+                            <label className="central-admin-field is-full">
+                                <span className="central-admin-field-label">Nome da impressora Windows</span>
+                                <span className="central-admin-field-shell">
+                                    <span className="central-admin-field-icon">
+                                        <i className="fa-solid fa-print" />
+                                    </span>
+                                    <input
+                                        className="central-admin-field-input"
+                                        value={form.printer_name}
+                                        onChange={(event) => onChange('printer_name', event.target.value)}
+                                        placeholder="POS-58"
+                                    />
+                                </span>
+                            </label>
+                        )}
+                    </div>
+                </div>
+
+                <div className="central-admin-modal-footer">
+                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
+                        Fechar
+                    </button>
+                    <button type="submit" className="central-admin-primary-button" disabled={busy}>
+                        <i className="fa-solid fa-floppy-disk" />
+                        <span>{busy ? 'Salvando...' : hasAgent ? 'Salvar agente' : 'Criar agente'}</span>
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    )
+}
+
+function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onManageAgent, onDelete }) {
     return (
         <section className="central-admin-card">
             <div className="central-admin-section-head">
@@ -491,6 +868,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onDelete }) 
                                 <th>ID</th>
                                 <th>Status</th>
                                 <th>Licenca</th>
+                                <th>Agente fiscal</th>
                                 <th>Acoes</th>
                             </tr>
                         </thead>
@@ -515,7 +893,16 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onDelete }) 
                                         </span>
                                     </td>
                                     <td>
+                                        <span className={`central-admin-status-pill ${getLocalAgentTone(tenant.local_agent?.status)}`}>
+                                            {getLocalAgentLabel(tenant.local_agent?.status)}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <div className="central-admin-table-actions">
+                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageAgent(tenant)}>
+                                                <i className="fa-solid fa-desktop" />
+                                                <span>Agente</span>
+                                            </button>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onManageLicense(tenant)}>
                                                 <i className="fa-solid fa-file-invoice-dollar" />
                                                 <span>Licenca</span>
@@ -615,7 +1002,7 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
     )
 }
 
-export default function CentralAdminClients({ tenantStats, tenants, moduleSections, pageMode = 'tenants' }) {
+export default function CentralAdminClients({ tenantStats, agentStats, tenants, moduleSections, pageMode = 'tenants' }) {
     const currentUrl = usePage().url
     const highlightedTenantId = new URLSearchParams(currentUrl.split('?')[1] || '').get('tenant')
     const isFeatureFlagsPage = pageMode === 'feature-flags'
@@ -631,6 +1018,10 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
     const [licenseForm, setLicenseForm] = useState(buildLicenseForm())
     const [licenseBusy, setLicenseBusy] = useState(false)
     const [invoiceBusyId, setInvoiceBusyId] = useState(null)
+    const [localAgentTenant, setLocalAgentTenant] = useState(null)
+    const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
+    const [localAgentBusy, setLocalAgentBusy] = useState(false)
+    const [bootstrapBusyMode, setBootstrapBusyMode] = useState(null)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
@@ -639,13 +1030,29 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
         setTenantSettingsState(buildTenantSettingsState(tenants))
     }, [tenants])
 
+    useEffect(() => {
+        if (!localAgentTenant) {
+            return
+        }
+
+        const updatedTenant = tenants.find((tenant) => tenant.id === localAgentTenant.id)
+        if (!updatedTenant) {
+            setLocalAgentTenant(null)
+            setLocalAgentForm(buildLocalAgentForm())
+            return
+        }
+
+        setLocalAgentTenant(updatedTenant)
+        setLocalAgentForm(buildLocalAgentForm(updatedTenant))
+    }, [tenants, localAgentTenant])
+
     const tenantSummaries = buildTenantSummaries(tenants, tenantSettingsState)
     const trackedModules = moduleSections.flatMap((section) => section.items)
     const averageModules = tenantSummaries.length
         ? (tenantSummaries.reduce((total, tenant) => total + tenant.activeModules, 0) / tenantSummaries.length).toFixed(1)
         : '0.0'
 
-    function refresh(only = ['tenants', 'tenantStats']) {
+    function refresh(only = ['tenants', 'tenantStats', 'agentStats']) {
         router.reload({
             only,
             preserveScroll: true,
@@ -674,6 +1081,11 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
     function openLicenseModal(tenant) {
         setLicenseTenant(tenant)
         setLicenseForm(buildLicenseForm(tenant))
+    }
+
+    function openLocalAgentModal(tenant) {
+        setLocalAgentTenant(tenant)
+        setLocalAgentForm(buildLocalAgentForm(tenant))
     }
 
     async function handleSubmitTenant(event) {
@@ -787,6 +1199,13 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
         }))
     }
 
+    function handleLocalAgentFieldChange(field, value) {
+        setLocalAgentForm((current) => ({
+            ...current,
+            [field]: value,
+        }))
+    }
+
     async function handleSubmitLicense(event) {
         event.preventDefault()
 
@@ -838,6 +1257,90 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
             setFeedback({ type: 'error', text: error.message })
         } finally {
             setInvoiceBusyId(null)
+        }
+    }
+
+    async function handleSubmitLocalAgent(event) {
+        event.preventDefault()
+
+        if (!localAgentTenant) {
+            return
+        }
+
+        setLocalAgentBusy(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent`, {
+                method: 'put',
+                data: {
+                    name: localAgentForm.name,
+                    active: Boolean(localAgentForm.active),
+                    poll_interval_seconds: Number(localAgentForm.poll_interval_seconds || 3),
+                    printer: {
+                        enabled: Boolean(localAgentForm.printer_enabled),
+                        connector: localAgentForm.printer_connector,
+                        name: localAgentForm.printer_name || '',
+                        host: localAgentForm.printer_host || '',
+                        port: Number(localAgentForm.printer_port || 9100),
+                        logo_path: localAgentForm.printer_logo_path || '',
+                    },
+                },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            setLocalAgentTenant((current) => (
+                current
+                    ? {
+                        ...current,
+                        local_agent: response.agent,
+                    }
+                    : current
+            ))
+            refresh(['tenants', 'agentStats'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLocalAgentBusy(false)
+        }
+    }
+
+    async function handleDownloadBootstrap(rotateSecret = false) {
+        if (!localAgentTenant) {
+            return
+        }
+
+        if (rotateSecret) {
+            const confirmed = window.confirm('Regenerar o bootstrap troca a credencial do agente. O cliente precisara reinstalar ou atualizar o bootstrap local. Deseja continuar?')
+            if (!confirmed) {
+                return
+            }
+        }
+
+        setBootstrapBusyMode(rotateSecret ? 'rotate' : 'download')
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/bootstrap`, {
+                method: 'post',
+                data: { rotate_secret: rotateSecret },
+            })
+
+            downloadTextFile(response.bootstrap.filename, `${response.bootstrap.content}\n`)
+            setFeedback({ type: 'success', text: response.message })
+            setLocalAgentTenant((current) => (
+                current
+                    ? {
+                        ...current,
+                        local_agent: response.agent,
+                    }
+                    : current
+            ))
+            refresh(['tenants', 'agentStats'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBootstrapBusyMode(null)
         }
     }
 
@@ -912,11 +1415,11 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
 
                     <article className="central-admin-card central-admin-stat-card">
                         <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-toggle-on" />
+                            <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-toggle-on' : 'fa-desktop'}`} />
                         </div>
                         <div className="central-admin-stat-copy">
-                            <strong>{isFeatureFlagsPage ? trackedModules.length : averageModules}</strong>
-                            <span>{isFeatureFlagsPage ? 'Modulos' : 'Media'}</span>
+                            <strong>{isFeatureFlagsPage ? trackedModules.length : `${agentStats?.online || 0}/${agentStats?.total || 0}`}</strong>
+                            <span>{isFeatureFlagsPage ? 'Modulos' : 'Agentes online'}</span>
                         </div>
                     </article>
                 </section>
@@ -935,6 +1438,7 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                         onCreate={openCreateModal}
                         onEdit={openEditModal}
                         onManageLicense={openLicenseModal}
+                        onManageAgent={openLocalAgentModal}
                         onDelete={setTenantToDelete}
                     />
                 )}
@@ -968,6 +1472,18 @@ export default function CentralAdminClients({ tenantStats, tenants, moduleSectio
                 onChange={handleLicenseFieldChange}
                 onSubmit={handleSubmitLicense}
                 onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
+            />
+
+            <LocalAgentModal
+                open={Boolean(localAgentTenant)}
+                tenant={localAgentTenant}
+                form={localAgentForm}
+                busy={localAgentBusy}
+                bootstrapBusyMode={bootstrapBusyMode}
+                onClose={() => setLocalAgentTenant(null)}
+                onChange={handleLocalAgentFieldChange}
+                onSubmit={handleSubmitLocalAgent}
+                onDownloadBootstrap={handleDownloadBootstrap}
             />
         </AdminLayout>
     )

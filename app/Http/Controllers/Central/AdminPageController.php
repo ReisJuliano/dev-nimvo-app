@@ -156,7 +156,13 @@ class AdminPageController extends Controller
             }
 
             $tenants = $tenantModels
-                ->map(function (Tenant $tenant) use ($settingsService, $licenseService): array {
+                ->map(function (Tenant $tenant) use (
+                    $settingsService,
+                    $licenseService,
+                    $agentLookup,
+                    $localAgentConfigService,
+                    $localAgentBootstrapService,
+                ): array {
                     $domain = $tenant->domains->first()?->domain ?? $tenant->client?->domain;
                     $licenseState = $licenseService->stateForTenant((string) $tenant->id);
                     $agent = $agentLookup->get((string) $tenant->id);
