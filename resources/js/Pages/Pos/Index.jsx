@@ -2914,7 +2914,7 @@ function PosWorkspace({
                 <section className="pos-main-column">
                     <header className="pos-topbar">
                         <div className="pos-terminal-line">
-                            <strong>{tenantName || 'Loja principal'} | {cashRegisterState ? `Terminal ${String(cashRegisterState.id).padStart(2, '0')}` : 'Caixa fechado'}</strong>
+                            <strong>{tenantName || 'Loja principal'} | {cashRegisterState ? 'Caixa principal' : 'Caixa fechado'}</strong>
                         </div>
 
                         <button
@@ -3474,7 +3474,7 @@ function PosCashCloseModal({
         ? openedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         : null
     const headerMeta = [
-        registerId ? `Caixa ${String(registerId).padStart(2, '0')}` : null,
+        registerId ? 'Caixa principal' : null,
         `Operador: ${operatorName}`,
         openedDateLabel,
         openedTimeLabel ? `abertura ${openedTimeLabel}` : null,
