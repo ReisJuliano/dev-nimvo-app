@@ -87,8 +87,6 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
         'backend_url' => $this->option('backend-url') ?: config('app.url'),
         'runtime_config' => [
             'poll_interval_seconds' => $pollInterval,
-            'printer' => $runtimePrinter,
-            'local_api' => $runtimeLocalApi,
         ],
     ]);
     $secret = app(LocalAgentBootstrapService::class)->secret($agent);

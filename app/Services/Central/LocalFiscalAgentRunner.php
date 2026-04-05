@@ -204,13 +204,6 @@ class LocalFiscalAgentRunner
             $merged['agent']['poll_interval_seconds'] = max(1, (int) $runtimeConfig['poll_interval_seconds']);
         }
 
-        if (is_array($runtimeConfig['printer'] ?? null)) {
-            $merged['printer'] = array_replace_recursive(
-                is_array($localConfig['printer'] ?? null) ? $localConfig['printer'] : [],
-                $runtimeConfig['printer'],
-            );
-        }
-
         return $merged;
     }
 }

@@ -171,6 +171,57 @@ class FiscalDocumentsApiTest extends TestCase
         ], 'central');
     }
 
+    public function test_heartbeat_syncs_local_machine_data_without_returning_central_printer_overrides(): void
+    {
+        [$agent, $secret] = $this->makeAgentWithSecret();
+
+        $agent->forceFill([
+            'metadata' => [
+                'runtime_config' => [
+                    'poll_interval_seconds' => 9,
+                ],
+            ],
+        ])->save();
+
+        $response = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/heartbeat', [
+            'machine' => [
+                'name' => 'PDV-CAIXA-01',
+                'user' => 'operador',
+            ],
+            'certificate' => [
+                'path' => 'C:\\certificados\\empresa.pfx',
+            ],
+            'printer' => [
+                'enabled' => true,
+                'connector' => 'windows',
+                'name' => 'ELGIN-I9',
+                'host' => '127.0.0.1',
+                'port' => 9100,
+                'logo_path' => 'C:\\logos\\cupom.png',
+            ],
+            'local_api' => [
+                'enabled' => true,
+                'host' => '127.0.0.1',
+                'port' => 18123,
+                'url' => 'http://127.0.0.1:18123',
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('config.poll_interval_seconds', 9)
+            ->assertJsonMissingPath('config.printer')
+            ->assertJsonMissingPath('config.local_api');
+
+        $agent->refresh();
+
+        $this->assertSame('PDV-CAIXA-01', data_get($agent->metadata, 'device.machine.name'));
+        $this->assertSame('ELGIN-I9', data_get($agent->metadata, 'device.printer.name'));
+        $this->assertSame('http://127.0.0.1:18123', data_get($agent->metadata, 'device.local_api.url'));
+    }
+
     public function test_it_requires_csc_data_before_queueing_a_fiscal_document(): void
     {
         $user = $this->actingOperator();

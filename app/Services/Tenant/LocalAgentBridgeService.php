@@ -28,8 +28,8 @@ class LocalAgentBridgeService
         $isOnline = $agent->active
             && $agent->last_seen_at
             && $agent->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($heartbeatWindowSeconds));
-        $host = (string) data_get($runtime, 'local_api.host', '127.0.0.1');
-        $port = max(1, (int) data_get($runtime, 'local_api.port', 18123));
+        $host = (string) data_get($agent->metadata, 'device.local_api.host', '127.0.0.1');
+        $port = max(1, (int) data_get($agent->metadata, 'device.local_api.port', 18123));
         $baseUrl = trim((string) data_get($agent->metadata, 'device.local_api.url'));
 
         if ($baseUrl === '') {
@@ -37,14 +37,14 @@ class LocalAgentBridgeService
         }
 
         return [
-            'enabled' => (bool) $agent->active && (bool) data_get($runtime, 'local_api.enabled', true),
+            'enabled' => (bool) $agent->active && (bool) data_get($agent->metadata, 'device.local_api.enabled', true),
             'online' => $isOnline,
             'base_url' => rtrim($baseUrl, '/'),
             'agent_key' => $agent->agent_key,
-            'printer_enabled' => (bool) data_get($runtime, 'printer.enabled', true),
+            'printer_enabled' => (bool) data_get($agent->metadata, 'device.printer.enabled', true),
             'printer_target' => data_get($agent->metadata, 'device.printer.name')
                 ?: data_get($agent->metadata, 'device.printer.host')
-                ?: ((string) data_get($runtime, 'printer.name', '')),
+                ?: '',
         ];
     }
 }

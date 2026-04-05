@@ -78,6 +78,9 @@ class LocalAgentBootstrapService
         $devicePrinter = is_array(data_get($agent->metadata, 'device.printer'))
             ? data_get($agent->metadata, 'device.printer')
             : [];
+        $deviceLocalApi = is_array(data_get($agent->metadata, 'device.local_api'))
+            ? data_get($agent->metadata, 'device.local_api')
+            : [];
         $bootstrapUrl = $this->resolveBackendUrl(data_get($agent->metadata, 'bootstrap.backend_url'));
 
         return [
@@ -97,17 +100,17 @@ class LocalAgentBootstrapService
                 'password' => '',
             ],
             'printer' => [
-                'enabled' => (bool) ($devicePrinter['enabled'] ?? data_get($runtime, 'printer.enabled', true)),
-                'connector' => (string) ($devicePrinter['connector'] ?? data_get($runtime, 'printer.connector', 'windows')),
-                'name' => (string) ($devicePrinter['name'] ?? data_get($runtime, 'printer.name', '')),
-                'host' => (string) ($devicePrinter['host'] ?? data_get($runtime, 'printer.host', '127.0.0.1')),
-                'port' => (int) ($devicePrinter['port'] ?? data_get($runtime, 'printer.port', 9100)),
-                'logo_path' => (string) ($devicePrinter['logo_path'] ?? data_get($runtime, 'printer.logo_path', '')),
+                'enabled' => (bool) ($devicePrinter['enabled'] ?? true),
+                'connector' => (string) ($devicePrinter['connector'] ?? 'windows'),
+                'name' => (string) ($devicePrinter['name'] ?? ''),
+                'host' => (string) ($devicePrinter['host'] ?? '127.0.0.1'),
+                'port' => (int) ($devicePrinter['port'] ?? 9100),
+                'logo_path' => (string) ($devicePrinter['logo_path'] ?? ''),
             ],
             'local_api' => [
-                'enabled' => (bool) data_get($runtime, 'local_api.enabled', true),
-                'host' => (string) data_get($runtime, 'local_api.host', '127.0.0.1'),
-                'port' => (int) data_get($runtime, 'local_api.port', 18123),
+                'enabled' => (bool) ($deviceLocalApi['enabled'] ?? true),
+                'host' => (string) ($deviceLocalApi['host'] ?? '127.0.0.1'),
+                'port' => (int) ($deviceLocalApi['port'] ?? 18123),
             ],
         ];
     }

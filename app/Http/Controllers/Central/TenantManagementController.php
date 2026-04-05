@@ -268,13 +268,6 @@ class TenantManagementController extends Controller
             'name' => ['nullable', 'string', 'max:120'],
             'active' => ['required', 'boolean'],
             'poll_interval_seconds' => ['nullable', 'integer', 'min:1', 'max:300'],
-            'printer' => ['required', 'array'],
-            'printer.enabled' => ['required', 'boolean'],
-            'printer.connector' => ['required', Rule::in(['windows', 'tcp'])],
-            'printer.name' => ['nullable', 'string', 'max:255'],
-            'printer.host' => ['nullable', 'string', 'max:255'],
-            'printer.port' => ['nullable', 'integer', 'between:1,65535'],
-            'printer.logo_path' => ['nullable', 'string', 'max:1024'],
         ]);
 
         $agent = $bootstrapService->upsertForTenant((string) $tenant->id, [
@@ -282,14 +275,6 @@ class TenantManagementController extends Controller
             'active' => $data['active'],
             'runtime_config' => [
                 'poll_interval_seconds' => (int) ($data['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
-                'printer' => [
-                    'enabled' => (bool) data_get($data, 'printer.enabled', true),
-                    'connector' => (string) data_get($data, 'printer.connector', 'windows'),
-                    'name' => (string) data_get($data, 'printer.name', ''),
-                    'host' => (string) data_get($data, 'printer.host', '127.0.0.1'),
-                    'port' => (int) data_get($data, 'printer.port', 9100),
-                    'logo_path' => (string) data_get($data, 'printer.logo_path', ''),
-                ],
             ],
         ]);
 

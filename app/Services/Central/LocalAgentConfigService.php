@@ -80,19 +80,6 @@ class LocalAgentConfigService
                 1,
                 (int) ($runtime['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
             ),
-            'printer' => [
-                'enabled' => (bool) ($runtime['printer']['enabled'] ?? true),
-                'connector' => (string) ($runtime['printer']['connector'] ?? 'windows'),
-                'name' => (string) ($runtime['printer']['name'] ?? ''),
-                'host' => (string) ($runtime['printer']['host'] ?? '127.0.0.1'),
-                'port' => max(1, (int) ($runtime['printer']['port'] ?? 9100)),
-                'logo_path' => (string) ($runtime['printer']['logo_path'] ?? ''),
-            ],
-            'local_api' => [
-                'enabled' => (bool) ($runtime['local_api']['enabled'] ?? true),
-                'host' => (string) ($runtime['local_api']['host'] ?? '127.0.0.1'),
-                'port' => max(1, (int) ($runtime['local_api']['port'] ?? 18123)),
-            ],
         ];
     }
 
