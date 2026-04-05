@@ -65,26 +65,19 @@ function buildLocalAgentForm(tenant = null) {
         name: agent?.name || `Agente fiscal ${tenant?.id || ''}`.trim(),
         active: agent?.active ?? true,
         poll_interval_seconds: String(agent?.runtime_config?.poll_interval_seconds || 3),
-        printer_enabled: agent?.runtime_config?.printer?.enabled ?? true,
-        printer_connector: agent?.runtime_config?.printer?.connector || 'windows',
-        printer_name: agent?.runtime_config?.printer?.name || '',
-        printer_host: agent?.runtime_config?.printer?.host || '127.0.0.1',
-        printer_port: String(agent?.runtime_config?.printer?.port || 9100),
-        printer_logo_path: agent?.runtime_config?.printer?.logo_path || '',
     }
 }
 
 function buildLocalAgentBridge(agent) {
-    const runtimeLocalApi = agent?.runtime_config?.local_api || {}
-    const host = runtimeLocalApi.host || '127.0.0.1'
-    const port = runtimeLocalApi.port || 18123
+    const host = agent?.device?.local_api_host || '127.0.0.1'
+    const port = agent?.device?.local_api_port || 18123
     const baseUrl = agent?.device?.local_api_url || `http://${host}:${port}`
 
     return {
-        enabled: Boolean(agent?.active && runtimeLocalApi.enabled !== false),
+        enabled: Boolean(agent?.active && agent?.device?.local_api_enabled !== false),
         base_url: String(baseUrl || '').replace(/\/+$/, ''),
         agent_key: agent?.agent_key || '',
-        printer_enabled: agent?.runtime_config?.printer?.enabled !== false,
+        printer_enabled: agent?.device?.printer_enabled !== false,
     }
 }
 
@@ -550,14 +543,13 @@ function LocalAgentModal({
 }) {
     const agent = tenant?.local_agent
     const hasAgent = Boolean(agent)
-    const connector = form.printer_connector || 'windows'
 
     return (
         <ModalFrame
             open={open}
             icon="fa-desktop"
             title={tenant ? `Agente fiscal de ${tenant.name}` : 'Agente fiscal'}
-            description="Gerencie o bootstrap do instalador e a configuracao central sincronizada do agente local."
+            description="Gerencie o bootstrap, o status central e acompanhe a configuracao local enviada pela maquina do cliente."
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
@@ -603,8 +595,8 @@ function LocalAgentModal({
                                 </span>
                             </div>
                             <p>
-                                Baixe o JSON bootstrap e entregue junto com o instalador `nimvo-fiscal-agent-setup.exe`. O setup vai pedir esse
-                                arquivo, o certificado A1 e a impressora do cliente.
+                                Baixe o JSON bootstrap e entregue junto com o instalador `nimvo-fiscal-agent-setup.exe`. O setup coleta na propria
+                                maquina o certificado A1, a impressora, o logo do cupom e a API local do tenant.
                             </p>
                             <div className="central-admin-table-actions">
                                 <button
@@ -693,6 +685,10 @@ function LocalAgentModal({
                                     <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Nao informado'}</span>
                                 </div>
                             </div>
+                            <p className="central-admin-field-note">
+                                Esses dados sao sincronizados pelo agente instalado. Para trocar impressora, certificado ou logo do cupom, rode o setup
+                                novamente na maquina do cliente.
+                            </p>
                             <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
                                 <button
                                     type="button"
@@ -758,102 +754,14 @@ function LocalAgentModal({
                         </div>
 
                         <div className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Impressao automatica</span>
+                            <span className="central-admin-field-label">Escopo da configuracao</span>
                             <div className="central-admin-list-row">
                                 <div className="central-admin-list-copy">
-                                    <strong>{form.printer_enabled ? 'Ativa' : 'Desativada'}</strong>
-                                    <small>Esse ajuste fica centralizado no banco e o agente aplica no proximo heartbeat.</small>
+                                    <strong>Central: nome, status e polling</strong>
+                                    <small>Impressora, certificado, logo do cupom e API local ficam na maquina e sao definidos pelo instalador do agente.</small>
                                 </div>
-                                <AdminSwitch
-                                    checked={form.printer_enabled}
-                                    ariaLabel="Alternar impressao automatica"
-                                    onChange={() => onChange('printer_enabled', !form.printer_enabled)}
-                                />
                             </div>
                         </div>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Conector da impressora</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-print" />
-                                </span>
-                                <select
-                                    className="central-admin-field-input"
-                                    value={form.printer_connector}
-                                    onChange={(event) => onChange('printer_connector', event.target.value)}
-                                >
-                                    <option value="windows">Windows</option>
-                                    <option value="tcp">TCP</option>
-                                </select>
-                            </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Logo no cupom</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-image" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.printer_logo_path}
-                                    onChange={(event) => onChange('printer_logo_path', event.target.value)}
-                                    placeholder="C:\\logos\\cupom.png"
-                                />
-                            </span>
-                        </label>
-
-                        {connector === 'tcp' ? (
-                            <>
-                                <label className="central-admin-field">
-                                    <span className="central-admin-field-label">Host da impressora</span>
-                                    <span className="central-admin-field-shell">
-                                        <span className="central-admin-field-icon">
-                                            <i className="fa-solid fa-network-wired" />
-                                        </span>
-                                        <input
-                                            className="central-admin-field-input"
-                                            value={form.printer_host}
-                                            onChange={(event) => onChange('printer_host', event.target.value)}
-                                            placeholder="192.168.0.50"
-                                        />
-                                    </span>
-                                </label>
-
-                                <label className="central-admin-field">
-                                    <span className="central-admin-field-label">Porta TCP</span>
-                                    <span className="central-admin-field-shell">
-                                        <span className="central-admin-field-icon">
-                                            <i className="fa-solid fa-ethernet" />
-                                        </span>
-                                        <input
-                                            className="central-admin-field-input"
-                                            type="number"
-                                            min="1"
-                                            max="65535"
-                                            value={form.printer_port}
-                                            onChange={(event) => onChange('printer_port', event.target.value)}
-                                        />
-                                    </span>
-                                </label>
-                            </>
-                        ) : (
-                            <label className="central-admin-field is-full">
-                                <span className="central-admin-field-label">Nome da impressora Windows</span>
-                                <span className="central-admin-field-shell">
-                                    <span className="central-admin-field-icon">
-                                        <i className="fa-solid fa-print" />
-                                    </span>
-                                    <input
-                                        className="central-admin-field-input"
-                                        value={form.printer_name}
-                                        onChange={(event) => onChange('printer_name', event.target.value)}
-                                        placeholder="POS-58"
-                                    />
-                                </span>
-                            </label>
-                        )}
                     </div>
                 </div>
 
@@ -1310,14 +1218,6 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
                     name: localAgentForm.name,
                     active: Boolean(localAgentForm.active),
                     poll_interval_seconds: Number(localAgentForm.poll_interval_seconds || 3),
-                    printer: {
-                        enabled: Boolean(localAgentForm.printer_enabled),
-                        connector: localAgentForm.printer_connector,
-                        name: localAgentForm.printer_name || '',
-                        host: localAgentForm.printer_host || '',
-                        port: Number(localAgentForm.printer_port || 9100),
-                        logo_path: localAgentForm.printer_logo_path || '',
-                    },
                 },
             })
 

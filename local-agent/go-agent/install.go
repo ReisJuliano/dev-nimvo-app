@@ -121,7 +121,7 @@ func runInstall(args []string) error {
 	payload, _ := json.MarshalIndent(summary, "", "  ")
 	fmt.Println("Agente instalado com sucesso.")
 	fmt.Println(string(payload))
-	fmt.Println("As configuracoes centrais passam a vir do Nimvo. O arquivo local fica somente com os dados da maquina.")
+	fmt.Println("As configuracoes centrais do tenant passam a vir do Nimvo. O arquivo local fica somente com os dados da maquina.")
 
 	return nil
 }
@@ -244,9 +244,9 @@ func buildReadme(configPath, projectRoot, installDir string) string {
 		fmt.Sprintf("Instalacao: %s", installDir),
 		"",
 		"Fluxo sugerido:",
-		"1. O instalador coleta o JSON base do agente, o certificado A1 e a impressora.",
+		"1. O instalador coleta o bootstrap do tenant, o certificado A1, a impressora e o logo do cupom.",
 		"2. O agente sobe uma API local HTTP para a ponte de impressao do Nimvo no navegador.",
-		"3. O agente sincroniza as configuracoes centrais com o Nimvo a cada heartbeat.",
+		"3. O agente sincroniza com o Nimvo o estado da maquina e recebe apenas os ajustes centrais do tenant.",
 		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
 		"5. O agente grava o loop em logs\\agent.log.",
 		"",
