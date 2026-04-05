@@ -7,7 +7,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
+
+type runtimeOptions struct {
+	ConfigPath  string
+	ProjectRoot string
+	PHPPath     string
+	Once        bool
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -18,6 +26,16 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		if err := runAgent(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+	case "serve":
+		if err := runServe(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+	case "daemon":
+		if err := runDaemon(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
@@ -48,26 +66,50 @@ func main() {
 }
 
 func runAgent(args []string) error {
-	fs := flag.NewFlagSet("run", flag.ContinueOnError)
-	configPath := fs.String("config", "", "Caminho do JSON do agente")
-	projectRoot := fs.String("project-root", defaultProjectRoot(), "Pasta raiz do projeto Laravel")
-	phpPath := fs.String("php", "", "Caminho do php.exe")
-	once := fs.Bool("once", false, "Executa um unico ciclo")
-
-	if err := fs.Parse(args); err != nil {
+	options, err := parseLocalAgentRuntimeOptions("run", args)
+	if err != nil {
 		return err
 	}
 
-	if *configPath == "" {
-		return errors.New("informe -config com o arquivo JSON do agente")
+	return runAgentOnce(options)
+}
+
+func runDaemon(args []string) error {
+	options, err := parseLocalAgentRuntimeOptions("daemon", args)
+	if err != nil {
+		return err
 	}
 
-	commandArgs := []string{"artisan", "fiscal:agent:run", *configPath}
-	if *once {
+	config, err := loadNormalizedAgentConfig(options.ConfigPath)
+	if err != nil {
+		return err
+	}
+
+	var server *httpServerHandle
+	if config.LocalAPI.Enabled {
+		server, err = startLocalAPIServer(config, &localAgentHTTPServer{
+			configPath:  options.ConfigPath,
+			projectRoot: options.ProjectRoot,
+			phpPath:     options.PHPPath,
+		})
+		if err != nil {
+			return err
+		}
+		defer server.Close()
+
+		fmt.Printf("API local do agente ouvindo em %s\n", localAPIBaseURL(config))
+	}
+
+	return runAgentOnce(options)
+}
+
+func runAgentOnce(options runtimeOptions) error {
+	commandArgs := []string{"artisan", "fiscal:agent:run", options.ConfigPath}
+	if options.Once {
 		commandArgs = append(commandArgs, "--once")
 	}
 
-	return runPHP(*phpPath, *projectRoot, commandArgs...)
+	return runPHP(options.PHPPath, options.ProjectRoot, commandArgs...)
 }
 
 func runLocalTest(args []string) error {
@@ -119,6 +161,32 @@ func runPHP(explicitPHP, projectRoot string, args ...string) error {
 	return cmd.Run()
 }
 
+func runPHPCapture(explicitPHP, projectRoot string, args ...string) ([]byte, error) {
+	phpBinary, err := resolvePHP(explicitPHP)
+	if err != nil {
+		return nil, err
+	}
+
+	root, err := filepath.Abs(projectRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command(phpBinary, args...)
+	cmd.Dir = root
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		message := string(output)
+		if message == "" {
+			message = err.Error()
+		}
+
+		return nil, errors.New(strings.TrimSpace(message))
+	}
+
+	return output, nil
+}
+
 func resolvePHP(explicit string) (string, error) {
 	candidates := []string{}
 
@@ -166,6 +234,8 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("Comandos:")
 	fmt.Println("  install    Instala o agente no Windows e configura a inicializacao automatica")
+	fmt.Println("  serve      Sobe somente a API HTTP local para a ponte de impressao")
+	fmt.Println("  daemon     Sobe a API local e executa o worker fiscal em paralelo")
 	fmt.Println("  run        Executa o agente fiscal client-side")
 	fmt.Println("  local-test Faz um ensaio local da NFC-e a partir de uma venda")
 	fmt.Println("  status     Mostra o estado da instalacao local")
@@ -173,6 +243,7 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("Exemplos:")
 	fmt.Println(`  nimvo-fiscal-agent install -project-root "D:\nimvo"`)
+	fmt.Println(`  nimvo-fiscal-agent daemon -config "D:\app\agent.json"`)
 	fmt.Println(`  nimvo-fiscal-agent run -config "D:\app\agent.json"`)
 	fmt.Println(`  nimvo-fiscal-agent local-test -config "D:\app\agent.json" -tenant tenant-teste -sale 6`)
 }

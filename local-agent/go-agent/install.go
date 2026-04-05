@@ -150,6 +150,12 @@ func runStatus(args []string) error {
 		"run_script_exists": fileExists(filepath.Join(installRoot, "run-agent.cmd")),
 	}
 
+	if config, err := loadAgentConfig(filepath.Join(installRoot, "config", "agent.json")); err == nil {
+		config = normalizeAgentConfig(config)
+		status["local_api_url"] = localAPIBaseURL(config)
+		status["local_api_enabled"] = config.LocalAPI.Enabled
+	}
+
 	payload, _ := json.MarshalIndent(status, "", "  ")
 	fmt.Println(string(payload))
 
@@ -203,7 +209,7 @@ func buildRunScript(exePath, configPath, projectRoot, phpPath, logPath string) s
 		"setlocal",
 		":loop",
 		fmt.Sprintf(`cd /d "%s"`, projectRoot),
-		fmt.Sprintf(`"%s" run -config "%s" -project-root "%s"%s >> "%s" 2>&1`, exePath, configPath, projectRoot, phpArgument, logPath),
+		fmt.Sprintf(`"%s" daemon -config "%s" -project-root "%s"%s >> "%s" 2>&1`, exePath, configPath, projectRoot, phpArgument, logPath),
 		"timeout /t 5 /nobreak >nul",
 		"goto loop",
 		"",
@@ -239,9 +245,10 @@ func buildReadme(configPath, projectRoot, installDir string) string {
 		"",
 		"Fluxo sugerido:",
 		"1. O instalador coleta o JSON base do agente, o certificado A1 e a impressora.",
-		"2. O agente sincroniza as configuracoes centrais com o Nimvo a cada heartbeat.",
-		"3. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"4. O agente grava o loop em logs\\agent.log.",
+		"2. O agente sobe uma API local HTTP para a ponte de impressao do Nimvo no navegador.",
+		"3. O agente sincroniza as configuracoes centrais com o Nimvo a cada heartbeat.",
+		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
+		"5. O agente grava o loop em logs\\agent.log.",
 		"",
 		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
 		"",

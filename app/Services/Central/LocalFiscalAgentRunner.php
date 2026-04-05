@@ -176,8 +176,18 @@ class LocalFiscalAgentRunner
                 'port' => (int) data_get($config, 'printer.port', 9100),
                 'logo_path' => (string) data_get($config, 'printer.logo_path', ''),
             ],
+            'local_api' => [
+                'enabled' => (bool) data_get($config, 'local_api.enabled', true),
+                'host' => (string) data_get($config, 'local_api.host', '127.0.0.1'),
+                'port' => (int) data_get($config, 'local_api.port', 18123),
+                'url' => sprintf(
+                    'http://%s:%d',
+                    (string) data_get($config, 'local_api.host', '127.0.0.1'),
+                    (int) data_get($config, 'local_api.port', 18123),
+                ),
+            ],
             'software' => [
-                'version' => 'nimvo-php-agent',
+                'version' => 'nimvo-go-agent-bridge',
                 'project_root' => base_path(),
                 'php_path' => PHP_BINARY,
                 'installed_at' => date(DATE_ATOM, filemtime($configPath) ?: time()),

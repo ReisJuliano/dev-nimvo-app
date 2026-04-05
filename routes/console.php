@@ -76,6 +76,11 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
         'port' => 9100,
         'logo_path' => '',
     ];
+    $runtimeLocalApi = [
+        'enabled' => true,
+        'host' => '127.0.0.1',
+        'port' => 18123,
+    ];
     $agent = app(LocalAgentBootstrapService::class)->upsertForTenant($tenantId, [
         'name' => $name,
         'active' => true,
@@ -83,6 +88,7 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
         'runtime_config' => [
             'poll_interval_seconds' => $pollInterval,
             'printer' => $runtimePrinter,
+            'local_api' => $runtimeLocalApi,
         ],
     ]);
     $secret = app(LocalAgentBootstrapService::class)->secret($agent);
@@ -111,6 +117,7 @@ Artisan::command('fiscal:agent:create {tenantId} {name} {--backend-url=} {--cert
             'password' => '',
         ],
         'printer' => $runtimePrinter,
+        'local_api' => $runtimeLocalApi,
     ];
     $this->line(json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 

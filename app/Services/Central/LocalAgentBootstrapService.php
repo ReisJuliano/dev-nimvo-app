@@ -104,6 +104,11 @@ class LocalAgentBootstrapService
                 'port' => (int) ($devicePrinter['port'] ?? data_get($runtime, 'printer.port', 9100)),
                 'logo_path' => (string) ($devicePrinter['logo_path'] ?? data_get($runtime, 'printer.logo_path', '')),
             ],
+            'local_api' => [
+                'enabled' => (bool) data_get($runtime, 'local_api.enabled', true),
+                'host' => (string) data_get($runtime, 'local_api.host', '127.0.0.1'),
+                'port' => (int) data_get($runtime, 'local_api.port', 18123),
+            ],
         ];
     }
 

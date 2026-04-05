@@ -43,6 +43,14 @@ class LocalAgentConfigService
                 'port' => isset($payload['printer']['port']) ? (int) $payload['printer']['port'] : null,
                 'logo_path' => $payload['printer']['logo_path'] ?? null,
             ], fn ($value) => $value !== null && $value !== ''),
+            'local_api' => array_filter([
+                'enabled' => array_key_exists('enabled', $payload['local_api'] ?? [])
+                    ? (bool) $payload['local_api']['enabled']
+                    : null,
+                'host' => $payload['local_api']['host'] ?? null,
+                'port' => isset($payload['local_api']['port']) ? (int) $payload['local_api']['port'] : null,
+                'url' => $payload['local_api']['url'] ?? null,
+            ], fn ($value) => $value !== null && $value !== ''),
             'software' => array_filter([
                 'version' => $payload['software']['version'] ?? null,
                 'project_root' => $payload['software']['project_root'] ?? null,
@@ -79,6 +87,11 @@ class LocalAgentConfigService
                 'host' => (string) ($runtime['printer']['host'] ?? '127.0.0.1'),
                 'port' => max(1, (int) ($runtime['printer']['port'] ?? 9100)),
                 'logo_path' => (string) ($runtime['printer']['logo_path'] ?? ''),
+            ],
+            'local_api' => [
+                'enabled' => (bool) ($runtime['local_api']['enabled'] ?? true),
+                'host' => (string) ($runtime['local_api']['host'] ?? '127.0.0.1'),
+                'port' => max(1, (int) ($runtime['local_api']['port'] ?? 18123)),
             ],
         ];
     }

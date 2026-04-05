@@ -12,10 +12,11 @@ import (
 )
 
 type AgentConfig struct {
-	Backend     BackendConfig `json:"backend"`
-	Agent       AgentAuth     `json:"agent"`
-	Certificate Certificate   `json:"certificate"`
-	Printer     PrinterConfig `json:"printer"`
+	Backend     BackendConfig  `json:"backend"`
+	Agent       AgentAuth      `json:"agent"`
+	Certificate Certificate    `json:"certificate"`
+	Printer     PrinterConfig  `json:"printer"`
+	LocalAPI    LocalAPIConfig `json:"local_api"`
 }
 
 type BackendConfig struct {
@@ -45,6 +46,12 @@ type PrinterConfig struct {
 	LogoPath  string `json:"logo_path"`
 }
 
+type LocalAPIConfig struct {
+	Enabled bool   `json:"enabled"`
+	Host    string `json:"host"`
+	Port    int    `json:"port"`
+}
+
 func defaultAgentConfig() AgentConfig {
 	return AgentConfig{
 		Backend: BackendConfig{
@@ -69,6 +76,11 @@ func defaultAgentConfig() AgentConfig {
 			Host:      "127.0.0.1",
 			Port:      9100,
 			LogoPath:  "",
+		},
+		LocalAPI: LocalAPIConfig{
+			Enabled: true,
+			Host:    "127.0.0.1",
+			Port:    18123,
 		},
 	}
 }
@@ -145,6 +157,14 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 
 	if config.Printer.Port <= 0 {
 		config.Printer.Port = 9100
+	}
+
+	if strings.TrimSpace(config.LocalAPI.Host) == "" {
+		config.LocalAPI.Host = "127.0.0.1"
+	}
+
+	if config.LocalAPI.Port <= 0 {
+		config.LocalAPI.Port = 18123
 	}
 
 	return config
