@@ -246,6 +246,7 @@ class AdminPageController extends Controller
         return [
             'id' => $agent->id,
             'name' => $agent->name,
+            'agent_key' => $agent->agent_key,
             'active' => (bool) $agent->active,
             'status' => $status,
             'last_ip' => $agent->last_ip,

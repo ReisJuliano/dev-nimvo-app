@@ -4,6 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { formatMoney } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
+import { printTestViaLocalAgent } from '@/lib/localAgentBridge'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
 
@@ -70,6 +71,20 @@ function buildLocalAgentForm(tenant = null) {
         printer_host: agent?.runtime_config?.printer?.host || '127.0.0.1',
         printer_port: String(agent?.runtime_config?.printer?.port || 9100),
         printer_logo_path: agent?.runtime_config?.printer?.logo_path || '',
+    }
+}
+
+function buildLocalAgentBridge(agent) {
+    const runtimeLocalApi = agent?.runtime_config?.local_api || {}
+    const host = runtimeLocalApi.host || '127.0.0.1'
+    const port = runtimeLocalApi.port || 18123
+    const baseUrl = agent?.device?.local_api_url || `http://${host}:${port}`
+
+    return {
+        enabled: Boolean(agent?.active && runtimeLocalApi.enabled !== false),
+        base_url: String(baseUrl || '').replace(/\/+$/, ''),
+        agent_key: agent?.agent_key || '',
+        printer_enabled: agent?.runtime_config?.printer?.enabled !== false,
     }
 }
 
@@ -525,11 +540,13 @@ function LocalAgentModal({
     tenant,
     form,
     busy,
+    printBusy,
     bootstrapBusyMode,
     onClose,
     onChange,
     onSubmit,
     onDownloadBootstrap,
+    onTestPrint,
 }) {
     const agent = tenant?.local_agent
     const hasAgent = Boolean(agent)
@@ -671,6 +688,21 @@ function LocalAgentModal({
                                     <strong>Config local</strong>
                                     <span className="central-admin-path-copy">{agent?.device?.config_path || 'Nao informado'}</span>
                                 </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>API local</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Nao informado'}</span>
+                                </div>
+                            </div>
+                            <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
+                                <button
+                                    type="button"
+                                    className="central-admin-secondary-button"
+                                    disabled={!hasAgent || printBusy}
+                                    onClick={onTestPrint}
+                                >
+                                    <i className="fa-solid fa-print" />
+                                    <span>{printBusy ? 'Testando...' : 'Testar impressao'}</span>
+                                </button>
                             </div>
                         </article>
                     </div>
@@ -1021,6 +1053,7 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
     const [localAgentTenant, setLocalAgentTenant] = useState(null)
     const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
     const [localAgentBusy, setLocalAgentBusy] = useState(false)
+    const [localAgentPrintBusy, setLocalAgentPrintBusy] = useState(false)
     const [bootstrapBusyMode, setBootstrapBusyMode] = useState(null)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
@@ -1344,6 +1377,30 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
         }
     }
 
+    async function handleTestLocalAgentPrint() {
+        const agent = localAgentTenant?.local_agent
+
+        if (!agent) {
+            return
+        }
+
+        setLocalAgentPrintBusy(true)
+        setFeedback(null)
+
+        try {
+            await printTestViaLocalAgent(buildLocalAgentBridge(agent), {
+                store_name: localAgentTenant?.name || 'Nimvo',
+                message: 'Teste disparado pelo painel administrativo do Nimvo.',
+            })
+
+            setFeedback({ type: 'success', text: 'Teste de impressao enviado para a API local do agente.' })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLocalAgentPrintBusy(false)
+        }
+    }
+
     return (
         <AdminLayout title={isFeatureFlagsPage ? 'Configuracoes' : 'Tenants'}>
             <div className="central-admin-page">
@@ -1479,11 +1536,13 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
                 tenant={localAgentTenant}
                 form={localAgentForm}
                 busy={localAgentBusy}
+                printBusy={localAgentPrintBusy}
                 bootstrapBusyMode={bootstrapBusyMode}
                 onClose={() => setLocalAgentTenant(null)}
                 onChange={handleLocalAgentFieldChange}
                 onSubmit={handleSubmitLocalAgent}
                 onDownloadBootstrap={handleDownloadBootstrap}
+                onTestPrint={handleTestLocalAgentPrint}
             />
         </AdminLayout>
     )

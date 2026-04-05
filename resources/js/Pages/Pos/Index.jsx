@@ -10,6 +10,7 @@ import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
+import { canUseLocalAgentBridge, printPaymentReceiptViaLocalAgent } from '@/lib/localAgentBridge'
 import { buildDiscountDraft, buildPreviewConfigFromDraft, resolvePricing, roundCurrency } from '@/Pages/Orders/orderUtils'
 import './pos.css'
 
@@ -174,6 +175,7 @@ export default function PosIndex({
     preloadedOrderDraft,
     pendingSale: initialPendingSale,
     recommendations: initialRecommendations,
+    localAgentBridge = null,
     posCapabilities = {},
 }) {
     const { tenant } = usePage().props
@@ -1792,7 +1794,7 @@ export default function PosIndex({
 
     async function concludeFinalizedSale(finalizedOrderDraftId, callback = null) {
         if (typeof callback === 'function') {
-            callback()
+            await callback()
         }
 
         resetSale()
@@ -1803,7 +1805,41 @@ export default function PosIndex({
         }
     }
 
-    function printPaymentReceipt(saleNumber) {
+    function buildLocalAgentReceiptPayload(saleNumber) {
+        return {
+            store_name: tenant?.name || 'Nimvo',
+            sale_number: saleNumber,
+            issued_at: new Date().toISOString(),
+            total: totals.total,
+            change_amount: cashChange,
+            notes: notes || null,
+            customer: selectedCustomerData ? { name: selectedCustomerData.name } : null,
+            items: pricing.items.map((item) => ({
+                name: item.name,
+                quantity: Number(item.qty),
+                unit_price: Number(item.sale_price || 0),
+                total: Number(item.lineTotal ?? Number(item.sale_price || 0) * Number(item.qty || 0)),
+            })),
+            payments: currentPaymentsSummary.map((payment) => ({
+                label: payment.label,
+                amount: Number(payment.amount || 0),
+                method: payment.method,
+            })),
+        }
+    }
+
+    async function printPaymentReceipt(saleNumber) {
+        let localBridgeError = null
+
+        if (canUseLocalAgentBridge(localAgentBridge) && localAgentBridge?.printer_enabled !== false) {
+            try {
+                await printPaymentReceiptViaLocalAgent(localAgentBridge, buildLocalAgentReceiptPayload(saleNumber))
+                return
+            } catch (error) {
+                localBridgeError = error
+            }
+        }
+
         const markup = buildPaymentReceiptMarkup({
             saleNumber,
             totals,
@@ -1813,7 +1849,13 @@ export default function PosIndex({
         })
 
         const printWindow = window.open('', '_blank', 'width=420,height=760')
-        if (!printWindow) return
+        if (!printWindow) {
+            if (localBridgeError) {
+                throw new Error(`Falha ao imprimir pelo agente local (${localBridgeError.message}) e o navegador bloqueou a janela de impressao.`)
+            }
+
+            throw new Error('O navegador bloqueou a janela de impressao.')
+        }
 
         printWindow.document.write(markup)
         printWindow.document.close()
@@ -1827,8 +1869,8 @@ export default function PosIndex({
             const finalizedOrderDraftId = activeOrderDraftId
             const response = await finalizeSale({ fiscalDecision: 'close', requestedDocumentModel: '65' })
 
-            await concludeFinalizedSale(finalizedOrderDraftId, () => {
-                printPaymentReceipt(response.sale.sale_number)
+            await concludeFinalizedSale(finalizedOrderDraftId, async () => {
+                await printPaymentReceipt(response.sale.sale_number)
             })
 
             showFeedback('success', `Venda ${response.sale.sale_number} finalizada com comprovante de pagamento.`)
