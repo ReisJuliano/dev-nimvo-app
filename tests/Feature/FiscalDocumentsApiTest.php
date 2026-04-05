@@ -317,6 +317,10 @@ class FiscalDocumentsApiTest extends TestCase
             'zip_code' => '01001000',
             'csc_id' => '000001',
             'csc_token' => 'TESTECSC1234567890',
+            'technical_contact_name' => 'Equipe Nimvo',
+            'technical_contact_email' => 'fiscal@nimvo.test',
+            'technical_contact_phone' => '11999999999',
+            'technical_contact_cnpj' => '12345678000123',
         ]);
     }
 
