@@ -4,8 +4,6 @@ namespace App\Support;
 
 use DOMDocument;
 use Illuminate\Support\Carbon;
-use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
-use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use NFePHP\NFe\Common\Standardize;
 use NFePHP\NFe\Complements;
 use NFePHP\NFe\Tools;
@@ -18,6 +16,7 @@ class SpedNfeNfceEmitter
         protected NfceLayoutBuilder $layoutBuilder,
         protected ThermalSaleReceiptPrinter $thermalReceiptPrinter,
         protected Pkcs12CertificateReader $certificateReader,
+        protected EscposConnectorFactory $connectorFactory,
     ) {
     }
 
@@ -112,18 +111,8 @@ class SpedNfeNfceEmitter
 
     protected function print(string $authorizedXml, array $printer): void
     {
-        $connectorType = strtolower((string) ($printer['connector'] ?? 'windows'));
         $logoPath = (string) ($printer['logo_path'] ?? '');
-
-        $connector = match ($connectorType) {
-            'network' => new NetworkPrintConnector(
-                (string) ($printer['host'] ?? '127.0.0.1'),
-                (int) ($printer['port'] ?? 9100),
-            ),
-            default => new WindowsPrintConnector((string) ($printer['name'] ?? '')),
-        };
-
-        $danfce = new DanfcePos($connector);
+        $danfce = new DanfcePos($this->connectorFactory->make($printer));
 
         if ($logoPath !== '' && is_file($logoPath)) {
             $danfce->logo($logoPath);

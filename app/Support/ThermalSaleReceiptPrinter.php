@@ -3,25 +3,19 @@
 namespace App\Support;
 
 use Mike42\Escpos\EscposImage;
-use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
-use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
 use Mike42\Escpos\Printer;
 use RuntimeException;
 
 class ThermalSaleReceiptPrinter
 {
+    public function __construct(
+        protected EscposConnectorFactory $connectorFactory,
+    ) {
+    }
+
     public function print(array $payload, array $printerConfig, ?string $accessKey = null): void
     {
-        $connectorType = strtolower((string) ($printerConfig['connector'] ?? 'windows'));
-        $connector = match ($connectorType) {
-            'network' => new NetworkPrintConnector(
-                (string) ($printerConfig['host'] ?? '127.0.0.1'),
-                (int) ($printerConfig['port'] ?? 9100),
-            ),
-            default => new WindowsPrintConnector((string) ($printerConfig['name'] ?? '')),
-        };
-
-        $printer = new Printer($connector);
+        $printer = new Printer($this->connectorFactory->make($printerConfig));
         $logoPath = (string) ($printerConfig['logo_path'] ?? '');
 
         if ($logoPath !== '' && is_file($logoPath)) {

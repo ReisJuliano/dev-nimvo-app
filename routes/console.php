@@ -9,6 +9,7 @@ use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalFiscalAgentRunner;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\PosService;
+use App\Support\LocalAgentReceiptPrinter;
 use App\Support\Pkcs12CertificateReader;
 use App\Support\SpedNfeNfceEmitter;
 use App\Support\Tenant\TenantContext;
@@ -151,6 +152,44 @@ Artisan::command('fiscal:agent:process-payload {config} {payloadFile} {--local-t
 
     $this->line(json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 })->purpose('Processa um payload fiscal usando a configuracao do agente local');
+
+Artisan::command('fiscal:agent:print-test {config} {--store-name=Nimvo} {--message=}', function (string $config) use ($resolveOutputPath, $loadJsonFile) {
+    $configPath = $resolveOutputPath($config);
+    $agentConfig = $loadJsonFile($configPath);
+
+    app(LocalAgentReceiptPrinter::class)->printTest(
+        (array) ($agentConfig['printer'] ?? []),
+        [
+            'store_name' => (string) $this->option('store-name'),
+            'message' => (string) $this->option('message'),
+            'issued_at' => now()->toIso8601String(),
+        ],
+    );
+
+    $this->line(json_encode([
+        'status' => 'printed',
+        'type' => 'test',
+        'printed_at' => now()->toIso8601String(),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+})->purpose('Imprime um cupom de teste usando a configuracao local do agente');
+
+Artisan::command('fiscal:agent:print-payment {config} {payloadFile}', function (string $config, string $payloadFile) use ($resolveOutputPath, $loadJsonFile) {
+    $configPath = $resolveOutputPath($config);
+    $payloadPath = $resolveOutputPath($payloadFile);
+    $agentConfig = $loadJsonFile($configPath);
+    $payload = $loadJsonFile($payloadPath);
+
+    app(LocalAgentReceiptPrinter::class)->printPaymentReceipt(
+        $payload,
+        (array) ($agentConfig['printer'] ?? []),
+    );
+
+    $this->line(json_encode([
+        'status' => 'printed',
+        'type' => 'payment_receipt',
+        'printed_at' => now()->toIso8601String(),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+})->purpose('Imprime um comprovante termico via agente local a partir de um JSON');
 
 Artisan::command('fiscal:profile:sample {tenantId} {--cert-path=} {--cert-password=123456} {--cnpj=} {--ie=123456789} {--company-name=Empresa Homologacao LTDA} {--trade-name=Empresa Homologacao} {--state=SP} {--city-code=3550308} {--city-name=Sao Paulo} {--zip-code=01001000} {--street=Rua de Homologacao} {--number=100} {--district=Centro} {--csc-id=} {--csc-token=}', function (string $tenantId) use ($readCertificateSubject) {
     $subject = $readCertificateSubject(
