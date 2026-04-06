@@ -59,9 +59,44 @@ class ExampleTest extends TestCase
 
     public function test_the_application_returns_a_successful_response(): void
     {
-        $response = $this->get('/admin');
+        $response = $this->get('http://nimvo.com.br/admin');
 
         $response->assertRedirect('/admin/login');
+    }
+
+    public function test_central_admin_can_create_a_tenant_using_a_subdomain(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $response = $this->postJson('/admin/tenants', [
+            'client_name' => 'Cliente Centro',
+            'tenant_name' => 'Tenant Centro',
+            'tenant_id' => 'tenant-centro',
+            'subdomain' => 'centro',
+            'client_email' => 'centro@nimvo.com.br',
+            'client_document' => '999',
+            'active' => true,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJson([
+                'message' => 'Tenant criado com sucesso.',
+                'tenant' => [
+                    'id' => 'tenant-centro',
+                ],
+            ]);
+
+        $this->assertDatabaseHas('domains', [
+            'tenant_id' => 'tenant-centro',
+            'domain' => 'centro.nimvo.com.br',
+        ]);
+
+        $this->assertDatabaseHas('clients', [
+            'tenant_id' => 'tenant-centro',
+            'domain' => 'centro.nimvo.com.br',
+            'active' => true,
+        ], 'central');
     }
 
     public function test_central_admin_can_update_a_tenant(): void
@@ -75,7 +110,7 @@ class ExampleTest extends TestCase
         ]);
 
         $tenant->domains()->create([
-            'domain' => 'old.test.lvh.me',
+            'domain' => 'old.nimvo.com.br',
         ]);
 
         Client::create([
@@ -83,14 +118,14 @@ class ExampleTest extends TestCase
             'name' => 'Cliente Antigo',
             'email' => 'old@tenant.com',
             'document' => '111',
-            'domain' => 'old.test.lvh.me',
+            'domain' => 'old.nimvo.com.br',
             'active' => true,
         ]);
 
         $response = $this->putJson("/admin/tenants/{$tenant->id}", [
             'client_name' => 'Cliente Novo',
             'tenant_name' => 'Tenant Novo',
-            'domain' => 'new.test.lvh.me',
+            'subdomain' => 'novo',
             'client_email' => 'new@tenant.com',
             'client_document' => '222',
             'active' => false,
@@ -110,7 +145,7 @@ class ExampleTest extends TestCase
 
         $this->assertDatabaseHas('domains', [
             'tenant_id' => 'tenant-alpha',
-            'domain' => 'new.test.lvh.me',
+            'domain' => 'novo.nimvo.com.br',
         ]);
 
         $this->assertDatabaseHas('clients', [
@@ -118,7 +153,7 @@ class ExampleTest extends TestCase
             'name' => 'Cliente Novo',
             'email' => 'new@tenant.com',
             'document' => '222',
-            'domain' => 'new.test.lvh.me',
+            'domain' => 'novo.nimvo.com.br',
             'active' => false,
         ], 'central');
     }
@@ -134,7 +169,7 @@ class ExampleTest extends TestCase
         ]);
 
         $tenant->domains()->create([
-            'domain' => 'delete.test.lvh.me',
+            'domain' => 'delete.nimvo.com.br',
         ]);
 
         Client::create([
@@ -142,7 +177,7 @@ class ExampleTest extends TestCase
             'name' => 'Cliente Delete',
             'email' => 'delete@tenant.com',
             'document' => '333',
-            'domain' => 'delete.test.lvh.me',
+            'domain' => 'delete.nimvo.com.br',
             'active' => true,
         ]);
 

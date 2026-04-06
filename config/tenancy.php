@@ -5,6 +5,13 @@ declare(strict_types=1);
 use Stancl\Tenancy\Database\Models\Domain;
 use Stancl\Tenancy\Database\Models\Tenant;
 
+$defaultHost = (string) (parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
+$centralDomains = array_values(array_filter(array_map(
+    static fn (string $domain): string => trim(strtolower($domain)),
+    explode(',', (string) env('CENTRAL_DOMAINS', $defaultHost)),
+)));
+$tenantBaseDomain = trim(strtolower((string) env('TENANT_BASE_DOMAIN', $centralDomains[0] ?? $defaultHost)));
+
 return [
     'tenant_model' => \App\Models\Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
@@ -18,7 +25,9 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => [],
+    'central_domains' => $centralDomains,
+
+    'tenant_base_domain' => $tenantBaseDomain,
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

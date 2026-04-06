@@ -63,7 +63,7 @@ class ProvisionTenantService
             return $tenantId;
         }
 
-        $baseId = Str::slug((string) ($data['tenant_name'] ?? $data['client_name'] ?? 'tenant'));
+        $baseId = Str::slug((string) ($data['subdomain'] ?? $data['tenant_name'] ?? $data['client_name'] ?? 'tenant'));
 
         if ($baseId === '') {
             $baseId = 'tenant';

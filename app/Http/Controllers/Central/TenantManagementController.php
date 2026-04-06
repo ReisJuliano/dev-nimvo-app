@@ -16,6 +16,7 @@ use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\ProvisionTenantService;
 use App\Services\Central\TenantLicenseService;
+use App\Support\Tenancy\TenantDomainManager;
 use App\Services\Tenant\LocalAgentReceiptPayloadService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Http\JsonResponse;
@@ -47,18 +48,18 @@ class TenantManagementController extends Controller
             'tenant' => [
                 'id' => (string) $tenant->id,
             ],
-        ]);
+        ], 201);
     }
 
     public function update(
         Request $request,
         Tenant $tenant,
+        TenantDomainManager $domainManager,
     ): JsonResponse {
-        $domain = trim((string) $request->input('domain'));
-        $domain = preg_replace('#^https?://#i', '', $domain);
-        $domain = rtrim((string) $domain, '/');
+        $subdomain = $domainManager->normalizeSubdomain((string) $request->input('subdomain', $request->input('domain')));
         $request->merge([
-            'domain' => $domain,
+            'subdomain' => strtolower($subdomain),
+            'domain' => $domainManager->buildTenantDomain($subdomain),
             'active' => $request->boolean('active', true),
         ]);
 
@@ -73,6 +74,17 @@ class TenantManagementController extends Controller
             'max:255',
             Rule::unique('domains', 'domain')->ignore($tenantDomain?->getKey()),
         ];
+        $subdomainRules = [
+            'required',
+            'string',
+            'min:2',
+            'max:63',
+            'regex:/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/',
+        ];
+
+        if ($domainManager->reservedSubdomains() !== []) {
+            $subdomainRules[] = Rule::notIn($domainManager->reservedSubdomains());
+        }
 
         if ($this->clientsTableExists()) {
             $domainRules[] = Rule::unique('clients', 'domain')->ignore($client?->getKey());
@@ -81,6 +93,7 @@ class TenantManagementController extends Controller
         $data = $request->validate([
             'client_name' => ['required', 'string', 'max:120'],
             'tenant_name' => ['nullable', 'string', 'max:120'],
+            'subdomain' => $subdomainRules,
             'domain' => $domainRules,
             'client_email' => ['nullable', 'email', 'max:120'],
             'client_document' => ['nullable', 'string', 'max:30'],

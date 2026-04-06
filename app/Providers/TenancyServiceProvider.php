@@ -101,6 +101,7 @@ class TenancyServiceProvider extends ServiceProvider
         $this->bootEvents();
         $this->mapRoutes();
 
+        $this->configureMissingTenantHandling();
         $this->makeTenancyMiddlewareHighestPriority();
     }
 
@@ -125,6 +126,12 @@ class TenancyServiceProvider extends ServiceProvider
     protected function mapRoutes()
     {
         //
+    }
+
+    protected function configureMissingTenantHandling(): void
+    {
+        Middleware\InitializeTenancyByDomain::$onFail = static fn () => abort(404);
+        Middleware\InitializeTenancyBySubdomain::$onFail = static fn () => abort(404);
     }
 
     protected function makeTenancyMiddlewareHighestPriority()
