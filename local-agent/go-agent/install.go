@@ -23,6 +23,9 @@ func runInstall(args []string) error {
 	installDir := fs.String("install-dir", defaultInstallDir(), "Pasta de instalacao do agente")
 	enableStartup := fs.Bool("startup", true, "Registrar o agente para iniciar com o Windows")
 	startNow := fs.Bool("start", true, "Iniciar o agente apos instalar")
+	seedConfigPath := fs.String("seed-config", "", "Arquivo JSON com a configuracao inicial do instalador")
+	activationCode := fs.String("activation-code", "", "Codigo de ativacao do tenant")
+	nonInteractive := fs.Bool("non-interactive", false, "Executa a instalacao sem perguntas na tela")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -74,7 +77,20 @@ func runInstall(args []string) error {
 		}
 	}
 
-	config, err := completeInstallationConfig(defaultAgentConfig(), targetLogo)
+	config := defaultAgentConfig()
+	if strings.TrimSpace(*seedConfigPath) != "" {
+		config, err = loadAgentConfig(strings.TrimSpace(*seedConfigPath))
+		if err != nil {
+			return fmt.Errorf("nao foi possivel carregar a configuracao inicial do instalador: %w", err)
+		}
+	}
+
+	config, err = completeInstallationConfig(
+		config,
+		targetLogo,
+		strings.TrimSpace(*activationCode),
+		!*nonInteractive,
+	)
 	if err != nil {
 		return err
 	}
@@ -317,23 +333,37 @@ func launchAgent(vbsPath string) error {
 	return cmd.Start()
 }
 
-func completeInstallationConfig(config AgentConfig, defaultLogoPath string) (AgentConfig, error) {
+func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationCode string, interactive bool) (AgentConfig, error) {
 	var err error
 
 	config = normalizeAgentConfig(config)
 	config.Certificate = Certificate{}
 	config.Printer.LogoPath = resolveAutomaticPrinterLogoPath(defaultLogoPath)
 
-	config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", strings.TrimSpace(config.Backend.BaseURL))
-	if err != nil {
-		return config, err
+	if interactive {
+		config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", strings.TrimSpace(config.Backend.BaseURL))
+		if err != nil {
+			return config, err
+		}
+
+		activationCode, err = promptRequired("Codigo de ativacao do tenant", activationCode)
+		if err != nil {
+			return config, err
+		}
+	} else {
+		config.Backend.BaseURL = strings.TrimSpace(config.Backend.BaseURL)
+		activationCode = strings.TrimSpace(activationCode)
 	}
 
-	activationCode, err := promptRequired("Codigo de ativacao do tenant", "")
-	if err != nil {
-		return config, err
+	if strings.TrimSpace(config.Backend.BaseURL) == "" {
+		return config, errors.New("informe a URL do backend do Nimvo para concluir a instalacao")
 	}
 
+	if strings.TrimSpace(activationCode) == "" {
+		return config, errors.New("informe um codigo de ativacao valido para concluir a instalacao")
+	}
+
+	requestedPollInterval := config.Agent.PollInterval
 	activatedConfig, err := activateInstalledAgentConfig(config.Backend.BaseURL, activationCode)
 	if err != nil {
 		return config, err
@@ -341,64 +371,99 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath string) (Age
 	config.Backend = activatedConfig.Backend
 	config.Agent = activatedConfig.Agent
 
-	pollInterval, err := promptText("Polling em segundos", fmt.Sprintf("%d", config.Agent.PollInterval))
-	if err != nil {
-		return config, err
-	}
-	if parsedPollInterval, parseErr := strconv.Atoi(strings.TrimSpace(pollInterval)); parseErr == nil && parsedPollInterval > 0 {
-		config.Agent.PollInterval = parsedPollInterval
+	if interactive {
+		pollInterval, err := promptText("Polling em segundos", fmt.Sprintf("%d", config.Agent.PollInterval))
+		if err != nil {
+			return config, err
+		}
+		if parsedPollInterval, parseErr := strconv.Atoi(strings.TrimSpace(pollInterval)); parseErr == nil && parsedPollInterval > 0 {
+			config.Agent.PollInterval = parsedPollInterval
+		}
+	} else if requestedPollInterval > 0 {
+		config.Agent.PollInterval = requestedPollInterval
 	}
 
-	config.Printer.Enabled, err = promptBool("Ativar impressao automatica do cupom", config.Printer.Enabled)
-	if err != nil {
-		return config, err
+	if interactive {
+		config.Printer.Enabled, err = promptBool("Ativar impressao automatica do cupom", config.Printer.Enabled)
+		if err != nil {
+			return config, err
+		}
 	}
 
 	if !config.Printer.Enabled {
 		return config, nil
 	}
 
-	config.Printer.Connector, err = promptChoice("Conector da impressora [windows/tcp/pdf]", []string{"windows", "tcp", "pdf"}, config.Printer.Connector)
-	if err != nil {
-		return config, err
+	if interactive {
+		config.Printer.Connector, err = promptChoice("Conector da impressora [windows/tcp/pdf]", []string{"windows", "tcp", "pdf"}, config.Printer.Connector)
+		if err != nil {
+			return config, err
+		}
+	} else {
+		config.Printer.Connector = normalizePrinterConnector(config.Printer.Connector)
 	}
 
-	if config.Printer.Connector == "tcp" {
-		config.Printer.Host, err = promptRequired("IP ou hostname da impressora", config.Printer.Host)
-		if err != nil {
-			return config, err
+	switch normalizePrinterConnector(config.Printer.Connector) {
+	case "tcp", "network":
+		if interactive {
+			config.Printer.Host, err = promptRequired("IP ou hostname da impressora", config.Printer.Host)
+			if err != nil {
+				return config, err
+			}
+
+			port, err := promptRequired("Porta TCP da impressora", fmt.Sprintf("%d", config.Printer.Port))
+			if err != nil {
+				return config, err
+			}
+
+			parsedPort, err := strconv.Atoi(strings.TrimSpace(port))
+			if err != nil || parsedPort <= 0 {
+				return config, errors.New("porta TCP invalida")
+			}
+
+			config.Printer.Port = parsedPort
 		}
 
-		port, err := promptRequired("Porta TCP da impressora", fmt.Sprintf("%d", config.Printer.Port))
-		if err != nil {
-			return config, err
+		config.Printer.Host = strings.TrimSpace(config.Printer.Host)
+		if config.Printer.Host == "" {
+			return config, errors.New("informe o IP ou hostname da impressora TCP")
 		}
 
-		parsedPort, err := strconv.Atoi(strings.TrimSpace(port))
-		if err != nil || parsedPort <= 0 {
-			return config, errors.New("porta TCP invalida")
+		if config.Printer.Port <= 0 {
+			return config, errors.New("informe uma porta TCP valida para a impressora")
 		}
 
-		config.Printer.Port = parsedPort
 		config.Printer.Name = ""
-
 		return config, nil
-	}
-
-	if config.Printer.Connector == "pdf" {
+	case "pdf":
 		config.Printer.Name = ""
 		config.Printer.Host = ""
-		config.Printer.OutputPath = defaultPreviewOutputDir()
-		fmt.Printf("Os cupons de exemplo serao gerados em PDF em: %s\n", config.Printer.OutputPath)
+		if strings.TrimSpace(config.Printer.OutputPath) == "" {
+			config.Printer.OutputPath = defaultPreviewOutputDir()
+		}
+		if interactive {
+			fmt.Printf("Os cupons de exemplo serao gerados em PDF em: %s\n", config.Printer.OutputPath)
+		}
+		return config, nil
+	default:
+		if interactive {
+			config.Printer.Name, err = promptPrinterName(config.Printer.Name)
+			if err != nil {
+				return config, err
+			}
+		}
+
+		config.Printer.Name = strings.TrimSpace(config.Printer.Name)
+		if config.Printer.Name == "" {
+			return config, errors.New("informe o nome da impressora do Windows")
+		}
+
+		if reason := unsupportedWindowsPrinterReason(config.Printer.Name); reason != "" {
+			return config, fmt.Errorf("a impressora %s %s e nao e compativel com o conector windows raw do Nimvo", config.Printer.Name, reason)
+		}
+
 		return config, nil
 	}
-
-	config.Printer.Name, err = promptPrinterName(config.Printer.Name)
-	if err != nil {
-		return config, err
-	}
-
-	return config, nil
 }
 
 func resolveAutomaticPrinterLogoPath(path string) string {
