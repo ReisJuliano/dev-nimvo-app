@@ -49,6 +49,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+	case "list-printers":
+		if err := runListPrinters(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	case "local-test":
 		if err := runLocalTest(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -122,6 +127,19 @@ func runLocalTest(args []string) error {
 
 	if strings.TrimSpace(outputPath) != "" {
 		fmt.Printf("Preview PDF salvo em: %s\n", outputPath)
+	}
+
+	return nil
+}
+
+func runListPrinters(args []string) error {
+	fs := flag.NewFlagSet("list-printers", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	for _, name := range listInstalledPrinters() {
+		fmt.Println(strings.TrimSpace(name))
 	}
 
 	return nil
@@ -306,12 +324,14 @@ func printUsage() {
 	fmt.Println("  daemon     Sobe a API local e envia heartbeat para o backend do Nimvo")
 	fmt.Println("  tray       Sobe o agente em segundo plano com icone na bandeja do Windows")
 	fmt.Println("  run        Alias de daemon")
+	fmt.Println("  list-printers Lista as impressoras Windows compativeis com o Nimvo")
 	fmt.Println("  local-test Imprime um cupom de teste usando a configuracao instalada")
 	fmt.Println("  status     Mostra o estado da instalacao local")
 	fmt.Println("  uninstall  Remove a inicializacao automatica e a configuracao local do agente")
 	fmt.Println("")
 	fmt.Println("Exemplos:")
 	fmt.Println(`  nimvo-fiscal-agent install`)
+	fmt.Println(`  nimvo-fiscal-agent list-printers`)
 	fmt.Println(`  nimvo-fiscal-agent tray`)
 	fmt.Println(`  nimvo-fiscal-agent daemon`)
 	fmt.Println(`  nimvo-fiscal-agent serve`)
