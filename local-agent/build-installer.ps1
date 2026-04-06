@@ -90,11 +90,24 @@ $stagedAgentExe = Join-Path $resolvedStagingDir 'nimvo-fiscal-agent.exe'
 $stagedTrayIcon = Join-Path $resolvedStagingDir 'nimvo.ico'
 $stagedLogoPng = Join-Path $resolvedStagingDir 'nimvo-logo.png'
 $stagedWizardScript = Join-Path $resolvedStagingDir 'install-agent.ps1'
+$stagedWizardLauncher = Join-Path $resolvedStagingDir 'launch-installer.vbs'
 
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stagedTrayIcon -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo-logo.png') -Destination $stagedLogoPng -Force
 Copy-Item -LiteralPath (Join-Path $scriptRoot 'install-agent.ps1') -Destination $stagedWizardScript -Force
+
+$wizardLauncher = @'
+Set shell = CreateObject("WScript.Shell")
+scriptPath = Replace(WScript.ScriptFullName, "launch-installer.vbs", "install-agent.ps1")
+command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File """ & scriptPath & """"
+exitCode = shell.Run(command, 0, True)
+If exitCode <> 0 Then
+  MsgBox "Nao foi possivel abrir o wizard do instalador do Nimvo. Codigo: " & exitCode, 16, "Nimvo Fiscal Agent Setup"
+End If
+'@
+
+Set-Content -LiteralPath $stagedWizardLauncher -Value $wizardLauncher -Encoding ASCII
 
 $targetName = $installerPath
 $sourceRoot = $resolvedStagingDir + '\'
@@ -128,7 +141,7 @@ DisplayLicense=
 FinishMessage=Pacote extraido. Siga a janela de instalacao do agente.
 TargetName=$targetName
 FriendlyName=Nimvo Fiscal Agent Setup
-AppLaunched=powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File install-agent.ps1
+AppLaunched=wscript.exe launch-installer.vbs
 PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
@@ -136,6 +149,7 @@ FILE0="nimvo-fiscal-agent.exe"
 FILE1="nimvo.ico"
 FILE2="nimvo-logo.png"
 FILE3="install-agent.ps1"
+FILE4="launch-installer.vbs"
 [SourceFiles]
 SourceFiles0=$sourceRoot
 [SourceFiles0]
@@ -143,6 +157,7 @@ SourceFiles0=$sourceRoot
 %FILE1%=
 %FILE2%=
 %FILE3%=
+%FILE4%=
 "@
 
 Set-Content -LiteralPath $sedPath -Value $sedContent -Encoding ASCII
