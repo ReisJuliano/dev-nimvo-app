@@ -39,12 +39,13 @@ type Certificate struct {
 }
 
 type PrinterConfig struct {
-	Enabled   bool   `json:"enabled"`
-	Connector string `json:"connector"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-	LogoPath  string `json:"logo_path"`
+	Enabled    bool   `json:"enabled"`
+	Connector  string `json:"connector"`
+	Name       string `json:"name"`
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	LogoPath   string `json:"logo_path"`
+	OutputPath string `json:"output_path"`
 }
 
 type LocalAPIConfig struct {
@@ -68,12 +69,13 @@ func defaultAgentConfig() AgentConfig {
 		},
 		Certificate: Certificate{},
 		Printer: PrinterConfig{
-			Enabled:   true,
-			Connector: "windows",
-			Name:      "",
-			Host:      "127.0.0.1",
-			Port:      9100,
-			LogoPath:  "",
+			Enabled:    true,
+			Connector:  "windows",
+			Name:       "",
+			Host:       "127.0.0.1",
+			Port:       9100,
+			LogoPath:   "",
+			OutputPath: defaultPreviewOutputDir(),
 		},
 		LocalAPI: LocalAPIConfig{
 			Enabled: true,
@@ -132,6 +134,10 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 		config.Printer.Connector = "windows"
 	}
 
+	if strings.TrimSpace(config.Printer.OutputPath) == "" {
+		config.Printer.OutputPath = defaultPreviewOutputDir()
+	}
+
 	if config.Printer.Port <= 0 {
 		config.Printer.Port = 9100
 	}
@@ -171,6 +177,7 @@ func loadInstalledAgentConfig() (AgentConfig, error) {
 	config.Printer.Host = values.stringValue("PrinterHost")
 	config.Printer.Port = values.intValue("PrinterPort", config.Printer.Port)
 	config.Printer.LogoPath = values.stringValue("PrinterLogoPath")
+	config.Printer.OutputPath = values.stringValue("PrinterOutputPath")
 	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
 	config.LocalAPI.Host = values.stringValue("LocalAPIHost")
 	config.LocalAPI.Port = values.intValue("LocalAPIPort", config.LocalAPI.Port)
@@ -203,6 +210,7 @@ func saveInstalledAgentConfig(config AgentConfig) error {
 		{name: "PrinterHost", kind: "REG_SZ", value: config.Printer.Host},
 		{name: "PrinterPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.Printer.Port)},
 		{name: "PrinterLogoPath", kind: "REG_SZ", value: config.Printer.LogoPath},
+		{name: "PrinterOutputPath", kind: "REG_SZ", value: config.Printer.OutputPath},
 		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},
 		{name: "LocalAPIHost", kind: "REG_SZ", value: config.LocalAPI.Host},
 		{name: "LocalAPIPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.LocalAPI.Port)},
@@ -277,6 +285,18 @@ func readLine() (string, error) {
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
+}
+
+func defaultPreviewOutputDir() string {
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		return filepath.Join(home, "Documents", "NimvoFiscalAgent", "prints")
+	}
+
+	if localAppData := strings.TrimSpace(os.Getenv("LOCALAPPDATA")); localAppData != "" {
+		return filepath.Join(localAppData, "NimvoFiscalAgent", "prints")
+	}
+
+	return filepath.Join(os.TempDir(), "NimvoFiscalAgent", "prints")
 }
 
 func dirExists(path string) bool {

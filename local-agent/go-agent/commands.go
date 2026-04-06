@@ -80,29 +80,43 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[s
 			return nil, err
 		}
 
-		if err := printTestReceipt(config.Printer, payload); err != nil {
+		outputPath, err := printTestReceipt(config.Printer, payload)
+		if err != nil {
 			return nil, err
 		}
 
-		return map[string]any{
+		result := map[string]any{
 			"message":    "Teste enviado para a impressora local.",
 			"printed_at": time.Now().Format(time.RFC3339),
-		}, nil
+		}
+		if strings.TrimSpace(outputPath) != "" {
+			result["message"] = "Preview PDF do teste gerado com sucesso."
+			result["output_file"] = outputPath
+		}
+
+		return result, nil
 	case "print_payment_receipt":
 		payload := paymentReceiptRequest{}
 		if err := decodeCommandPayload(command.Payload, &payload); err != nil {
 			return nil, err
 		}
 
-		if err := printPaymentReceipt(config.Printer, payload); err != nil {
+		outputPath, err := printPaymentReceipt(config.Printer, payload)
+		if err != nil {
 			return nil, err
 		}
 
-		return map[string]any{
+		result := map[string]any{
 			"message":     "Comprovante enviado para a impressora local.",
 			"printed_at":  time.Now().Format(time.RFC3339),
 			"sale_number": payload.SaleNumber,
-		}, nil
+		}
+		if strings.TrimSpace(outputPath) != "" {
+			result["message"] = "Preview PDF do comprovante gerado com sucesso."
+			result["output_file"] = outputPath
+		}
+
+		return result, nil
 	default:
 		return nil, fmt.Errorf("tipo de comando nao suportado neste agente: %s", command.Type)
 	}

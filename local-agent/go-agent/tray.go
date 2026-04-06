@@ -329,12 +329,17 @@ func (controller *trayController) printTest() {
 		return
 	}
 
-	err = printTestReceipt(config.Printer, printTestRequest{
+	outputPath, err := printTestReceipt(config.Printer, printTestRequest{
 		StoreName: "Nimvo",
 		Message:   "Teste enviado pelo icone da bandeja do agente local.",
 	})
 	if err != nil {
 		controller.showMessage("Nimvo Fiscal Agent", err.Error(), mbIconError)
+		return
+	}
+
+	if strings.TrimSpace(outputPath) != "" {
+		controller.showMessage("Nimvo Fiscal Agent", "Preview PDF salvo em:\n"+outputPath, mbIconInformation)
 		return
 	}
 

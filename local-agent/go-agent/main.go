@@ -112,10 +112,19 @@ func runLocalTest(args []string) error {
 		return err
 	}
 
-	return printTestReceipt(config.Printer, printTestRequest{
+	outputPath, err := printTestReceipt(config.Printer, printTestRequest{
 		StoreName: "Nimvo",
 		Message:   "Teste local do agente standalone de impressao.",
 	})
+	if err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(outputPath) != "" {
+		fmt.Printf("Preview PDF salvo em: %s\n", outputPath)
+	}
+
+	return nil
 }
 
 func runHeartbeatLoop(options runtimeOptions) error {
@@ -249,12 +258,13 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 			"path": strings.TrimSpace(config.Certificate.Path),
 		},
 		"printer": map[string]any{
-			"enabled":   config.Printer.Enabled,
-			"connector": config.Printer.Connector,
-			"name":      config.Printer.Name,
-			"host":      config.Printer.Host,
-			"port":      config.Printer.Port,
-			"logo_path": config.Printer.LogoPath,
+			"enabled":     config.Printer.Enabled,
+			"connector":   config.Printer.Connector,
+			"name":        config.Printer.Name,
+			"host":        config.Printer.Host,
+			"port":        config.Printer.Port,
+			"logo_path":   config.Printer.LogoPath,
+			"output_path": config.Printer.OutputPath,
 		},
 		"local_api": map[string]any{
 			"enabled": config.LocalAPI.Enabled,

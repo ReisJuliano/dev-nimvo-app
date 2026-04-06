@@ -185,7 +185,8 @@ func (server *localAgentHTTPServer) handlePrintTest(writer http.ResponseWriter, 
 		return
 	}
 
-	if err := printTestReceipt(config.Printer, payload); err != nil {
+	outputPath, err := printTestReceipt(config.Printer, payload)
+	if err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
 			Error:  err.Error(),
@@ -194,9 +195,10 @@ func (server *localAgentHTTPServer) handlePrintTest(writer http.ResponseWriter, 
 	}
 
 	server.writeJSON(writer, http.StatusOK, map[string]any{
-		"status":     "printed",
-		"type":       "test",
-		"printed_at": time.Now().Format(time.RFC3339),
+		"status":      "printed",
+		"type":        "test",
+		"printed_at":  time.Now().Format(time.RFC3339),
+		"output_file": outputPath,
 	})
 }
 
@@ -219,7 +221,8 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 		return
 	}
 
-	if err := printPaymentReceipt(config.Printer, payload); err != nil {
+	outputPath, err := printPaymentReceipt(config.Printer, payload)
+	if err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
 			Error:  err.Error(),
@@ -228,9 +231,10 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 	}
 
 	server.writeJSON(writer, http.StatusOK, map[string]any{
-		"status":     "printed",
-		"type":       "payment_receipt",
-		"printed_at": time.Now().Format(time.RFC3339),
+		"status":      "printed",
+		"type":        "payment_receipt",
+		"printed_at":  time.Now().Format(time.RFC3339),
+		"output_file": outputPath,
 	})
 }
 
@@ -308,8 +312,13 @@ func localAPIBaseURL(config AgentConfig) string {
 }
 
 func printerTarget(config PrinterConfig) string {
-	if strings.EqualFold(strings.TrimSpace(config.Connector), "tcp") || strings.EqualFold(strings.TrimSpace(config.Connector), "network") {
+	connector := normalizePrinterConnector(config.Connector)
+	if connector == "tcp" || connector == "network" {
 		return fmt.Sprintf("%s:%d", config.Host, config.Port)
+	}
+
+	if connector == "pdf" {
+		return strings.TrimSpace(config.OutputPath)
 	}
 
 	return config.Name

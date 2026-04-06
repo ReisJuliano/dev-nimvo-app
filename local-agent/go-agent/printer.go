@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -45,9 +46,13 @@ type paymentReceiptPayment struct {
 	Method string  `json:"method"`
 }
 
-func printTestReceipt(config PrinterConfig, payload printTestRequest) error {
+func printTestReceipt(config PrinterConfig, payload printTestRequest) (string, error) {
 	if !config.Enabled {
-		return errors.New("a impressao local esta desativada neste agente")
+		return "", errors.New("a impressao local esta desativada neste agente")
+	}
+
+	if normalizePrinterConnector(config.Connector) == "pdf" {
+		return writeReceiptPreviewPDF(config, "teste", buildTestReceiptPreviewLines(config, payload))
 	}
 
 	builder := newEscposBuilder()
@@ -73,12 +78,16 @@ func printTestReceipt(config PrinterConfig, payload printTestRequest) error {
 	builder.feed(2)
 	builder.cut()
 
-	return writeReceiptToPrinter(config, builder.bytes())
+	return "", writeReceiptToPrinter(config, builder.bytes())
 }
 
-func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) error {
+func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (string, error) {
 	if !config.Enabled {
-		return errors.New("a impressao local esta desativada neste agente")
+		return "", errors.New("a impressao local esta desativada neste agente")
+	}
+
+	if normalizePrinterConnector(config.Connector) == "pdf" {
+		return writeReceiptPreviewPDF(config, "pagamento", buildPaymentReceiptPreviewLines(config, payload))
 	}
 
 	builder := newEscposBuilder()
@@ -139,7 +148,7 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) er
 	builder.feed(2)
 	builder.cut()
 
-	return writeReceiptToPrinter(config, builder.bytes())
+	return "", writeReceiptToPrinter(config, builder.bytes())
 }
 
 func writeReceiptToPrinter(config PrinterConfig, payload []byte) error {
@@ -157,7 +166,7 @@ func writeReceiptToPrinter(config PrinterConfig, payload []byte) error {
 }
 
 func openPrinterWriter(config PrinterConfig) (io.WriteCloser, error) {
-	connector := strings.ToLower(strings.TrimSpace(config.Connector))
+	connector := normalizePrinterConnector(config.Connector)
 	if connector == "tcp" || connector == "network" {
 		address := fmt.Sprintf("%s:%d", strings.TrimSpace(config.Host), config.Port)
 		if strings.TrimSpace(config.Host) == "" {
@@ -168,6 +177,219 @@ func openPrinterWriter(config PrinterConfig) (io.WriteCloser, error) {
 	}
 
 	return openWindowsPrinterWriter(strings.TrimSpace(config.Name))
+}
+
+func normalizePrinterConnector(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "" {
+		return "windows"
+	}
+
+	return normalized
+}
+
+func buildTestReceiptPreviewLines(config PrinterConfig, payload printTestRequest) []string {
+	lines := []string{
+		orDefault(strings.TrimSpace(payload.StoreName), "Nimvo"),
+		"TESTE DE IMPRESSAO LOCAL",
+		"API DO AGENTE GO",
+		strings.Repeat("=", 48),
+		fmt.Sprintf("Data: %s", formatReceiptDateTime(time.Now().Format(time.RFC3339))),
+		fmt.Sprintf("Conector: %s", strings.ToUpper(orDefault(config.Connector, "windows"))),
+	}
+
+	if target := strings.TrimSpace(printerTarget(config)); target != "" {
+		lines = append(lines, fmt.Sprintf("Destino: %s", target))
+	}
+
+	lines = append(lines,
+		strings.Repeat("-", 48),
+		orDefault(strings.TrimSpace(payload.Message), "Se este cupom saiu corretamente, a ponte local do Nimvo esta operacional."),
+		strings.Repeat("-", 48),
+		"Sem valor fiscal.",
+	)
+
+	return lines
+}
+
+func buildPaymentReceiptPreviewLines(config PrinterConfig, payload paymentReceiptRequest) []string {
+	lines := []string{
+		orDefault(strings.TrimSpace(payload.StoreName), "Nimvo"),
+		"COMPROVANTE DE PAGAMENTO",
+		strings.Repeat("=", 48),
+	}
+
+	if saleNumber := strings.TrimSpace(payload.SaleNumber); saleNumber != "" {
+		lines = append(lines, fmt.Sprintf("Venda: %s", saleNumber))
+	}
+
+	lines = append(lines, fmt.Sprintf("Emissao: %s", formatReceiptDateTime(payload.IssuedAt)))
+
+	if payload.Customer != nil && strings.TrimSpace(payload.Customer.Name) != "" {
+		lines = append(lines, fmt.Sprintf("Cliente: %s", strings.TrimSpace(payload.Customer.Name)))
+	}
+
+	if target := strings.TrimSpace(printerTarget(config)); target != "" {
+		lines = append(lines, fmt.Sprintf("Destino: %s", target))
+	}
+
+	if len(payload.Items) > 0 {
+		lines = append(lines,
+			strings.Repeat("-", 48),
+			"Descricao             Qt  VlrUn   Total",
+		)
+		for _, item := range payload.Items {
+			lines = append(lines, formatReceiptColumns(item.Name, item.Quantity, item.UnitPrice, item.Total))
+		}
+	}
+
+	lines = append(lines,
+		strings.Repeat("-", 48),
+		formatReceiptSummary("Total", payload.Total),
+	)
+
+	if payload.ChangeAmount > 0 {
+		lines = append(lines, formatReceiptSummary("Troco", payload.ChangeAmount))
+	}
+
+	for _, payment := range payload.Payments {
+		label := strings.TrimSpace(payment.Label)
+		if label == "" {
+			label = orDefault(strings.TrimSpace(payment.Method), "Pagamento")
+		}
+		lines = append(lines, formatReceiptSummary(label, payment.Amount))
+	}
+
+	if notes := strings.TrimSpace(payload.Notes); notes != "" {
+		lines = append(lines,
+			strings.Repeat("-", 48),
+			notes,
+		)
+	}
+
+	return lines
+}
+
+func writeReceiptPreviewPDF(config PrinterConfig, kind string, lines []string) (string, error) {
+	outputDir := strings.TrimSpace(config.OutputPath)
+	if outputDir == "" {
+		outputDir = defaultPreviewOutputDir()
+	}
+
+	if err := ensureDir(outputDir); err != nil {
+		return "", err
+	}
+
+	if len(lines) == 0 {
+		lines = []string{"Nimvo"}
+	}
+
+	filename := fmt.Sprintf("nimvo-%s-%s.pdf", strings.TrimSpace(kind), time.Now().Format("20060102-150405-000"))
+	outputPath := filepath.Join(outputDir, filename)
+	content, err := buildReceiptPreviewPDF(lines)
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(outputPath, content, 0o644); err != nil {
+		return "", err
+	}
+
+	return outputPath, nil
+}
+
+func buildReceiptPreviewPDF(lines []string) ([]byte, error) {
+	const (
+		pageWidth  = 226
+		margin     = 18
+		lineHeight = 12
+	)
+
+	pageHeight := margin*2 + maxInt(1, len(lines))*lineHeight + 12
+	if pageHeight < 140 {
+		pageHeight = 140
+	}
+
+	stream := &bytes.Buffer{}
+	stream.WriteString("BT\n")
+	stream.WriteString("/F1 10 Tf\n")
+	stream.WriteString(fmt.Sprintf("%d TL\n", lineHeight))
+	stream.WriteString(fmt.Sprintf("1 0 0 1 %d %d Tm\n", margin, pageHeight-margin))
+	for index, line := range lines {
+		if index > 0 {
+			stream.WriteString("T*\n")
+		}
+		stream.WriteString(fmt.Sprintf("(%s) Tj\n", escapePDFText(normalizePreviewText(line))))
+	}
+	stream.WriteString("ET\n")
+
+	objects := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+		fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>", pageWidth, pageHeight),
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>",
+		fmt.Sprintf("<< /Length %d >>\nstream\n%sendstream", stream.Len(), stream.String()),
+	}
+
+	pdf := &bytes.Buffer{}
+	pdf.WriteString("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")
+	offsets := make([]int, len(objects)+1)
+	for index, object := range objects {
+		offsets[index+1] = pdf.Len()
+		pdf.WriteString(fmt.Sprintf("%d 0 obj\n%s\nendobj\n", index+1, object))
+	}
+
+	xrefOffset := pdf.Len()
+	pdf.WriteString(fmt.Sprintf("xref\n0 %d\n", len(objects)+1))
+	pdf.WriteString("0000000000 65535 f \n")
+	for index := 1; index <= len(objects); index++ {
+		pdf.WriteString(fmt.Sprintf("%010d 00000 n \n", offsets[index]))
+	}
+	pdf.WriteString(fmt.Sprintf("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xrefOffset))
+
+	return pdf.Bytes(), nil
+}
+
+func normalizePreviewText(value string) string {
+	replacer := strings.NewReplacer(
+		"á", "a", "à", "a", "â", "a", "ã", "a", "ä", "a",
+		"Á", "A", "À", "A", "Â", "A", "Ã", "A", "Ä", "A",
+		"é", "e", "è", "e", "ê", "e", "ë", "e",
+		"É", "E", "È", "E", "Ê", "E", "Ë", "E",
+		"í", "i", "ì", "i", "î", "i", "ï", "i",
+		"Í", "I", "Ì", "I", "Î", "I", "Ï", "I",
+		"ó", "o", "ò", "o", "ô", "o", "õ", "o", "ö", "o",
+		"Ó", "O", "Ò", "O", "Ô", "O", "Õ", "O", "Ö", "O",
+		"ú", "u", "ù", "u", "û", "u", "ü", "u",
+		"Ú", "U", "Ù", "U", "Û", "U", "Ü", "U",
+		"ç", "c", "Ç", "C",
+		"º", "o", "ª", "a",
+	)
+
+	normalized := replacer.Replace(strings.ReplaceAll(strings.TrimSpace(value), "\r", ""))
+	buffer := &strings.Builder{}
+	for _, runeValue := range normalized {
+		switch {
+		case runeValue == '\n' || runeValue == '\t':
+			buffer.WriteByte(' ')
+		case runeValue >= 32 && runeValue <= 126:
+			buffer.WriteRune(runeValue)
+		default:
+			buffer.WriteByte('?')
+		}
+	}
+
+	return buffer.String()
+}
+
+func escapePDFText(value string) string {
+	replacer := strings.NewReplacer(
+		`\\`, `\\\\`,
+		`(`, `\(`,
+		`)`, `\)`,
+	)
+
+	return replacer.Replace(value)
 }
 
 func unsupportedWindowsPrinterReason(name string) string {

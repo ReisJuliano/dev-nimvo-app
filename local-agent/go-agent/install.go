@@ -249,8 +249,9 @@ func buildReadme(installDir string) string {
 		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, a impressora e o logo do cupom.",
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
-		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"5. O agente grava a execucao em logs\\agent.log.",
+		"4. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
+		"5. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
+		"6. O agente grava a execucao em logs\\agent.log.",
 		"",
 		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
 		"",
@@ -357,7 +358,7 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath string) (Age
 		return config, nil
 	}
 
-	config.Printer.Connector, err = promptChoice("Conector da impressora [windows/tcp]", []string{"windows", "tcp"}, config.Printer.Connector)
+	config.Printer.Connector, err = promptChoice("Conector da impressora [windows/tcp/pdf]", []string{"windows", "tcp", "pdf"}, config.Printer.Connector)
 	if err != nil {
 		return config, err
 	}
@@ -381,6 +382,14 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath string) (Age
 		config.Printer.Port = parsedPort
 		config.Printer.Name = ""
 
+		return config, nil
+	}
+
+	if config.Printer.Connector == "pdf" {
+		config.Printer.Name = ""
+		config.Printer.Host = ""
+		config.Printer.OutputPath = defaultPreviewOutputDir()
+		fmt.Printf("Os cupons de exemplo serao gerados em PDF em: %s\n", config.Printer.OutputPath)
 		return config, nil
 	}
 
