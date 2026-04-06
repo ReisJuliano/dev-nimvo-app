@@ -15,11 +15,15 @@ class CentralAdminSeeder extends Seeder
             return;
         }
 
+        $username = trim((string) env('CENTRAL_ADMIN_USERNAME', 'admin')) ?: 'admin';
+        $password = (string) env('CENTRAL_ADMIN_PASSWORD', '123456');
+        $name = trim((string) env('CENTRAL_ADMIN_NAME', 'Administrador Central')) ?: 'Administrador Central';
+
         AdminUser::query()->firstOrCreate(
-            ['username' => 'admin'],
+            ['username' => $username],
             [
-                'name' => 'Administrador Central',
-                'password' => Hash::make('123456'),
+                'name' => $name,
+                'password' => Hash::make($password),
                 'active' => true,
             ],
         );

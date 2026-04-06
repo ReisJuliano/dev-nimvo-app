@@ -7,6 +7,10 @@ use App\Http\Middleware\Central\AuthenticateLocalAgent;
 use App\Http\Controllers\Central\TenantManagementController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/', function () {
+    return redirect()->route('central.admin.home');
+})->name('central.home');
+
 Route::prefix('admin')->name('central.admin.')->group(function () {
     Route::get('/', function () {
         return auth('central_admin')->check()
