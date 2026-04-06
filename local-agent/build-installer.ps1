@@ -89,36 +89,12 @@ finally {
 $stagedAgentExe = Join-Path $resolvedStagingDir 'nimvo-fiscal-agent.exe'
 $stagedTrayIcon = Join-Path $resolvedStagingDir 'nimvo.ico'
 $stagedLogoPng = Join-Path $resolvedStagingDir 'nimvo-logo.png'
-$stagedInstallScript = Join-Path $resolvedStagingDir 'install-agent.cmd'
+$stagedWizardScript = Join-Path $resolvedStagingDir 'install-agent.ps1'
 
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stagedTrayIcon -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo-logo.png') -Destination $stagedLogoPng -Force
-
-$installScript = @'
-@echo off
-setlocal
-title Nimvo Fiscal Agent Setup
-echo ========================================
-echo Nimvo Fiscal Agent Setup
-echo ========================================
-echo.
-echo O instalador vai configurar o agente local do Nimvo nesta maquina.
-echo Ele vai pedir a URL do Nimvo, o codigo de ativacao do tenant e a impressora da maquina.
-echo.
-"%~dp0nimvo-fiscal-agent.exe" install
-set "EXIT_CODE=%ERRORLEVEL%"
-echo.
-if not "%EXIT_CODE%"=="0" (
-  echo A instalacao falhou com codigo %EXIT_CODE%.
-  pause
-  exit /b %EXIT_CODE%
-)
-echo Instalacao concluida com sucesso.
-pause
-'@
-
-Set-Content -LiteralPath $stagedInstallScript -Value $installScript -Encoding ASCII
+Copy-Item -LiteralPath (Join-Path $repoRoot 'local-agent' 'install-agent.ps1') -Destination $stagedWizardScript -Force
 
 $targetName = $installerPath
 $sourceRoot = $resolvedStagingDir + '\'
@@ -152,14 +128,14 @@ DisplayLicense=
 FinishMessage=Pacote extraido. Siga a janela de instalacao do agente.
 TargetName=$targetName
 FriendlyName=Nimvo Fiscal Agent Setup
-AppLaunched=cmd.exe /k install-agent.cmd
+AppLaunched=powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -File install-agent.ps1
 PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
 FILE0="nimvo-fiscal-agent.exe"
 FILE1="nimvo.ico"
 FILE2="nimvo-logo.png"
-FILE3="install-agent.cmd"
+FILE3="install-agent.ps1"
 [SourceFiles]
 SourceFiles0=$sourceRoot
 [SourceFiles0]
