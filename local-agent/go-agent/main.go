@@ -125,15 +125,23 @@ func runHeartbeatLoop(options runtimeOptions) error {
 		interval := time.Duration(maxInt(1, config.Agent.PollInterval)) * time.Second
 		lastInterval = interval
 
-		if err := sendHeartbeat(config); err != nil {
-			fmt.Fprintf(os.Stderr, "Falha no heartbeat do agente: %s\n", err.Error())
+		heartbeatErr := sendHeartbeat(config)
+		if heartbeatErr != nil {
+			fmt.Fprintf(os.Stderr, "Falha no heartbeat do agente: %s\n", heartbeatErr.Error())
+		}
 
-			if options.Once {
-				return err
-			}
+		commandErr := pollAndProcessCommands(config)
+		if commandErr != nil {
+			fmt.Fprintf(os.Stderr, "Falha ao consumir a fila central do agente: %s\n", commandErr.Error())
 		}
 
 		if options.Once {
+			if heartbeatErr != nil {
+				return heartbeatErr
+			}
+			if commandErr != nil {
+				return commandErr
+			}
 			return nil
 		}
 

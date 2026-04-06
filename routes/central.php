@@ -44,6 +44,7 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
         Route::put('/tenants/{tenant}/local-agent', [TenantManagementController::class, 'upsertLocalAgent'])->name('tenants.local-agent.upsert');
         Route::post('/tenants/{tenant}/local-agent/activation-code', [TenantManagementController::class, 'issueLocalAgentActivationCode'])->name('tenants.local-agent.activation-code');
+        Route::post('/tenants/{tenant}/local-agent/test-print', [TenantManagementController::class, 'queueLocalAgentTestPrint'])->name('tenants.local-agent.test-print');
         Route::put('/tenants/{tenant}/license', [TenantManagementController::class, 'updateLicense'])->name('tenants.license.update');
         Route::patch('/tenant-license-invoices/{invoice}/status', [TenantManagementController::class, 'updateLicenseInvoiceStatus'])->name('tenant-license-invoices.status');
     });

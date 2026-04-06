@@ -12,9 +12,11 @@ use App\Models\Central\TenantLicenseInvoice;
 use App\Models\Central\TenantSetting;
 use App\Models\Tenant;
 use App\Services\Central\LocalAgentBootstrapService;
+use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\ProvisionTenantService;
 use App\Services\Central\TenantLicenseService;
+use App\Services\Tenant\LocalAgentReceiptPayloadService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -309,6 +311,43 @@ class TenantManagementController extends Controller
                 'expires_at' => $issued['expires_at'],
             ],
             'agent' => $this->serializeLocalAgent($agent, $configService, $bootstrapService),
+        ]);
+    }
+
+    public function queueLocalAgentTestPrint(
+        Tenant $tenant,
+        LocalAgentCommandService $commandService,
+        LocalAgentReceiptPayloadService $payloadService,
+        LocalAgentConfigService $configService,
+        LocalAgentBootstrapService $bootstrapService,
+    ): JsonResponse {
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+
+        $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
+        abort_unless($agent, 404, 'Nenhum agente fiscal foi cadastrado para este tenant.');
+        abort_unless($agent->active, 422, 'Ative o agente fiscal antes de enviar um teste de impressao.');
+
+        if (data_get($agent->metadata, 'device.printer.enabled') === false) {
+            abort(422, 'A impressora local deste agente esta desativada no momento.');
+        }
+
+        $command = $commandService->queuePrintTest(
+            $agent,
+            (string) $tenant->id,
+            $payloadService->buildTestPrintPayload(
+                storeName: $tenant->name ?: (string) $tenant->id,
+                message: 'Teste disparado pelo painel administrativo do Nimvo.',
+            ),
+        );
+
+        return response()->json([
+            'message' => 'Teste enviado para a fila central de impressao do agente.',
+            'command' => [
+                'id' => $command->id,
+                'status' => $command->status,
+                'type' => $command->type,
+            ],
+            'agent' => $this->serializeLocalAgent($agent->fresh(), $configService, $bootstrapService),
         ]);
     }
 

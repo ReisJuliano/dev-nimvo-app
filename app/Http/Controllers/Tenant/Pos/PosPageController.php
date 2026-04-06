@@ -8,9 +8,8 @@ use App\Models\Tenant\Category;
 use App\Models\Tenant\Company;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\User;
-use App\Services\Tenant\OrderDraftService;
-use App\Services\Tenant\LocalAgentBridgeService;
 use App\Services\Tenant\PendingSaleService;
+use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
@@ -25,7 +24,6 @@ class PosPageController extends Controller
 
     public function __invoke(
         OrderDraftService $orderDraftService,
-        LocalAgentBridgeService $localAgentBridgeService,
         PendingSaleService $pendingSaleService,
         PosRecommendationService $recommendationService,
         TenantSettingsService $settingsService,
@@ -59,7 +57,6 @@ class PosPageController extends Controller
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'pendingSale' => $pendingSaleService->serialize($pendingSale),
             'recommendations' => $recommendationService->build(),
-            'localAgentBridge' => $localAgentBridgeService->forCurrentTenant(),
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,
                 'status' => $cashRegister->status,

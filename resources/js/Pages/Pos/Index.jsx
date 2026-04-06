@@ -10,7 +10,6 @@ import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
-import { canUseLocalAgentBridge, printPaymentReceiptViaLocalAgent } from '@/lib/localAgentBridge'
 import { buildDiscountDraft, buildPreviewConfigFromDraft, resolvePricing, roundCurrency } from '@/Pages/Orders/orderUtils'
 import './pos.css'
 
@@ -111,59 +110,6 @@ function normalizeCartItem(item) {
     }
 }
 
-function buildPaymentReceiptMarkup({ saleNumber, totals, payments, customer, cashChange }) {
-    const rows = payments
-        .map((payment) => `
-            <tr>
-                <td>${payment.label}</td>
-                <td>${formatMoney(payment.amount)}</td>
-            </tr>
-        `)
-        .join('')
-
-    return `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-            <head>
-                <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>Comprovante ${saleNumber}</title>
-                <style>
-                    * { box-sizing: border-box; }
-                    body { margin: 0; padding: 16px; font-family: Arial, sans-serif; color: #111827; }
-                    .receipt { width: 300px; margin: 0 auto; }
-                    h1, h2, p { margin: 0; }
-                    h1 { font-size: 18px; margin-bottom: 4px; text-align: center; }
-                    p { font-size: 12px; text-align: center; margin-bottom: 12px; color: #4b5563; }
-                    .meta, .totals { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #cbd5e1; }
-                    .meta div, .totals div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; font-size: 12px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-                    td { padding: 6px 0; font-size: 12px; border-bottom: 1px dashed #e2e8f0; }
-                    td:last-child { text-align: right; }
-                    .footer { text-align: center; font-size: 11px; color: #64748b; margin-top: 16px; }
-                </style>
-            </head>
-            <body>
-                <div class="receipt">
-                    <h1>Comprovante de pagamento</h1>
-                    <p>Venda ${saleNumber}</p>
-                    <div class="meta">
-                        <div><span>Cliente</span><strong>${customer?.name || 'Nao identificado'}</strong></div>
-                    </div>
-                    <table><tbody>${rows}</tbody></table>
-                    <div class="totals">
-                        <div><span>Subtotal</span><strong>${formatMoney(totals.subtotal)}</strong></div>
-                        <div><span>Desconto</span><strong>${formatMoney(totals.discount)}</strong></div>
-                        <div><span>Total</span><strong>${formatMoney(totals.total)}</strong></div>
-                        <div><span>Troco</span><strong>${formatMoney(cashChange)}</strong></div>
-                    </div>
-                    <div class="footer">Emitido em ${new Date().toLocaleString('pt-BR')}</div>
-                </div>
-            </body>
-        </html>
-    `
-}
-
 export default function PosIndex({
     categories,
     customers: initialCustomers,
@@ -175,7 +121,6 @@ export default function PosIndex({
     preloadedOrderDraft,
     pendingSale: initialPendingSale,
     recommendations: initialRecommendations,
-    localAgentBridge = null,
     posCapabilities = {},
 }) {
     const { tenant } = usePage().props
@@ -1805,63 +1750,6 @@ export default function PosIndex({
         }
     }
 
-    function buildLocalAgentReceiptPayload(saleNumber) {
-        return {
-            store_name: tenant?.name || 'Nimvo',
-            sale_number: saleNumber,
-            issued_at: new Date().toISOString(),
-            total: totals.total,
-            change_amount: cashChange,
-            notes: notes || null,
-            customer: selectedCustomerData ? { name: selectedCustomerData.name } : null,
-            items: pricing.items.map((item) => ({
-                name: item.name,
-                quantity: Number(item.qty),
-                unit_price: Number(item.sale_price || 0),
-                total: Number(item.lineTotal ?? Number(item.sale_price || 0) * Number(item.qty || 0)),
-            })),
-            payments: currentPaymentsSummary.map((payment) => ({
-                label: payment.label,
-                amount: Number(payment.amount || 0),
-                method: payment.method,
-            })),
-        }
-    }
-
-    async function printPaymentReceipt(saleNumber) {
-        let localBridgeError = null
-
-        if (canUseLocalAgentBridge(localAgentBridge) && localAgentBridge?.printer_enabled !== false) {
-            try {
-                await printPaymentReceiptViaLocalAgent(localAgentBridge, buildLocalAgentReceiptPayload(saleNumber))
-                return
-            } catch (error) {
-                localBridgeError = error
-            }
-        }
-
-        const markup = buildPaymentReceiptMarkup({
-            saleNumber,
-            totals,
-            payments: currentPaymentsSummary,
-            customer: selectedCustomerData,
-            cashChange,
-        })
-
-        const printWindow = window.open('', '_blank', 'width=420,height=760')
-        if (!printWindow) {
-            if (localBridgeError) {
-                throw new Error(`Falha ao imprimir pelo agente local (${localBridgeError.message}) e o navegador bloqueou a janela de impressao.`)
-            }
-
-            throw new Error('O navegador bloqueou a janela de impressao.')
-        }
-
-        printWindow.document.write(markup)
-        printWindow.document.close()
-        setTimeout(() => printWindow.print(), 150)
-    }
-
     async function handleCloseSaleWithoutFiscal() {
         setSubmitting(true)
 
@@ -1869,11 +1757,13 @@ export default function PosIndex({
             const finalizedOrderDraftId = activeOrderDraftId
             const response = await finalizeSale({ fiscalDecision: 'close', requestedDocumentModel: '65' })
 
-            await concludeFinalizedSale(finalizedOrderDraftId, async () => {
-                await printPaymentReceipt(response.sale.sale_number)
-            })
+            await concludeFinalizedSale(finalizedOrderDraftId)
 
-            showFeedback('success', `Venda ${response.sale.sale_number} finalizada com comprovante de pagamento.`)
+            const printMessage = response.local_agent_print?.message
+                ? ` ${response.local_agent_print.message}`
+                : ''
+
+            showFeedback('success', `Venda ${response.sale.sale_number} finalizada.${printMessage}`)
         } catch (error) {
             showFeedback('error', error.message)
         } finally {

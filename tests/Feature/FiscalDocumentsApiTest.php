@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Central\LocalAgent;
+use App\Models\Central\LocalAgentCommand;
 use App\Models\Tenant as TenantModel;
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\FiscalDocument;
@@ -260,6 +261,120 @@ class FiscalDocumentsApiTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_pos_finalize_queues_a_payment_receipt_for_the_local_agent(): void
+    {
+        $user = $this->actingOperator();
+
+        CashRegister::query()->create([
+            'user_id' => $user->id,
+            'status' => 'open',
+            'opening_amount' => 0,
+            'opened_at' => now(),
+        ]);
+
+        $product = Product::query()->create([
+            'code' => 'COPO',
+            'barcode' => '7891234567000',
+            'ncm' => '39241000',
+            'cfop' => '5102',
+            'cest' => null,
+            'origin_code' => '0',
+            'icms_csosn' => '102',
+            'pis_cst' => '49',
+            'cofins_cst' => '49',
+            'name' => 'Copo Personalizado',
+            'description' => null,
+            'unit' => 'UN',
+            'cost_price' => 5,
+            'sale_price' => 12.5,
+            'stock_quantity' => 20,
+            'min_stock' => 0,
+            'active' => true,
+        ]);
+
+        /** @var LocalAgentBootstrapService $bootstrapService */
+        $bootstrapService = app(LocalAgentBootstrapService::class);
+        $agent = $bootstrapService->upsertForTenant((string) $this->tenant->id, [
+            'name' => 'PDV Impressao',
+            'active' => true,
+        ]);
+        $agent->forceFill([
+            'metadata' => array_replace_recursive($agent->metadata ?? [], [
+                'device' => [
+                    'printer' => [
+                        'enabled' => true,
+                    ],
+                ],
+            ]),
+        ])->save();
+
+        $response = $this->postJson('/api/pdv/sales', [
+            'discount' => 0,
+            'notes' => 'Fila central',
+            'fiscal_decision' => 'close',
+            'requested_document_model' => '65',
+            'items' => [
+                [
+                    'id' => $product->id,
+                    'qty' => 2,
+                    'discount' => 0,
+                ],
+            ],
+            'payments' => [
+                [
+                    'method' => 'cash',
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('local_agent_print.status', 'queued');
+
+        $command = LocalAgentCommand::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('type', 'print_payment_receipt')
+            ->latest('created_at')
+            ->firstOrFail();
+
+        $this->assertSame('pending', $command->status);
+        $this->assertSame('Loja Fiscal', data_get($command->payload, 'store_name'));
+        $this->assertSame('Dinheiro', data_get($command->payload, 'payments.0.label'));
+        $this->assertSame('Copo Personalizado', data_get($command->payload, 'items.0.name'));
+    }
+
+    public function test_local_agent_poll_can_filter_only_supported_print_commands(): void
+    {
+        [$agent, $secret] = $this->makeAgentWithSecret();
+
+        LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $this->tenant->id,
+            'type' => 'emit_nfce',
+            'status' => 'pending',
+            'payload' => ['document' => 'fiscal'],
+            'available_at' => now(),
+        ]);
+
+        LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $this->tenant->id,
+            'type' => 'print_test',
+            'status' => 'pending',
+            'payload' => ['store_name' => 'Loja Fiscal', 'message' => 'Teste'],
+            'available_at' => now(),
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/commands/poll', [
+            'supported_types' => ['print_test'],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('command.type', 'print_test');
     }
 
     public function test_it_requires_csc_data_before_queueing_a_fiscal_document(): void

@@ -33,12 +33,54 @@ class LocalAgentCommandService
         ]);
     }
 
-    public function claimNext(LocalAgent $agent): ?LocalAgentCommand
+    public function queuePaymentReceipt(LocalAgent $agent, string $tenantId, array $payload): LocalAgentCommand
+    {
+        $saleId = (int) ($payload['sale_id'] ?? 0);
+
+        if ($saleId > 0) {
+            $existing = LocalAgentCommand::query()
+                ->where('local_agent_id', $agent->id)
+                ->where('tenant_id', $tenantId)
+                ->where('type', 'print_payment_receipt')
+                ->whereIn('status', ['pending', 'processing'])
+                ->latest('created_at')
+                ->take(20)
+                ->get()
+                ->first(fn (LocalAgentCommand $command) => (int) data_get($command->payload, 'sale_id') === $saleId);
+
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'type' => 'print_payment_receipt',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
+    public function queuePrintTest(LocalAgent $agent, string $tenantId, array $payload): LocalAgentCommand
+    {
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'type' => 'print_test',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
+    public function claimNext(LocalAgent $agent, array $supportedTypes = []): ?LocalAgentCommand
     {
         $timeout = config('fiscal.agents.command_timeout_seconds', 120);
 
-        return DB::connection('central')->transaction(function () use ($agent, $timeout) {
-            $command = LocalAgentCommand::query()
+        return DB::connection('central')->transaction(function () use ($agent, $timeout, $supportedTypes) {
+            $query = LocalAgentCommand::query()
                 ->where('local_agent_id', $agent->id)
                 ->where(function ($query) use ($timeout) {
                     $query
@@ -54,9 +96,13 @@ class LocalAgentCommandService
                         ->whereNull('available_at')
                         ->orWhere('available_at', '<=', now());
                 })
-                ->orderBy('created_at')
-                ->lockForUpdate()
-                ->first();
+                ->orderBy('created_at');
+
+            if ($supportedTypes !== []) {
+                $query->whereIn('type', $supportedTypes);
+            }
+
+            $command = $query->lockForUpdate()->first();
 
             if (!$command) {
                 return null;

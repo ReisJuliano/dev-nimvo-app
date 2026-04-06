@@ -13,6 +13,7 @@ use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\DiscountAuthorizationService;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
+use App\Services\Tenant\LocalAgentPrintQueueService;
 use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
@@ -269,15 +270,34 @@ class PosApiController extends Controller
     public function finalize(
         FinalizeSaleRequest $request,
         PosService $posService,
+        LocalAgentPrintQueueService $printQueueService,
     ): JsonResponse {
         $this->validateDiscountAuthorizations($request);
 
         $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
+        $printResult = null;
+
+        if (($sale['fiscal_decision'] ?? null) === 'close') {
+            $saleModel = Sale::query()->find($sale['sale_id']);
+
+            if ($saleModel) {
+                try {
+                    $printResult = $printQueueService->queuePaymentReceiptForSale($saleModel);
+                } catch (\Throwable) {
+                    $printResult = [
+                        'status' => 'failed',
+                        'message' => 'Venda finalizada. Nao foi possivel enviar o comprovante para a fila central de impressao.',
+                    ];
+                }
+            }
+        }
+
         $request->session()->forget('pos.discount_authorizations');
 
         return response()->json([
             'message' => 'Venda finalizada com sucesso.',
             'sale' => $sale,
+            'local_agent_print' => $printResult,
         ]);
     }
 

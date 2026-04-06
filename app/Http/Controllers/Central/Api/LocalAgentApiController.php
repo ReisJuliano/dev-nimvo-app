@@ -100,7 +100,12 @@ class LocalAgentApiController extends Controller
     ): JsonResponse {
         /** @var LocalAgent $agent */
         $agent = $request->attributes->get('localAgent');
-        $command = $commandService->claimNext($agent);
+        $validated = $request->validate([
+            'supported_types' => ['nullable', 'array'],
+            'supported_types.*' => ['string', 'max:30'],
+        ]);
+        $supportedTypes = array_values(array_filter((array) ($validated['supported_types'] ?? [])));
+        $command = $commandService->claimNext($agent, $supportedTypes);
 
         if (!$command) {
             return response()->json(['command' => null]);
@@ -157,7 +162,7 @@ class LocalAgentApiController extends Controller
         }
 
         return response()->json([
-            'message' => 'Resultado do comando fiscal recebido.',
+            'message' => 'Resultado do comando recebido.',
             'command' => [
                 'id' => $command->id,
                 'status' => $command->status,

@@ -4,7 +4,6 @@ import AdminLayout from '@/Layouts/AdminLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { formatMoney } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
-import { printTestViaLocalAgent } from '@/lib/localAgentBridge'
 import { CUSTOM_PRESET, getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
 
@@ -65,19 +64,6 @@ function buildLocalAgentForm(tenant = null) {
         name: agent?.name || `Agente fiscal ${tenant?.id || ''}`.trim(),
         active: agent?.active ?? true,
         poll_interval_seconds: String(agent?.runtime_config?.poll_interval_seconds || 3),
-    }
-}
-
-function buildLocalAgentBridge(agent) {
-    const host = agent?.device?.local_api_host || '127.0.0.1'
-    const port = agent?.device?.local_api_port || 18123
-    const baseUrl = agent?.device?.local_api_url || `http://${host}:${port}`
-
-    return {
-        enabled: Boolean(agent?.active && agent?.device?.local_api_enabled !== false),
-        base_url: String(baseUrl || '').replace(/\/+$/, ''),
-        agent_key: agent?.agent_key || '',
-        printer_enabled: agent?.device?.printer_enabled !== false,
     }
 }
 
@@ -1292,9 +1278,7 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
     }
 
     async function handleTestLocalAgentPrint() {
-        const agent = localAgentTenant?.local_agent
-
-        if (!agent) {
+        if (!localAgentTenant?.local_agent) {
             return
         }
 
@@ -1302,12 +1286,11 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
         setFeedback(null)
 
         try {
-            await printTestViaLocalAgent(buildLocalAgentBridge(agent), {
-                store_name: localAgentTenant?.name || 'Nimvo',
-                message: 'Teste disparado pelo painel administrativo do Nimvo.',
+            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/test-print`, {
+                method: 'post',
             })
 
-            setFeedback({ type: 'success', text: 'Teste de impressao enviado para a API local do agente.' })
+            setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
