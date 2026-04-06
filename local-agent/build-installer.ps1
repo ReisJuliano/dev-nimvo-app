@@ -1,14 +1,32 @@
 [CmdletBinding()]
 param(
-    [string]$OutputDir = (Join-Path $PSScriptRoot 'dist'),
-    [string]$BuildRoot = (Join-Path $PSScriptRoot 'build'),
-    [string]$AgentBinaryPath = (Join-Path $PSScriptRoot 'bin\nimvo-fiscal-agent.exe'),
+    [string]$OutputDir,
+    [string]$BuildRoot,
+    [string]$AgentBinaryPath,
     [string]$InstallerName = 'nimvo-fiscal-agent-setup.exe',
     [switch]$KeepBuildFiles
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+$scriptRoot = if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+    Split-Path -Parent $MyInvocation.MyCommand.Path
+} else {
+    $PSScriptRoot
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputDir)) {
+    $OutputDir = Join-Path $scriptRoot 'dist'
+}
+
+if ([string]::IsNullOrWhiteSpace($BuildRoot)) {
+    $BuildRoot = Join-Path $scriptRoot 'build'
+}
+
+if ([string]::IsNullOrWhiteSpace($AgentBinaryPath)) {
+    $AgentBinaryPath = Join-Path $scriptRoot 'bin\nimvo-fiscal-agent.exe'
+}
 
 $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 $BuildRoot = [System.IO.Path]::GetFullPath($BuildRoot)
@@ -30,7 +48,7 @@ function New-CleanDirectory {
     New-Item -ItemType Directory -Path $Path -Force | Out-Null
 }
 
-$goProjectDir = Join-Path $PSScriptRoot 'go-agent'
+$goProjectDir = Join-Path $scriptRoot 'go-agent'
 $iexpressPath = Join-Path $env:SystemRoot 'System32\iexpress.exe'
 $stagingDir = Join-Path $BuildRoot 'installer-files'
 $sedPath = Join-Path $BuildRoot 'nimvo-fiscal-agent.sed'
@@ -69,9 +87,11 @@ finally {
 }
 
 $stagedAgentExe = Join-Path $resolvedStagingDir 'nimvo-fiscal-agent.exe'
+$stagedTrayIcon = Join-Path $resolvedStagingDir 'nimvo.ico'
 $stagedInstallScript = Join-Path $resolvedStagingDir 'install-agent.cmd'
 
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
+Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stagedTrayIcon -Force
 
 $installScript = @'
 @echo off
@@ -139,12 +159,14 @@ PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
 FILE0="nimvo-fiscal-agent.exe"
-FILE1="install-agent.cmd"
+FILE1="nimvo.ico"
+FILE2="install-agent.cmd"
 [SourceFiles]
 SourceFiles0=$sourceRoot
 [SourceFiles0]
 %FILE0%=
 %FILE1%=
+%FILE2%=
 "@
 
 Set-Content -LiteralPath $sedPath -Value $sedContent -Encoding ASCII

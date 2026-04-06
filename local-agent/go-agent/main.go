@@ -39,6 +39,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+	case "tray":
+		if err := runTray(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	case "install":
 		if err := runInstall(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -289,6 +294,7 @@ func printUsage() {
 	fmt.Println("  install    Instala o agente local do Nimvo e configura a inicializacao automatica")
 	fmt.Println("  serve      Sobe somente a API HTTP local para a ponte de impressao")
 	fmt.Println("  daemon     Sobe a API local e envia heartbeat para o backend do Nimvo")
+	fmt.Println("  tray       Sobe o agente em segundo plano com icone na bandeja do Windows")
 	fmt.Println("  run        Alias de daemon")
 	fmt.Println("  local-test Imprime um cupom de teste usando a configuracao instalada")
 	fmt.Println("  status     Mostra o estado da instalacao local")
@@ -296,6 +302,7 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("Exemplos:")
 	fmt.Println(`  nimvo-fiscal-agent install`)
+	fmt.Println(`  nimvo-fiscal-agent tray`)
 	fmt.Println(`  nimvo-fiscal-agent daemon`)
 	fmt.Println(`  nimvo-fiscal-agent serve`)
 }

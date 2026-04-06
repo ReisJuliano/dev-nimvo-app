@@ -38,8 +38,10 @@ func runInstall(args []string) error {
 		return err
 	}
 
+	sourceDir := filepath.Dir(currentExe)
 	targetExe := filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")
 	targetLog := filepath.Join(installRoot, "logs", "agent.log")
+	targetIcon := filepath.Join(installRoot, "assets", "nimvo.ico")
 	targetRunCmd := filepath.Join(installRoot, "run-agent.cmd")
 	targetRunVbs := filepath.Join(installRoot, "run-agent.vbs")
 	targetUninstall := filepath.Join(installRoot, "uninstall-agent.cmd")
@@ -48,6 +50,7 @@ func runInstall(args []string) error {
 	for _, directory := range []string{
 		filepath.Join(installRoot, "bin"),
 		filepath.Join(installRoot, "logs"),
+		filepath.Join(installRoot, "assets"),
 	} {
 		if err := ensureDir(directory); err != nil {
 			return err
@@ -56,6 +59,12 @@ func runInstall(args []string) error {
 
 	if err := copyFile(currentExe, targetExe); err != nil {
 		return err
+	}
+
+	if sourceIcon := filepath.Join(sourceDir, "nimvo.ico"); fileExists(sourceIcon) {
+		if err := copyFile(sourceIcon, targetIcon); err != nil {
+			return err
+		}
 	}
 
 	config, err := completeInstallationConfig(defaultAgentConfig())
@@ -197,10 +206,7 @@ func buildRunScript(exePath, logPath string) string {
 	return strings.Join([]string{
 		"@echo off",
 		"setlocal",
-		":loop",
-		fmt.Sprintf(`"%s" daemon >> "%s" 2>&1`, exePath, logPath),
-		"timeout /t 5 /nobreak >nul",
-		"goto loop",
+		fmt.Sprintf(`"%s" tray >> "%s" 2>&1`, exePath, logPath),
 		"",
 	}, "\r\n")
 }
@@ -233,7 +239,7 @@ func buildReadme(installDir string) string {
 		"",
 		"Fluxo sugerido:",
 		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, a impressora e o logo do cupom.",
-		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano no Windows.",
+		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
 		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
 		"5. O agente grava a execucao em logs\\agent.log.",
