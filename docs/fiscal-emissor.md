@@ -72,19 +72,24 @@ php artisan fiscal:agent:run C:\caminho\agent-config.json --once
 
 Para gerar um `.exe` instalavel do agente local:
 
-1. Crie a configuracao base do tenant:
+1. Instale o Inno Setup 6 na maquina que gera o pacote:
 
-```bash
-php artisan fiscal:agent:create tenant-fiscal "PDV Loja 1" --write-config=storage/app/fiscal-agent/tenant-fiscal.json
+```powershell
+winget install JRSoftware.InnoSetup
 ```
 
 2. Monte o instalador:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\local-agent\build-installer.ps1 -SeedConfigPath .\storage\app\fiscal-agent\tenant-fiscal.json
+powershell -ExecutionPolicy Bypass -File .\local-agent\build-installer.ps1
 ```
 
-O script recompila `local-agent/bin/nimvo-fiscal-agent.exe` e gera um `setup.exe` em `local-agent/dist/`. Esse pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicializacao automatica no Windows, usa o bootstrap do tenant quando ele vier embutido no instalador e grava a configuracao local da maquina no registro do Windows. O setup coleta os dados do tenant, a impressora, o logo do cupom e a API local.
+O script recompila `local-agent/bin/nimvo-fiscal-agent.exe` e gera um `setup.exe` profissional em `local-agent/dist/` usando Inno Setup. O pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicializacao automatica no Windows, grava a configuracao local no registro e apresenta um wizard nativo com:
+
+- URL do backend central do Nimvo
+- codigo de ativacao do tenant
+- polling em segundos
+- impressora Windows, TCP ou preview em PDF
 
 ## Emissao via API tenant
 
@@ -102,7 +107,7 @@ POST /api/fiscal/documents
 
 - O projeto esta pronto para usar a fila atual do Laravel. Hoje ele funciona com `database` e pode ser trocado para `redis` sem alterar codigo.
 - O lock principal esta em tres camadas: `idempotency_key` unico, reserva transacional de numero fiscal e job unico por documento.
-- O bootstrap local do agente serve apenas para preencher automaticamente os dados do tenant no setup quando o instalador for gerado por cliente.
+- O instalador profissional do agente usa o codigo de ativacao para trocar as credenciais diretamente com o backend central no primeiro setup.
 - O `/admin` central passa a cuidar apenas do bootstrap, do status do agente e do polling. As configuracoes da maquina nao devem mais ser editadas manualmente ali.
 - A configuracao local do agente fica armazenada na propria maquina e e sincronizada com o Nimvo via `local_agents.metadata`, sem depender de JSON manual no cliente.
 - O agente local atual sobe uma API HTTP local de impressao e envia heartbeat direto para o backend do Nimvo, sem depender de uma copia local do projeto Laravel.

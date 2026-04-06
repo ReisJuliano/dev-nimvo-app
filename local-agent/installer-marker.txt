@@ -1,0 +1,2 @@
+Nimvo Fiscal Agent
+Esta pasta e gerenciada pelo instalador profissional do Nimvo.

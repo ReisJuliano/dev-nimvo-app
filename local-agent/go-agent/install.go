@@ -262,7 +262,7 @@ func buildReadme(installDir string) string {
 		"Configuracao local: registry://HKCU/Software/NimvoFiscalAgent",
 		"",
 		"Fluxo sugerido:",
-		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, a impressora e o logo do cupom.",
+		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant e a configuracao de impressao local.",
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
 		"4. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
