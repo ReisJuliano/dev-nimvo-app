@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (! config('tenancy.dev_single_database')) {
+        if (config('tenancy.dev_single_database')) {
             Schema::create('users', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
-        if (! config('tenancy.dev_single_database')) {
+        if (config('tenancy.dev_single_database')) {
             Schema::create('sessions', function (Blueprint $table) {
                 $table->string('id')->primary();
                 $table->foreignId('user_id')->nullable()->index();
@@ -46,7 +46,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (! config('tenancy.dev_single_database')) {
+        if (config('tenancy.dev_single_database')) {
             Schema::dropIfExists('users');
             Schema::dropIfExists('sessions');
         }
