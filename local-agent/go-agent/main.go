@@ -1,20 +1,20 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
+	"time"
 )
 
 type runtimeOptions struct {
-	ConfigPath  string
-	ProjectRoot string
-	PHPPath     string
-	Once        bool
+	ConfigPath string
+	Once       bool
 }
 
 func main() {
@@ -66,12 +66,7 @@ func main() {
 }
 
 func runAgent(args []string) error {
-	options, err := parseLocalAgentRuntimeOptions("run", args)
-	if err != nil {
-		return err
-	}
-
-	return runAgentOnce(options)
+	return runDaemon(args)
 }
 
 func runDaemon(args []string) error {
@@ -88,9 +83,7 @@ func runDaemon(args []string) error {
 	var server *httpServerHandle
 	if config.LocalAPI.Enabled {
 		server, err = startLocalAPIServer(config, &localAgentHTTPServer{
-			configPath:  options.ConfigPath,
-			projectRoot: options.ProjectRoot,
-			phpPath:     options.PHPPath,
+			configPath: options.ConfigPath,
 		})
 		if err != nil {
 			return err
@@ -100,150 +93,259 @@ func runDaemon(args []string) error {
 		fmt.Printf("API local do agente ouvindo em %s\n", localAPIBaseURL(config))
 	}
 
-	return runAgentOnce(options)
-}
-
-func runAgentOnce(options runtimeOptions) error {
-	commandArgs := []string{"artisan", "fiscal:agent:run", options.ConfigPath}
-	if options.Once {
-		commandArgs = append(commandArgs, "--once")
-	}
-
-	return runPHP(options.PHPPath, options.ProjectRoot, commandArgs...)
+	return runHeartbeatLoop(options)
 }
 
 func runLocalTest(args []string) error {
-	fs := flag.NewFlagSet("local-test", flag.ContinueOnError)
-	configPath := fs.String("config", "", "Caminho do JSON do agente")
-	projectRoot := fs.String("project-root", defaultProjectRoot(), "Pasta raiz do projeto Laravel")
-	phpPath := fs.String("php", "", "Caminho do php.exe")
-	tenantID := fs.String("tenant", "", "Tenant para o ensaio local")
-	saleID := fs.String("sale", "", "ID da venda para o ensaio local")
-	saveDir := fs.String("save-dir", "storage/app/fiscal-local-tests", "Pasta para salvar XML e resultado")
+	options, err := parseLocalAgentRuntimeOptions("local-test", args)
+	if err != nil {
+		return err
+	}
+
+	config, err := loadNormalizedAgentConfig(options.ConfigPath)
+	if err != nil {
+		return err
+	}
+
+	return printTestReceipt(config.Printer, printTestRequest{
+		StoreName: "Nimvo",
+		Message:   "Teste local do agente standalone de impressao.",
+	})
+}
+
+func runHeartbeatLoop(options runtimeOptions) error {
+	lastInterval := 3 * time.Second
+
+	for {
+		config, err := loadNormalizedAgentConfig(options.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		interval := time.Duration(maxInt(1, config.Agent.PollInterval)) * time.Second
+		lastInterval = interval
+
+		if err := sendHeartbeat(config); err != nil {
+			fmt.Fprintf(os.Stderr, "Falha no heartbeat do agente: %s\n", err.Error())
+
+			if options.Once {
+				return err
+			}
+		}
+
+		if options.Once {
+			return nil
+		}
+
+		time.Sleep(lastInterval)
+	}
+}
+
+func sendHeartbeat(config AgentConfig) error {
+	if strings.TrimSpace(config.Backend.BaseURL) == "" {
+		return errors.New("a URL do backend do Nimvo nao foi configurada")
+	}
+
+	if strings.TrimSpace(config.Agent.Key) == "" || strings.TrimSpace(config.Agent.Secret) == "" {
+		return errors.New("as credenciais do agente nao foram configuradas")
+	}
+
+	payload := heartbeatPayload(config)
+	response, err := postBackendJSON(config, "/api/local-agents/heartbeat", payload)
+	if err != nil {
+		return err
+	}
+
+	if pollInterval := maxInt(0, intValueFromMap(response, "config.poll_interval_seconds")); pollInterval > 0 && optionsDiffer(config.Agent.PollInterval, pollInterval) {
+		config.Agent.PollInterval = pollInterval
+		if err := saveInstalledAgentConfig(config); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func postBackendJSON(config AgentConfig, uri string, payload any) (map[string]any, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	baseURL := strings.TrimRight(strings.TrimSpace(config.Backend.BaseURL), "/")
+	client := &http.Client{
+		Timeout: time.Duration(maxInt(1, config.Backend.Timeout)) * time.Second,
+	}
+
+	request, err := http.NewRequest(http.MethodPost, baseURL+uri, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("X-Agent-Key", config.Agent.Key)
+	request.Header.Set("X-Agent-Secret", config.Agent.Secret)
+
+	var response *http.Response
+	for attempt := 0; attempt < maxInt(1, config.Backend.RetryTimes); attempt++ {
+		response, err = client.Do(request.Clone(request.Context()))
+		if err == nil {
+			break
+		}
+
+		if attempt+1 < maxInt(1, config.Backend.RetryTimes) {
+			time.Sleep(time.Duration(maxInt(100, config.Backend.RetrySleepMS)) * time.Millisecond)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	decoded := map[string]any{}
+	if err := json.NewDecoder(response.Body).Decode(&decoded); err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode >= 400 {
+		message := strings.TrimSpace(stringValueFromMap(decoded, "message"))
+		if message == "" {
+			message = strings.TrimSpace(stringValueFromMap(decoded, "error"))
+		}
+		if message == "" {
+			message = fmt.Sprintf("backend retornou HTTP %d", response.StatusCode)
+		}
+
+		return nil, errors.New(message)
+	}
+
+	return decoded, nil
+}
+
+func heartbeatPayload(config AgentConfig) map[string]any {
+	hostName, _ := os.Hostname()
+	userName := strings.TrimSpace(os.Getenv("USERNAME"))
+
+	return map[string]any{
+		"machine": map[string]any{
+			"name": hostName,
+			"user": userName,
+		},
+		"certificate": map[string]any{
+			"path": strings.TrimSpace(config.Certificate.Path),
+		},
+		"printer": map[string]any{
+			"enabled":   config.Printer.Enabled,
+			"connector": config.Printer.Connector,
+			"name":      config.Printer.Name,
+			"host":      config.Printer.Host,
+			"port":      config.Printer.Port,
+			"logo_path": config.Printer.LogoPath,
+		},
+		"local_api": map[string]any{
+			"enabled": config.LocalAPI.Enabled,
+			"host":    config.LocalAPI.Host,
+			"port":    config.LocalAPI.Port,
+			"url":     localAPIBaseURL(config),
+		},
+		"software": map[string]any{
+			"version":      localAgentVersion,
+			"project_root": "",
+			"php_path":     "",
+			"installed_at": time.Now().Format(time.RFC3339),
+			"config_path":  "registry://HKCU/Software/NimvoFiscalAgent",
+		},
+	}
+}
+
+func parseLocalAgentRuntimeOptions(command string, args []string) (runtimeOptions, error) {
+	fs := flag.NewFlagSet(command, flag.ContinueOnError)
+	configPath := fs.String("config", "", "Arquivo JSON apenas para bootstrap ou override do agente")
+	once := fs.Bool("once", false, "Executa um unico ciclo de heartbeat")
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		return runtimeOptions{}, err
 	}
 
-	if *configPath == "" || *tenantID == "" || *saleID == "" {
-		return errors.New("informe -config, -tenant e -sale para o ensaio local")
-	}
-
-	commandArgs := []string{
-		"artisan",
-		"fiscal:sale:local-test",
-		*tenantID,
-		*saleID,
-		*configPath,
-		fmt.Sprintf("--save-dir=%s", *saveDir),
-	}
-
-	return runPHP(*phpPath, *projectRoot, commandArgs...)
-}
-
-func runPHP(explicitPHP, projectRoot string, args ...string) error {
-	phpBinary, err := resolvePHP(explicitPHP)
-	if err != nil {
-		return err
-	}
-
-	root, err := filepath.Abs(projectRoot)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command(phpBinary, args...)
-	cmd.Dir = root
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
-}
-
-func runPHPCapture(explicitPHP, projectRoot string, args ...string) ([]byte, error) {
-	phpBinary, err := resolvePHP(explicitPHP)
-	if err != nil {
-		return nil, err
-	}
-
-	root, err := filepath.Abs(projectRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	cmd := exec.Command(phpBinary, args...)
-	cmd.Dir = root
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		message := string(output)
-		if message == "" {
-			message = err.Error()
-		}
-
-		return nil, errors.New(strings.TrimSpace(message))
-	}
-
-	return output, nil
-}
-
-func resolvePHP(explicit string) (string, error) {
-	candidates := []string{}
-
-	if explicit != "" {
-		candidates = append(candidates, explicit)
-	}
-
-	if envPHP := os.Getenv("PHP_BIN"); envPHP != "" {
-		candidates = append(candidates, envPHP)
-	}
-
-	if lookedUp, err := exec.LookPath("php"); err == nil {
-		candidates = append(candidates, lookedUp)
-	}
-
-	candidates = append(candidates,
-		`C:\php-8.3.30-nts-Win32-vs16-x64\php.exe`,
-		`C:\xampp\php\php.exe`,
-	)
-
-	for _, candidate := range candidates {
-		if candidate == "" {
-			continue
-		}
-
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
-		}
-	}
-
-	return "", errors.New("php.exe nao encontrado. Use -php ou defina PHP_BIN")
-}
-
-func defaultProjectRoot() string {
-	exePath, err := os.Executable()
-	if err != nil {
-		return "."
-	}
-
-	return filepath.Clean(filepath.Join(filepath.Dir(exePath), "..", ".."))
+	return runtimeOptions{
+		ConfigPath: strings.TrimSpace(*configPath),
+		Once:       *once,
+	}, nil
 }
 
 func printUsage() {
 	fmt.Println("nimvo-fiscal-agent")
 	fmt.Println("")
 	fmt.Println("Comandos:")
-	fmt.Println("  install    Instala o agente no Windows e configura a inicializacao automatica")
+	fmt.Println("  install    Instala o agente local do Nimvo e configura a inicializacao automatica")
 	fmt.Println("  serve      Sobe somente a API HTTP local para a ponte de impressao")
-	fmt.Println("  daemon     Sobe a API local e executa o worker fiscal em paralelo")
-	fmt.Println("  run        Executa o agente fiscal client-side")
-	fmt.Println("  local-test Faz um ensaio local da NFC-e a partir de uma venda")
+	fmt.Println("  daemon     Sobe a API local e envia heartbeat para o backend do Nimvo")
+	fmt.Println("  run        Alias de daemon")
+	fmt.Println("  local-test Imprime um cupom de teste usando a configuracao instalada")
 	fmt.Println("  status     Mostra o estado da instalacao local")
-	fmt.Println("  uninstall  Remove a inicializacao automatica do agente")
+	fmt.Println("  uninstall  Remove a inicializacao automatica e a configuracao local do agente")
 	fmt.Println("")
 	fmt.Println("Exemplos:")
-	fmt.Println(`  nimvo-fiscal-agent install -project-root "D:\nimvo"`)
-	fmt.Println(`  nimvo-fiscal-agent daemon -config "D:\app\agent.json"`)
-	fmt.Println(`  nimvo-fiscal-agent run -config "D:\app\agent.json"`)
-	fmt.Println(`  nimvo-fiscal-agent local-test -config "D:\app\agent.json" -tenant tenant-teste -sale 6`)
+	fmt.Println(`  nimvo-fiscal-agent install`)
+	fmt.Println(`  nimvo-fiscal-agent install -config "D:\bootstrap\tenant.json"`)
+	fmt.Println(`  nimvo-fiscal-agent daemon`)
+	fmt.Println(`  nimvo-fiscal-agent serve`)
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+func optionsDiffer(current, next int) bool {
+	return maxInt(1, current) != maxInt(1, next)
+}
+
+func intValueFromMap(payload map[string]any, path string) int {
+	current := any(payload)
+	for _, segment := range strings.Split(path, ".") {
+		asMap, ok := current.(map[string]any)
+		if !ok {
+			return 0
+		}
+
+		current, ok = asMap[segment]
+		if !ok {
+			return 0
+		}
+	}
+
+	switch value := current.(type) {
+	case float64:
+		return int(value)
+	case int:
+		return value
+	default:
+		return 0
+	}
+}
+
+func stringValueFromMap(payload map[string]any, path string) string {
+	current := any(payload)
+	for _, segment := range strings.Split(path, ".") {
+		asMap, ok := current.(map[string]any)
+		if !ok {
+			return ""
+		}
+
+		current, ok = asMap[segment]
+		if !ok {
+			return ""
+		}
+	}
+
+	if value, ok := current.(string); ok {
+		return value
+	}
+
+	return ""
 }

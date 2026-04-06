@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -55,24 +56,21 @@ type LocalAPIConfig struct {
 func defaultAgentConfig() AgentConfig {
 	return AgentConfig{
 		Backend: BackendConfig{
-			BaseURL:      "https://app.seudominio.com",
+			BaseURL:      "",
 			Timeout:      30,
 			RetryTimes:   3,
 			RetrySleepMS: 500,
 		},
 		Agent: AgentAuth{
-			Key:          "preencher-com-agent_key",
-			Secret:       "preencher-com-agent_secret",
+			Key:          "",
+			Secret:       "",
 			PollInterval: 3,
 		},
-		Certificate: Certificate{
-			Path:     `C:\certificados\empresa.pfx`,
-			Password: "alterar-aqui",
-		},
+		Certificate: Certificate{},
 		Printer: PrinterConfig{
 			Enabled:   true,
 			Connector: "windows",
-			Name:      "POS-58",
+			Name:      "",
 			Host:      "127.0.0.1",
 			Port:      9100,
 			LogoPath:  "",
@@ -113,28 +111,7 @@ func saveAgentConfig(path string, config AgentConfig) error {
 	return os.WriteFile(path, append(content, '\n'), 0o644)
 }
 
-func resolveSeedConfig(configSource, sourceDir string) (AgentConfig, error) {
-	if strings.TrimSpace(configSource) != "" {
-		return loadAgentConfig(configSource)
-	}
-
-	for _, candidate := range []string{
-		filepath.Join(sourceDir, "agent.seed.json"),
-		filepath.Join(sourceDir, "config.example.json"),
-	} {
-		if fileExists(candidate) {
-			return loadAgentConfig(candidate)
-		}
-	}
-
-	return defaultAgentConfig(), nil
-}
-
 func normalizeAgentConfig(config AgentConfig) AgentConfig {
-	if strings.TrimSpace(config.Backend.BaseURL) == "" {
-		config.Backend.BaseURL = defaultAgentConfig().Backend.BaseURL
-	}
-
 	if config.Backend.Timeout <= 0 {
 		config.Backend.Timeout = 30
 	}
@@ -170,6 +147,91 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 	return config
 }
 
+const installedAgentRegistryKey = `HKCU\Software\NimvoFiscalAgent`
+
+func loadInstalledAgentConfig() (AgentConfig, error) {
+	values, err := readRegistryKey(installedAgentRegistryKey)
+	if err != nil {
+		return AgentConfig{}, errors.New("configuracao local do agente nao encontrada. Rode o instalador do Nimvo Fiscal Agent nesta maquina")
+	}
+
+	config := defaultAgentConfig()
+	config.Backend.BaseURL = strings.TrimSpace(values.stringValue("BackendBaseURL"))
+	config.Backend.Timeout = values.intValue("BackendTimeoutSeconds", config.Backend.Timeout)
+	config.Backend.RetryTimes = values.intValue("BackendRetryTimes", config.Backend.RetryTimes)
+	config.Backend.RetrySleepMS = values.intValue("BackendRetrySleepMS", config.Backend.RetrySleepMS)
+	config.Agent.Key = strings.TrimSpace(values.stringValue("AgentKey"))
+	config.Agent.Secret = values.stringValue("AgentSecret")
+	config.Agent.PollInterval = values.intValue("AgentPollIntervalSeconds", config.Agent.PollInterval)
+	config.Certificate.Path = values.stringValue("CertificatePath")
+	config.Certificate.Password = values.stringValue("CertificatePassword")
+	config.Printer.Enabled = values.boolValue("PrinterEnabled", config.Printer.Enabled)
+	config.Printer.Connector = strings.TrimSpace(values.stringValue("PrinterConnector"))
+	config.Printer.Name = values.stringValue("PrinterName")
+	config.Printer.Host = values.stringValue("PrinterHost")
+	config.Printer.Port = values.intValue("PrinterPort", config.Printer.Port)
+	config.Printer.LogoPath = values.stringValue("PrinterLogoPath")
+	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
+	config.LocalAPI.Host = values.stringValue("LocalAPIHost")
+	config.LocalAPI.Port = values.intValue("LocalAPIPort", config.LocalAPI.Port)
+
+	return normalizeAgentConfig(config), nil
+}
+
+func saveInstalledAgentConfig(config AgentConfig) error {
+	config = normalizeAgentConfig(config)
+
+	type registryWrite struct {
+		name  string
+		kind  string
+		value string
+	}
+
+	writes := []registryWrite{
+		{name: "BackendBaseURL", kind: "REG_SZ", value: strings.TrimSpace(config.Backend.BaseURL)},
+		{name: "BackendTimeoutSeconds", kind: "REG_DWORD", value: formatRegistryDWORD(config.Backend.Timeout)},
+		{name: "BackendRetryTimes", kind: "REG_DWORD", value: formatRegistryDWORD(config.Backend.RetryTimes)},
+		{name: "BackendRetrySleepMS", kind: "REG_DWORD", value: formatRegistryDWORD(config.Backend.RetrySleepMS)},
+		{name: "AgentKey", kind: "REG_SZ", value: strings.TrimSpace(config.Agent.Key)},
+		{name: "AgentSecret", kind: "REG_SZ", value: config.Agent.Secret},
+		{name: "AgentPollIntervalSeconds", kind: "REG_DWORD", value: formatRegistryDWORD(config.Agent.PollInterval)},
+		{name: "CertificatePath", kind: "REG_SZ", value: config.Certificate.Path},
+		{name: "CertificatePassword", kind: "REG_SZ", value: config.Certificate.Password},
+		{name: "PrinterEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.Printer.Enabled)},
+		{name: "PrinterConnector", kind: "REG_SZ", value: config.Printer.Connector},
+		{name: "PrinterName", kind: "REG_SZ", value: config.Printer.Name},
+		{name: "PrinterHost", kind: "REG_SZ", value: config.Printer.Host},
+		{name: "PrinterPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.Printer.Port)},
+		{name: "PrinterLogoPath", kind: "REG_SZ", value: config.Printer.LogoPath},
+		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},
+		{name: "LocalAPIHost", kind: "REG_SZ", value: config.LocalAPI.Host},
+		{name: "LocalAPIPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.LocalAPI.Port)},
+	}
+
+	for _, write := range writes {
+		if err := writeRegistryValue(installedAgentRegistryKey, write.name, write.kind, write.value); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func deleteInstalledAgentConfig() error {
+	cmd := exec.Command("reg", "delete", installedAgentRegistryKey, "/f")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		trimmed := strings.ToLower(strings.TrimSpace(string(output)))
+		if strings.Contains(trimmed, "unable to find") || strings.Contains(trimmed, "nao foi possivel localizar") {
+			return nil
+		}
+
+		return errors.New(strings.TrimSpace(string(output)))
+	}
+
+	return nil
+}
+
 func ensureDir(path string) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
@@ -202,67 +264,6 @@ func copyFile(src, dst string) error {
 	return target.Close()
 }
 
-func resolveProjectRoot(explicit string) (string, error) {
-	candidates := []string{}
-
-	if explicit != "" {
-		candidates = append(candidates, explicit)
-	}
-
-	if envRoot := os.Getenv("NIMVO_PROJECT_ROOT"); envRoot != "" {
-		candidates = append(candidates, envRoot)
-	}
-
-	if cwd, err := os.Getwd(); err == nil {
-		candidates = append(candidates, cwd)
-	}
-
-	candidates = append(candidates, defaultProjectRoot())
-
-	for _, candidate := range candidates {
-		if root := searchProjectRoot(candidate); root != "" {
-			return root, nil
-		}
-	}
-
-	fmt.Print("Informe a pasta do Nimvo onde existe o arquivo artisan: ")
-	line, err := readLine()
-	if err != nil {
-		return "", err
-	}
-
-	if root := searchProjectRoot(line); root != "" {
-		return root, nil
-	}
-
-	return "", errors.New("nao foi possivel localizar a pasta do Nimvo. Use -project-root apontando para a raiz do projeto")
-}
-
-func searchProjectRoot(start string) string {
-	start = strings.TrimSpace(start)
-	if start == "" {
-		return ""
-	}
-
-	current, err := filepath.Abs(start)
-	if err != nil {
-		return ""
-	}
-
-	for {
-		if fileExists(filepath.Join(current, "artisan")) && dirExists(filepath.Join(current, "app")) {
-			return current
-		}
-
-		parent := filepath.Dir(current)
-		if parent == current {
-			return ""
-		}
-
-		current = parent
-	}
-}
-
 func readLine() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
@@ -281,4 +282,118 @@ func fileExists(path string) bool {
 func dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+type registryValues map[string]registryEntry
+
+type registryEntry struct {
+	kind  string
+	value string
+}
+
+func (values registryValues) stringValue(name string) string {
+	entry, ok := values[name]
+	if !ok {
+		return ""
+	}
+
+	return strings.TrimSpace(entry.value)
+}
+
+func (values registryValues) intValue(name string, fallback int) int {
+	entry, ok := values[name]
+	if !ok {
+		return fallback
+	}
+
+	normalized := strings.TrimSpace(entry.value)
+	if normalized == "" {
+		return fallback
+	}
+
+	if strings.HasPrefix(strings.ToLower(normalized), "0x") {
+		parsed, err := strconv.ParseInt(normalized[2:], 16, 32)
+		if err == nil {
+			return int(parsed)
+		}
+	}
+
+	parsed, err := strconv.Atoi(normalized)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+func (values registryValues) boolValue(name string, fallback bool) bool {
+	if values.intValue(name, boolToInt(fallback)) > 0 {
+		return true
+	}
+
+	return false
+}
+
+func readRegistryKey(key string) (registryValues, error) {
+	cmd := exec.Command("reg", "query", key)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(string(output), "\n")
+	values := registryValues{}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(strings.ToUpper(line), "HKEY_") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			continue
+		}
+
+		values[fields[0]] = registryEntry{
+			kind:  fields[1],
+			value: strings.Join(fields[2:], " "),
+		}
+	}
+
+	if len(values) == 0 {
+		return nil, errors.New("registro vazio")
+	}
+
+	return values, nil
+}
+
+func writeRegistryValue(key, name, kind, value string) error {
+	cmd := exec.Command("reg", "add", key, "/v", name, "/t", kind, "/d", value, "/f")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return errors.New(strings.TrimSpace(string(output)))
+	}
+
+	return nil
+}
+
+func formatRegistryDWORD(value int) string {
+	if value < 0 {
+		value = 0
+	}
+
+	return strconv.Itoa(value)
+}
+
+func formatRegistryBool(value bool) string {
+	return formatRegistryDWORD(boolToInt(value))
+}
+
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+
+	return 0
 }

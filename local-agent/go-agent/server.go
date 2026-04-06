@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -18,9 +15,7 @@ import (
 const localAgentVersion = "nimvo-go-agent"
 
 type localAgentHTTPServer struct {
-	configPath  string
-	projectRoot string
-	phpPath     string
+	configPath string
 }
 
 type httpServerHandle struct {
@@ -53,9 +48,7 @@ func runServe(args []string) error {
 	}
 
 	server := &localAgentHTTPServer{
-		configPath:  options.ConfigPath,
-		projectRoot: options.ProjectRoot,
-		phpPath:     options.PHPPath,
+		configPath: options.ConfigPath,
 	}
 
 	fmt.Printf("API local do agente ouvindo em %s\n", localAPIBaseURL(config))
@@ -183,16 +176,16 @@ func (server *localAgentHTTPServer) handlePrintTest(writer http.ResponseWriter, 
 		return
 	}
 
-	args := []string{"artisan", "fiscal:agent:print-test", server.configPath}
-	if strings.TrimSpace(payload.StoreName) != "" {
-		args = append(args, fmt.Sprintf("--store-name=%s", payload.StoreName))
-	}
-	if strings.TrimSpace(payload.Message) != "" {
-		args = append(args, fmt.Sprintf("--message=%s", payload.Message))
+	config, err := loadNormalizedAgentConfig(server.configPath)
+	if err != nil {
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
 	}
 
-	responsePayload, err := runPHPCapture(server.phpPath, server.projectRoot, args...)
-	if err != nil {
+	if err := printTestReceipt(config.Printer, payload); err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
 			Error:  err.Error(),
@@ -200,64 +193,33 @@ func (server *localAgentHTTPServer) handlePrintTest(writer http.ResponseWriter, 
 		return
 	}
 
-	server.writeRawJSON(writer, http.StatusOK, responsePayload)
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":     "printed",
+		"type":       "test",
+		"printed_at": time.Now().Format(time.RFC3339),
+	})
 }
 
 func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWriter, request *http.Request) {
-	payload, err := io.ReadAll(io.LimitReader(request.Body, 1<<20))
-	if err != nil {
+	payload := paymentReceiptRequest{}
+	if err := server.decodeJSONBody(request, &payload); err != nil {
 		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
 			Status: "invalid_request",
-			Error:  "nao foi possivel ler o corpo da requisicao",
+			Error:  err.Error(),
 		})
 		return
 	}
 
-	if !json.Valid(payload) {
-		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
-			Status: "invalid_request",
-			Error:  "o JSON do comprovante e invalido",
-		})
-		return
-	}
-
-	tempFile, err := os.CreateTemp("", "nimvo-local-print-*.json")
+	config, err := loadNormalizedAgentConfig(server.configPath)
 	if err != nil {
 		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
 			Status: "error",
-			Error:  "nao foi possivel preparar o payload temporario da impressao",
-		})
-		return
-	}
-	tempPath := tempFile.Name()
-	defer os.Remove(tempPath)
-
-	if _, err := tempFile.Write(payload); err != nil {
-		tempFile.Close()
-		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
-			Status: "error",
-			Error:  "nao foi possivel salvar o payload temporario da impressao",
+			Error:  err.Error(),
 		})
 		return
 	}
 
-	if err := tempFile.Close(); err != nil {
-		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
-			Status: "error",
-			Error:  "nao foi possivel fechar o payload temporario da impressao",
-		})
-		return
-	}
-
-	responsePayload, err := runPHPCapture(
-		server.phpPath,
-		server.projectRoot,
-		"artisan",
-		"fiscal:agent:print-payment",
-		server.configPath,
-		tempPath,
-	)
-	if err != nil {
+	if err := printPaymentReceipt(config.Printer, payload); err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
 			Error:  err.Error(),
@@ -265,7 +227,11 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 		return
 	}
 
-	server.writeRawJSON(writer, http.StatusOK, responsePayload)
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":     "printed",
+		"type":       "payment_receipt",
+		"printed_at": time.Now().Format(time.RFC3339),
+	})
 }
 
 func (server *localAgentHTTPServer) authorize(writer http.ResponseWriter, request *http.Request) bool {
@@ -324,40 +290,11 @@ func (server *localAgentHTTPServer) writeJSON(writer http.ResponseWriter, status
 	_, _ = writer.Write(encoded)
 }
 
-func (server *localAgentHTTPServer) writeRawJSON(writer http.ResponseWriter, status int, payload []byte) {
-	writer.WriteHeader(status)
-	_, _ = writer.Write(bytes.TrimSpace(payload))
-}
-
-func parseLocalAgentRuntimeOptions(command string, args []string) (runtimeOptions, error) {
-	fs := flag.NewFlagSet(command, flag.ContinueOnError)
-	configPath := fs.String("config", "", "Caminho do JSON do agente")
-	projectRoot := fs.String("project-root", defaultProjectRoot(), "Pasta raiz do projeto Laravel")
-	phpPath := fs.String("php", "", "Caminho do php.exe")
-	once := fs.Bool("once", false, "Executa um unico ciclo")
-
-	if err := fs.Parse(args); err != nil {
-		return runtimeOptions{}, err
-	}
-
-	if *configPath == "" {
-		return runtimeOptions{}, errors.New("informe -config com o arquivo JSON do agente")
-	}
-
-	projectRootPath, err := filepath.Abs(*projectRoot)
-	if err != nil {
-		return runtimeOptions{}, err
-	}
-
-	return runtimeOptions{
-		ConfigPath:  *configPath,
-		ProjectRoot: projectRootPath,
-		PHPPath:     *phpPath,
-		Once:        *once,
-	}, nil
-}
-
 func loadNormalizedAgentConfig(path string) (AgentConfig, error) {
+	if strings.TrimSpace(path) == "" {
+		return loadInstalledAgentConfig()
+	}
+
 	config, err := loadAgentConfig(path)
 	if err != nil {
 		return AgentConfig{}, err

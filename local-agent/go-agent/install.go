@@ -17,9 +17,7 @@ const runEntryName = "NimvoFiscalAgent"
 func runInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	installDir := fs.String("install-dir", defaultInstallDir(), "Pasta de instalacao do agente")
-	configSource := fs.String("config", "", "JSON base do agente para copiar na instalacao")
-	projectRoot := fs.String("project-root", "", "Pasta raiz do Nimvo (onde existe o arquivo artisan)")
-	phpPath := fs.String("php", "", "Caminho do php.exe usado pelo agente")
+	configSource := fs.String("config", "", "JSON bootstrap opcional do agente para preencher os dados do tenant")
 	enableStartup := fs.Bool("startup", true, "Registrar o agente para iniciar com o Windows")
 	startNow := fs.Bool("start", true, "Iniciar o agente apos instalar")
 
@@ -32,11 +30,6 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	projectRootPath, err := resolveProjectRoot(*projectRoot)
-	if err != nil {
-		return err
-	}
-
 	currentExe, err := os.Executable()
 	if err != nil {
 		return err
@@ -44,7 +37,6 @@ func runInstall(args []string) error {
 
 	sourceDir := filepath.Dir(currentExe)
 	targetExe := filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")
-	targetConfig := filepath.Join(installRoot, "config", "agent.json")
 	targetLog := filepath.Join(installRoot, "logs", "agent.log")
 	targetRunCmd := filepath.Join(installRoot, "run-agent.cmd")
 	targetRunVbs := filepath.Join(installRoot, "run-agent.vbs")
@@ -53,7 +45,6 @@ func runInstall(args []string) error {
 
 	for _, directory := range []string{
 		filepath.Join(installRoot, "bin"),
-		filepath.Join(installRoot, "config"),
 		filepath.Join(installRoot, "logs"),
 	} {
 		if err := ensureDir(directory); err != nil {
@@ -75,11 +66,11 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	if err := saveAgentConfig(targetConfig, config); err != nil {
+	if err := saveInstalledAgentConfig(config); err != nil {
 		return err
 	}
 
-	if err := os.WriteFile(targetRunCmd, []byte(buildRunScript(targetExe, targetConfig, projectRootPath, *phpPath, targetLog)), 0o644); err != nil {
+	if err := os.WriteFile(targetRunCmd, []byte(buildRunScript(targetExe, targetLog)), 0o644); err != nil {
 		return err
 	}
 
@@ -91,7 +82,7 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	if err := os.WriteFile(targetReadme, []byte(buildReadme(targetConfig, projectRootPath, installRoot)), 0o644); err != nil {
+	if err := os.WriteFile(targetReadme, []byte(buildReadme(installRoot)), 0o644); err != nil {
 		return err
 	}
 
@@ -110,18 +101,20 @@ func runInstall(args []string) error {
 	}
 
 	summary := map[string]string{
-		"install_dir":  installRoot,
-		"project_root": projectRootPath,
-		"config":       targetConfig,
-		"seed_config":  selectedConfigPath,
-		"log":          targetLog,
-		"startup":      fmt.Sprintf("%t", *enableStartup),
+		"install_dir":     installRoot,
+		"seed_config":     selectedConfigPath,
+		"config_storage":  "registry://HKCU/Software/NimvoFiscalAgent",
+		"log":             targetLog,
+		"startup":         fmt.Sprintf("%t", *enableStartup),
+		"local_api_url":   localAPIBaseURL(config),
+		"printer_target":  printerTarget(config.Printer),
+		"backend_baseurl": strings.TrimSpace(config.Backend.BaseURL),
 	}
 
 	payload, _ := json.MarshalIndent(summary, "", "  ")
 	fmt.Println("Agente instalado com sucesso.")
 	fmt.Println(string(payload))
-	fmt.Println("As configuracoes centrais do tenant passam a vir do Nimvo. O arquivo local fica somente com os dados da maquina.")
+	fmt.Println("O agente foi configurado na propria maquina e fica pronto para rodar em segundo plano, sem depender de pasta local do projeto.")
 
 	return nil
 }
@@ -141,17 +134,19 @@ func runStatus(args []string) error {
 
 	runValue, startupEnabled := readStartupEntry()
 	status := map[string]any{
-		"install_dir":       installRoot,
-		"installed":         fileExists(filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")),
-		"config_exists":     fileExists(filepath.Join(installRoot, "config", "agent.json")),
-		"log_exists":        fileExists(filepath.Join(installRoot, "logs", "agent.log")),
-		"startup_enabled":   startupEnabled,
-		"startup_command":   runValue,
-		"run_script_exists": fileExists(filepath.Join(installRoot, "run-agent.cmd")),
+		"install_dir":         installRoot,
+		"installed":           fileExists(filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")),
+		"log_exists":          fileExists(filepath.Join(installRoot, "logs", "agent.log")),
+		"startup_enabled":     startupEnabled,
+		"startup_command":     runValue,
+		"run_script_exists":   fileExists(filepath.Join(installRoot, "run-agent.cmd")),
+		"registry_configured": false,
 	}
 
-	if config, err := loadAgentConfig(filepath.Join(installRoot, "config", "agent.json")); err == nil {
-		config = normalizeAgentConfig(config)
+	if config, err := loadInstalledAgentConfig(); err == nil {
+		status["registry_configured"] = true
+		status["backend_baseurl"] = strings.TrimSpace(config.Backend.BaseURL)
+		status["printer_target"] = printerTarget(config.Printer)
 		status["local_api_url"] = localAPIBaseURL(config)
 		status["local_api_enabled"] = config.LocalAPI.Enabled
 	}
@@ -179,7 +174,11 @@ func runUninstall(args []string) error {
 		return err
 	}
 
-	fmt.Println("Inicializacao automatica removida com sucesso.")
+	if err := deleteInstalledAgentConfig(); err != nil {
+		return err
+	}
+
+	fmt.Println("Inicializacao automatica e configuracao local removidas com sucesso.")
 	fmt.Printf("Se quiser apagar os arquivos do agente, remova a pasta: %s\n", installRoot)
 
 	return nil
@@ -198,18 +197,12 @@ func defaultInstallDir() string {
 	return filepath.Join(home, "AppData", "Local", "NimvoFiscalAgent")
 }
 
-func buildRunScript(exePath, configPath, projectRoot, phpPath, logPath string) string {
-	phpArgument := ""
-	if strings.TrimSpace(phpPath) != "" {
-		phpArgument = fmt.Sprintf(` -php "%s"`, phpPath)
-	}
-
+func buildRunScript(exePath, logPath string) string {
 	return strings.Join([]string{
 		"@echo off",
 		"setlocal",
 		":loop",
-		fmt.Sprintf(`cd /d "%s"`, projectRoot),
-		fmt.Sprintf(`"%s" daemon -config "%s" -project-root "%s"%s >> "%s" 2>&1`, exePath, configPath, projectRoot, phpArgument, logPath),
+		fmt.Sprintf(`"%s" daemon >> "%s" 2>&1`, exePath, logPath),
 		"timeout /t 5 /nobreak >nul",
 		"goto loop",
 		"",
@@ -234,19 +227,18 @@ func buildUninstallScript(exePath, installDir string) string {
 	}, "\r\n")
 }
 
-func buildReadme(configPath, projectRoot, installDir string) string {
+func buildReadme(installDir string) string {
 	lines := []string{
 		"Nimvo Fiscal Agent",
 		"",
 		"Arquivos principais:",
-		fmt.Sprintf("Config: %s", configPath),
-		fmt.Sprintf("Projeto Nimvo: %s", projectRoot),
 		fmt.Sprintf("Instalacao: %s", installDir),
+		"Configuracao local: registry://HKCU/Software/NimvoFiscalAgent",
 		"",
 		"Fluxo sugerido:",
-		"1. O instalador coleta o bootstrap do tenant, o certificado A1, a impressora e o logo do cupom.",
+		"1. O instalador coleta a URL do Nimvo, as credenciais do tenant, a impressora e o logo do cupom.",
 		"2. O agente sobe uma API local HTTP para a ponte de impressao do Nimvo no navegador.",
-		"3. O agente sincroniza com o Nimvo o estado da maquina e recebe apenas os ajustes centrais do tenant.",
+		"3. O agente envia heartbeat para o Nimvo em segundo plano e mantem a ponte local pronta para receber impressoes.",
 		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
 		"5. O agente grava o loop em logs\\agent.log.",
 		"",
@@ -328,94 +320,54 @@ func resolveInstallSeedConfig(configSource, sourceDir string) (AgentConfig, stri
 		}
 	}
 
-	for {
-		selectedPath, err := promptSeedConfigPath(defaultPath)
-		if err != nil {
-			return AgentConfig{}, "", err
-		}
-
-		config, err := loadAgentConfig(selectedPath)
-		if err != nil {
-			fmt.Printf("Nao foi possivel ler o JSON do agente: %s\n", err.Error())
-			defaultPath = ""
-			continue
-		}
-
-		config = normalizeAgentConfig(config)
-		reason := ""
-		if err := ensureBootstrapConfig(config); err != nil {
-			reason = err.Error()
-		} else if isPlaceholderConfig(config) {
-			reason = "o arquivo ainda contem valores de exemplo"
-		}
-
-		if reason != "" {
-			fmt.Printf("O JSON selecionado nao esta pronto para instalar este cliente: %s.\n", reason)
-			fmt.Println("Selecione o JSON real gerado pelo Nimvo para esse tenant.")
-			defaultPath = ""
-			continue
-		}
-
-		return config, selectedPath, nil
-	}
-}
-
-func promptSeedConfigPath(defaultPath string) (string, error) {
-	defaultPath = strings.TrimSpace(defaultPath)
-	if defaultPath != "" && fileExists(defaultPath) {
-		value, err := promptText("JSON base do agente (Enter para usar, B para procurar)", defaultPath)
-		if err != nil {
-			return "", err
-		}
-
-		switch strings.ToLower(strings.TrimSpace(value)) {
-		case "":
-			return defaultPath, nil
-		case "b", "browse", "procurar":
-			picked, err := openFileDialog("Selecione o JSON do agente Nimvo", "Arquivos JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*")
-			if err != nil {
-				return "", err
-			}
-			if strings.TrimSpace(picked) != "" {
-				return picked, nil
-			}
-		default:
-			return strings.TrimSpace(value), nil
-		}
+	if defaultPath == "" {
+		return defaultAgentConfig(), "", nil
 	}
 
-	return promptFilePath(
-		"Informe o JSON do agente Nimvo",
-		"",
-		"Selecione o JSON do agente Nimvo",
-		"Arquivos JSON (*.json)|*.json|Todos os arquivos (*.*)|*.*",
-	)
+	config, err := loadAgentConfig(defaultPath)
+	if err != nil {
+		return AgentConfig{}, "", err
+	}
+
+	return normalizeAgentConfig(config), defaultPath, nil
 }
 
 func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
 	var err error
 
 	config = normalizeAgentConfig(config)
-	if isPlaceholderValue(config.Certificate.Path) {
-		config.Certificate.Path = ""
+	config.Certificate = Certificate{}
+	if isPlaceholderValue(config.Backend.BaseURL) {
+		config.Backend.BaseURL = ""
 	}
-	if isPlaceholderValue(config.Certificate.Password) {
-		config.Certificate.Password = ""
+	if isPlaceholderValue(config.Agent.Key) {
+		config.Agent.Key = ""
+	}
+	if isPlaceholderValue(config.Agent.Secret) {
+		config.Agent.Secret = ""
 	}
 
-	config.Certificate.Path, err = promptFilePath(
-		"Certificado A1 da empresa",
-		config.Certificate.Path,
-		"Selecione o certificado A1",
-		"Certificados A1 (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
-	)
+	config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", config.Backend.BaseURL)
 	if err != nil {
 		return config, err
 	}
 
-	config.Certificate.Password, err = promptRequired("Senha do certificado", config.Certificate.Password)
+	config.Agent.Key, err = promptRequired("Agent key do tenant", config.Agent.Key)
 	if err != nil {
 		return config, err
+	}
+
+	config.Agent.Secret, err = promptRequired("Agent secret do tenant", config.Agent.Secret)
+	if err != nil {
+		return config, err
+	}
+
+	pollInterval, err := promptText("Polling em segundos", fmt.Sprintf("%d", config.Agent.PollInterval))
+	if err != nil {
+		return config, err
+	}
+	if parsedPollInterval, parseErr := strconv.Atoi(strings.TrimSpace(pollInterval)); parseErr == nil && parsedPollInterval > 0 {
+		config.Agent.PollInterval = parsedPollInterval
 	}
 
 	config.Printer.Enabled, err = promptBool("Ativar impressao automatica do cupom", config.Printer.Enabled)
@@ -452,6 +404,11 @@ func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
 		config.Printer.Name = ""
 
 		return config, nil
+	}
+
+	config.Printer.LogoPath, err = promptText("Logo do cupom (opcional)", config.Printer.LogoPath)
+	if err != nil {
+		return config, err
 	}
 
 	config.Printer.Name, err = promptPrinterName(config.Printer.Name)
