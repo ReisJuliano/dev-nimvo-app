@@ -51,10 +51,17 @@ class TenantDomainRoutingTest extends TestCase
         $response->assertNotFound();
     }
 
-    public function test_central_routes_stay_available_on_root_domain(): void
+    public function test_central_routes_stay_available_on_admin_subdomain(): void
     {
-        $response = $this->get('http://nimvo.com.br/admin');
+        $response = $this->get('http://admin.nimvo.com.br/admin');
 
         $response->assertRedirect('/admin/login');
+    }
+
+    public function test_root_domain_without_a_tenant_returns_not_found(): void
+    {
+        $response = $this->get('http://nimvo.com.br/');
+
+        $response->assertNotFound();
     }
 }

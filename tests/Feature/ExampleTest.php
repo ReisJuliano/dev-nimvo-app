@@ -59,7 +59,7 @@ class ExampleTest extends TestCase
 
     public function test_the_application_returns_a_successful_response(): void
     {
-        $response = $this->get('http://nimvo.com.br/admin');
+        $response = $this->get('http://admin.nimvo.com.br/admin');
 
         $response->assertRedirect('/admin/login');
     }
@@ -68,7 +68,7 @@ class ExampleTest extends TestCase
     {
         $this->authenticateCentralAdmin();
 
-        $response = $this->postJson('/admin/tenants', [
+        $response = $this->postJson('http://admin.nimvo.com.br/admin/tenants', [
             'client_name' => 'Cliente Centro',
             'tenant_name' => 'Tenant Centro',
             'tenant_id' => 'tenant-centro',
@@ -122,7 +122,7 @@ class ExampleTest extends TestCase
             'active' => true,
         ]);
 
-        $response = $this->putJson("/admin/tenants/{$tenant->id}", [
+        $response = $this->putJson("http://admin.nimvo.com.br/admin/tenants/{$tenant->id}", [
             'client_name' => 'Cliente Novo',
             'tenant_name' => 'Tenant Novo',
             'subdomain' => 'novo',
@@ -181,7 +181,7 @@ class ExampleTest extends TestCase
             'active' => true,
         ]);
 
-        $response = $this->deleteJson("/admin/tenants/{$tenant->id}");
+        $response = $this->deleteJson("http://admin.nimvo.com.br/admin/tenants/{$tenant->id}");
 
         $response
             ->assertOk()
