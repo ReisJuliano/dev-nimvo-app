@@ -158,6 +158,34 @@ class ExampleTest extends TestCase
         ], 'central');
     }
 
+    public function test_central_admin_dashboard_loads_when_tenants_exist(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-dashboard',
+            'name' => 'Tenant Dashboard',
+            'email' => 'dashboard@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'dashboard.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Dashboard',
+            'email' => 'dashboard@tenant.com',
+            'document' => '444',
+            'domain' => 'dashboard.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        $response = $this->get('http://admin.nimvo.com.br/admin/painel');
+
+        $response->assertOk();
+    }
+
     public function test_central_admin_can_delete_a_tenant(): void
     {
         $this->authenticateCentralAdmin();

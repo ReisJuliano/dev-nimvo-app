@@ -160,6 +160,7 @@ class AdminPageController extends Controller
             $tenants = $tenantModels
                 ->map(function (Tenant $tenant) use (
                     $settingsService,
+                    $domainManager,
                     $licenseService,
                     $agentLookup,
                     $localAgentConfigService,
