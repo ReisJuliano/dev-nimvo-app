@@ -52,7 +52,7 @@ class TenantLicenseBillingService
         return sprintf(
             'LIC-%s-%s',
             $license->tenant_id,
-            $periodStart->format('Ym')
+            $periodStart->format('Ymd')
         );
     }
 }
