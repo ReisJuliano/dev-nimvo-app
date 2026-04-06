@@ -18,13 +18,13 @@ has_changed() {
   printf '%s\n' "$changed_files" | grep -Eq "$pattern"
 }
 
-echo '[deploy] clearing Laravel caches'
-php artisan optimize:clear
-
-if [ ! -d vendor ] || has_changed '^(composer\.json|composer\.lock)$'; then
+if [ ! -f vendor/autoload.php ] || has_changed '^(composer\.json|composer\.lock)$'; then
   echo '[deploy] installing PHP dependencies'
   composer install --no-dev --optimize-autoloader --no-interaction
 fi
+
+echo '[deploy] clearing Laravel caches'
+php artisan optimize:clear
 
 if command -v npm >/dev/null 2>&1; then
   if [ ! -d node_modules ] || has_changed '^(package\.json|package-lock\.json)$'; then
@@ -40,6 +40,11 @@ fi
 
 echo '[deploy] running database migrations'
 php artisan migrate --force
+
+if [ ! -L public/storage ] && [ -d storage/app/public ]; then
+  echo '[deploy] creating storage symlink'
+  php artisan storage:link || true
+fi
 
 echo '[deploy] caching Laravel config'
 php artisan config:cache
