@@ -5,6 +5,7 @@ import DataTable from '@/Components/Operations/DataTable'
 import FilterBar from '@/Components/Operations/FilterBar'
 import InfoPanels from '@/Components/Operations/InfoPanels'
 import MetricGrid from '@/Components/Operations/MetricGrid'
+import ReportsShowcase from '@/Components/Operations/ReportsShowcase'
 import AppLayout from '@/Layouts/AppLayout'
 import './operations.css'
 
@@ -23,6 +24,7 @@ function buildFilterPayload(filters, overrides = {}) {
 
 export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
+    const isReportsShowcase = module.view === 'reports_showcase'
     const hasSections = Array.isArray(module.sections) && module.sections.length > 0
     const currentSection = hasSections
         ? module.sections.find((section) => section.key === module.activeSection) || module.sections[0]
@@ -86,21 +88,25 @@ export default function OperationsOverview({ module }) {
                     </div>
                     <div className="operations-hero-badges">
                         <span className="ui-badge success">
-                            {hasSections
+                            {isReportsShowcase
+                                ? '6 mockups'
+                                : hasSections
                                 ? `${module.sections.length} aba(s)`
                                 : modulePanels.length
                                   ? `${modulePanels.length} painel(is)`
                                   : `${moduleTables.length} tabela(s)`}
                         </span>
-                        {module.filters?.product ? (
+                        {!isReportsShowcase && module.filters?.product ? (
                             <span className="ui-badge warning">Produto: {module.filters.product}</span>
                         ) : null}
                     </div>
                 </section>
 
-                <FilterBar filters={module.filters} />
+                {isReportsShowcase ? null : <FilterBar filters={module.filters} />}
 
-                {hasSections ? (
+                {isReportsShowcase ? (
+                    <ReportsShowcase />
+                ) : hasSections ? (
                     <>
                         <section className="operations-section-tabs">
                             {module.sections.map((section) => (

@@ -151,6 +151,144 @@
     gap: 0.75rem;
 }
 
+.operations-reports-showcase {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.operations-report-category-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.operations-report-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 60px;
+    min-width: 180px;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 22px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+    color: var(--app-text-secondary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.operations-report-category:hover,
+.operations-report-category.active {
+    transform: translateY(-2px);
+    border-color: rgba(47, 124, 246, 0.28);
+    box-shadow: var(--app-shadow);
+    color: var(--app-text-primary);
+}
+
+.operations-report-category.active {
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 246, 254, 0.94));
+}
+
+.operations-report-category-icon,
+.operations-report-guide-icon {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(47, 124, 246, 0.12);
+    color: var(--app-primary-dark);
+    flex-shrink: 0;
+}
+
+.operations-report-category-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.operations-report-category-copy small,
+.operations-report-guide-card small {
+    color: var(--app-text-muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.operations-report-category-copy strong,
+.operations-report-guide-card strong {
+    color: var(--app-text-primary);
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+.operations-report-preview-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.35rem;
+    border: 1px solid var(--app-border);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top right, rgba(244, 161, 0, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(252, 248, 242, 0.95));
+    box-shadow: var(--app-shadow-sm);
+}
+
+.operations-report-preview-hero h2 {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.7vw, 1.9rem);
+    letter-spacing: -0.04em;
+    color: var(--app-text-primary);
+}
+
+.operations-report-preview-hero p {
+    margin: 0.5rem 0 0;
+    max-width: 48rem;
+    color: var(--app-text-secondary);
+    line-height: 1.6;
+}
+
+.operations-report-preview-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    justify-content: flex-end;
+}
+
+.operations-report-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.operations-report-guide-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 92px;
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--app-border);
+    border-radius: 22px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.operations-report-guide-card div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+}
+
 .operations-section-tab,
 .operations-section-hero {
     border: 1px solid var(--app-border);
@@ -403,6 +541,16 @@
         flex-direction: column;
     }
 
+    .operations-report-category-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+
+    .operations-report-category {
+        min-width: 220px;
+    }
+
     .operations-filter-search {
         grid-column: auto;
     }
@@ -415,7 +563,15 @@
         flex-direction: column;
     }
 
+    .operations-report-preview-hero {
+        flex-direction: column;
+    }
+
     .operations-section-badges {
+        justify-content: flex-start;
+    }
+
+    .operations-report-preview-badges {
         justify-content: flex-start;
     }
 }

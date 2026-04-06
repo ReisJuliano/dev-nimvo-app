@@ -68,6 +68,7 @@ class SalesOverviewService
         $showProductSearch = (bool) data_get($currentFilters, 'showProductSearch', false);
 
         return [
+            'view' => 'reports_showcase',
             'title' => 'Relatorios',
             'description' => 'Resumo financeiro em uma unica tela.',
             'metrics' => data_get($currentSection, 'metrics', []),
