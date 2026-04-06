@@ -545,7 +545,12 @@ function LocalAgentModal({
 }) {
     const agent = tenant?.local_agent
     const hasAgent = Boolean(agent)
-    const hasActivationPreview = activationPreview?.tenantId === tenant?.id
+    const hasActivationPreview = Boolean(
+        tenant?.id
+        && activationPreview?.tenantId
+        && activationPreview.tenantId === tenant.id
+        && activationPreview.code,
+    )
 
     return (
         <ModalFrame
