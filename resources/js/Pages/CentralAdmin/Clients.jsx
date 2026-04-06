@@ -959,13 +959,27 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
 }
 
 export default function CentralAdminClients({
-    tenantStats,
-    agentStats,
-    tenants,
-    moduleSections,
-    tenantBaseDomain,
+    tenantStats = {},
+    agentStats = {},
+    tenants = [],
+    moduleSections = [],
+    tenantBaseDomain = 'nimvo.com.br',
     pageMode = 'tenants',
 }) {
+    const safeTenantStats = {
+        total: 0,
+        active: 0,
+        inactive: 0,
+        ...tenantStats,
+    }
+    const safeAgentStats = {
+        total: 0,
+        online: 0,
+        offline: 0,
+        ...agentStats,
+    }
+    const safeTenants = Array.isArray(tenants) ? tenants : []
+    const safeModuleSections = Array.isArray(moduleSections) ? moduleSections : []
     const currentUrl = usePage().url
     const highlightedTenantId = new URLSearchParams(currentUrl.split('?')[1] || '').get('tenant')
     const isFeatureFlagsPage = pageMode === 'feature-flags'
@@ -987,20 +1001,20 @@ export default function CentralAdminClients({
     const [localAgentPrintBusy, setLocalAgentPrintBusy] = useState(false)
     const [activationBusy, setActivationBusy] = useState(false)
     const [activationPreview, setActivationPreview] = useState(null)
-    const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
+    const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(safeTenants))
     const [rowState, setRowState] = useState({})
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     useEffect(() => {
-        setTenantSettingsState(buildTenantSettingsState(tenants))
-    }, [tenants])
+        setTenantSettingsState(buildTenantSettingsState(safeTenants))
+    }, [safeTenants])
 
     useEffect(() => {
         if (!localAgentTenant) {
             return
         }
 
-        const updatedTenant = tenants.find((tenant) => tenant.id === localAgentTenant.id)
+        const updatedTenant = safeTenants.find((tenant) => tenant.id === localAgentTenant.id)
         if (!updatedTenant) {
             setLocalAgentTenant(null)
             setLocalAgentForm(buildLocalAgentForm())
@@ -1009,10 +1023,10 @@ export default function CentralAdminClients({
 
         setLocalAgentTenant(updatedTenant)
         setLocalAgentForm(buildLocalAgentForm(updatedTenant))
-    }, [tenants, localAgentTenant])
+    }, [safeTenants, localAgentTenant])
 
-    const tenantSummaries = buildTenantSummaries(tenants, tenantSettingsState)
-    const trackedModules = moduleSections.flatMap((section) => section.items)
+    const tenantSummaries = buildTenantSummaries(safeTenants, tenantSettingsState)
+    const trackedModules = safeModuleSections.flatMap((section) => section.items || [])
     const averageModules = tenantSummaries.length
         ? (tenantSummaries.reduce((total, tenant) => total + tenant.activeModules, 0) / tenantSummaries.length).toFixed(1)
         : '0.0'
@@ -1375,7 +1389,7 @@ export default function CentralAdminClients({
                             <i className="fa-solid fa-buildings" />
                         </div>
                         <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.total}</strong>
+                            <strong>{safeTenantStats.total}</strong>
                             <span>Tenants</span>
                         </div>
                     </article>
@@ -1385,7 +1399,7 @@ export default function CentralAdminClients({
                             <i className="fa-solid fa-circle-check" />
                         </div>
                         <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.active}</strong>
+                            <strong>{safeTenantStats.active}</strong>
                             <span>Ativos</span>
                         </div>
                     </article>
@@ -1395,7 +1409,7 @@ export default function CentralAdminClients({
                             <i className="fa-solid fa-circle-pause" />
                         </div>
                         <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.inactive}</strong>
+                            <strong>{safeTenantStats.inactive}</strong>
                             <span>Inativos</span>
                         </div>
                     </article>
@@ -1405,7 +1419,7 @@ export default function CentralAdminClients({
                             <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-toggle-on' : 'fa-desktop'}`} />
                         </div>
                         <div className="central-admin-stat-copy">
-                            <strong>{isFeatureFlagsPage ? trackedModules.length : `${agentStats?.online || 0}/${agentStats?.total || 0}`}</strong>
+                            <strong>{isFeatureFlagsPage ? trackedModules.length : `${safeAgentStats.online}/${safeAgentStats.total}`}</strong>
                             <span>{isFeatureFlagsPage ? 'Modulos' : 'Agentes online'}</span>
                         </div>
                     </article>
@@ -1414,7 +1428,7 @@ export default function CentralAdminClients({
                 {isFeatureFlagsPage ? (
                     <FeatureFlagsList
                         tenants={tenantSummaries}
-                        moduleSections={moduleSections}
+                        moduleSections={safeModuleSections}
                         rowState={rowState}
                         highlightedTenantId={highlightedTenantId}
                         onToggle={handleToggleModule}

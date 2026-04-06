@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
+            'auth.central_admin' => \App\Http\Middleware\Central\AuthenticateCentralAdmin::class,
             'password.changed' => \App\Http\Middleware\Tenant\EnsurePasswordIsChanged::class,
             'tenant.license' => \App\Http\Middleware\Tenant\EnsureTenantLicenseIsValid::class,
             'module.enabled' => \App\Http\Middleware\Tenant\EnsureModuleIsEnabled::class,

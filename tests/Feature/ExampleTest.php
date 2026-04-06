@@ -186,6 +186,71 @@ class ExampleTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_central_admin_clients_page_loads_when_tenants_exist(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-clients',
+            'name' => 'Tenant Clients',
+            'email' => 'clients@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'clients.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Clients',
+            'email' => 'clients@tenant.com',
+            'document' => '555',
+            'domain' => 'clients.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        $response = $this->get('http://admin.nimvo.com.br/admin/clientes');
+
+        $response->assertOk();
+    }
+
+    public function test_central_admin_feature_flags_page_loads_when_tenants_exist(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-feature-flags',
+            'name' => 'Tenant Feature Flags',
+            'email' => 'flags@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'flags.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Feature Flags',
+            'email' => 'flags@tenant.com',
+            'document' => '666',
+            'domain' => 'flags.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        $response = $this->get('http://admin.nimvo.com.br/admin/feature-flags');
+
+        $response->assertOk();
+    }
+
+    public function test_unauthenticated_central_admin_routes_redirect_to_admin_login(): void
+    {
+        $this->get('http://admin.nimvo.com.br/admin/clientes')
+            ->assertRedirect('http://admin.nimvo.com.br/admin/login');
+
+        $this->get('http://admin.nimvo.com.br/admin/feature-flags')
+            ->assertRedirect('http://admin.nimvo.com.br/admin/login');
+    }
+
     public function test_central_admin_can_delete_a_tenant(): void
     {
         $this->authenticateCentralAdmin();

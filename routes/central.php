@@ -23,7 +23,7 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::post('/login', [LoginController::class, 'store'])->name('login.store');
     });
 
-    Route::middleware('auth:central_admin')->group(function () {
+    Route::middleware('auth.central_admin:central_admin')->group(function () {
         Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
         Route::get('/painel', [AdminPageController::class, 'dashboard'])->name('dashboard');
         Route::get('/clientes', [AdminPageController::class, 'clients'])->name('clients');
