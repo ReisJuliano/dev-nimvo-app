@@ -252,7 +252,7 @@ class AdminPageController extends Controller
             'last_ip' => $agent->last_ip,
             'last_seen_at' => optional($agent->last_seen_at)?->toIso8601String(),
             'last_seen_label' => optional($agent->last_seen_at)?->format('d/m/Y H:i'),
-            'bootstrap_available' => $bootstrapService->bootstrapAvailable($agent),
+            'activation' => $bootstrapService->activationStatus($agent),
             'runtime_config' => $runtime,
             'device' => [
                 'machine_name' => data_get($agent->metadata, 'device.machine.name'),

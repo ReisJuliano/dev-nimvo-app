@@ -6,13 +6,51 @@ use App\Http\Controllers\Controller;
 use App\Models\Central\LocalAgent;
 use App\Models\Central\LocalAgentCommand;
 use App\Services\Central\LocalAgentCommandService;
+use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Tenant\Fiscal\FiscalDocumentResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class LocalAgentApiController extends Controller
 {
+    public function activate(
+        Request $request,
+        LocalAgentBootstrapService $bootstrapService,
+        LocalAgentConfigService $configService,
+    ): JsonResponse {
+        $validated = $request->validate([
+            'activation_code' => ['required', 'string', 'max:64'],
+        ]);
+
+        try {
+            ['agent' => $agent, 'secret' => $secret] = $bootstrapService->activateByCode((string) $validated['activation_code']);
+        } catch (RuntimeException $exception) {
+            abort(422, $exception->getMessage());
+        }
+
+        $runtimeConfig = $configService->buildRuntimeConfig($agent);
+
+        return response()->json([
+            'message' => 'Agente ativado com sucesso.',
+            'agent' => [
+                'id' => $agent->id,
+                'tenant_id' => $agent->tenant_id,
+                'name' => $agent->name,
+                'key' => $agent->agent_key,
+            ],
+            'backend' => [
+                'base_url' => rtrim((string) config('app.url', url('/')), '/'),
+            ],
+            'credentials' => [
+                'key' => $agent->agent_key,
+                'secret' => $secret,
+                'poll_interval_seconds' => (int) ($runtimeConfig['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3)),
+            ],
+        ]);
+    }
+
     public function heartbeat(Request $request, LocalAgentConfigService $configService): JsonResponse
     {
         /** @var LocalAgent $agent */

@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [string]$SeedConfigPath,
     [string]$OutputDir = (Join-Path $PSScriptRoot 'dist'),
     [string]$BuildRoot = (Join-Path $PSScriptRoot 'build'),
     [string]$AgentBinaryPath = (Join-Path $PSScriptRoot 'bin\nimvo-fiscal-agent.exe'),
@@ -47,16 +46,6 @@ if (-not (Test-Path -LiteralPath $iexpressPath)) {
 
 $goCommand = Get-Command go -ErrorAction Stop
 
-if ([string]::IsNullOrWhiteSpace($SeedConfigPath)) {
-    $SeedConfigPath = Join-Path $PSScriptRoot 'config.example.json'
-}
-
-$resolvedSeedConfig = (Resolve-Path -LiteralPath $SeedConfigPath).Path
-
-if (-not (Test-Path -LiteralPath $resolvedSeedConfig)) {
-    throw "Arquivo de configuracao base nao encontrado: $SeedConfigPath"
-}
-
 New-Item -ItemType Directory -Path (Split-Path -Parent $AgentBinaryPath) -Force | Out-Null
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 New-CleanDirectory -Path $BuildRoot
@@ -80,11 +69,9 @@ finally {
 }
 
 $stagedAgentExe = Join-Path $resolvedStagingDir 'nimvo-fiscal-agent.exe'
-$stagedSeedConfig = Join-Path $resolvedStagingDir 'agent.seed.json'
 $stagedInstallScript = Join-Path $resolvedStagingDir 'install-agent.cmd'
 
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
-Copy-Item -LiteralPath $resolvedSeedConfig -Destination $stagedSeedConfig -Force
 
 $installScript = @'
 @echo off
@@ -99,9 +86,9 @@ echo Nimvo Fiscal Agent Setup
 echo ========================================
 echo.
 echo O instalador vai configurar o agente local do Nimvo nesta maquina.
-echo Ele usa o bootstrap embutido quando existir e pede apenas os dados do tenant e da impressora.
+echo Ele vai pedir a URL do Nimvo, o codigo de ativacao do tenant e a impressora da maquina.
 echo.
-"%~dp0nimvo-fiscal-agent.exe" install -config "%~dp0agent.seed.json"
+"%~dp0nimvo-fiscal-agent.exe" install
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.
 if not "%EXIT_CODE%"=="0" (
@@ -152,14 +139,12 @@ PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
 FILE0="nimvo-fiscal-agent.exe"
-FILE1="agent.seed.json"
-FILE2="install-agent.cmd"
+FILE1="install-agent.cmd"
 [SourceFiles]
 SourceFiles0=$sourceRoot
 [SourceFiles0]
 %FILE0%=
 %FILE1%=
-%FILE2%=
 "@
 
 Set-Content -LiteralPath $sedPath -Value $sedContent -Encoding ASCII

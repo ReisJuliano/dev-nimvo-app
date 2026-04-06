@@ -10,6 +10,7 @@ use App\Models\Tenant\FiscalProfile;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\User;
+use App\Services\Central\LocalAgentBootstrapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
@@ -220,6 +221,45 @@ class FiscalDocumentsApiTest extends TestCase
         $this->assertSame('PDV-CAIXA-01', data_get($agent->metadata, 'device.machine.name'));
         $this->assertSame('ELGIN-I9', data_get($agent->metadata, 'device.printer.name'));
         $this->assertSame('http://127.0.0.1:18123', data_get($agent->metadata, 'device.local_api.url'));
+    }
+
+    public function test_local_agent_can_activate_with_a_temporary_code(): void
+    {
+        /** @var LocalAgentBootstrapService $bootstrapService */
+        $bootstrapService = app(LocalAgentBootstrapService::class);
+
+        $agent = $bootstrapService->upsertForTenant((string) $this->tenant->id, [
+            'name' => 'PDV Fiscal',
+            'active' => true,
+            'runtime_config' => [
+                'poll_interval_seconds' => 9,
+            ],
+        ]);
+        $issued = $bootstrapService->issueActivationCode($agent);
+
+        $response = $this->postJson('/api/local-agents/activate', [
+            'activation_code' => $issued['code'],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('agent.key', $agent->agent_key)
+            ->assertJsonPath('credentials.key', $agent->agent_key)
+            ->assertJsonPath('credentials.secret', $bootstrapService->secret($agent->fresh()))
+            ->assertJsonPath('credentials.poll_interval_seconds', 9);
+
+        $agent->refresh();
+
+        $this->assertNull(data_get($agent->metadata, 'activation.code_hash'));
+        $this->assertNotNull(data_get($agent->metadata, 'activation.activated_at'));
+    }
+
+    public function test_local_agent_activation_rejects_invalid_codes(): void
+    {
+        $response = $this->postJson('/api/local-agents/activate', [
+            'activation_code' => 'CODIGO-INVALIDO',
+        ]);
+
+        $response->assertStatus(422);
     }
 
     public function test_it_requires_csc_data_before_queueing_a_fiscal_document(): void

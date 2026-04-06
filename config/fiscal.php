@@ -8,5 +8,6 @@ return [
     'agents' => [
         'command_timeout_seconds' => (int) env('FISCAL_AGENT_COMMAND_TIMEOUT', 120),
         'poll_interval_seconds' => (int) env('FISCAL_AGENT_POLL_INTERVAL', 3),
+        'activation_code_expires_minutes' => (int) env('FISCAL_AGENT_ACTIVATION_EXPIRES', 30),
     ],
 ];

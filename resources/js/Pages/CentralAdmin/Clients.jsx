@@ -129,18 +129,6 @@ function formatDateTime(value) {
     }).format(date)
 }
 
-function downloadTextFile(filename, content, type = 'application/json;charset=utf-8') {
-    const blob = new Blob([content], { type })
-    const objectUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = objectUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(objectUrl)
-}
-
 function buildTenantSummaries(tenants, settingsState) {
     return tenants.map((tenant) => {
         const form = normalizeSettings(settingsState?.[tenant.id] || tenant.settings)
@@ -534,22 +522,25 @@ function LocalAgentModal({
     form,
     busy,
     printBusy,
-    bootstrapBusyMode,
+    activationBusy,
+    activationPreview,
     onClose,
     onChange,
     onSubmit,
-    onDownloadBootstrap,
+    onGenerateActivationCode,
+    onCopyActivationCode,
     onTestPrint,
 }) {
     const agent = tenant?.local_agent
     const hasAgent = Boolean(agent)
+    const hasActivationPreview = activationPreview?.tenantId === tenant?.id
 
     return (
         <ModalFrame
             open={open}
             icon="fa-desktop"
             title={tenant ? `Agente fiscal de ${tenant.name}` : 'Agente fiscal'}
-            description="Gerencie o bootstrap, o status central e acompanhe a configuracao local enviada pela maquina do cliente."
+            description="Gerencie a ativacao, o status central e acompanhe a configuracao local enviada pela maquina do cliente."
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
@@ -582,45 +573,58 @@ function LocalAgentModal({
                             </div>
                             <p>
                                 {hasAgent
-                                    ? 'Esse registro central controla o bootstrap e a configuracao sincronizada do agente instalado no cliente.'
-                                    : 'Salve este cadastro para gerar o primeiro bootstrap do agente fiscal deste tenant.'}
+                                    ? 'Esse registro central controla a ativacao e a configuracao sincronizada do agente instalado no cliente.'
+                                    : 'Salve este cadastro para gerar o primeiro codigo de ativacao do agente fiscal deste tenant.'}
                             </p>
                         </article>
 
                         <article className="central-admin-license-card central-admin-agent-card">
                             <div className="central-admin-license-card-top">
-                                <h3>Bootstrap do instalador</h3>
-                                <span className={`central-admin-status-pill ${agent?.bootstrap_available ? 'is-active' : 'is-muted'}`}>
-                                    {agent?.bootstrap_available ? 'Disponivel' : 'Pendente'}
+                                <h3>Codigo de ativacao</h3>
+                                <span className={`central-admin-status-pill ${agent?.activation?.pending ? 'is-active' : agent?.activation?.activated_at ? 'is-info' : 'is-muted'}`}>
+                                    {agent?.activation?.pending ? 'Pendente' : agent?.activation?.activated_at ? 'Usado' : 'Nao gerado'}
                                 </span>
                             </div>
                             <p>
-                                Baixe o JSON bootstrap e entregue junto com o instalador `nimvo-fiscal-agent-setup.exe`. O setup coleta na propria
-                                maquina o certificado A1, a impressora, o logo do cupom e a API local do tenant.
+                                Gere um codigo temporario e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse codigo por
+                                credenciais internas e segue com a configuracao da impressora na propria maquina do cliente.
                             </p>
+                            {hasActivationPreview ? (
+                                <div className="central-admin-note-card" style={{ marginBottom: 16 }}>
+                                    <h3>
+                                        <i className="fa-solid fa-key" /> Codigo atual
+                                    </h3>
+                                    <p className="central-admin-path-copy">{activationPreview.code}</p>
+                                    <p>
+                                        Backend: {activationPreview.backend_url || 'Nao informado'}
+                                        <br />
+                                        Expira em: {formatDateTime(activationPreview.expires_at)}
+                                    </p>
+                                </div>
+                            ) : null}
                             <div className="central-admin-table-actions">
                                 <button
                                     type="button"
                                     className="central-admin-secondary-button"
-                                    disabled={!hasAgent || bootstrapBusyMode !== null}
-                                    onClick={() => onDownloadBootstrap(false)}
+                                    disabled={!hasAgent || activationBusy}
+                                    onClick={onGenerateActivationCode}
                                 >
-                                    <i className="fa-solid fa-file-arrow-down" />
-                                    <span>{bootstrapBusyMode === 'download' ? 'Baixando...' : 'Baixar JSON'}</span>
+                                    <i className="fa-solid fa-key" />
+                                    <span>{activationBusy ? 'Gerando...' : agent?.activation?.pending ? 'Gerar novo codigo' : 'Gerar codigo'}</span>
                                 </button>
                                 <button
                                     type="button"
                                     className="central-admin-secondary-button"
-                                    disabled={!hasAgent || bootstrapBusyMode !== null}
-                                    onClick={() => onDownloadBootstrap(true)}
+                                    disabled={!hasActivationPreview}
+                                    onClick={onCopyActivationCode}
                                 >
-                                    <i className="fa-solid fa-rotate" />
-                                    <span>{bootstrapBusyMode === 'rotate' ? 'Gerando...' : 'Regenerar bootstrap'}</span>
+                                    <i className="fa-solid fa-copy" />
+                                    <span>Copiar codigo</span>
                                 </button>
                             </div>
-                            {hasAgent && !agent?.bootstrap_available ? (
+                            {hasAgent && agent?.activation?.pending ? (
                                 <p className="central-admin-field-note">
-                                    Este agente foi criado sem bootstrap recuperavel. Use “Regenerar bootstrap” e reinstale no cliente.
+                                    O codigo fica valido ate {formatDateTime(agent?.activation?.expires_at)}. Se expirar, gere um novo codigo e rode o setup novamente no cliente.
                                 </p>
                             ) : null}
                         </article>
@@ -962,7 +966,8 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
     const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
     const [localAgentBusy, setLocalAgentBusy] = useState(false)
     const [localAgentPrintBusy, setLocalAgentPrintBusy] = useState(false)
-    const [bootstrapBusyMode, setBootstrapBusyMode] = useState(null)
+    const [activationBusy, setActivationBusy] = useState(false)
+    const [activationPreview, setActivationPreview] = useState(null)
     const [tenantSettingsState, setTenantSettingsState] = useState(() => buildTenantSettingsState(tenants))
     const [rowState, setRowState] = useState({})
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
@@ -1027,6 +1032,7 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
     function openLocalAgentModal(tenant) {
         setLocalAgentTenant(tenant)
         setLocalAgentForm(buildLocalAgentForm(tenant))
+        setActivationPreview(null)
     }
 
     async function handleSubmitTenant(event) {
@@ -1238,28 +1244,23 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
         }
     }
 
-    async function handleDownloadBootstrap(rotateSecret = false) {
+    async function handleGenerateActivationCode() {
         if (!localAgentTenant) {
             return
         }
 
-        if (rotateSecret) {
-            const confirmed = window.confirm('Regenerar o bootstrap troca a credencial do agente. O cliente precisara reinstalar ou atualizar o bootstrap local. Deseja continuar?')
-            if (!confirmed) {
-                return
-            }
-        }
-
-        setBootstrapBusyMode(rotateSecret ? 'rotate' : 'download')
+        setActivationBusy(true)
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/bootstrap`, {
+            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/activation-code`, {
                 method: 'post',
-                data: { rotate_secret: rotateSecret },
             })
 
-            downloadTextFile(response.bootstrap.filename, `${response.bootstrap.content}\n`)
+            setActivationPreview({
+                tenantId: localAgentTenant.id,
+                ...response.activation,
+            })
             setFeedback({ type: 'success', text: response.message })
             setLocalAgentTenant((current) => (
                 current
@@ -1273,7 +1274,20 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
-            setBootstrapBusyMode(null)
+            setActivationBusy(false)
+        }
+    }
+
+    async function handleCopyActivationCode() {
+        if (!activationPreview?.code) {
+            return
+        }
+
+        try {
+            await navigator.clipboard.writeText(activationPreview.code)
+            setFeedback({ type: 'success', text: 'Codigo de ativacao copiado.' })
+        } catch (error) {
+            setFeedback({ type: 'error', text: 'Nao foi possivel copiar o codigo de ativacao automaticamente.' })
         }
     }
 
@@ -1437,11 +1451,16 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
                 form={localAgentForm}
                 busy={localAgentBusy}
                 printBusy={localAgentPrintBusy}
-                bootstrapBusyMode={bootstrapBusyMode}
-                onClose={() => setLocalAgentTenant(null)}
+                activationBusy={activationBusy}
+                activationPreview={activationPreview}
+                onClose={() => {
+                    setLocalAgentTenant(null)
+                    setActivationPreview(null)
+                }}
                 onChange={handleLocalAgentFieldChange}
                 onSubmit={handleSubmitLocalAgent}
-                onDownloadBootstrap={handleDownloadBootstrap}
+                onGenerateActivationCode={handleGenerateActivationCode}
+                onCopyActivationCode={handleCopyActivationCode}
                 onTestPrint={handleTestLocalAgentPrint}
             />
         </AdminLayout>

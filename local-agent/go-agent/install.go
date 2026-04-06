@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const runEntryName = "NimvoFiscalAgent"
@@ -17,7 +21,6 @@ const runEntryName = "NimvoFiscalAgent"
 func runInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	installDir := fs.String("install-dir", defaultInstallDir(), "Pasta de instalacao do agente")
-	configSource := fs.String("config", "", "JSON bootstrap opcional do agente para preencher os dados do tenant")
 	enableStartup := fs.Bool("startup", true, "Registrar o agente para iniciar com o Windows")
 	startNow := fs.Bool("start", true, "Iniciar o agente apos instalar")
 
@@ -35,7 +38,6 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	sourceDir := filepath.Dir(currentExe)
 	targetExe := filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")
 	targetLog := filepath.Join(installRoot, "logs", "agent.log")
 	targetRunCmd := filepath.Join(installRoot, "run-agent.cmd")
@@ -56,12 +58,7 @@ func runInstall(args []string) error {
 		return err
 	}
 
-	config, selectedConfigPath, err := resolveInstallSeedConfig(*configSource, sourceDir)
-	if err != nil {
-		return err
-	}
-
-	config, err = completeInstallationConfig(config)
+	config, err := completeInstallationConfig(defaultAgentConfig())
 	if err != nil {
 		return err
 	}
@@ -102,7 +99,6 @@ func runInstall(args []string) error {
 
 	summary := map[string]string{
 		"install_dir":     installRoot,
-		"seed_config":     selectedConfigPath,
 		"config_storage":  "registry://HKCU/Software/NimvoFiscalAgent",
 		"log":             targetLog,
 		"startup":         fmt.Sprintf("%t", *enableStartup),
@@ -236,11 +232,11 @@ func buildReadme(installDir string) string {
 		"Configuracao local: registry://HKCU/Software/NimvoFiscalAgent",
 		"",
 		"Fluxo sugerido:",
-		"1. O instalador coleta a URL do Nimvo, as credenciais do tenant, a impressora e o logo do cupom.",
-		"2. O agente sobe uma API local HTTP para a ponte de impressao do Nimvo no navegador.",
-		"3. O agente envia heartbeat para o Nimvo em segundo plano e mantem a ponte local pronta para receber impressoes.",
+		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, a impressora e o logo do cupom.",
+		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano no Windows.",
+		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
 		"4. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"5. O agente grava o loop em logs\\agent.log.",
+		"5. O agente grava a execucao em logs\\agent.log.",
 		"",
 		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
 		"",
@@ -306,61 +302,28 @@ func launchAgent(vbsPath string) error {
 	return cmd.Start()
 }
 
-func resolveInstallSeedConfig(configSource, sourceDir string) (AgentConfig, string, error) {
-	defaultPath := strings.TrimSpace(configSource)
-	if defaultPath == "" {
-		for _, candidate := range []string{
-			filepath.Join(sourceDir, "agent.seed.json"),
-			filepath.Join(sourceDir, "config.example.json"),
-		} {
-			if fileExists(candidate) {
-				defaultPath = candidate
-				break
-			}
-		}
-	}
-
-	if defaultPath == "" {
-		return defaultAgentConfig(), "", nil
-	}
-
-	config, err := loadAgentConfig(defaultPath)
-	if err != nil {
-		return AgentConfig{}, "", err
-	}
-
-	return normalizeAgentConfig(config), defaultPath, nil
-}
-
 func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
 	var err error
 
 	config = normalizeAgentConfig(config)
 	config.Certificate = Certificate{}
-	if isPlaceholderValue(config.Backend.BaseURL) {
-		config.Backend.BaseURL = ""
-	}
-	if isPlaceholderValue(config.Agent.Key) {
-		config.Agent.Key = ""
-	}
-	if isPlaceholderValue(config.Agent.Secret) {
-		config.Agent.Secret = ""
-	}
 
-	config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", config.Backend.BaseURL)
+	config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", strings.TrimSpace(config.Backend.BaseURL))
 	if err != nil {
 		return config, err
 	}
 
-	config.Agent.Key, err = promptRequired("Agent key do tenant", config.Agent.Key)
+	activationCode, err := promptRequired("Codigo de ativacao do tenant", "")
 	if err != nil {
 		return config, err
 	}
 
-	config.Agent.Secret, err = promptRequired("Agent secret do tenant", config.Agent.Secret)
+	activatedConfig, err := activateInstalledAgentConfig(config.Backend.BaseURL, activationCode)
 	if err != nil {
 		return config, err
 	}
+	config.Backend = activatedConfig.Backend
+	config.Agent = activatedConfig.Agent
 
 	pollInterval, err := promptText("Polling em segundos", fmt.Sprintf("%d", config.Agent.PollInterval))
 	if err != nil {
@@ -417,4 +380,64 @@ func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
 	}
 
 	return config, nil
+}
+
+func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, error) {
+	config := defaultAgentConfig()
+	config.Backend.BaseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+
+	payload, err := json.Marshal(map[string]any{
+		"activation_code": strings.TrimSpace(activationCode),
+	})
+	if err != nil {
+		return config, err
+	}
+
+	request, err := http.NewRequest(http.MethodPost, config.Backend.BaseURL+"/api/local-agents/activate", bytes.NewReader(payload))
+	if err != nil {
+		return config, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: time.Duration(maxInt(1, config.Backend.Timeout)) * time.Second}
+	response, err := client.Do(request)
+	if err != nil {
+		return config, fmt.Errorf("nao foi possivel ativar o agente no backend do Nimvo: %w", err)
+	}
+	defer response.Body.Close()
+
+	rawBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		return config, err
+	}
+
+	decoded := map[string]any{}
+	if len(bytes.TrimSpace(rawBody)) > 0 {
+		if err := json.Unmarshal(rawBody, &decoded); err != nil {
+			return config, errors.New("o backend respondeu com um JSON invalido durante a ativacao do agente")
+		}
+	}
+
+	if response.StatusCode >= 400 {
+		message := strings.TrimSpace(stringValueFromMap(decoded, "message"))
+		if message == "" {
+			message = fmt.Sprintf("o backend recusou a ativacao com HTTP %d", response.StatusCode)
+		}
+
+		return config, errors.New(message)
+	}
+
+	config.Agent.Key = strings.TrimSpace(stringValueFromMap(decoded, "credentials.key"))
+	config.Agent.Secret = strings.TrimSpace(stringValueFromMap(decoded, "credentials.secret"))
+	if pollInterval := maxInt(0, intValueFromMap(decoded, "credentials.poll_interval_seconds")); pollInterval > 0 {
+		config.Agent.PollInterval = pollInterval
+	}
+
+	if config.Agent.Key == "" || config.Agent.Secret == "" {
+		return config, errors.New("o backend ativou o agente, mas nao retornou as credenciais internas")
+	}
+
+	return normalizeAgentConfig(config), nil
 }

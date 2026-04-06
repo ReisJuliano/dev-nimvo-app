@@ -43,11 +43,15 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::patch('/tenants/{tenant}/status', [TenantManagementController::class, 'updateStatus'])->name('tenants.status');
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
         Route::put('/tenants/{tenant}/local-agent', [TenantManagementController::class, 'upsertLocalAgent'])->name('tenants.local-agent.upsert');
-        Route::post('/tenants/{tenant}/local-agent/bootstrap', [TenantManagementController::class, 'downloadLocalAgentBootstrap'])->name('tenants.local-agent.bootstrap');
+        Route::post('/tenants/{tenant}/local-agent/activation-code', [TenantManagementController::class, 'issueLocalAgentActivationCode'])->name('tenants.local-agent.activation-code');
         Route::put('/tenants/{tenant}/license', [TenantManagementController::class, 'updateLicense'])->name('tenants.license.update');
         Route::patch('/tenant-license-invoices/{invoice}/status', [TenantManagementController::class, 'updateLicenseInvoiceStatus'])->name('tenant-license-invoices.status');
     });
 });
+
+Route::post('/api/local-agents/activate', [LocalAgentApiController::class, 'activate'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])
+    ->name('central.api.local-agents.activate');
 
 Route::prefix('api/local-agents')
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class])

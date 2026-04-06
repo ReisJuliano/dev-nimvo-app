@@ -4,6 +4,7 @@ namespace App\Services\Central;
 
 use App\Models\Central\LocalAgent;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -59,6 +60,94 @@ class LocalAgentBootstrapService
         ])->save();
 
         return $agent->refresh();
+    }
+
+    public function issueActivationCode(LocalAgent $agent): array
+    {
+        $metadata = is_array($agent->metadata) ? $agent->metadata : [];
+        $code = $this->generateActivationCode();
+        $normalized = $this->normalizeActivationCode($code);
+        $expiresAt = now()->addMinutes(max(5, (int) config('fiscal.agents.activation_code_expires_minutes', 30)));
+
+        $metadata['activation'] = [
+            'code_hash' => hash('sha256', $normalized),
+            'code_encrypted' => encrypt($code),
+            'generated_at' => now()->toIso8601String(),
+            'expires_at' => $expiresAt->toIso8601String(),
+            'activated_at' => null,
+        ];
+
+        $agent->forceFill([
+            'metadata' => $metadata,
+        ])->save();
+
+        return [
+            'agent' => $agent->refresh(),
+            'code' => $code,
+            'backend_url' => $this->resolveBackendUrl(data_get($metadata, 'bootstrap.backend_url')),
+            'generated_at' => data_get($metadata, 'activation.generated_at'),
+            'expires_at' => data_get($metadata, 'activation.expires_at'),
+        ];
+    }
+
+    public function activationStatus(LocalAgent $agent): array
+    {
+        $activation = is_array(data_get($agent->metadata, 'activation'))
+            ? data_get($agent->metadata, 'activation')
+            : [];
+
+        $expiresAt = $this->normalizeDate(data_get($activation, 'expires_at'));
+        $generatedAt = $this->normalizeDate(data_get($activation, 'generated_at'));
+        $activatedAt = $this->normalizeDate(data_get($activation, 'activated_at'));
+        $pending = filled(data_get($activation, 'code_hash'))
+            && (!$expiresAt || $expiresAt->isFuture());
+
+        return [
+            'pending' => $pending,
+            'generated_at' => $generatedAt?->toIso8601String(),
+            'expires_at' => $expiresAt?->toIso8601String(),
+            'activated_at' => $activatedAt?->toIso8601String(),
+            'backend_url' => $this->resolveBackendUrl(data_get($agent->metadata, 'bootstrap.backend_url')),
+        ];
+    }
+
+    public function activateByCode(string $code): array
+    {
+        $normalized = $this->normalizeActivationCode($code);
+
+        if ($normalized === '') {
+            throw new RuntimeException('Informe um codigo de ativacao valido para conectar o agente.');
+        }
+
+        $agent = LocalAgent::query()
+            ->where('active', true)
+            ->get()
+            ->first(fn (LocalAgent $candidate) => $this->activationMatches($candidate, $normalized));
+
+        if (!$agent) {
+            throw new RuntimeException('Codigo de ativacao invalido ou expirado. Gere um novo codigo no admin do Nimvo.');
+        }
+
+        $secret = $this->secret($agent);
+        if (!$secret) {
+            throw new RuntimeException('As credenciais permanentes do agente ainda nao estao disponiveis para esta ativacao.');
+        }
+
+        $metadata = is_array($agent->metadata) ? $agent->metadata : [];
+        $metadata['activation'] = [
+            'generated_at' => data_get($metadata, 'activation.generated_at'),
+            'expires_at' => data_get($metadata, 'activation.expires_at'),
+            'activated_at' => now()->toIso8601String(),
+        ];
+
+        $agent->forceFill([
+            'metadata' => $metadata,
+        ])->save();
+
+        return [
+            'agent' => $agent->refresh(),
+            'secret' => $secret,
+        ];
     }
 
     public function bootstrapAvailable(LocalAgent $agent): bool
@@ -164,6 +253,57 @@ class LocalAgentBootstrapService
             'secret_hash' => Hash::make($secret),
             'secret_encrypted' => encrypt($secret),
         ];
+    }
+
+    protected function generateActivationCode(): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $segments = [];
+
+        for ($segment = 0; $segment < 3; $segment++) {
+            $value = '';
+
+            for ($index = 0; $index < 4; $index++) {
+                $value .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+
+            $segments[] = $value;
+        }
+
+        return implode('-', $segments);
+    }
+
+    protected function normalizeActivationCode(string $code): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', strtoupper(trim($code))) ?: '';
+    }
+
+    protected function activationMatches(LocalAgent $agent, string $normalizedCode): bool
+    {
+        $activation = is_array(data_get($agent->metadata, 'activation'))
+            ? data_get($agent->metadata, 'activation')
+            : [];
+        $codeHash = (string) data_get($activation, 'code_hash', '');
+        $expiresAt = $this->normalizeDate(data_get($activation, 'expires_at'));
+
+        if ($codeHash === '' || !$expiresAt || $expiresAt->isPast()) {
+            return false;
+        }
+
+        return hash_equals($codeHash, hash('sha256', $normalizedCode));
+    }
+
+    protected function normalizeDate(mixed $value): ?Carbon
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function resolveBackendUrl(?string $url): string

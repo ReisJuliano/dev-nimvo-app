@@ -288,7 +288,6 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("Exemplos:")
 	fmt.Println(`  nimvo-fiscal-agent install`)
-	fmt.Println(`  nimvo-fiscal-agent install -config "D:\bootstrap\tenant.json"`)
 	fmt.Println(`  nimvo-fiscal-agent daemon`)
 	fmt.Println(`  nimvo-fiscal-agent serve`)
 }

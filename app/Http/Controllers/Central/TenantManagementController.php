@@ -286,7 +286,7 @@ class TenantManagementController extends Controller
         ]);
     }
 
-    public function downloadLocalAgentBootstrap(
+    public function issueLocalAgentActivationCode(
         Request $request,
         Tenant $tenant,
         LocalAgentBootstrapService $bootstrapService,
@@ -297,21 +297,17 @@ class TenantManagementController extends Controller
         $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
         abort_unless($agent, 404, 'Nenhum agente fiscal foi cadastrado para este tenant.');
 
-        $rotateSecret = $request->boolean('rotate_secret');
-
-        if ($rotateSecret) {
-            $agent = $bootstrapService->rotateSecret($agent);
-        } elseif (!$bootstrapService->bootstrapAvailable($agent)) {
-            abort(422, 'Este agente ainda nao possui um bootstrap recuperavel. Gere um novo bootstrap para reinstalar o cliente.');
-        }
-
-        $bootstrap = $bootstrapService->bootstrapFile($agent);
+        $issued = $bootstrapService->issueActivationCode($agent);
+        $agent = $issued['agent'];
 
         return response()->json([
-            'message' => $rotateSecret
-                ? 'Bootstrap regenerado. Reinstale ou reconfigure o agente da maquina com este novo arquivo.'
-                : 'Bootstrap do agente pronto para download.',
-            'bootstrap' => $bootstrap,
+            'message' => 'Codigo de ativacao gerado. Use esse codigo no instalador do agente da maquina.',
+            'activation' => [
+                'code' => $issued['code'],
+                'backend_url' => $issued['backend_url'],
+                'generated_at' => $issued['generated_at'],
+                'expires_at' => $issued['expires_at'],
+            ],
             'agent' => $this->serializeLocalAgent($agent, $configService, $bootstrapService),
         ]);
     }
@@ -338,7 +334,7 @@ class TenantManagementController extends Controller
             'last_ip' => $agent->last_ip,
             'last_seen_at' => optional($agent->last_seen_at)?->toIso8601String(),
             'last_seen_label' => optional($agent->last_seen_at)?->format('d/m/Y H:i'),
-            'bootstrap_available' => $bootstrapService->bootstrapAvailable($agent),
+            'activation' => $bootstrapService->activationStatus($agent),
             'runtime_config' => $runtime,
             'device' => [
                 'machine_name' => data_get($agent->metadata, 'device.machine.name'),
