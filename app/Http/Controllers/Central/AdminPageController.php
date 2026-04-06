@@ -10,6 +10,7 @@ use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
+use App\Support\Tenancy\TenantDomainManager;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -123,6 +124,7 @@ class AdminPageController extends Controller
     protected function buildProps(TenantSettingsService $settingsService): array
     {
         $tenants = [];
+        $domainManager = app(TenantDomainManager::class);
         $licenseService = app(TenantLicenseService::class);
         $localAgentConfigService = app(LocalAgentConfigService::class);
         $localAgentBootstrapService = app(LocalAgentBootstrapService::class);
@@ -174,6 +176,7 @@ class AdminPageController extends Controller
                         'client_name' => $tenant->client?->name,
                         'document' => $tenant->client?->document,
                         'domain' => $domain,
+                        'subdomain' => $domainManager->normalizeSubdomain($domain),
                         'url' => $this->tenantUrl($domain),
                         'active' => (bool) ($tenant->client?->active ?? true),
                         'created_at' => optional($tenant->created_at)?->format('d/m/Y H:i'),
@@ -208,6 +211,7 @@ class AdminPageController extends Controller
             'businessPresets' => $settingsService->businessPresets(),
             'generalOptions' => $settingsService->generalOptions(),
             'moduleSections' => $settingsService->moduleDefinitions(),
+            'tenantBaseDomain' => $domainManager->tenantBaseDomain(),
         ];
     }
 

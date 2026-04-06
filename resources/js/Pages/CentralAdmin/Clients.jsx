@@ -11,7 +11,7 @@ const INITIAL_TENANT_FORM = {
     client_name: '',
     tenant_name: '',
     tenant_id: '',
-    domain: '',
+    subdomain: '',
     client_email: '',
     client_document: '',
     active: true,
@@ -29,6 +29,24 @@ function buildTenantSettingsState(tenants) {
     return Object.fromEntries(tenants.map((tenant) => [tenant.id, normalizeSettings(tenant.settings)]))
 }
 
+function normalizeSubdomainInput(value, tenantBaseDomain) {
+    const sanitized = String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .split(/[/?#]/)[0]
+
+    const withoutBaseDomain = tenantBaseDomain && sanitized.endsWith(`.${tenantBaseDomain}`)
+        ? sanitized.slice(0, -(tenantBaseDomain.length + 1))
+        : sanitized
+
+    return withoutBaseDomain
+        .replace(/\.+/g, '-')
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+}
+
 function buildTenantForm(tenant = null) {
     if (!tenant) {
         return { ...INITIAL_TENANT_FORM }
@@ -38,7 +56,7 @@ function buildTenantForm(tenant = null) {
         client_name: tenant.client_name || tenant.name || '',
         tenant_name: tenant.name || '',
         tenant_id: tenant.id || '',
-        domain: tenant.domain || '',
+        subdomain: tenant.subdomain || '',
         client_email: tenant.email || '',
         client_document: tenant.document || '',
         active: Boolean(tenant.active),
@@ -172,14 +190,18 @@ function ModalFrame({ open, icon, title, description, onClose, children }) {
     )
 }
 
-function TenantFormModal({ open, mode, form, busy, onClose, onChange, onSubmit }) {
+function TenantFormModal({ open, mode, form, busy, tenantBaseDomain, onClose, onChange, onSubmit }) {
     const isEdit = mode === 'edit'
+    const tenantPreview = form.subdomain
+        ? `${form.subdomain}.${tenantBaseDomain}`
+        : `tenant.${tenantBaseDomain}`
 
     return (
         <ModalFrame
             open={open}
             icon={isEdit ? 'fa-pen-to-square' : 'fa-plus'}
             title={isEdit ? 'Editar tenant' : 'Novo tenant'}
+            description={`O tenant sempre sera publicado em ${tenantPreview}.`}
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
@@ -234,18 +256,22 @@ function TenantFormModal({ open, mode, form, busy, onClose, onChange, onSubmit }
                         </label>
 
                         <label className="central-admin-field">
-                            <span className="central-admin-field-label">Dominio</span>
+                            <span className="central-admin-field-label">Subdominio</span>
                             <span className="central-admin-field-shell">
                                 <span className="central-admin-field-icon">
                                     <i className="fa-solid fa-globe" />
                                 </span>
                                 <input
                                     className="central-admin-field-input"
-                                    value={form.domain}
-                                    onChange={(event) => onChange('domain', event.target.value)}
-                                    placeholder="tenant.test.lvh.me"
+                                    value={form.subdomain}
+                                    onChange={(event) => onChange('subdomain', event.target.value)}
+                                    placeholder="tenantnome"
                                     required
                                 />
+                                <span className="central-admin-field-suffix">.{tenantBaseDomain}</span>
+                            </span>
+                            <span className="central-admin-field-note">
+                                URL final: {tenantPreview}
                             </span>
                         </label>
 
@@ -932,7 +958,14 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
     )
 }
 
-export default function CentralAdminClients({ tenantStats, agentStats, tenants, moduleSections, pageMode = 'tenants' }) {
+export default function CentralAdminClients({
+    tenantStats,
+    agentStats,
+    tenants,
+    moduleSections,
+    tenantBaseDomain,
+    pageMode = 'tenants',
+}) {
     const currentUrl = usePage().url
     const highlightedTenantId = new URLSearchParams(currentUrl.split('?')[1] || '').get('tenant')
     const isFeatureFlagsPage = pageMode === 'feature-flags'
@@ -994,7 +1027,7 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
     function handleFieldChange(field, value) {
         setTenantForm((current) => ({
             ...current,
-            [field]: value,
+            [field]: field === 'subdomain' ? normalizeSubdomainInput(value, tenantBaseDomain) : value,
         }))
     }
 
@@ -1403,6 +1436,7 @@ export default function CentralAdminClients({ tenantStats, agentStats, tenants, 
                 mode={formMode}
                 form={tenantForm}
                 busy={formBusy}
+                tenantBaseDomain={tenantBaseDomain}
                 onClose={() => setFormOpen(false)}
                 onChange={handleFieldChange}
                 onSubmit={handleSubmitTenant}

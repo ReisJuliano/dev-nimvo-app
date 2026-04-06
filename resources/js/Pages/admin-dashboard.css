@@ -567,6 +567,15 @@
     color: var(--central-admin-text);
 }
 
+.central-admin-field-suffix {
+    flex-shrink: 0;
+    padding-right: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #7f95af;
+    white-space: nowrap;
+}
+
 .central-admin-field.is-readonly .central-admin-field-shell {
     background: #0f1827;
 }
