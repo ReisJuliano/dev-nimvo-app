@@ -96,10 +96,6 @@ Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stage
 $installScript = @'
 @echo off
 setlocal
-if /I not "%~1"=="--interactive" (
-  start "Nimvo Fiscal Agent Setup" cmd.exe /k ""%~f0" --interactive"
-  exit /b 0
-)
 title Nimvo Fiscal Agent Setup
 echo ========================================
 echo Nimvo Fiscal Agent Setup
@@ -154,7 +150,7 @@ DisplayLicense=
 FinishMessage=Pacote extraido. Siga a janela de instalacao do agente.
 TargetName=$targetName
 FriendlyName=Nimvo Fiscal Agent Setup
-AppLaunched=cmd.exe /c install-agent.cmd
+AppLaunched=cmd.exe /k install-agent.cmd
 PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
