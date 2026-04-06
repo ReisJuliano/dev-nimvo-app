@@ -63,11 +63,14 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 var
   ConnectionPage: TWizardPage;
+  CertificatePage: TWizardPage;
   PrintingPage: TWizardPage;
 
   BackendUrlEdit: TNewEdit;
   ActivationCodeEdit: TNewEdit;
   PollIntervalEdit: TNewEdit;
+  CertificatePathEdit: TNewEdit;
+  CertificatePasswordEdit: TPasswordEdit;
 
   EnablePrintingCheck: TNewCheckBox;
   ConnectorCombo: TNewComboBox;
@@ -90,7 +93,7 @@ var
 function EscapeJson(const Value: string): string;
 begin
   Result := Value;
-  StringChangeEx(Result, '\\', '\\\\', True);
+  StringChangeEx(Result, '\', '\\', True);
   StringChangeEx(Result, '"', '\\"', True);
   StringChangeEx(Result, #13#10, '\n', True);
   StringChangeEx(Result, #13, '\n', True);
@@ -248,6 +251,25 @@ begin
   Result := True;
 end;
 
+function ValidateCertificatePage: Boolean;
+begin
+  Result := False;
+
+  if (Trim(CertificatePathEdit.Text) = '') and (Trim(CertificatePasswordEdit.Text) <> '') then begin
+    MsgBox('Informe o arquivo do certificado digital antes de preencher a senha.', mbError, MB_OK);
+    WizardForm.ActiveControl := CertificatePathEdit;
+    Exit;
+  end;
+
+  if (Trim(CertificatePathEdit.Text) <> '') and (not FileExists(Trim(CertificatePathEdit.Text))) then begin
+    MsgBox('O arquivo do certificado digital nao foi encontrado no caminho informado.', mbError, MB_OK);
+    WizardForm.ActiveControl := CertificatePathEdit;
+    Exit;
+  end;
+
+  Result := True;
+end;
+
 function ValidatePrintingPage: Boolean;
 var
   ConnectorValue: string;
@@ -299,6 +321,8 @@ begin
 
   if CurPageID = ConnectionPage.ID then begin
     Result := ValidateConnectionPage;
+  end else if CurPageID = CertificatePage.ID then begin
+    Result := ValidateCertificatePage;
   end else if CurPageID = PrintingPage.ID then begin
     Result := ValidatePrintingPage;
   end;
@@ -314,6 +338,19 @@ begin
   Summary := Summary + '  Backend: ' + Trim(BackendUrlEdit.Text) + #13#10;
   Summary := Summary + '  Codigo de ativacao: ' + Trim(ActivationCodeEdit.Text) + #13#10;
   Summary := Summary + '  Polling: ' + Trim(PollIntervalEdit.Text) + ' segundo(s)' + #13#10 + #13#10;
+
+  Summary := Summary + 'Certificado digital:' + #13#10;
+  if Trim(CertificatePathEdit.Text) = '' then begin
+    Summary := Summary + '  Arquivo: nao informado' + #13#10;
+  end else begin
+    Summary := Summary + '  Arquivo: ' + Trim(CertificatePathEdit.Text) + #13#10;
+    if Trim(CertificatePasswordEdit.Text) <> '' then begin
+      Summary := Summary + '  Senha: informada' + #13#10;
+    end else begin
+      Summary := Summary + '  Senha: em branco' + #13#10;
+    end;
+  end;
+  Summary := Summary + #13#10;
 
   Summary := Summary + 'Impressao:' + #13#10;
   if not EnablePrintingCheck.Checked then begin
@@ -351,36 +388,45 @@ var
   Content: string;
 begin
   ConnectorValue := GetConnectorValue;
-  if not EnablePrintingCheck.Checked then begin
+
+  if not EnablePrintingCheck.Checked then
     ConnectorValue := 'windows';
-  end;
 
   PrinterEnabledValue := 'false';
   PrinterNameValue := '';
   PrinterHostValue := '127.0.0.1';
   PrinterPortValue := '9100';
-  OutputPathValue := '';
+  OutputPathValue := EscapeJson(GetPreviewOutputDir);
 
-  if EnablePrintingCheck.Checked then begin
+  if EnablePrintingCheck.Checked then
+  begin
     PrinterEnabledValue := 'true';
-    if ConnectorValue = 'windows' then begin
+
+    if ConnectorValue = 'windows' then
+    begin
       PrinterNameValue := Trim(PrinterNameCombo.Text);
       PrinterHostValue := '';
-    end else if ConnectorValue = 'tcp' then begin
+    end
+    else if ConnectorValue = 'tcp' then
+    begin
       PrinterHostValue := Trim(TcpHostEdit.Text);
       PrinterPortValue := Trim(TcpPortEdit.Text);
       PrinterNameValue := '';
-    end else begin
+    end
+    else
+    begin
       PrinterHostValue := '';
       PrinterNameValue := '';
-      OutputPathValue := GetPreviewOutputDir;
     end;
-  end else begin
+  end
+  else
+  begin
     PrinterHostValue := '';
     PrinterNameValue := '';
   end;
 
   SeedConfigPath := ExpandConstant('{tmp}\nimvo-agent-seed.json');
+
   Content := '{' + #13#10 +
     '  "backend": {' + #13#10 +
     '    "base_url": "' + EscapeJson(Trim(BackendUrlEdit.Text)) + '"' + #13#10 +
@@ -388,13 +434,17 @@ begin
     '  "agent": {' + #13#10 +
     '    "poll_interval_seconds": ' + IntToStr(StrToIntDef(Trim(PollIntervalEdit.Text), 3)) + #13#10 +
     '  },' + #13#10 +
+    '  "certificate": {' + #13#10 +
+    '    "path": "' + EscapeJson(Trim(CertificatePathEdit.Text)) + '",' + #13#10 +
+    '    "password": "' + EscapeJson(Trim(CertificatePasswordEdit.Text)) + '"' + #13#10 +
+    '  },' + #13#10 +
     '  "printer": {' + #13#10 +
     '    "enabled": ' + PrinterEnabledValue + ',' + #13#10 +
     '    "connector": "' + EscapeJson(ConnectorValue) + '",' + #13#10 +
     '    "name": "' + EscapeJson(PrinterNameValue) + '",' + #13#10 +
     '    "host": "' + EscapeJson(PrinterHostValue) + '",' + #13#10 +
     '    "port": ' + PrinterPortValue + ',' + #13#10 +
-    '    "output_path": "' + EscapeJson(OutputPathValue) + '"' + #13#10 +
+    '    "output_path": "' + OutputPathValue + '"' + #13#10 +
     '  },' + #13#10 +
     '  "local_api": {' + #13#10 +
     '    "enabled": true,' + #13#10 +
@@ -499,7 +549,44 @@ begin
   LabelControl.Height := ScaleY(40);
   LabelControl.Caption := 'O instalador troca o codigo de ativacao por credenciais internas e deixa o agente pronto para rodar em segundo plano.';
 
-  PrintingPage := CreateCustomPage(ConnectionPage.ID, 'Impressao local', 'Escolha como o Nimvo vai gerar o cupom na maquina.');
+  CertificatePage := CreateCustomPage(ConnectionPage.ID, 'Certificado digital', 'Informe o local do certificado A1 e a senha para salvar essa configuracao no agente.');
+
+  LabelControl := TNewStaticText.Create(CertificatePage);
+  LabelControl.Parent := CertificatePage.Surface;
+  LabelControl.Left := ScaleX(0);
+  LabelControl.Top := ScaleY(8);
+  LabelControl.Width := ScaleX(560);
+  LabelControl.Caption := 'Arquivo do certificado digital (.pfx ou .p12)';
+
+  CertificatePathEdit := TNewEdit.Create(CertificatePage);
+  CertificatePathEdit.Parent := CertificatePage.Surface;
+  CertificatePathEdit.Left := ScaleX(0);
+  CertificatePathEdit.Top := ScaleY(28);
+  CertificatePathEdit.Width := ScaleX(520);
+
+  LabelControl := TNewStaticText.Create(CertificatePage);
+  LabelControl.Parent := CertificatePage.Surface;
+  LabelControl.Left := ScaleX(0);
+  LabelControl.Top := ScaleY(76);
+  LabelControl.Width := ScaleX(560);
+  LabelControl.Caption := 'Senha do certificado digital';
+
+  CertificatePasswordEdit := TPasswordEdit.Create(CertificatePage);
+  CertificatePasswordEdit.Parent := CertificatePage.Surface;
+  CertificatePasswordEdit.Left := ScaleX(0);
+  CertificatePasswordEdit.Top := ScaleY(96);
+  CertificatePasswordEdit.Width := ScaleX(280);
+
+  LabelControl := TNewStaticText.Create(CertificatePage);
+  LabelControl.Parent := CertificatePage.Surface;
+  LabelControl.Left := ScaleX(0);
+  LabelControl.Top := ScaleY(144);
+  LabelControl.Width := ScaleX(560);
+  LabelControl.Height := ScaleY(56);
+  LabelControl.AutoSize := False;
+  LabelControl.Caption := 'Esse passo e opcional, mas ja deixa o agente pronto para localizar o certificado fiscal da maquina. Se quiser instalar primeiro e configurar depois, deixe os campos em branco.';
+
+  PrintingPage := CreateCustomPage(CertificatePage.ID, 'Impressao local', 'Escolha como o Nimvo vai gerar o cupom na maquina.');
 
   EnablePrintingCheck := TNewCheckBox.Create(PrintingPage);
   EnablePrintingCheck.Parent := PrintingPage.Surface;

@@ -130,14 +130,16 @@ func runInstall(args []string) error {
 	}
 
 	summary := map[string]string{
-		"install_dir":     installRoot,
-		"config_storage":  "registry://HKCU/Software/NimvoFiscalAgent",
-		"log":             targetLog,
-		"startup":         fmt.Sprintf("%t", *enableStartup),
-		"local_api_url":   localAPIBaseURL(config),
-		"printer_target":  printerTarget(config.Printer),
-		"logo_path":       strings.TrimSpace(config.Printer.LogoPath),
-		"backend_baseurl": strings.TrimSpace(config.Backend.BaseURL),
+		"install_dir":                     installRoot,
+		"config_storage":                  "registry://HKCU/Software/NimvoFiscalAgent",
+		"log":                             targetLog,
+		"startup":                         fmt.Sprintf("%t", *enableStartup),
+		"local_api_url":                   localAPIBaseURL(config),
+		"printer_target":                  printerTarget(config.Printer),
+		"logo_path":                       strings.TrimSpace(config.Printer.LogoPath),
+		"backend_baseurl":                 strings.TrimSpace(config.Backend.BaseURL),
+		"certificate_path":                strings.TrimSpace(config.Certificate.Path),
+		"certificate_password_configured": fmt.Sprintf("%t", strings.TrimSpace(config.Certificate.Password) != ""),
 	}
 
 	payload, _ := json.MarshalIndent(summary, "", "  ")
@@ -175,6 +177,8 @@ func runStatus(args []string) error {
 	if config, err := loadInstalledAgentConfig(); err == nil {
 		status["registry_configured"] = true
 		status["backend_baseurl"] = strings.TrimSpace(config.Backend.BaseURL)
+		status["certificate_path"] = strings.TrimSpace(config.Certificate.Path)
+		status["certificate_configured"] = strings.TrimSpace(config.Certificate.Path) != ""
 		status["printer_target"] = printerTarget(config.Printer)
 		status["local_api_url"] = localAPIBaseURL(config)
 		status["local_api_enabled"] = config.LocalAPI.Enabled
@@ -262,7 +266,7 @@ func buildReadme(installDir string) string {
 		"Configuracao local: registry://HKCU/Software/NimvoFiscalAgent",
 		"",
 		"Fluxo sugerido:",
-		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant e a configuracao de impressao local.",
+		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, o certificado digital e a configuracao de impressao local.",
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
 		"4. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
@@ -337,7 +341,7 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 	var err error
 
 	config = normalizeAgentConfig(config)
-	config.Certificate = Certificate{}
+	config.Certificate = normalizeInstallationCertificate(config.Certificate)
 	config.Printer.LogoPath = resolveAutomaticPrinterLogoPath(defaultLogoPath)
 
 	if interactive {
@@ -372,6 +376,13 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 	config.Agent = activatedConfig.Agent
 
 	if interactive {
+		config.Certificate, err = promptInstallationCertificate(config.Certificate)
+		if err != nil {
+			return config, err
+		}
+	}
+
+	if interactive {
 		pollInterval, err := promptText("Polling em segundos", fmt.Sprintf("%d", config.Agent.PollInterval))
 		if err != nil {
 			return config, err
@@ -381,6 +392,11 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 		}
 	} else if requestedPollInterval > 0 {
 		config.Agent.PollInterval = requestedPollInterval
+	}
+
+	config.Certificate = normalizeInstallationCertificate(config.Certificate)
+	if err := validateInstallationCertificate(config.Certificate); err != nil {
+		return config, err
 	}
 
 	if interactive {
@@ -473,6 +489,62 @@ func resolveAutomaticPrinterLogoPath(path string) string {
 	}
 
 	return path
+}
+
+func normalizeInstallationCertificate(certificate Certificate) Certificate {
+	certificate.Path = strings.TrimSpace(certificate.Path)
+	if certificate.Path == "" {
+		return Certificate{}
+	}
+
+	certificate.Password = strings.TrimSpace(certificate.Password)
+
+	return certificate
+}
+
+func validateInstallationCertificate(certificate Certificate) error {
+	if strings.TrimSpace(certificate.Path) == "" {
+		return nil
+	}
+
+	if !fileExists(certificate.Path) {
+		return fmt.Errorf("o arquivo do certificado digital nao foi encontrado: %s", certificate.Path)
+	}
+
+	return nil
+}
+
+func promptInstallationCertificate(certificate Certificate) (Certificate, error) {
+	configureNow, err := promptBool("Informar certificado digital agora", strings.TrimSpace(certificate.Path) != "")
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	if !configureNow {
+		return Certificate{}, nil
+	}
+
+	certificate.Path, err = promptFilePath(
+		"Arquivo do certificado digital (.pfx/.p12)",
+		certificate.Path,
+		"Selecione o certificado digital",
+		"Certificados digitais (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
+	)
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	certificate.Password, err = promptText("Senha do certificado digital (opcional)", certificate.Password)
+	if err != nil {
+		return Certificate{}, err
+	}
+
+	certificate = normalizeInstallationCertificate(certificate)
+	if err := validateInstallationCertificate(certificate); err != nil {
+		return Certificate{}, err
+	}
+
+	return certificate, nil
 }
 
 func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, error) {
