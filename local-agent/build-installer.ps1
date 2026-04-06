@@ -89,6 +89,10 @@ Copy-Item -LiteralPath $resolvedSeedConfig -Destination $stagedSeedConfig -Force
 $installScript = @'
 @echo off
 setlocal
+if /I not "%~1"=="--interactive" (
+  start "Nimvo Fiscal Agent Setup" cmd.exe /k ""%~f0" --interactive"
+  exit /b 0
+)
 title Nimvo Fiscal Agent Setup
 echo ========================================
 echo Nimvo Fiscal Agent Setup
