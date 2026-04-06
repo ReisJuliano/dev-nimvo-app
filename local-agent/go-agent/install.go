@@ -42,6 +42,7 @@ func runInstall(args []string) error {
 	targetExe := filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")
 	targetLog := filepath.Join(installRoot, "logs", "agent.log")
 	targetIcon := filepath.Join(installRoot, "assets", "nimvo.ico")
+	targetLogo := filepath.Join(installRoot, "assets", "nimvo-logo.png")
 	targetRunCmd := filepath.Join(installRoot, "run-agent.cmd")
 	targetRunVbs := filepath.Join(installRoot, "run-agent.vbs")
 	targetUninstall := filepath.Join(installRoot, "uninstall-agent.cmd")
@@ -67,7 +68,13 @@ func runInstall(args []string) error {
 		}
 	}
 
-	config, err := completeInstallationConfig(defaultAgentConfig())
+	if sourceLogo := filepath.Join(sourceDir, "nimvo-logo.png"); fileExists(sourceLogo) {
+		if err := copyFile(sourceLogo, targetLogo); err != nil {
+			return err
+		}
+	}
+
+	config, err := completeInstallationConfig(defaultAgentConfig(), targetLogo)
 	if err != nil {
 		return err
 	}
@@ -113,6 +120,7 @@ func runInstall(args []string) error {
 		"startup":         fmt.Sprintf("%t", *enableStartup),
 		"local_api_url":   localAPIBaseURL(config),
 		"printer_target":  printerTarget(config.Printer),
+		"logo_path":       strings.TrimSpace(config.Printer.LogoPath),
 		"backend_baseurl": strings.TrimSpace(config.Backend.BaseURL),
 	}
 
@@ -308,11 +316,12 @@ func launchAgent(vbsPath string) error {
 	return cmd.Start()
 }
 
-func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
+func completeInstallationConfig(config AgentConfig, defaultLogoPath string) (AgentConfig, error) {
 	var err error
 
 	config = normalizeAgentConfig(config)
 	config.Certificate = Certificate{}
+	config.Printer.LogoPath = resolveAutomaticPrinterLogoPath(defaultLogoPath)
 
 	config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", strings.TrimSpace(config.Backend.BaseURL))
 	if err != nil {
@@ -375,17 +384,21 @@ func completeInstallationConfig(config AgentConfig) (AgentConfig, error) {
 		return config, nil
 	}
 
-	config.Printer.LogoPath, err = promptText("Logo do cupom (opcional)", config.Printer.LogoPath)
-	if err != nil {
-		return config, err
-	}
-
 	config.Printer.Name, err = promptPrinterName(config.Printer.Name)
 	if err != nil {
 		return config, err
 	}
 
 	return config, nil
+}
+
+func resolveAutomaticPrinterLogoPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || !fileExists(path) {
+		return ""
+	}
+
+	return path
 }
 
 func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, error) {

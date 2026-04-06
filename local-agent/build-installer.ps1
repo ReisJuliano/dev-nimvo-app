@@ -88,10 +88,12 @@ finally {
 
 $stagedAgentExe = Join-Path $resolvedStagingDir 'nimvo-fiscal-agent.exe'
 $stagedTrayIcon = Join-Path $resolvedStagingDir 'nimvo.ico'
+$stagedLogoPng = Join-Path $resolvedStagingDir 'nimvo-logo.png'
 $stagedInstallScript = Join-Path $resolvedStagingDir 'install-agent.cmd'
 
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stagedTrayIcon -Force
+Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo-logo.png') -Destination $stagedLogoPng -Force
 
 $installScript = @'
 @echo off
@@ -156,13 +158,15 @@ AdminQuietInstCmd=
 UserQuietInstCmd=
 FILE0="nimvo-fiscal-agent.exe"
 FILE1="nimvo.ico"
-FILE2="install-agent.cmd"
+FILE2="nimvo-logo.png"
+FILE3="install-agent.cmd"
 [SourceFiles]
 SourceFiles0=$sourceRoot
 [SourceFiles0]
 %FILE0%=
 %FILE1%=
 %FILE2%=
+%FILE3%=
 "@
 
 Set-Content -LiteralPath $sedPath -Value $sedContent -Encoding ASCII
