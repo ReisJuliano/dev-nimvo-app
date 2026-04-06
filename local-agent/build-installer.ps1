@@ -94,7 +94,7 @@ $stagedWizardScript = Join-Path $resolvedStagingDir 'install-agent.ps1'
 Copy-Item -LiteralPath $resolvedAgentBinaryPath -Destination $stagedAgentExe -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo.ico') -Destination $stagedTrayIcon -Force
 Copy-Item -LiteralPath (Join-Path $goProjectDir 'nimvo-logo.png') -Destination $stagedLogoPng -Force
-Copy-Item -LiteralPath (Join-Path $repoRoot 'local-agent' 'install-agent.ps1') -Destination $stagedWizardScript -Force
+Copy-Item -LiteralPath (Join-Path $scriptRoot 'install-agent.ps1') -Destination $stagedWizardScript -Force
 
 $targetName = $installerPath
 $sourceRoot = $resolvedStagingDir + '\'
