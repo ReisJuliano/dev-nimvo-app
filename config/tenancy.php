@@ -11,11 +11,16 @@ $centralDomains = array_values(array_filter(array_map(
     explode(',', (string) env('CENTRAL_DOMAINS', $defaultHost)),
 )));
 $tenantBaseDomain = trim(strtolower((string) env('TENANT_BASE_DOMAIN', $centralDomains[0] ?? $defaultHost)));
+$devSingleDatabase = filter_var(
+    env('TENANT_DEV_SINGLE_DATABASE', true),
+    FILTER_VALIDATE_BOOLEAN,
+    FILTER_NULL_ON_FAILURE,
+) ?? true;
 
 return [
     'tenant_model' => \App\Models\Tenant::class,
     'id_generator' => Stancl\Tenancy\UUIDGenerator::class,
-    'dev_single_database' => (bool) env('TENANT_DEV_SINGLE_DATABASE', true),
+    'dev_single_database' => $devSingleDatabase,
     'dev_single_database_connection' => env('DB_CONNECTION', 'mariadb'),
 
     'domain_model' => Domain::class,
@@ -35,7 +40,9 @@ return [
      *
      * To configure their behavior, see the config keys below.
      */
-    'bootstrappers' => [],
+    'bootstrappers' => array_values(array_filter([
+        $devSingleDatabase ? null : Stancl\Tenancy\Bootstrappers\DatabaseTenancyBootstrapper::class,
+    ])),
 
     /**
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
