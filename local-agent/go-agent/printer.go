@@ -170,6 +170,30 @@ func openPrinterWriter(config PrinterConfig) (io.WriteCloser, error) {
 	return openWindowsPrinterWriter(strings.TrimSpace(config.Name))
 }
 
+func unsupportedWindowsPrinterReason(name string) string {
+	normalized := strings.ToLower(strings.TrimSpace(name))
+	switch {
+	case normalized == "":
+		return ""
+	case strings.Contains(normalized, "print to pdf"),
+		strings.Contains(normalized, "adobe pdf"),
+		strings.Contains(normalized, "pdf24"),
+		strings.Contains(normalized, "bullzip pdf"):
+		return "gera arquivos PDF em vez de receber comandos ESC/POS brutos"
+	case strings.Contains(normalized, "xps"):
+		return "gera documentos XPS em vez de receber comandos ESC/POS brutos"
+	case strings.Contains(normalized, "onenote"):
+		return "redireciona a impressao para o OneNote"
+	case normalized == "fax" || strings.Contains(normalized, " fax"):
+		return "envia fax e nao interpreta comandos ESC/POS"
+	case strings.Contains(normalized, "anydesk printer"),
+		strings.Contains(normalized, "rustdesk printer"):
+		return "e uma impressora virtual de acesso remoto"
+	default:
+		return ""
+	}
+}
+
 type escposBuilder struct {
 	buffer bytes.Buffer
 }
@@ -398,6 +422,10 @@ var (
 func openWindowsPrinterWriter(name string) (*rawPrinterWriter, error) {
 	if name == "" {
 		return nil, errors.New("nome da impressora do Windows nao informado")
+	}
+
+	if reason := unsupportedWindowsPrinterReason(name); reason != "" {
+		return nil, fmt.Errorf("a impressora %s %s e nao e compativel com o conector windows raw do Nimvo", name, reason)
 	}
 
 	namePtr, err := syscall.UTF16PtrFromString(name)

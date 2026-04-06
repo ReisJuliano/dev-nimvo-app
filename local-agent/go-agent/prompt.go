@@ -150,30 +150,50 @@ func promptFilePath(label, defaultPath, dialogTitle, filter string) (string, err
 }
 
 func promptPrinterName(current string) (string, error) {
-	printers := listInstalledPrinters()
-	if len(printers) > 0 {
-		fmt.Println("Impressoras encontradas neste Windows:")
-		for index, name := range printers {
-			fmt.Printf("  %d. %s\n", index+1, name)
+	for {
+		printers := listInstalledPrinters()
+		if len(printers) > 0 {
+			fmt.Println("Impressoras encontradas neste Windows:")
+			for index, name := range printers {
+				fmt.Printf("  %d. %s\n", index+1, name)
+			}
+
+			value, err := promptText("Numero ou nome da impressora", current)
+			if err != nil {
+				return "", err
+			}
+
+			selected := strings.TrimSpace(value)
+			if numeric, err := strconv.Atoi(selected); err == nil {
+				if numeric >= 1 && numeric <= len(printers) {
+					selected = printers[numeric-1]
+				}
+			}
+
+			if selected != "" {
+				if reason := unsupportedWindowsPrinterReason(selected); reason != "" {
+					fmt.Printf("A impressora \"%s\" %s e nao e compativel com o conector windows do Nimvo. Escolha uma impressora termica/ESC POS ou use o conector TCP.\n", selected, reason)
+					current = ""
+					continue
+				}
+
+				return selected, nil
+			}
 		}
 
-		value, err := promptText("Numero ou nome da impressora", current)
+		selected, err := promptRequired("Nome da impressora do Windows", current)
 		if err != nil {
 			return "", err
 		}
 
-		if numeric, err := strconv.Atoi(strings.TrimSpace(value)); err == nil {
-			if numeric >= 1 && numeric <= len(printers) {
-				return printers[numeric-1], nil
-			}
+		if reason := unsupportedWindowsPrinterReason(selected); reason != "" {
+			fmt.Printf("A impressora \"%s\" %s e nao e compativel com o conector windows do Nimvo. Escolha uma impressora termica/ESC POS ou use o conector TCP.\n", selected, reason)
+			current = ""
+			continue
 		}
 
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value), nil
-		}
+		return selected, nil
 	}
-
-	return promptRequired("Nome da impressora do Windows", current)
 }
 
 func openFileDialog(title, filter string) (string, error) {
