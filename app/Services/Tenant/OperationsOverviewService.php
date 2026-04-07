@@ -29,7 +29,7 @@ class OperationsOverviewService
             'fornecedores' => $this->inventory->suppliers(),
             'categorias' => $this->inventory->categories(),
             'entrada-estoque' => $this->inventory->stockInbound(),
-            'ajuste-estoque' => $this->inventory->stockAdjustments(),
+            'ajuste-estoque' => $this->inventory->stockHistory($filters),
             'movimentacao-estoque' => $this->inventory->stockHistory($filters),
             'relatorios' => $this->reports->catalog(data_get($context, 'enabledModules', [])),
             'vendas' => $this->sales->sales($filters),

@@ -63,8 +63,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/fornecedores', OperationsPageController::class)->defaults('module', 'fornecedores')->name('suppliers.index');
         Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');
         Route::get('/entrada-estoque', OperationsPageController::class)->defaults('module', 'entrada-estoque')->name('stock.inbound');
-        Route::get('/ajuste-estoque', OperationsPageController::class)->defaults('module', 'ajuste-estoque')->name('stock.adjustments');
-        Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.history');
+        Route::get('/ajuste-estoque', fn () => redirect()->route('stock.movement'))->name('stock.adjustments');
+        Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.movement');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {

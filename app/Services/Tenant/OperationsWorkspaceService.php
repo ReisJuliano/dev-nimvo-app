@@ -31,8 +31,7 @@ class OperationsWorkspaceService
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
         protected IncomingNfeService $incomingNfeService,
-    ) {
-    }
+    ) {}
 
     public function workspaceModules(): array
     {
@@ -43,7 +42,6 @@ class OperationsWorkspaceService
             'delivery',
             'compras',
             'entrada-estoque',
-            'ajuste-estoque',
             'movimentacao-estoque',
             'usuarios',
         ];
@@ -90,20 +88,14 @@ class OperationsWorkspaceService
             'entrada-estoque' => [
                 'moduleKey' => 'entrada-estoque',
                 'moduleTitle' => 'Entrada de estoque',
-                'moduleDescription' => 'Lancamento real de entrada de produtos com documento, custo e local de recebimento.',
+                'moduleDescription' => 'Recebimento em etapas com fornecedor, nota, bipagem de itens e dados do boleto.',
                 'payload' => $this->stockInboundPayload(),
-            ],
-            'ajuste-estoque' => [
-                'moduleKey' => 'ajuste-estoque',
-                'moduleTitle' => 'Conferencia de estoque',
-                'moduleDescription' => 'Conferencia por contagem fisica e ajuste do saldo quando houver divergencia.',
-                'payload' => $this->stockAdjustmentsPayload(),
             ],
             'movimentacao-estoque' => [
                 'moduleKey' => 'movimentacao-estoque',
-                'moduleTitle' => 'Movimentacao entre locais',
-                'moduleDescription' => 'Registro de transferencia entre locais internos com historico e rastreabilidade.',
-                'payload' => $this->stockTransfersPayload(),
+                'moduleTitle' => 'Movimentacao de estoque',
+                'moduleDescription' => 'Bipe o produto, confira o saldo atual e ajuste a quantidade final com confirmacao.',
+                'payload' => $this->stockMovementsPayload(),
             ],
             'usuarios' => [
                 'moduleKey' => 'usuarios',
@@ -123,9 +115,8 @@ class OperationsWorkspaceService
             'categorias' => ['message' => 'Categoria cadastrada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory(null, $input))],
             'delivery' => ['message' => 'Entrega salva com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder(null, $input))],
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
-            'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockInbound($input, $userId))],
-            'ajuste-estoque' => ['message' => 'Conferencia registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockAdjustment($input, $userId))],
-            'movimentacao-estoque' => ['message' => 'Movimentacao registrada com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockTransfer($input, $userId))],
+            'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
+            'movimentacao-estoque' => ['message' => 'Saldo atualizado com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockLevelUpdate($input, $userId))],
             'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
             default => abort(404),
         };
@@ -146,7 +137,7 @@ class OperationsWorkspaceService
             'categorias' => ['message' => 'Categoria atualizada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory($this->findRecord(Category::class, $recordId), $input))],
             'delivery' => ['message' => 'Entrega atualizada com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder($this->findRecord(DeliveryOrder::class, $recordId), $input))],
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
-            'entrada-estoque', 'ajuste-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
+            'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser alterados. Crie um novo lancamento.',
             ]),
             'usuarios' => ['message' => 'Usuario atualizado com sucesso.', 'record' => $this->serializeUser($this->saveUser($this->findRecord(User::class, $recordId), $input))],
@@ -163,7 +154,7 @@ class OperationsWorkspaceService
             'delivery' => tap($this->findRecord(DeliveryOrder::class, $recordId))->delete() ? 'Entrega removida com sucesso.' : 'Entrega removida com sucesso.',
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
             'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
-            'entrada-estoque', 'ajuste-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
+            'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser excluidos para preservar a rastreabilidade.',
             ]),
             default => abort(404),
@@ -268,10 +259,9 @@ class OperationsWorkspaceService
     protected function stockInboundPayload(): array
     {
         return [
-            'records' => $this->stockMovementRecords(['manual_inbound']),
+            'records' => $this->stockInboundRecords(),
             'products' => $this->stockProductOptions(),
             'suppliers' => $this->supplierOptions(),
-            'locations' => $this->stockLocationOptions(),
         ];
     }
 
@@ -284,12 +274,11 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function stockTransfersPayload(): array
+    protected function stockMovementsPayload(): array
     {
         return [
-            'records' => $this->stockMovementRecords(['stock_transfer']),
+            'records' => $this->stockMovementRecords(['manual_adjustment']),
             'products' => $this->stockProductOptions(),
-            'locations' => $this->stockLocationOptions(),
         ];
     }
 
@@ -320,7 +309,7 @@ class OperationsWorkspaceService
             'active' => ['required', 'boolean'],
         ])->validate();
 
-        $customer ??= new Customer();
+        $customer ??= new Customer;
         $customer->fill([
             'name' => $validated['name'],
             'phone' => $validated['phone'] ?? null,
@@ -345,7 +334,7 @@ class OperationsWorkspaceService
             'active' => ['required', 'boolean'],
         ])->validate();
 
-        $supplier ??= new Supplier();
+        $supplier ??= new Supplier;
         $document = filled($validated['document'] ?? null)
             ? preg_replace('/\D+/', '', (string) $validated['document'])
             : null;
@@ -374,7 +363,7 @@ class OperationsWorkspaceService
             'active' => ['required', 'boolean'],
         ])->validate();
 
-        $category ??= new Category();
+        $category ??= new Category;
         $category->fill($validated)->save();
 
         return $category->fresh();
@@ -382,7 +371,7 @@ class OperationsWorkspaceService
 
     protected function saveUser(?User $user, array $input): User
     {
-        $isCreate = !$user;
+        $isCreate = ! $user;
 
         $validated = Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
@@ -395,7 +384,7 @@ class OperationsWorkspaceService
             'discount_authorization_password' => ['nullable', 'string', 'min:4'],
         ])->validate();
 
-        $user ??= new User();
+        $user ??= new User;
 
         $payload = [
             'name' => $validated['name'],
@@ -423,36 +412,47 @@ class OperationsWorkspaceService
         return $user->fresh();
     }
 
-    protected function saveStockInbound(array $input, int $userId): InventoryMovement
+    protected function saveStockInbound(array $input, int $userId): Purchase
+    {
+        return $this->savePurchase(null, [
+            ...$this->normalizeStockInboundInput($input),
+            'status' => 'received',
+        ], $userId);
+    }
+
+    protected function saveStockLevelUpdate(array $input, int $userId): InventoryMovement
     {
         $validated = Validator::make($input, [
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'quantity' => ['required', 'numeric', 'gt:0'],
-            'unit_cost' => ['nullable', 'numeric', 'min:0'],
-            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
-            'document' => ['nullable', 'string', 'max:80'],
-            'location' => ['nullable', 'string', 'max:120'],
+            'counted_quantity' => ['required', 'numeric', 'min:0'],
+            'reason' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'occurred_at' => ['nullable', 'date'],
         ])->validate();
 
         $product = Product::query()->findOrFail((int) $validated['product_id']);
-        $supplier = filled($validated['supplier_id'] ?? null)
-            ? Supplier::query()->find((int) $validated['supplier_id'])
-            : null;
+        $expected = round((float) $product->stock_quantity, 3);
+        $counted = round((float) $validated['counted_quantity'], 3);
+        $delta = round($counted - $expected, 3);
+
+        if (abs($delta) <= 0.0001) {
+            throw ValidationException::withMessages([
+                'counted_quantity' => 'Informe um saldo diferente do estoque atual para registrar a movimentacao.',
+            ]);
+        }
 
         $stockProduct = $this->inventoryMovementService->apply(
             $product,
-            round((float) $validated['quantity'], 3),
-            'manual_inbound',
+            $delta,
+            'manual_adjustment',
             [
                 'user_id' => $userId,
-                'unit_cost' => round((float) ($validated['unit_cost'] ?? $product->cost_price), 2),
-                'notes' => $this->encodeMovementNotes('stock_inbound', [
-                    'supplier_id' => $supplier?->id,
-                    'supplier_name' => $supplier?->name,
-                    'document' => $validated['document'] ?? null,
-                    'location' => $validated['location'] ?? null,
+                'unit_cost' => round((float) $product->cost_price, 2),
+                'notes' => $this->encodeMovementNotes('stock_adjustment', [
+                    'reason' => $validated['reason'] ?? 'Ajuste manual de saldo',
+                    'expected_quantity' => $expected,
+                    'counted_quantity' => $counted,
+                    'adjustment_delta' => $delta,
                     'notes' => $validated['notes'] ?? null,
                 ]),
                 'occurred_at' => $validated['occurred_at'] ?? null,
@@ -461,7 +461,7 @@ class OperationsWorkspaceService
 
         return InventoryMovement::query()
             ->where('product_id', $stockProduct->id)
-            ->where('type', 'manual_inbound')
+            ->where('type', 'manual_adjustment')
             ->latest('id')
             ->firstOrFail();
     }
@@ -585,7 +585,7 @@ class OperationsWorkspaceService
             'notes' => ['nullable', 'string'],
         ])->validate();
 
-        $order ??= new DeliveryOrder();
+        $order ??= new DeliveryOrder;
 
         [$dispatchedAt, $deliveredAt] = match ($validated['status']) {
             'pending' => [null, null],
@@ -620,8 +620,13 @@ class OperationsWorkspaceService
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'status' => ['required', Rule::in(['draft', 'ordered', 'received'])],
             'expected_at' => ['nullable', 'date'],
+            'received_at' => ['nullable', 'date'],
             'freight' => ['nullable', 'numeric', 'gte:0'],
             'notes' => ['nullable', 'string'],
+            'invoice_number' => ['nullable', 'string', 'max:80'],
+            'billing_barcode' => ['nullable', 'string', 'max:255'],
+            'billing_amount' => ['nullable', 'numeric', 'gte:0'],
+            'billing_due_date' => ['nullable', 'date'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
@@ -654,9 +659,34 @@ class OperationsWorkspaceService
                 ]);
             }
 
-            $purchase ??= new Purchase();
+            $purchase ??= new Purchase;
             $subtotal = round($items->sum('total'), 2);
             $freight = round((float) ($validated['freight'] ?? 0), 2);
+            $purchaseMetadata = $this->decodePurchaseNotes($purchase->notes);
+            $plainNotes = array_key_exists('notes', $validated)
+                ? ($validated['notes'] ?? null)
+                : ($purchaseMetadata['notes'] ?? null);
+            $invoiceNumber = array_key_exists('invoice_number', $validated)
+                ? ($validated['invoice_number'] ?? null)
+                : ($purchaseMetadata['invoice_number'] ?? null);
+            $billingBarcode = array_key_exists('billing_barcode', $validated)
+                ? ($validated['billing_barcode'] ?? null)
+                : ($purchaseMetadata['billing_barcode'] ?? null);
+            $billingAmount = array_key_exists('billing_amount', $validated)
+                ? (filled($validated['billing_amount'] ?? null)
+                    ? round((float) $validated['billing_amount'], 2)
+                    : null)
+                : (array_key_exists('billing_amount', $purchaseMetadata)
+                    ? round((float) $purchaseMetadata['billing_amount'], 2)
+                    : null);
+            $billingDueDate = array_key_exists('billing_due_date', $validated)
+                ? ($validated['billing_due_date'] ?? null)
+                : ($purchaseMetadata['billing_due_date'] ?? null);
+            $shouldEncodeNotes = $this->hasStructuredPurchaseNotes($purchase->notes)
+                || filled($invoiceNumber)
+                || filled($billingBarcode)
+                || $billingAmount !== null
+                || filled($billingDueDate);
 
             $purchase->fill([
                 'supplier_id' => $validated['supplier_id'] ?? null,
@@ -664,11 +694,21 @@ class OperationsWorkspaceService
                 'code' => $purchase->code ?: $this->nextCode(Purchase::class, 'CMP'),
                 'status' => $validated['status'],
                 'expected_at' => $validated['expected_at'] ?? null,
-                'received_at' => $validated['status'] === 'received' ? ($purchase->received_at ?: now()) : null,
+                'received_at' => $validated['status'] === 'received'
+                    ? ($validated['received_at'] ?? $purchase->received_at ?? now())
+                    : null,
                 'subtotal' => $subtotal,
                 'freight' => $freight,
                 'total' => round($subtotal + $freight, 2),
-                'notes' => $validated['notes'] ?? null,
+                'notes' => $shouldEncodeNotes
+                    ? $this->encodePurchaseNotes([
+                        'notes' => $plainNotes,
+                        'invoice_number' => $invoiceNumber,
+                        'billing_barcode' => $billingBarcode,
+                        'billing_amount' => $billingAmount,
+                        'billing_due_date' => $billingDueDate,
+                    ])
+                    : $plainNotes,
             ])->save();
 
             $purchase->items()->delete();
@@ -701,6 +741,20 @@ class OperationsWorkspaceService
         });
     }
 
+    protected function stockInboundRecords(int $limit = 80): array
+    {
+        return Purchase::query()
+            ->with(['supplier:id,name', 'items.product:id,name,code,barcode,unit'])
+            ->where('status', 'received')
+            ->orderByDesc('received_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Purchase $purchase) => $this->serializePurchase($purchase))
+            ->values()
+            ->all();
+    }
+
     protected function stockMovementRecords(array $types, int $limit = 120): array
     {
         return InventoryMovement::query()
@@ -721,17 +775,18 @@ class OperationsWorkspaceService
             ->with('supplier:id,name')
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'code', 'unit', 'cost_price', 'stock_quantity', 'supplier_id'])
+            ->get(['id', 'name', 'code', 'barcode', 'unit', 'cost_price', 'stock_quantity', 'supplier_id'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'code' => $product->code,
+                'barcode' => $product->barcode,
                 'unit' => $product->unit,
                 'cost_price' => (float) $product->cost_price,
                 'stock_quantity' => (float) $product->stock_quantity,
                 'supplier_id' => $product->supplier_id,
                 'supplier_name' => $product->supplier?->name,
-                'label' => "{$product->name} ({$product->code})",
+                'label' => $product->name.' ('.($product->barcode ?: $product->code).')',
             ])
             ->values()
             ->all();
@@ -740,6 +795,27 @@ class OperationsWorkspaceService
     protected function stockLocationOptions(): array
     {
         return ['Loja', 'Deposito', 'Estoque geral', 'Cozinha', 'Producao'];
+    }
+
+    protected function normalizeStockInboundInput(array $input): array
+    {
+        if (is_array($input['items'] ?? null) && count($input['items']) > 0) {
+            return $input;
+        }
+
+        $product = Product::query()->findOrFail((int) ($input['product_id'] ?? 0));
+
+        return [
+            'supplier_id' => $input['supplier_id'] ?? null,
+            'received_at' => $input['received_at'] ?? $input['occurred_at'] ?? null,
+            'invoice_number' => $input['invoice_number'] ?? $input['document'] ?? null,
+            'notes' => $input['notes'] ?? null,
+            'items' => [[
+                'product_id' => $product->id,
+                'quantity' => $input['quantity'] ?? 1,
+                'unit_cost' => $input['unit_cost'] ?? $product->cost_price,
+            ]],
+        ];
     }
 
     protected function encodeMovementNotes(string $type, array $metadata = []): string
@@ -761,7 +837,7 @@ class OperationsWorkspaceService
 
         $decoded = json_decode((string) $notes, true);
 
-        if (!is_array($decoded)) {
+        if (! is_array($decoded)) {
             return ['notes' => $notes];
         }
 
@@ -770,6 +846,50 @@ class OperationsWorkspaceService
         }
 
         return $decoded;
+    }
+
+    protected function encodePurchaseNotes(array $metadata = []): ?string
+    {
+        $payload = array_filter($metadata, fn ($value) => $value !== null && $value !== '');
+
+        if ($payload === []) {
+            return null;
+        }
+
+        return (string) json_encode([
+            'schema' => 'ops_purchase_v1',
+            'meta' => $payload,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    protected function decodePurchaseNotes(?string $notes): array
+    {
+        if (blank($notes)) {
+            return [];
+        }
+
+        $decoded = json_decode((string) $notes, true);
+
+        if (! is_array($decoded)) {
+            return ['notes' => $notes];
+        }
+
+        if (($decoded['schema'] ?? null) === 'ops_purchase_v1') {
+            return is_array($decoded['meta'] ?? null) ? $decoded['meta'] : [];
+        }
+
+        return ['notes' => $notes];
+    }
+
+    protected function hasStructuredPurchaseNotes(?string $notes): bool
+    {
+        if (blank($notes)) {
+            return false;
+        }
+
+        $decoded = json_decode((string) $notes, true);
+
+        return is_array($decoded) && ($decoded['schema'] ?? null) === 'ops_purchase_v1';
     }
 
     protected function parseMovementOccurredAt(mixed $occurredAt): Carbon
@@ -851,7 +971,7 @@ class OperationsWorkspaceService
 
     protected function serializeCustomer(Customer $customer): array
     {
-        if (!array_key_exists('sales_count', $customer->getAttributes())) {
+        if (! array_key_exists('sales_count', $customer->getAttributes())) {
             $customer->loadCount(['sales as sales_count' => fn ($query) => $query->where('status', 'finalized')]);
         }
 
@@ -868,7 +988,7 @@ class OperationsWorkspaceService
 
     protected function serializeSupplier(Supplier $supplier): array
     {
-        if (!array_key_exists('products_count', $supplier->getAttributes())) {
+        if (! array_key_exists('products_count', $supplier->getAttributes())) {
             $supplier->loadCount(['products as products_count' => fn ($query) => $query->where('active', true)]);
         }
 
@@ -890,7 +1010,7 @@ class OperationsWorkspaceService
 
     protected function serializeCategory(Category $category): array
     {
-        if (!array_key_exists('products_count', $category->getAttributes())) {
+        if (! array_key_exists('products_count', $category->getAttributes())) {
             $category->loadCount(['products as products_count' => fn ($query) => $query->where('active', true)]);
         }
 
@@ -933,7 +1053,7 @@ class OperationsWorkspaceService
     protected function hasTable(string $table): bool
     {
         return $this->schemaTableCache[$table]
-            ??= Schema::connection((new User())->getConnectionName())->hasTable($table);
+            ??= Schema::connection((new User)->getConnectionName())->hasTable($table);
     }
 
     protected function hasColumn(string $table, string $column): bool
@@ -942,7 +1062,7 @@ class OperationsWorkspaceService
 
         return $this->schemaColumnCache[$cacheKey]
             ??= $this->hasTable($table)
-                && Schema::connection((new User())->getConnectionName())->hasColumn($table, $column);
+                && Schema::connection((new User)->getConnectionName())->hasColumn($table, $column);
     }
 
     protected function serializeStockMovement(InventoryMovement $movement): array
@@ -1071,6 +1191,17 @@ class OperationsWorkspaceService
     protected function serializePurchase(Purchase $purchase): array
     {
         $purchase->loadMissing(['supplier:id,name', 'items.product:id,name,code,unit']);
+        $metadata = $this->decodePurchaseNotes($purchase->notes);
+        $items = $purchase->items
+            ->map(fn ($item) => [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product_name,
+                'quantity' => (float) $item->quantity,
+                'unit_cost' => (float) $item->unit_cost,
+                'total' => (float) $item->total,
+            ])
+            ->values();
 
         return [
             'id' => $purchase->id,
@@ -1083,19 +1214,16 @@ class OperationsWorkspaceService
             'subtotal' => (float) $purchase->subtotal,
             'freight' => (float) $purchase->freight,
             'total' => (float) $purchase->total,
-            'notes' => $purchase->notes,
+            'notes' => $metadata['notes'] ?? null,
+            'invoice_number' => $metadata['invoice_number'] ?? null,
+            'document' => $metadata['invoice_number'] ?? null,
+            'billing_barcode' => $metadata['billing_barcode'] ?? null,
+            'billing_amount' => array_key_exists('billing_amount', $metadata) ? (float) $metadata['billing_amount'] : null,
+            'billing_due_date' => $metadata['billing_due_date'] ?? null,
             'stock_applied_at' => $purchase->stock_applied_at?->toIso8601String(),
-            'items' => $purchase->items
-                ->map(fn ($item) => [
-                    'id' => $item->id,
-                    'product_id' => $item->product_id,
-                    'product_name' => $item->product_name,
-                    'quantity' => (float) $item->quantity,
-                    'unit_cost' => (float) $item->unit_cost,
-                    'total' => (float) $item->total,
-                ])
-                ->values()
-                ->all(),
+            'items_count' => $items->count(),
+            'quantity_total' => (float) $items->sum('quantity'),
+            'items' => $items->all(),
         ];
     }
 

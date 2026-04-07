@@ -6,6 +6,7 @@ namespace App\Services\Tenant\Reports;
 
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
 use App\Support\Tenant\PaymentMethod;
 use Carbon\Carbon;
@@ -92,6 +93,7 @@ class ReportBrowserService
             'sales-customers', 'customer-ranking' => $this->salesCustomersReport($resolvedFilters),
             'stock-shortages' => $this->stockShortagesReport($resolvedFilters),
             'stock-position' => $this->stockPositionReport($resolvedFilters),
+            'stock-inbounds' => $this->stockInboundsReport($resolvedFilters),
             'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
             'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
             default => abort(404),
@@ -225,6 +227,14 @@ class ReportBrowserService
                 'description' => 'Saldo atual com minimo, valor estocado e giro do periodo.',
                 'icon' => 'fa-layer-group',
                 'tags' => ['Saldo', 'Minimo', 'Valor'],
+            ],
+            [
+                'key' => 'stock-inbounds',
+                'category' => 'stock',
+                'title' => 'Entradas de mercadoria',
+                'description' => 'Recebimentos por fornecedor, nota, quantidade e dados de boleto.',
+                'icon' => 'fa-dolly',
+                'tags' => ['Entrada', 'Nota', 'Boleto'],
             ],
             [
                 'key' => 'cashflow-daily',
@@ -749,6 +759,96 @@ class ReportBrowserService
         );
     }
 
+    protected function stockInboundsReport(array $filters): array
+    {
+        $itemsSubquery = DB::table('purchase_items')
+            ->groupBy('purchase_id')
+            ->selectRaw('purchase_id, COUNT(*) as items_count, COALESCE(SUM(quantity), 0) as quantity_total');
+
+        $query = Purchase::query()
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')
+            ->leftJoinSub($itemsSubquery, 'purchase_summary', fn ($join) => $join->on('purchase_summary.purchase_id', '=', 'purchases.id'))
+            ->where('purchases.status', 'received')
+            ->where(function ($builder) use ($filters) {
+                $builder
+                    ->whereBetween('purchases.received_at', [$filters['from'], $filters['to']])
+                    ->orWhere(function ($fallback) use ($filters) {
+                        $fallback
+                            ->whereNull('purchases.received_at')
+                            ->whereBetween('purchases.created_at', [$filters['from'], $filters['to']]);
+                    });
+            })
+            ->selectRaw("
+                purchases.id,
+                purchases.code,
+                purchases.received_at,
+                purchases.created_at,
+                purchases.total,
+                purchases.freight,
+                purchases.notes,
+                COALESCE(suppliers.name, 'Sem fornecedor') as supplier_name,
+                COALESCE(purchase_summary.items_count, 0) as items_count,
+                COALESCE(purchase_summary.quantity_total, 0) as quantity_total
+            ")
+            ->orderByRaw('COALESCE(purchases.received_at, purchases.created_at) desc')
+            ->orderByDesc('purchases.id');
+
+        $summary = (clone $query)->get()->reduce(function (array $carry, $row) {
+            $metadata = $this->decodePurchaseNotes($row->notes);
+
+            $carry['entries']++;
+            $carry['quantity_total'] += (float) $row->quantity_total;
+            $carry['total'] += (float) $row->total;
+            $carry['billing_amount'] += (float) ($metadata['billing_amount'] ?? 0);
+
+            return $carry;
+        }, [
+            'entries' => 0,
+            'quantity_total' => 0,
+            'total' => 0,
+            'billing_amount' => 0,
+        ]);
+
+        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
+        $rows = collect($paginator->items())->map(function ($row) {
+            $metadata = $this->decodePurchaseNotes($row->notes);
+
+            return [
+                'code' => $row->code,
+                'supplier_name' => $row->supplier_name,
+                'invoice_number' => $metadata['invoice_number'] ?? '-',
+                'items_count' => (int) $row->items_count,
+                'quantity_total' => (float) $row->quantity_total,
+                'total' => (float) $row->total,
+                'billing_amount' => array_key_exists('billing_amount', $metadata) ? (float) $metadata['billing_amount'] : null,
+                'billing_due_date' => $metadata['billing_due_date'] ?? null,
+                'received_at' => $row->received_at ?: $row->created_at,
+            ];
+        })->all();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Entradas', (int) $summary['entries'], 'number', 'fa-dolly'),
+                $this->summaryCard('Volume', (float) $summary['quantity_total'], 'number', 'fa-boxes-stacked'),
+                $this->summaryCard('Total', (float) $summary['total'], 'money', 'fa-money-bill-wave'),
+                $this->summaryCard('Boletos', (float) $summary['billing_amount'], 'money', 'fa-barcode'),
+            ],
+            columns: [
+                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'supplier_name', 'label' => 'Fornecedor'],
+                ['key' => 'invoice_number', 'label' => 'Nota'],
+                ['key' => 'items_count', 'label' => 'Itens', 'format' => 'number'],
+                ['key' => 'quantity_total', 'label' => 'Qtd', 'format' => 'decimal'],
+                ['key' => 'total', 'label' => 'Total', 'format' => 'money'],
+                ['key' => 'billing_due_date', 'label' => 'Venc.', 'format' => 'date'],
+                ['key' => 'received_at', 'label' => 'Recebido', 'format' => 'datetime'],
+            ],
+            rows: $rows,
+            paginator: $paginator,
+            emptyText: 'Nenhuma entrada de mercadoria encontrada no recorte selecionado.',
+        );
+    }
+
     protected function cashFlowDailyReport(array $filters): array
     {
         $salesByDay = DB::table('sale_payments')
@@ -870,6 +970,25 @@ class ReportBrowserService
             paginator: $paginator,
             emptyText: 'Nenhum cliente com limite ou saldo a prazo encontrado.',
         );
+    }
+
+    protected function decodePurchaseNotes(?string $notes): array
+    {
+        if (! filled($notes)) {
+            return [];
+        }
+
+        $decoded = json_decode((string) $notes, true);
+
+        if (! is_array($decoded)) {
+            return ['notes' => $notes];
+        }
+
+        if (($decoded['schema'] ?? null) === 'ops_purchase_v1') {
+            return is_array($decoded['meta'] ?? null) ? $decoded['meta'] : [];
+        }
+
+        return ['notes' => $notes];
     }
 
     protected function reportPayload(array $summary, array $columns, array $rows, LengthAwarePaginator $paginator, string $emptyText): array
