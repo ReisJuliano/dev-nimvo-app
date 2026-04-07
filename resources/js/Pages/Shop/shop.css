@@ -32,7 +32,7 @@
 
 .shop-hero {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
     padding: 1.4rem;
 }

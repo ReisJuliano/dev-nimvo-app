@@ -157,11 +157,6 @@ function PromotionsWorkspace({ payload }) {
     return (
         <div className="fashion-module-stack">
             <SectionTabs tabs={[{ key: 'active', label: 'Ativas', icon: 'fa-tags' }, { key: 'scheduled', label: 'Agendadas', icon: 'fa-calendar-days' }, { key: 'ended', label: 'Encerradas', icon: 'fa-clock-rotate-left' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <section className="fashion-metric-grid">
-                <article><span>Promocoes</span><strong>{formatNumber(promotions.length)}</strong><small>Total cadastrado</small></article>
-                <article><span>Ativas</span><strong>{formatNumber(promotions.filter((promotion) => promotionMatchesTab(promotion, 'active')).length)}</strong><small>Em vigencia</small></article>
-                <article><span>Colecoes</span><strong>{formatNumber(payload.collections.length)}</strong><small>Com alvo disponivel</small></article>
-            </section>
             <div className="fashion-grid two-columns">
                 <section className="fashion-panel-card">
                     <header><h2>Campanhas</h2><span>{formatNumber(filteredPromotions.length)} registro(s)</span></header>
@@ -173,7 +168,7 @@ function PromotionsWorkspace({ payload }) {
                                 <p>{promotion.description || 'Sem descricao.'}</p>
                                 <div className="fashion-list-card-meta"><span>{getPromotionDiscountLabel(promotion)}</span><span>{getPromotionScopeLabel(promotion)}</span></div>
                             </button>
-                        )) : <EmptyState title="Sem promocoes nesse recorte" text="Cadastre campanhas comerciais para acompanhar desconto, colecao e vigencia." />}
+                        )) : <EmptyState title="Sem promocoes" text="Nenhum registro neste filtro." />}
                     </div>
                 </section>
                 <section className="fashion-panel-card">
@@ -306,7 +301,7 @@ function ReturnsWorkspace({ payload }) {
                                 <p>{record.reason}</p>
                                 <div className="fashion-list-card-meta"><span>{record.customer_name || 'Cliente nao informado'}</span><span>{record.type}</span></div>
                             </button>
-                        )) : <EmptyState title="Sem trocas nesse status" text="Os atendimentos cadastrados aparecem aqui em tempo real." />}
+                        )) : <EmptyState title="Sem trocas" text="Nenhum atendimento nesta etapa." />}
                     </div>
                 </section>
                 <section className="fashion-panel-card">
@@ -344,8 +339,6 @@ function CatalogWorkspace({ payload }) {
     const [savingSettings, setSavingSettings] = useState(false)
 
     const filteredProducts = useMemo(() => products.filter((product) => collectionFilter === '' || product.collection === collectionFilter), [products, collectionFilter])
-    const publishedCount = products.filter((product) => product.catalog_visible).length
-
     async function handleToggle(product) {
         try {
             const nextVisible = !product.catalog_visible
@@ -375,11 +368,6 @@ function CatalogWorkspace({ payload }) {
     return (
         <div className="fashion-module-stack">
             <SectionTabs tabs={[{ key: 'catalog', label: 'Vitrine', icon: 'fa-store' }, { key: 'settings', label: 'Configuracoes', icon: 'fa-sliders' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <section className="fashion-metric-grid">
-                <article><span>Publicados</span><strong>{formatNumber(publishedCount)}</strong><small>Itens em vitrine</small></article>
-                <article><span>Total</span><strong>{formatNumber(products.length)}</strong><small>Produtos ativos</small></article>
-                <article><span>Colecoes</span><strong>{formatNumber(payload.collections.length)}</strong><small>Recortes disponiveis</small></article>
-            </section>
             <Feedback feedback={feedback} />
             {activeTab === 'catalog' ? (
                 <section className="fashion-panel-card">
@@ -529,7 +517,7 @@ function OnlineOrdersWorkspace({ payload }) {
                                 <p>{order.customer?.name || 'Cliente nao informado'}</p>
                                 <div className="fashion-list-card-meta"><span>{formatMoney(order.total)}</span><span>{order.items?.length || 0} item(ns)</span></div>
                             </button>
-                        )) : <EmptyState title="Sem pedidos no canal" text="Cadastre pedidos do site ou do WhatsApp para acompanhar a fila digital." />}
+                        )) : <EmptyState title="Sem pedidos" text="Nenhum pedido neste canal." />}
                     </div>
                 </section>
                 <section className="fashion-panel-card">
@@ -605,11 +593,6 @@ function WhatsAppWorkspace({ payload }) {
     return (
         <div className="fashion-module-stack">
             <SectionTabs tabs={[{ key: 'settings', label: 'Configuracao', icon: 'fa-gear' }, { key: 'preview', label: 'Preview', icon: 'fa-comment' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <section className="fashion-metric-grid">
-                <article><span>Em aberto</span><strong>{formatNumber(payload.summary.drafts)}</strong><small>Pedidos no canal</small></article>
-                <article><span>No caixa</span><strong>{formatNumber(payload.summary.sent_to_cashier)}</strong><small>Fila pronta para cobrar</small></article>
-                <article><span>Contato</span><strong>{settings.phone || '-'}</strong><small>Numero oficial</small></article>
-            </section>
             <Feedback feedback={feedback} />
             {activeTab === 'settings' ? (
                 <section className="fashion-panel-card">

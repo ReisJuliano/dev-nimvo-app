@@ -191,9 +191,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
             <div className="shop-page">
                 <section className="shop-hero">
                     <div className="shop-hero-copy">
-                        <span className="shop-eyebrow">Same domain, own shop</span>
                         <h1>{store.name}</h1>
-                        <p>{catalog.subtitle || 'Colecoes selecionadas, pecas publicadas e pedido online no mesmo dominio da loja.'}</p>
 
                         <div className="shop-hero-actions">
                             <a href="#colecoes" className="shop-primary-link">
@@ -205,24 +203,6 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                 </a>
                             ) : null}
                         </div>
-                    </div>
-
-                    <div className="shop-hero-aside">
-                        <article>
-                            <span>Produtos publicados</span>
-                            <strong>{formatNumber(products.length)}</strong>
-                            <small>Vitrine ativa</small>
-                        </article>
-                        <article>
-                            <span>Colecoes</span>
-                            <strong>{formatNumber(collections.length)}</strong>
-                            <small>Recortes da loja</small>
-                        </article>
-                        <article>
-                            <span>Atendimento</span>
-                            <strong>{whatsApp.business_hours || 'Online'}</strong>
-                            <small>Mesmo dominio, fluxo real</small>
-                        </article>
                     </div>
                 </section>
 
@@ -276,7 +256,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                         <div className="shop-product-body">
                                             <div>
                                                 <h2>{product.name}</h2>
-                                                <p>{product.description || 'Peca publicada na vitrine online da loja.'}</p>
+                                                {product.description ? <p>{product.description}</p> : null}
                                             </div>
 
                                             <div className="shop-product-meta">
@@ -310,7 +290,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                         ) : (
                             <section className="shop-empty-state">
                                 <strong>Nenhum item encontrado</strong>
-                                <p>Ajuste a busca ou troque a colecao para ver as pecas publicadas no shop.</p>
+                                <p>Ajuste a busca ou a colecao.</p>
                             </section>
                         )}
                     </div>
@@ -332,7 +312,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                             <div className="shop-success-card">
                                 <span>Pedido recebido</span>
                                 <strong>{lastOrder.reference}</strong>
-                                <p>O shop salvou o pedido no tenant e ele ja pode ser tratado em pedidos online.</p>
+                                <p>Pedido salvo com sucesso.</p>
                                 {lastOrder.whatsAppUrl ? (
                                     <a href={lastOrder.whatsAppUrl} target="_blank" rel="noreferrer" className="shop-secondary-link">
                                         Continuar no WhatsApp
@@ -364,7 +344,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                 ))
                             ) : (
                                 <div className="shop-empty-cart">
-                                    Selecione as pecas no grid ao lado para montar o pedido do shop.
+                                    Nenhum item no carrinho.
                                 </div>
                             )}
                         </div>
