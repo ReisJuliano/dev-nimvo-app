@@ -16,6 +16,7 @@ export default function AppLayout({
     showTopbar = true,
     contentClassName = '',
     navigationMode = 'default',
+    defaultCollapsed = false,
 }) {
     const { auth, flash, tenantNavigationCatalog, license } = usePage().props
     const currentUrl = usePage().url
@@ -23,13 +24,14 @@ export default function AppLayout({
     const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
     const isOverlayNavigation = navigationMode === 'overlay'
     const isHiddenNavigation = navigationMode === 'hidden'
+    const shouldStartCollapsed = isPosPage || defaultCollapsed
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
-            return isPosPage || isOverlayNavigation
+            return shouldStartCollapsed || isOverlayNavigation
         }
 
-        if (isPosPage || isOverlayNavigation) {
+        if (shouldStartCollapsed || isOverlayNavigation) {
             return true
         }
 
@@ -43,21 +45,21 @@ export default function AppLayout({
             return
         }
 
-        if (isPosPage || isOverlayNavigation) {
+        if (shouldStartCollapsed || isOverlayNavigation) {
             setCollapsed(true)
             return
         }
 
         setCollapsed(window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true')
-    }, [isOverlayNavigation, isPosPage])
+    }, [isOverlayNavigation, shouldStartCollapsed])
 
     useEffect(() => {
-        if (typeof window === 'undefined' || isPosPage || isOverlayNavigation) {
+        if (typeof window === 'undefined' || shouldStartCollapsed || isOverlayNavigation) {
             return
         }
 
         window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
-    }, [collapsed, isOverlayNavigation, isPosPage])
+    }, [collapsed, isOverlayNavigation, shouldStartCollapsed])
 
     function handleLogout() {
         router.post('/logout')

@@ -79,7 +79,7 @@ export default function OperationsOverview({ module }) {
     }
 
     return (
-        <AppLayout title={module.title} navigationMode={isReportsCatalog ? 'overlay' : 'default'}>
+        <AppLayout title={module.title} defaultCollapsed={isReportsCatalog}>
             <div className="operations-page">
                 <section className="operations-hero">
                     <div>
