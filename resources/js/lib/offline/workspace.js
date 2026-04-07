@@ -696,7 +696,23 @@ export function seedOfflineWorkspace(tenantId, snapshot = {}) {
         }
 
         if (Array.isArray(snapshot.products)) {
-            state.catalogs.products = mergeSnapshotRecords(state.catalogs.products, snapshot.products, state.queue.products, normalizeProductRecord, sortProducts)
+            const productQueueWithPendingSales = [
+                ...state.queue.products,
+                ...state.queue.sales.flatMap((entry) =>
+                    (entry.payload?.items || []).map((item) => ({
+                        entityId: item.id,
+                        action: 'upsert',
+                    })),
+                ),
+            ]
+
+            state.catalogs.products = mergeSnapshotRecords(
+                state.catalogs.products,
+                snapshot.products,
+                productQueueWithPendingSales,
+                normalizeProductRecord,
+                sortProducts,
+            )
         }
 
         if (Array.isArray(snapshot.orders)) {

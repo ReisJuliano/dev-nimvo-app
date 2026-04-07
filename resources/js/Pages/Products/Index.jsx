@@ -1,11 +1,21 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
 import ProductToolbar from '@/Components/Products/ProductToolbar'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import {
+    getOfflineWorkspaceSnapshot,
+    removeOfflineProduct,
+    resolveOfflineEntityId,
+    seedOfflineWorkspace,
+    subscribeOfflineWorkspace,
+    syncOfflineWorkspace,
+    upsertOfflineProduct,
+} from '@/lib/offline/workspace'
 import './products.css'
 
 function normalizeProductRecord(product) {
@@ -29,6 +39,8 @@ function normalizeProductRecord(product) {
 }
 
 export default function ProductsIndex({ products, categories, suppliers }) {
+    const { tenant } = usePage().props
+    const tenantId = tenant?.id
     const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
@@ -42,6 +54,49 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const isFashionMode = false
     const [activeTab, setActiveTab] = useState(isFashionMode ? 'catalog' : 'catalog')
     const deferredSearch = useDeferredValue(search)
+
+    useEffect(() => {
+        if (!tenantId) {
+            return undefined
+        }
+
+        const applyWorkspaceState = (state) => {
+            setCollectionItems(state.catalogs.products.map((product) => normalizeProductRecord(product)))
+            setCategoryOptions(state.catalogs.categories)
+            setSupplierOptions(state.catalogs.suppliers)
+            setSelectedProduct((current) => {
+                if (!current) {
+                    return current
+                }
+
+                return state.catalogs.products.find((product) => String(product.id) === String(current.id)) || current
+            })
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            products,
+            categories,
+            suppliers,
+        })
+
+        applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
+
+        const unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
+            applyWorkspaceState(state)
+        })
+
+        const handleOnline = () => {
+            syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
+        }
+
+        handleOnline()
+        window.addEventListener('online', handleOnline)
+
+        return () => {
+            unsubscribe()
+            window.removeEventListener('online', handleOnline)
+        }
+    }, [categories, products, suppliers, tenantId])
     const collections = useMemo(
         () =>
             Array.from(
@@ -132,15 +187,40 @@ export default function ProductsIndex({ products, categories, suppliers }) {
         }
 
         try {
-            const response = await apiRequest(`/api/products/${product.id}`, { method: 'delete' })
-            setCollectionItems((current) => current.filter((entry) => entry.id !== product.id))
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                removeOfflineProduct(tenantId, product.id)
+                showPopup({
+                    type: 'warning',
+                    title: 'Produto salvo offline',
+                    message: `O produto "${product.name}" foi removido da operacao local e entrara na fila de sincronizacao.`,
+                })
+                return
+            }
+
+            const response = await apiRequest(`/api/products/${resolveOfflineEntityId(tenantId, 'products', product.id)}`, { method: 'delete' })
+            const nextItems = collectionItems.filter((entry) => entry.id !== product.id)
+            setCollectionItems(nextItems)
+            seedOfflineWorkspace(tenantId, {
+                products: nextItems,
+                categories: categoryOptions,
+                suppliers: supplierOptions,
+            })
             showPopup({
                 type: 'success',
                 title: 'Produto desativado',
                 message: response.message || `O produto "${product.name}" foi desativado com sucesso.`,
             })
         } catch (error) {
-            showErrorPopup(error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                removeOfflineProduct(tenantId, product.id)
+                showPopup({
+                    type: 'warning',
+                    title: 'Produto salvo offline',
+                    message: `O produto "${product.name}" foi removido da operacao local e entrara na fila de sincronizacao.`,
+                })
+            } else {
+                showErrorPopup(error.message)
+            }
         }
     }
 
@@ -175,54 +255,126 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 ipi_rate: form.ipi_rate === '' ? null : Number(form.ipi_rate),
                 active: Boolean(form.active),
             }
+            const category = categoryOptions.find((option) => String(option.id) === String(payload.category_id))
+            const supplier = supplierOptions.find((option) => String(option.id) === String(payload.supplier_id))
+
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                upsertOfflineProduct(tenantId, {
+                    ...payload,
+                    id: form.id ? Number(form.id) : null,
+                    category_name: category?.name || null,
+                    supplier_name: supplier?.name || null,
+                })
+                setModalOpen(false)
+                setSelectedProduct(null)
+                showPopup({
+                    type: 'warning',
+                    title: 'Produto salvo offline',
+                    message: `O produto "${payload.name}" foi guardado nesta maquina e sera sincronizado quando a internet voltar.`,
+                })
+                return
+            }
 
             if (form.id) {
-                const response = await apiRequest(`/api/products/${form.id}`, { method: 'put', data: payload })
+                const response = await apiRequest(`/api/products/${resolveOfflineEntityId(tenantId, 'products', form.id)}`, { method: 'put', data: payload })
                 const normalized = normalizeProductRecord(response.product)
-                setCollectionItems((current) =>
-                    current.map((entry) => (entry.id === normalized.id ? normalized : entry)),
-                )
+                const nextItems = collectionItems.map((entry) => (entry.id === normalized.id ? normalized : entry))
+                setCollectionItems(nextItems)
+                seedOfflineWorkspace(tenantId, {
+                    products: nextItems,
+                    categories: categoryOptions,
+                    suppliers: supplierOptions,
+                })
             } else {
                 const response = await apiRequest('/api/products', { method: 'post', data: payload })
                 const normalized = normalizeProductRecord(response.product)
-                setCollectionItems((current) => [normalized, ...current])
+                const nextItems = [normalized, ...collectionItems]
+                setCollectionItems(nextItems)
+                seedOfflineWorkspace(tenantId, {
+                    products: nextItems,
+                    categories: categoryOptions,
+                    suppliers: supplierOptions,
+                })
             }
 
             setModalOpen(false)
             setSelectedProduct(null)
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const payload = {
+                    ...form,
+                    id: form.id ? Number(form.id) : null,
+                    category_id: form.category_id ? Number(form.category_id) : null,
+                    supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
+                }
+                const category = categoryOptions.find((option) => String(option.id) === String(payload.category_id))
+                const supplier = supplierOptions.find((option) => String(option.id) === String(payload.supplier_id))
+
+                upsertOfflineProduct(tenantId, {
+                    ...payload,
+                    category_name: category?.name || null,
+                    supplier_name: supplier?.name || null,
+                })
+                setModalOpen(false)
+                setSelectedProduct(null)
+                showPopup({
+                    type: 'warning',
+                    title: 'Produto salvo offline',
+                    message: `O produto "${payload.name}" foi guardado nesta maquina e sera sincronizado quando a internet voltar.`,
+                })
+                return
+            }
+
+            throw error
         } finally {
             setSaving(false)
         }
     }
 
     async function handleQuickCreateCategory(data) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            throw new Error('Criacao rapida de categoria exige conexao ativa.')
+        }
+
         const response = await apiRequest('/api/operations/categorias/records', {
             method: 'post',
             data,
         })
 
         const record = response.record
-        setCategoryOptions((current) =>
-            [...current, { id: record.id, name: record.name }].sort((left, right) =>
-                String(left.name).localeCompare(String(right.name)),
-            ),
+        const nextCategories = [...categoryOptions, { id: record.id, name: record.name }].sort((left, right) =>
+            String(left.name).localeCompare(String(right.name)),
         )
+        setCategoryOptions(nextCategories)
+        seedOfflineWorkspace(tenantId, {
+            products: collectionItems,
+            categories: nextCategories,
+            suppliers: supplierOptions,
+        })
 
         return record
     }
 
     async function handleQuickCreateSupplier(data) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            throw new Error('Criacao rapida de fornecedor exige conexao ativa.')
+        }
+
         const response = await apiRequest('/api/operations/fornecedores/records', {
             method: 'post',
             data,
         })
 
         const record = response.record
-        setSupplierOptions((current) =>
-            [...current, { id: record.id, name: record.name }].sort((left, right) =>
-                String(left.name).localeCompare(String(right.name)),
-            ),
+        const nextSuppliers = [...supplierOptions, { id: record.id, name: record.name }].sort((left, right) =>
+            String(left.name).localeCompare(String(right.name)),
         )
+        setSupplierOptions(nextSuppliers)
+        seedOfflineWorkspace(tenantId, {
+            products: collectionItems,
+            categories: categoryOptions,
+            suppliers: nextSuppliers,
+        })
 
         return record
     }

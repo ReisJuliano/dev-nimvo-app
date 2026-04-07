@@ -3,8 +3,26 @@ import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import useModules from '@/hooks/useModules'
 import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import {
+    createOfflineCustomer,
+    createOfflineOrderDraft,
+    discardOfflinePendingSale,
+    getOfflineOrderDetail,
+    getOfflineOrderSummaries,
+    getOfflinePendingCheckoutSummaries,
+    getOfflineWorkspaceSnapshot,
+    queueOfflineSaleFinalize,
+    removeOfflineOrderDraft,
+    resolveOfflineEntityId,
+    saveOfflineOrderDraft,
+    searchOfflineProducts,
+    seedOfflineWorkspace,
+    sendOfflineOrderToCashier,
+    subscribeOfflineWorkspace,
+    syncOfflineWorkspace,
+} from '@/lib/offline/workspace'
 import SidebarToolButton from './SidebarToolButton'
 import OrderDetailModal from './OrderDetailModal'
 import OrderProductModal from './OrderProductModal'
@@ -42,10 +60,18 @@ function sortCustomerOptions(currentCustomers) {
     )
 }
 
-export default function OrdersIndex({ categories, customers, drafts: initialDrafts, initialDraft }) {
-    const { auth } = usePage().props
+export default function OrdersIndex({
+    categories,
+    customers,
+    drafts: initialDrafts,
+    draftDetails = [],
+    initialDraft,
+    productCatalog = [],
+}) {
+    const { auth, tenant } = usePage().props
     const moduleState = useModules()
     const initialDraftState = initialDraft ? mapOrderToDraft(initialDraft) : null
+    const tenantId = tenant?.id
 
     const [customerOptions, setCustomerOptions] = useState(customers)
     const [drafts, setDrafts] = useState(sortDrafts(initialDrafts))
@@ -105,6 +131,53 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     const lastSavedSignatureRef = useRef(initialDraftState ? JSON.stringify(buildDraftPayload(initialDraftState)) : null)
 
     useEffect(() => {
+        if (!tenantId) {
+            return undefined
+        }
+
+        const applyWorkspaceState = (state) => {
+            setCustomerOptions(sortCustomerOptions(state.catalogs.customers))
+            setDrafts(sortDrafts(getOfflineOrderSummaries(tenantId)))
+            setCurrentDraft((current) => {
+                if (!current) {
+                    return current
+                }
+
+                const nextDetail =
+                    getOfflineOrderDetail(tenantId, current.id)
+                    || getOfflineOrderDetail(tenantId, resolveOfflineEntityId(tenantId, 'orders', current.id))
+
+                return nextDetail ? mapOrderToDraft(nextDetail) : null
+            })
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            categories,
+            customers,
+            products: productCatalog,
+            orders: draftDetails,
+        })
+
+        applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
+
+        const unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
+            applyWorkspaceState(state)
+        })
+
+        const handleOnline = () => {
+            syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
+        }
+
+        handleOnline()
+        window.addEventListener('online', handleOnline)
+
+        return () => {
+            unsubscribe()
+            window.removeEventListener('online', handleOnline)
+        }
+    }, [categories, customers, draftDetails, productCatalog, tenantId])
+
+    useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()
         let ignore = false
 
@@ -125,6 +198,14 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                 setLoadingProducts(true)
 
                 try {
+                    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                        setProducts(searchOfflineProducts(tenantId, {
+                            term: trimmedSearchTerm,
+                            categoryId: selectedCategory || undefined,
+                        }))
+                        return
+                    }
+
                     const response = await apiRequest('/api/pdv/products', {
                         params: { term: trimmedSearchTerm, category_id: selectedCategory || undefined },
                     })
@@ -133,7 +214,12 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         setProducts(response.products)
                     }
                 } catch (error) {
-                    if (!ignore) {
+                    if (!ignore && tenantId && isNetworkApiError(error)) {
+                        setProducts(searchOfflineProducts(tenantId, {
+                            term: trimmedSearchTerm,
+                            categoryId: selectedCategory || undefined,
+                        }))
+                    } else if (!ignore) {
                         setFeedback({ type: 'error', text: error.message })
                     }
                 } finally {
@@ -148,7 +234,7 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             ignore = true
             clearTimeout(timeout)
         }
-    }, [searchTerm, selectedCategory])
+    }, [searchTerm, selectedCategory, tenantId])
 
     const isAnyModalOpen =
         draftModalOpen ||
@@ -339,6 +425,65 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setCashReceived('')
     }
 
+    function buildResolvedDraftPayload(draft) {
+        return {
+            type: draft.type,
+            reference: draft.reference || null,
+            customer_id: draft.customerId
+                ? Number(resolveOfflineEntityId(tenantId, 'customers', draft.customerId))
+                : null,
+            notes: draft.notes || null,
+            items: draft.items.map((item) => ({
+                id: Number(resolveOfflineEntityId(tenantId, 'products', item.id)),
+                qty: Number(item.qty),
+            })),
+        }
+    }
+
+    function upsertOrderInWorkspace(order) {
+        if (!tenantId) {
+            return
+        }
+
+        const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+        const nextOrders = [
+            order,
+            ...snapshot.orders.details.filter((entry) => String(entry.id) !== String(order.id)),
+        ]
+
+        seedOfflineWorkspace(tenantId, {
+            categories,
+            customers: customerOptions,
+            products: snapshot.catalogs.products.length ? snapshot.catalogs.products : productCatalog,
+            orders: nextOrders,
+        })
+    }
+
+    function removeOrderFromWorkspace(orderId) {
+        if (!tenantId) {
+            return
+        }
+
+        const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+
+        seedOfflineWorkspace(tenantId, {
+            categories,
+            customers: customerOptions,
+            products: snapshot.catalogs.products.length ? snapshot.catalogs.products : productCatalog,
+            orders: snapshot.orders.details.filter((entry) => String(entry.id) !== String(orderId)),
+        })
+    }
+
+    function persistCustomersInWorkspace(nextCustomers) {
+        if (!tenantId) {
+            return
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            customers: nextCustomers,
+        })
+    }
+
     function syncDraftSummary(order) {
         const nextSummary = {
             id: order.id,
@@ -392,7 +537,22 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setSavingDraft(true)
 
         try {
-            const response = await apiRequest(`/api/orders/${nextDraft.id}`, { method: 'put', data: payload })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                lastSavedSignatureRef.current = payloadSignature
+                setCurrentDraft((current) => (
+                    current && Number(current.id) === Number(nextDraft.id)
+                        ? { ...current, status: offlineOrder.status, label: offlineOrder.label, subtotal: Number(offlineOrder.subtotal || 0), total: Number(offlineOrder.total || 0), updatedAt: offlineOrder.updated_at || null }
+                        : current
+                ))
+                syncDraftSummary(offlineOrder)
+                return
+            }
+
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', nextDraft.id)}`, {
+                method: 'put',
+                data: buildResolvedDraftPayload(nextDraft),
+            })
             lastSavedSignatureRef.current = payloadSignature
             setCurrentDraft((current) => (
                 current && Number(current.id) === Number(response.order.id)
@@ -400,7 +560,20 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                     : current
             ))
             syncDraftSummary(response.order)
+            upsertOrderInWorkspace(response.order)
         } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                lastSavedSignatureRef.current = payloadSignature
+                setCurrentDraft((current) => (
+                    current && Number(current.id) === Number(nextDraft.id)
+                        ? { ...current, status: offlineOrder.status, label: offlineOrder.label, subtotal: Number(offlineOrder.subtotal || 0), total: Number(offlineOrder.total || 0), updatedAt: offlineOrder.updated_at || null }
+                        : current
+                ))
+                syncDraftSummary(offlineOrder)
+                return
+            }
+
             showFeedback('error', error.message)
             throw error
         } finally {
@@ -418,7 +591,22 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setSavingDraft(true)
         saveTimeoutRef.current = setTimeout(async () => {
             try {
-                const response = await apiRequest(`/api/orders/${nextDraft.id}`, { method: 'put', data: payload })
+                if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                    const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                    lastSavedSignatureRef.current = payloadSignature
+                    setCurrentDraft((current) => (
+                        current && Number(current.id) === Number(nextDraft.id)
+                            ? { ...current, status: offlineOrder.status, label: offlineOrder.label, subtotal: Number(offlineOrder.subtotal || 0), total: Number(offlineOrder.total || 0), updatedAt: offlineOrder.updated_at || null }
+                            : current
+                    ))
+                    syncDraftSummary(offlineOrder)
+                    return
+                }
+
+                const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', nextDraft.id)}`, {
+                    method: 'put',
+                    data: buildResolvedDraftPayload(nextDraft),
+                })
                 lastSavedSignatureRef.current = payloadSignature
                 setCurrentDraft((current) => (
                     current && Number(current.id) === Number(response.order.id)
@@ -426,8 +614,20 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                         : current
                 ))
                 syncDraftSummary(response.order)
+                upsertOrderInWorkspace(response.order)
             } catch (error) {
-                showFeedback('error', error.message)
+                if (tenantId && isNetworkApiError(error)) {
+                    const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                    lastSavedSignatureRef.current = payloadSignature
+                    setCurrentDraft((current) => (
+                        current && Number(current.id) === Number(nextDraft.id)
+                            ? { ...current, status: offlineOrder.status, label: offlineOrder.label, subtotal: Number(offlineOrder.subtotal || 0), total: Number(offlineOrder.total || 0), updatedAt: offlineOrder.updated_at || null }
+                            : current
+                    ))
+                    syncDraftSummary(offlineOrder)
+                } else {
+                    showFeedback('error', error.message)
+                }
             } finally {
                 setSavingDraft(false)
             }
@@ -450,12 +650,33 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setLoadingDraft(true)
         try {
             if (currentDraft) await saveDraftNow(currentDraft)
-            const response = await apiRequest(`/api/orders/${draftId}`)
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = getOfflineOrderDetail(tenantId, draftId)
+                if (!offlineOrder) throw new Error('Atendimento nao encontrado no cache offline.')
+                hydrateDraft(offlineOrder)
+                setDraftModalOpen(true)
+                setFeedback(null)
+                return
+            }
+
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', draftId)}`)
+            upsertOrderInWorkspace(response.order)
             hydrateDraft(response.order)
             setDraftModalOpen(true)
             setFeedback(null)
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineOrder = getOfflineOrderDetail(tenantId, draftId)
+                if (offlineOrder) {
+                    hydrateDraft(offlineOrder)
+                    setDraftModalOpen(true)
+                    setFeedback(null)
+                } else {
+                    showFeedback('error', error.message)
+                }
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setLoadingDraft(false)
         }
@@ -469,9 +690,26 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         const existing = customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === typedName.toLowerCase())
         if (existing) return Number(existing.id)
 
-        const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: { name: typedName, phone: null } })
-        setCustomerOptions((current) => sortCustomerOptions([...current, response.customer]))
-        return Number(response.customer.id)
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            const offlineCustomer = createOfflineCustomer(tenantId, { name: typedName, phone: null })
+            return Number(offlineCustomer.id)
+        }
+
+        try {
+            const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: { name: typedName, phone: null } })
+            persistCustomersInWorkspace([
+                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.customers,
+                response.customer,
+            ])
+            return Number(response.customer.id)
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineCustomer = createOfflineCustomer(tenantId, { name: typedName, phone: null })
+                return Number(offlineCustomer.id)
+            }
+
+            throw error
+        }
     }
 
     async function handleCreateTransferCustomer(name) {
@@ -487,12 +725,29 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
         setCreatingTransferCustomer(true)
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineCustomer = createOfflineCustomer(tenantId, { name: typedName, phone: null })
+                setTransferForm((current) => ({ ...current, customerId: String(offlineCustomer.id) }))
+                showFeedback('warning', 'Cliente salvo no modo offline.')
+                return offlineCustomer
+            }
+
             const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: { name: typedName, phone: null } })
-            setCustomerOptions((current) => sortCustomerOptions([...current, response.customer]))
+            persistCustomersInWorkspace([
+                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.customers,
+                response.customer,
+            ])
             setTransferForm((current) => ({ ...current, customerId: String(response.customer.id) }))
             showFeedback('success', 'Cliente criado.')
             return response.customer
         } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineCustomer = createOfflineCustomer(tenantId, { name: typedName, phone: null })
+                setTransferForm((current) => ({ ...current, customerId: String(offlineCustomer.id) }))
+                showFeedback('warning', 'Cliente salvo no modo offline.')
+                return offlineCustomer
+            }
+
             showFeedback('error', error.message)
             return null
         } finally {
@@ -503,20 +758,54 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     async function handleCreateDraft(event, options = {}) {
         event?.preventDefault?.()
         const openProductsAfter = Boolean(options.openProductsAfter)
+        let resolvedCustomerId = null
+        let initialAttributes = null
         setCreatingDraft(true)
         try {
             if (currentDraft) await saveDraftNow(currentDraft)
+            resolvedCustomerId = await resolveNewDraftCustomer()
+            initialAttributes = {
+                type: newDraftForm.type,
+                reference: newDraftForm.reference.trim(),
+                customerId: resolvedCustomerId ? String(resolvedCustomerId) : '',
+                notes: newDraftForm.notes,
+            }
+
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = createOfflineOrderDraft(tenantId, initialAttributes, { userName: auth?.user?.name })
+                hydrateDraft(offlineOrder)
+                setDraftModalOpen(true)
+                setNewDraftModalOpen(false)
+                setListFilter('draft')
+                setNewDraftForm(getInitialNewDraftForm())
+                showFeedback('warning', 'Atendimento iniciado no modo offline.')
+
+                if (openProductsAfter) {
+                    setProductsModalOpen(true)
+                }
+
+                return
+            }
+
             const response = await apiRequest('/api/orders', { method: 'post' })
             let nextOrder = response.order
-            const customerId = await resolveNewDraftCustomer()
-            const hasInitialData = newDraftForm.type !== 'comanda' || newDraftForm.reference.trim() !== '' || Boolean(customerId) || newDraftForm.notes.trim() !== ''
+            const hasInitialData = newDraftForm.type !== 'comanda' || newDraftForm.reference.trim() !== '' || Boolean(resolvedCustomerId) || newDraftForm.notes.trim() !== ''
 
             if (hasInitialData) {
-                const payload = buildDraftPayload({ ...mapOrderToDraft(response.order), type: newDraftForm.type, reference: newDraftForm.reference.trim(), customerId: customerId ? String(customerId) : '', notes: newDraftForm.notes, items: [] })
-                const savedResponse = await apiRequest(`/api/orders/${response.order.id}`, { method: 'put', data: payload })
+                const savedResponse = await apiRequest(`/api/orders/${response.order.id}`, {
+                    method: 'put',
+                    data: {
+                        type: initialAttributes.type,
+                        reference: initialAttributes.reference || null,
+                        customer_id: initialAttributes.customerId ? Number(resolveOfflineEntityId(tenantId, 'customers', initialAttributes.customerId)) : null,
+                        notes: initialAttributes.notes || null,
+                        items: [],
+                    },
+                })
                 nextOrder = savedResponse.order
             }
 
+            upsertOrderInWorkspace(nextOrder)
             hydrateDraft(nextOrder)
             setDraftModalOpen(true)
             setNewDraftModalOpen(false)
@@ -528,7 +817,31 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
                 setProductsModalOpen(true)
             }
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const customerId = resolvedCustomerId ?? await resolveNewDraftCustomer()
+                const offlineOrder = createOfflineOrderDraft(
+                    tenantId,
+                    initialAttributes || {
+                        type: newDraftForm.type,
+                        reference: newDraftForm.reference.trim(),
+                        customerId: customerId ? String(customerId) : '',
+                        notes: newDraftForm.notes,
+                    },
+                    { userName: auth?.user?.name },
+                )
+                hydrateDraft(offlineOrder)
+                setDraftModalOpen(true)
+                setNewDraftModalOpen(false)
+                setListFilter('draft')
+                setNewDraftForm(getInitialNewDraftForm())
+                showFeedback('warning', 'Atendimento salvo no modo offline.')
+
+                if (openProductsAfter) {
+                    setProductsModalOpen(true)
+                }
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setCreatingDraft(false)
         }
@@ -571,13 +884,31 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setFeedback(null)
         try {
             await saveDraftNow(currentDraft)
-            const response = await apiRequest(`/api/orders/${currentDraft.id}/send-to-cashier`, { method: 'post' })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = sendOfflineOrderToCashier(tenantId, currentDraft.id)
+                hydrateDraft(offlineOrder)
+                setListFilter('sent_to_cashier')
+                setDraftModalOpen(false)
+                showFeedback('warning', 'Atendimento enviado para o caixa no modo offline.')
+                return
+            }
+
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', currentDraft.id)}/send-to-cashier`, { method: 'post' })
+            upsertOrderInWorkspace(response.order)
             hydrateDraft(response.order)
             setListFilter('sent_to_cashier')
             setDraftModalOpen(false)
             showFeedback('success', response.message)
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineOrder = sendOfflineOrderToCashier(tenantId, currentDraft.id)
+                hydrateDraft(offlineOrder)
+                setListFilter('sent_to_cashier')
+                setDraftModalOpen(false)
+                showFeedback('warning', 'Atendimento enviado para o caixa no modo offline.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setSendingDraft(false)
         }
@@ -602,7 +933,12 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
 
         try {
             clearTimeout(saveTimeoutRef.current)
-            await apiRequest(`/api/orders/${draftId}`, { method: 'delete' })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                removeOfflineOrderDraft(tenantId, draftId)
+            } else {
+                await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', draftId)}`, { method: 'delete' })
+                removeOrderFromWorkspace(draftId)
+            }
 
             setDrafts((current) => current.filter((draft) => Number(draft.id) !== draftId))
             lastSavedSignatureRef.current = null
@@ -620,7 +956,26 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             resetCheckoutState('')
             showFeedback('success', 'Atendimento removido com sucesso.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                removeOfflineOrderDraft(tenantId, draftId)
+                setDrafts((current) => current.filter((draft) => Number(draft.id) !== draftId))
+                lastSavedSignatureRef.current = null
+                setCurrentDraft(null)
+                setSelectedItemId(null)
+                setDraftModalOpen(false)
+                setProductsModalOpen(false)
+                setTransferModalOpen(false)
+                setDiscountModalOpen(false)
+                setCheckoutModalOpen(false)
+                setQuantityModalOpen(false)
+                setPartialCheckoutModalOpen(false)
+                setDeliveryModalOpen(false)
+                updateDraftUrl(null)
+                resetCheckoutState('')
+                showFeedback('warning', 'Atendimento removido no modo offline.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setDeletingDraft(false)
         }
@@ -672,15 +1027,46 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         setFeedback(null)
         try {
             await saveDraftNow(currentDraft)
+            const salePayload = {
+                order_draft_id: currentDraft.id,
+                customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                discount: pricing.discount,
+                notes: currentDraft.notes || null,
+                items: pricing.items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                payments: [{ method: resolvedPaymentMethod, amount: pricing.total }],
+                total: pricing.total,
+                fiscal_decision: 'close',
+                requested_document_model: '65',
+            }
+
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const response = queueOfflineSaleFinalize(tenantId, salePayload, { userId: auth?.user?.id })
+                removeOrderFromWorkspace(currentDraft.id)
+
+                setDrafts((current) => current.filter((draft) => Number(draft.id) !== Number(currentDraft.id)))
+                clearTimeout(saveTimeoutRef.current)
+                setCurrentDraft(null)
+                setSelectedItemId(null)
+                setDraftModalOpen(false)
+                setCheckoutModalOpen(false)
+                setDiscountModalOpen(false)
+                updateDraftUrl(null)
+                resetCheckoutState('')
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline.`)
+                return
+            }
+
             const response = await apiRequest('/api/pdv/sales', {
                 method: 'post',
                 data: {
-                    order_draft_id: currentDraft.id,
-                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
-                    discount: pricing.discount,
-                    notes: currentDraft.notes || null,
-                    items: pricing.items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
-                    payments: [{ method: resolvedPaymentMethod, amount: pricing.total }],
+                    ...salePayload,
+                    order_draft_id: resolveOfflineEntityId(tenantId, 'orders', currentDraft.id),
+                    customer_id: currentDraft.customerId ? Number(resolveOfflineEntityId(tenantId, 'customers', currentDraft.customerId)) : null,
+                    items: pricing.items.map((item) => ({
+                        id: Number(resolveOfflineEntityId(tenantId, 'products', item.id)),
+                        qty: Number(item.qty),
+                        discount: Number(item.lineDiscount || 0),
+                    })),
                 },
             })
 
@@ -693,9 +1079,36 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
             setDiscountModalOpen(false)
             updateDraftUrl(null)
             resetCheckoutState('')
+            removeOrderFromWorkspace(currentDraft.id)
             showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.`)
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const response = queueOfflineSaleFinalize(tenantId, {
+                    order_draft_id: currentDraft.id,
+                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                    discount: pricing.discount,
+                    notes: currentDraft.notes || null,
+                    items: pricing.items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                    payments: [{ method: resolvedPaymentMethod, amount: pricing.total }],
+                    total: pricing.total,
+                    fiscal_decision: 'close',
+                    requested_document_model: '65',
+                }, { userId: auth?.user?.id })
+
+                setDrafts((current) => current.filter((draft) => Number(draft.id) !== Number(currentDraft.id)))
+                clearTimeout(saveTimeoutRef.current)
+                setCurrentDraft(null)
+                setSelectedItemId(null)
+                setDraftModalOpen(false)
+                setCheckoutModalOpen(false)
+                setDiscountModalOpen(false)
+                updateDraftUrl(null)
+                resetCheckoutState('')
+                removeOrderFromWorkspace(currentDraft.id)
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline.`)
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setSubmittingCheckout(false)
         }
@@ -707,21 +1120,26 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
         if (method === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
         if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
 
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return showFeedback('error', 'Pagamento parcial exige conexao para manter o atendimento consistente.')
+        }
+
         setSubmittingPartialCheckout(true)
         setFeedback(null)
         try {
             await saveDraftNow(currentDraft)
-            const response = await apiRequest(`/api/orders/${currentDraft.id}/partial-checkout`, {
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', currentDraft.id)}/partial-checkout`, {
                 method: 'post',
                 data: {
-                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                    customer_id: currentDraft.customerId ? Number(resolveOfflineEntityId(tenantId, 'customers', currentDraft.customerId)) : null,
                     discount: partialPricing.discount,
                     notes: currentDraft.notes || null,
-                    items: items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                    items: items.map((item) => ({ id: Number(resolveOfflineEntityId(tenantId, 'products', item.id)), qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
                     payments: [{ method, amount: partialPricing.total }],
                 },
             })
 
+            upsertOrderInWorkspace(response.order)
             hydrateDraft(response.order)
             setDraftModalOpen(true)
             setCheckoutModalOpen(false)
@@ -737,14 +1155,18 @@ export default function OrdersIndex({ categories, customers, drafts: initialDraf
     async function handleCreateDelivery(form) {
         if (!currentDraft) return
 
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return showFeedback('error', 'Delivery a partir da comanda exige conexao ativa.')
+        }
+
         setSubmittingDelivery(true)
         setFeedback(null)
         try {
             await saveDraftNow(currentDraft)
-            const response = await apiRequest(`/api/delivery/orders/${currentDraft.id}/from-draft`, {
+            const response = await apiRequest(`/api/delivery/orders/${resolveOfflineEntityId(tenantId, 'orders', currentDraft.id)}/from-draft`, {
                 method: 'post',
                 data: {
-                    customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
+                    customer_id: currentDraft.customerId ? Number(resolveOfflineEntityId(tenantId, 'customers', currentDraft.customerId)) : null,
                     channel: form.channel,
                     reference: form.reference || null,
                     recipient_name: form.recipient_name || null,

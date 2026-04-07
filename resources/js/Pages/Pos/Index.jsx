@@ -9,7 +9,23 @@ import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, isNetworkApiError } from '@/lib/http'
+import {
+    createOfflineCompany,
+    createOfflineCustomer,
+    discardOfflinePendingSale,
+    getOfflineOrderDetail,
+    getOfflinePendingCheckoutSummaries,
+    getOfflinePendingSale,
+    getOfflineWorkspaceSnapshot,
+    queueOfflineSaleFinalize,
+    resolveOfflineEntityId,
+    saveOfflinePendingSale,
+    searchOfflineProducts,
+    seedOfflineWorkspace,
+    subscribeOfflineWorkspace,
+    syncOfflineWorkspace,
+} from '@/lib/offline/workspace'
 import { buildDiscountDraft, buildPreviewConfigFromDraft, resolvePricing, roundCurrency } from '@/Pages/Orders/orderUtils'
 import './pos.css'
 
@@ -116,18 +132,21 @@ function normalizeCartItem(item) {
 
 export default function PosIndex({
     categories,
+    productCatalog = [],
     customers: initialCustomers,
     companies: initialCompanies,
     managers,
     supervisors = [],
     cashRegister,
     pendingOrderDrafts: initialPendingOrderDrafts,
+    pendingOrderDraftDetails = [],
     preloadedOrderDraft,
     pendingSale: initialPendingSale,
     recommendations: initialRecommendations,
     posCapabilities = {},
 }) {
-    const { tenant } = usePage().props
+    const { tenant, auth } = usePage().props
+    const tenantId = tenant?.id
     const moduleState = useModules()
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
@@ -219,6 +238,73 @@ export default function PosIndex({
     )
 
     useEffect(() => {
+        if (!tenantId) {
+            return undefined
+        }
+
+        const applyWorkspaceState = () => {
+            const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+            setCustomers(snapshot.catalogs.customers)
+            setCompanies(snapshot.catalogs.companies)
+            setPendingOrderDrafts(getOfflinePendingCheckoutSummaries(tenantId))
+            setCashRegisterState(snapshot.cashRegister)
+
+            if (!supportsPendingSales) {
+                return
+            }
+
+            const offlinePendingSale = getOfflinePendingSale(tenantId, auth?.user?.id)
+
+            if (offlinePendingSale) {
+                setPendingSaleServerState(offlinePendingSale)
+                setPendingSalePromptOpen(!preloadedOrderDraft)
+                setPendingSaleResolved(false)
+            }
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            categories,
+            products: productCatalog,
+            customers: initialCustomers,
+            companies: initialCompanies,
+            orders: pendingOrderDraftDetails,
+            cashRegister,
+            pendingSaleUserId: auth?.user?.id,
+            pendingSale: initialPendingSale,
+        })
+
+        applyWorkspaceState()
+
+        const unsubscribe = subscribeOfflineWorkspace(tenantId, () => {
+            applyWorkspaceState()
+        })
+
+        const handleOnline = () => {
+            syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
+        }
+
+        handleOnline()
+        window.addEventListener('online', handleOnline)
+
+        return () => {
+            unsubscribe()
+            window.removeEventListener('online', handleOnline)
+        }
+    }, [
+        auth?.user?.id,
+        cashRegister,
+        categories,
+        initialCompanies,
+        initialCustomers,
+        initialPendingSale,
+        pendingOrderDraftDetails,
+        preloadedOrderDraft,
+        productCatalog,
+        supportsPendingSales,
+        tenantId,
+    ])
+
+    useEffect(() => {
         setCashRegisterState(cashRegister)
     }, [cashRegister])
 
@@ -297,12 +383,27 @@ export default function PosIndex({
                 setLoadingProducts(true)
 
                 try {
+                    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                        setProducts(searchOfflineProducts(tenantId, {
+                            term: trimmedSearchTerm,
+                            categoryId: selectedCategory || undefined,
+                        }))
+                        return
+                    }
+
                     const response = await apiRequest('/api/pdv/products', {
                         params: { term: trimmedSearchTerm, category_id: selectedCategory || undefined },
                     })
 
                     if (!ignore) {
                         setProducts(response.products || [])
+                    }
+                } catch (error) {
+                    if (!ignore && tenantId && isNetworkApiError(error)) {
+                        setProducts(searchOfflineProducts(tenantId, {
+                            term: trimmedSearchTerm,
+                            categoryId: selectedCategory || undefined,
+                        }))
                     }
                 } finally {
                     if (!ignore) {
@@ -316,7 +417,7 @@ export default function PosIndex({
             ignore = true
             clearTimeout(timeout)
         }
-    }, [searchTerm, selectedCategory])
+    }, [searchTerm, selectedCategory, tenantId])
 
     useEffect(() => {
         if (!supportsDeferredPayment || !selectedCustomer) {
@@ -634,42 +735,68 @@ export default function PosIndex({
         if (!pendingSaleResolved || submitting) return undefined
 
         const timeout = setTimeout(async () => {
+            const offlinePayload = {
+                cash_register_id: cashRegisterState?.id || null,
+                order_draft_id: activeOrderDraftId || null,
+                customer_id: selectedCustomer || null,
+                company_id: selectedCompany || null,
+                notes: notes || null,
+                status: 'draft',
+                cart: pricing.items.map((item) => ({ ...item, qty: Number(item.qty) })),
+                discount: { config: discountConfig, authorizer: discountAuthorizer },
+                payment: {
+                    payment_method: paymentMethod,
+                    cash_received: cashReceived === '' ? null : Number(cashReceived),
+                    mixed_payments: mixedPayments,
+                    mixed_draft: mixedDraft,
+                },
+            }
+
             if (!cart.length) {
                 if (pendingSaleServerState) {
+                    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                        discardOfflinePendingSale(tenantId, auth?.user?.id)
+                        setPendingSaleServerState(null)
+                        return
+                    }
+
                     try {
                         await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
                         setPendingSaleServerState(null)
                     } catch {
-                        // Mantem silencioso.
+                        discardOfflinePendingSale(tenantId, auth?.user?.id)
+                        setPendingSaleServerState(null)
                     }
                 }
                 return
             }
 
             try {
+                if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                    const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
+                    setPendingSaleServerState(offlinePendingSale || null)
+                    return
+                }
+
                 const response = await apiRequest('/api/pdv/pending-sale', {
                     method: 'post',
                     data: {
                         cash_register_id: cashRegisterState?.id || null,
-                        order_draft_id: activeOrderDraftId || null,
-                        customer_id: selectedCustomer || null,
-                        company_id: selectedCompany || null,
-                        notes: notes || null,
+                        order_draft_id: activeOrderDraftId ? resolveOfflineEntityId(tenantId, 'orders', activeOrderDraftId) : null,
+                        customer_id: selectedCustomer ? resolveOfflineEntityId(tenantId, 'customers', selectedCustomer) : null,
+                        company_id: selectedCompany ? resolveOfflineEntityId(tenantId, 'companies', selectedCompany) : null,
+                        notes: offlinePayload.notes,
                         status: 'draft',
-                        cart_payload: pricing.items.map((item) => ({ ...item, qty: Number(item.qty) })),
-                        discount_payload: { config: discountConfig, authorizer: discountAuthorizer },
-                        payment_payload: {
-                            payment_method: paymentMethod,
-                            cash_received: cashReceived === '' ? null : Number(cashReceived),
-                            mixed_payments: mixedPayments,
-                            mixed_draft: mixedDraft,
-                        },
+                        cart_payload: offlinePayload.cart,
+                        discount_payload: offlinePayload.discount,
+                        payment_payload: offlinePayload.payment,
                     },
                 })
 
                 setPendingSaleServerState(response.pending_sale || null)
             } catch {
-                // Mantem silencioso.
+                const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
+                setPendingSaleServerState(offlinePendingSale || null)
             }
         }, 700)
 
@@ -691,11 +818,33 @@ export default function PosIndex({
         notes,
         cashRegisterState?.id,
         activeOrderDraftId,
+        auth?.user?.id,
         pendingSaleServerState,
+        tenantId,
     ])
 
     function showFeedback(type, text) {
         setFeedback({ type, text })
+    }
+
+    function persistCustomersInWorkspace(nextCustomers) {
+        if (!tenantId) {
+            return
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            customers: nextCustomers,
+        })
+    }
+
+    function persistCompaniesInWorkspace(nextCompanies) {
+        if (!tenantId) {
+            return
+        }
+
+        seedOfflineWorkspace(tenantId, {
+            companies: nextCompanies,
+        })
     }
 
     function closeCustomerPicker() {
@@ -792,10 +941,17 @@ export default function PosIndex({
         }
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                setPendingOrderDrafts(getOfflinePendingCheckoutSummaries(tenantId))
+                return
+            }
+
             const response = await apiRequest('/api/orders/pending-checkout')
             setPendingOrderDrafts(response.orders || [])
         } catch (error) {
-            if (!quiet) {
+            if (tenantId && isNetworkApiError(error)) {
+                setPendingOrderDrafts(getOfflinePendingCheckoutSummaries(tenantId))
+            } else if (!quiet) {
                 showFeedback('error', error.message)
             }
         } finally {
@@ -819,11 +975,29 @@ export default function PosIndex({
         setLoadingOrderDraftId(orderDraftId)
 
         try {
-            const response = await apiRequest(`/api/orders/${orderDraftId}`)
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = getOfflineOrderDetail(tenantId, orderDraftId)
+                if (!offlineOrder) throw new Error('Pedido nao encontrado no cache offline.')
+                applyOrderDraftToSale(offlineOrder)
+                setCashierDraftsModalOpen(false)
+                return
+            }
+
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', orderDraftId)}`)
             applyOrderDraftToSale(response.order)
             setCashierDraftsModalOpen(false)
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineOrder = getOfflineOrderDetail(tenantId, orderDraftId)
+                if (offlineOrder) {
+                    applyOrderDraftToSale(offlineOrder)
+                    setCashierDraftsModalOpen(false)
+                } else {
+                    showFeedback('error', error.message)
+                }
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setLoadingOrderDraftId(null)
         }
@@ -1089,18 +1263,35 @@ export default function PosIndex({
         event.preventDefault()
 
         try {
-            const response = await apiRequest('/api/pdv/customers/quick', {
-                method: 'post',
-                data: quickCustomerForm,
-            })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineCustomer = createOfflineCustomer(tenantId, quickCustomerForm)
+                setSelectedCustomer(String(offlineCustomer.id))
+                setQuickCustomerForm(initialQuickCustomerForm)
+                setQuickCustomerOpen(false)
+                showFeedback('warning', 'Cliente salvo no modo offline e vinculado a esta venda.')
+                return
+            }
 
-            setCustomers((current) => [...current, response.customer])
+            const response = await apiRequest('/api/pdv/customers/quick', { method: 'post', data: quickCustomerForm })
+
+            persistCustomersInWorkspace([
+                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.customers,
+                response.customer,
+            ])
             setSelectedCustomer(String(response.customer.id))
             setQuickCustomerForm(initialQuickCustomerForm)
             setQuickCustomerOpen(false)
             showFeedback('success', 'Cliente cadastrado e selecionado para esta venda.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineCustomer = createOfflineCustomer(tenantId, quickCustomerForm)
+                setSelectedCustomer(String(offlineCustomer.id))
+                setQuickCustomerForm(initialQuickCustomerForm)
+                setQuickCustomerOpen(false)
+                showFeedback('warning', 'Cliente salvo no modo offline e vinculado a esta venda.')
+            } else {
+                showFeedback('error', error.message)
+            }
         }
     }
 
@@ -1131,6 +1322,27 @@ export default function PosIndex({
         setLoadingProducts(true)
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const fallbackMatch = resolveProductMatch(
+                    searchOfflineProducts(tenantId, {
+                        term,
+                        categoryId: selectedCategory || undefined,
+                    }),
+                    term,
+                )
+
+                if (!fallbackMatch) {
+                    showFeedback('error', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                    return
+                }
+
+                handleAddProduct(fallbackMatch)
+                setSelectedCartItemId(fallbackMatch.id)
+                setSearchTerm('')
+                setProducts([])
+                return
+            }
+
             const response = await apiRequest('/api/pdv/products', {
                 params: { term, category_id: selectedCategory || undefined },
             })
@@ -1146,7 +1358,26 @@ export default function PosIndex({
             setSearchTerm('')
             setProducts([])
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const fallbackMatch = resolveProductMatch(
+                    searchOfflineProducts(tenantId, {
+                        term,
+                        categoryId: selectedCategory || undefined,
+                    }),
+                    term,
+                )
+
+                if (!fallbackMatch) {
+                    showFeedback('error', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                } else {
+                    handleAddProduct(fallbackMatch)
+                    setSelectedCartItemId(fallbackMatch.id)
+                    setSearchTerm('')
+                    setProducts([])
+                }
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setLoadingProducts(false)
         }
@@ -1236,13 +1467,29 @@ export default function PosIndex({
                 },
             })
 
-            setCustomers((current) => [...current, response.customer])
+            persistCustomersInWorkspace([
+                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.customers,
+                response.customer,
+            ])
             setSelectedCustomer(String(response.customer.id))
             setCustomerLinkForm(initialCustomerLinkForm)
             setCustomerModalOpen(false)
             showFeedback('success', 'Cliente cadastrado e vinculado com sucesso.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineCustomer = createOfflineCustomer(tenantId, {
+                    name,
+                    phone: null,
+                    document: normalizedDocument || null,
+                    email: email || null,
+                })
+                setSelectedCustomer(String(offlineCustomer.id))
+                setCustomerLinkForm(initialCustomerLinkForm)
+                setCustomerModalOpen(false)
+                showFeedback('warning', 'Cliente salvo no modo offline e vinculado a esta venda.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setLinkingCustomer(false)
         }
@@ -1532,14 +1779,37 @@ export default function PosIndex({
         setPendingSaleActionBusy(true)
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlinePendingSale = getOfflinePendingSale(tenantId, auth?.user?.id)
+
+                if (!offlinePendingSale) {
+                    throw new Error('Nenhuma venda pendente foi encontrada no cache offline.')
+                }
+
+                applyPendingSale(offlinePendingSale)
+                return
+            }
+
             const response = await apiRequest('/api/pdv/pending-sale/restore', {
                 method: 'post',
             })
             applyPendingSale(response.pending_sale)
         } catch (error) {
-            showFeedback('error', error.message)
-            setPendingSaleResolved(true)
-            setPendingSalePromptOpen(false)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlinePendingSale = getOfflinePendingSale(tenantId, auth?.user?.id)
+
+                if (offlinePendingSale) {
+                    applyPendingSale(offlinePendingSale)
+                } else {
+                    showFeedback('error', error.message)
+                    setPendingSaleResolved(true)
+                    setPendingSalePromptOpen(false)
+                }
+            } else {
+                showFeedback('error', error.message)
+                setPendingSaleResolved(true)
+                setPendingSalePromptOpen(false)
+            }
         } finally {
             setPendingSaleActionBusy(false)
         }
@@ -1556,15 +1826,26 @@ export default function PosIndex({
         setPendingSaleActionBusy(true)
 
         try {
-            await apiRequest('/api/pdv/pending-sale', {
-                method: 'delete',
-            })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                discardOfflinePendingSale(tenantId, auth?.user?.id)
+            } else {
+                await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
+                discardOfflinePendingSale(tenantId, auth?.user?.id)
+            }
             setPendingSaleServerState(null)
             setPendingSaleResolved(true)
             setPendingSalePromptOpen(false)
             showFeedback('success', 'Venda pendente descartada com seguranca.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                discardOfflinePendingSale(tenantId, auth?.user?.id)
+                setPendingSaleServerState(null)
+                setPendingSaleResolved(true)
+                setPendingSalePromptOpen(false)
+                showFeedback('warning', 'Venda pendente descartada no modo offline.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setPendingSaleActionBusy(false)
         }
@@ -1724,22 +2005,52 @@ export default function PosIndex({
 
     async function finalizeSale({ fiscalDecision, requestedDocumentModel = '65', recipientPayload = null }) {
         const payments = buildPaymentsPayload()
+        const salePayload = {
+            order_draft_id: activeOrderDraftId || null,
+            customer_id: selectedCustomer || recipientPayload?.customer_id || null,
+            company_id: selectedCompany || recipientPayload?.company_id || null,
+            discount: totals.discount,
+            notes: notes || null,
+            fiscal_decision: fiscalDecision,
+            requested_document_model: requestedDocumentModel,
+            recipient_payload: recipientPayload,
+            items: buildSaleItemsPayload(),
+            payments,
+            total: totals.total,
+        }
 
-        return apiRequest('/api/pdv/sales', {
-            method: 'post',
-            data: {
-                order_draft_id: activeOrderDraftId || null,
-                customer_id: selectedCustomer || recipientPayload?.customer_id || null,
-                company_id: selectedCompany || recipientPayload?.company_id || null,
-                discount: totals.discount,
-                notes: notes || null,
-                fiscal_decision: fiscalDecision,
-                requested_document_model: requestedDocumentModel,
-                recipient_payload: recipientPayload,
-                items: buildSaleItemsPayload(),
-                payments,
-            },
-        })
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return queueOfflineSaleFinalize(tenantId, salePayload, { userId: auth?.user?.id })
+        }
+
+        try {
+            return await apiRequest('/api/pdv/sales', {
+                method: 'post',
+                data: {
+                    ...salePayload,
+                    order_draft_id: activeOrderDraftId ? resolveOfflineEntityId(tenantId, 'orders', activeOrderDraftId) : null,
+                    customer_id: salePayload.customer_id ? resolveOfflineEntityId(tenantId, 'customers', salePayload.customer_id) : null,
+                    company_id: salePayload.company_id ? resolveOfflineEntityId(tenantId, 'companies', salePayload.company_id) : null,
+                    recipient_payload: recipientPayload
+                        ? {
+                            ...recipientPayload,
+                            customer_id: recipientPayload.customer_id ? resolveOfflineEntityId(tenantId, 'customers', recipientPayload.customer_id) : recipientPayload.customer_id,
+                            company_id: recipientPayload.company_id ? resolveOfflineEntityId(tenantId, 'companies', recipientPayload.company_id) : recipientPayload.company_id,
+                        }
+                        : null,
+                    items: buildSaleItemsPayload().map((item) => ({
+                        ...item,
+                        id: Number(resolveOfflineEntityId(tenantId, 'products', item.id)),
+                    })),
+                },
+            })
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                return queueOfflineSaleFinalize(tenantId, salePayload, { userId: auth?.user?.id })
+            }
+
+            throw error
+        }
     }
 
     async function concludeFinalizedSale(finalizedOrderDraftId, callback = null) {
@@ -1768,7 +2079,12 @@ export default function PosIndex({
                 ? ` ${response.local_agent_print.message}`
                 : ''
 
-            showFeedback('success', `Venda ${response.sale.sale_number} finalizada.${printMessage}`)
+            showFeedback(
+                response.sale?.sale_id < 0 ? 'warning' : 'success',
+                response.sale?.sale_id < 0
+                    ? `Venda ${response.sale.sale_number} registrada no modo offline.`
+                    : `Venda ${response.sale.sale_number} finalizada.${printMessage}`,
+            )
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -1799,6 +2115,12 @@ export default function PosIndex({
                 requestedDocumentModel,
                 recipientPayload,
             })
+
+            if (response.sale?.sale_id < 0) {
+                await concludeFinalizedSale(finalizedOrderDraftId)
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissao fiscal sera tentada quando a conexao voltar.`)
+                return
+            }
 
             await apiRequest(`/api/pdv/sales/${response.sale.sale_id}/issue-fiscal`, {
                 method: 'post',
@@ -1874,17 +2196,32 @@ export default function PosIndex({
         setCreatingCompany(true)
 
         try {
-            const response = await apiRequest('/api/pdv/companies/quick', {
-                method: 'post',
-                data: quickCompanyForm,
-            })
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
+                setSelectedCompany(String(offlineCompany.id))
+                setQuickCompanyForm(initialQuickCompanyForm)
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizacao.')
+                return
+            }
 
-            setCompanies((current) => [...current, response.company])
+            const response = await apiRequest('/api/pdv/companies/quick', { method: 'post', data: quickCompanyForm })
+
+            persistCompaniesInWorkspace([
+                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.companies,
+                response.company,
+            ])
             setSelectedCompany(String(response.company.id))
             setQuickCompanyForm(initialQuickCompanyForm)
             showFeedback('success', 'Empresa cadastrada e pronta para reutilizacao.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
+                setSelectedCompany(String(offlineCompany.id))
+                setQuickCompanyForm(initialQuickCompanyForm)
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizacao.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setCreatingCompany(false)
         }
@@ -1930,6 +2267,12 @@ export default function PosIndex({
                 requestedDocumentModel: recipientDocumentModel,
                 recipientPayload,
             })
+
+            if (response.sale?.sale_id < 0) {
+                await concludeFinalizedSale(finalizedOrderDraftId)
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissao fiscal sera tentada quando a conexao voltar.`)
+                return
+            }
 
             try {
                 await apiRequest(`/api/pdv/sales/${response.sale.sale_id}/issue-fiscal`, {
