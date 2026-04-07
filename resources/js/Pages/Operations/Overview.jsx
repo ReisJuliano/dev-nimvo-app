@@ -1,12 +1,12 @@
 import { router } from '@inertiajs/react'
 import { useState } from 'react'
+import { formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import PageContainer from '@/Components/UI/PageContainer'
 import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import DataTable from '@/Components/Operations/DataTable'
 import FilterBar from '@/Components/Operations/FilterBar'
 import InfoPanels from '@/Components/Operations/InfoPanels'
-import MetricGrid from '@/Components/Operations/MetricGrid'
 import ReportsShowcase from '@/Components/Operations/ReportsShowcase'
 import AppLayout from '@/Layouts/AppLayout'
 import './operations.css'
@@ -24,6 +24,22 @@ function buildFilterPayload(filters, overrides = {}) {
     )
 }
 
+function formatMetricValue(metric) {
+    if (metric?.format === 'money') {
+        return formatMoney(metric.value)
+    }
+
+    if (metric?.format === 'percent') {
+        return formatPercent(metric.value)
+    }
+
+    if (metric?.format === 'text') {
+        return metric?.value || '-'
+    }
+
+    return formatNumber(metric?.value || 0)
+}
+
 export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
     const isReportsCatalog = module.view === 'reports_catalog'
@@ -35,6 +51,7 @@ export default function OperationsOverview({ module }) {
     const modulePanels = Array.isArray(module.panels) ? module.panels : []
     const moduleTables = Array.isArray(module.tables) ? module.tables : []
     const currentDialog = currentSection?.dialog ?? null
+    const activeMetrics = Array.isArray(currentSection?.metrics) ? currentSection.metrics : moduleMetrics
     const heroTitle = hasSections
         ? module.title
         : `Painel de ${module.title.charAt(0).toLowerCase()}${module.title.slice(1)}`
@@ -121,7 +138,7 @@ export default function OperationsOverview({ module }) {
                                     </div>
                                     <div className="right-sidebar-meta-item">
                                         <span>Indicadores</span>
-                                        <strong>{(currentSection?.metrics || moduleMetrics).length || 0}</strong>
+                                        <strong>{activeMetrics.length || 0}</strong>
                                     </div>
                                     <div className="right-sidebar-meta-item">
                                         <span>Tabelas</span>
@@ -140,6 +157,19 @@ export default function OperationsOverview({ module }) {
                                     ) : null}
                                 </div>
                             </RightSidebarSection>
+
+                            {activeMetrics.length ? (
+                                <RightSidebarSection title="Indicadores" subtitle="Valores atuais">
+                                    <div className="right-sidebar-meta">
+                                        {activeMetrics.map((metric) => (
+                                            <div key={metric.label} className="right-sidebar-meta-item">
+                                                <span>{metric.label}</span>
+                                                <strong>{formatMetricValue(metric)}</strong>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </RightSidebarSection>
+                            ) : null}
                         </RightSidebarPanel>
                     )}
                 >
@@ -161,7 +191,6 @@ export default function OperationsOverview({ module }) {
                                 ))}
                             </section>
 
-                            <MetricGrid metrics={currentSection.metrics} />
                             <InfoPanels panels={currentSection.panels} />
 
                             <div className="operations-table-grid">
@@ -172,8 +201,6 @@ export default function OperationsOverview({ module }) {
                         </>
                     ) : (
                         <>
-                            {resolvedActiveTab !== 'tables' && moduleMetrics.length ? <MetricGrid metrics={moduleMetrics} /> : null}
-
                             {resolvedActiveTab !== 'tables' ? <InfoPanels panels={modulePanels} /> : null}
 
                             {resolvedActiveTab !== 'insights' && moduleTables.length ? (

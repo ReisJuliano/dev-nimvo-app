@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
-import { Badge, EmptyState, Feedback, FeedbackHeader, ListCard, MetricGrid } from './shared'
+import { Badge, EmptyState, Feedback, FeedbackHeader, ListCard } from './shared'
 
 function FieldLabel({ icon, text }) {
     return (
@@ -62,16 +62,6 @@ export default function IncomingNfeWorkspace({ payload }) {
     const selectedRecord = useMemo(
         () => records.find((record) => record.id === selectedId) ?? filteredRecords[0] ?? null,
         [filteredRecords, records, selectedId],
-    )
-
-    const metrics = useMemo(
-        () => [
-            { label: 'NF-e recebidas', value: records.length, caption: 'Documentos importados' },
-            { label: 'Prontas', value: records.filter((record) => record.status === 'ready').length, caption: 'Sem pendencias de cadastro' },
-            { label: 'Pendentes', value: records.filter((record) => record.status === 'pending_products' || record.summary_only).length, caption: 'Revisao necessaria' },
-            { label: 'Processadas', value: records.filter((record) => record.status === 'processed').length, caption: 'Ja entrou no estoque' },
-        ],
-        [records],
     )
 
     const matchedSupplier = useMemo(() => {
@@ -276,14 +266,13 @@ export default function IncomingNfeWorkspace({ payload }) {
 
     return (
         <div className="ops-workspace-stack">
-            <MetricGrid items={metrics} />
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Consulta e importacao" subtitle="SEFAZ com certificado A1 ou XML do fornecedor" />
+                    <FeedbackHeader title="Consulta e importacao" subtitle="SEFAZ ou XML" />
                     <Feedback feedback={feedback} />
                     <div className="ops-nfe-status-card">
                         <strong>{integrationStatus.configured ? 'Integracao fiscal pronta' : 'Integracao fiscal pendente'}</strong>
-                        <p>{integrationStatus.message || 'Configure o certificado A1 para consultar NF-e recebida diretamente na SEFAZ.'}</p>
+                        <p>{integrationStatus.message || 'Configure o certificado A1.'}</p>
                         <div className="ops-workspace-list-card-meta">
                             <span>{integrationStatus.recipient_name || 'Perfil fiscal nao informado'}</span>
                             <span>{integrationStatus.recipient_document || 'Sem CNPJ ativo'}</span>
@@ -307,8 +296,8 @@ export default function IncomingNfeWorkspace({ payload }) {
                             <input value={filters.supplier} onChange={(event) => setFilters((current) => ({ ...current, supplier: event.target.value }))} placeholder="Nome ou CNPJ" />
                         </label>
                         <label className="span-2">
-                            <FieldLabel icon="fa-key" text="Chave de acesso para sincronizar" />
-                            <input value={syncAccessKey} onChange={(event) => setSyncAccessKey(event.target.value)} placeholder="Opcional para baixar uma nota especifica" />
+                            <FieldLabel icon="fa-key" text="Chave de acesso" />
+                            <input value={syncAccessKey} onChange={(event) => setSyncAccessKey(event.target.value)} placeholder="Opcional" />
                         </label>
                         <div className="ops-workspace-actions span-2">
                             <button type="button" className="ui-button-ghost" onClick={handleSync} disabled={busyAction === 'sync'}>
@@ -317,7 +306,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                         </div>
                         <label className="span-2">
                             <FieldLabel icon="fa-file-code" text="XML da NF-e" />
-                            <textarea rows="6" value={xmlText} onChange={(event) => setXmlText(event.target.value)} placeholder="Cole aqui o XML recebido do fornecedor se preferir importar manualmente." />
+                            <textarea rows="6" value={xmlText} onChange={(event) => setXmlText(event.target.value)} placeholder="Cole o XML da nota." />
                         </label>
                         <label className="span-2">
                             <FieldLabel icon="fa-file-arrow-up" text="Arquivo XML" />
@@ -346,7 +335,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                 />
                             ))
                         ) : (
-                            <EmptyState title="Nenhuma NF-e nesse filtro" text="Sincronize a SEFAZ ou importe um XML para iniciar o recebimento automatizado." />
+                            <EmptyState title="Nenhuma NF-e" text="Nenhum documento neste filtro." />
                         )}
                     </div>
                 </section>
@@ -371,7 +360,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                             </div>
                             <div className="ops-nfe-status-card">
                                 <strong>Fornecedor e validacao</strong>
-                                <p>{matchedSupplier ? `Fornecedor vinculado: ${matchedSupplier.name}` : 'Nenhum fornecedor vinculado ao CNPJ da NF-e ainda.'}</p>
+                                <p>{matchedSupplier ? matchedSupplier.name : 'Sem fornecedor vinculado'}</p>
                                 <div className="ops-workspace-form-grid">
                                     <label>
                                         <FieldLabel icon="fa-id-card" text="CNPJ do fornecedor" />
@@ -416,7 +405,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <strong>{selectedRecord.validation?.ncm_mismatches || 0}</strong>
                                 </article>
                             </div>
-                            {selectedRecord.summary_only ? <div className="ops-workspace-inline-alert">Essa nota veio como resumo SEFAZ. Use reprocessar para tentar baixar o XML completo quando a manifestacao estiver liberada.</div> : null}
+                            {selectedRecord.summary_only ? <div className="ops-workspace-inline-alert">NF-e em resumo. Reprocesse para buscar o XML completo.</div> : null}
                             {(selectedRecord.validation?.alerts || []).length ? (
                                 <div className="ops-nfe-alert-list">
                                     {(selectedRecord.validation?.alerts || []).slice(0, 6).map((alert, index) => (

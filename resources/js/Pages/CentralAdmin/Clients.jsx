@@ -203,7 +203,6 @@ function TenantFormModal({ open, mode, form, busy, tenantBaseDomain, onClose, on
             open={open}
             icon={isEdit ? 'fa-pen-to-square' : 'fa-plus'}
             title={isEdit ? 'Editar tenant' : 'Novo tenant'}
-            description={`O tenant sempre sera publicado em ${tenantPreview}.`}
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
@@ -373,7 +372,6 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
             open={open}
             icon="fa-file-invoice-dollar"
             title={tenant ? `Licenca de ${tenant.name}` : 'Licenca'}
-            description="Controle o ciclo, tolerancia e a fatura ativa da licenca deste tenant."
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
@@ -559,7 +557,6 @@ function LocalAgentModal({
             open={open}
             icon="fa-desktop"
             title={tenant ? `Agente fiscal de ${tenant.name}` : 'Agente fiscal'}
-            description="Gerencie a ativacao, o status central e acompanhe a configuracao local enviada pela maquina do cliente."
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
