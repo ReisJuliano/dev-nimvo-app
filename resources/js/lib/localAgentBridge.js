@@ -35,7 +35,9 @@ export async function requestLocalAgent(bridge, path, options = {}) {
         const payload = raw ? JSON.parse(raw) : {}
 
         if (!response.ok) {
-            throw new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitacao.')
+            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitacao.')
+            localAgentError.status = response.status
+            throw localAgentError
         }
 
         return payload
@@ -65,5 +67,20 @@ export async function printTestViaLocalAgent(bridge, payload = {}) {
     return requestLocalAgent(bridge, '/v1/prints/test', {
         method: 'post',
         body: payload,
+    })
+}
+
+export async function readOfflineWorkspaceViaLocalAgent(bridge, tenantId) {
+    return requestLocalAgent(bridge, `/v1/workspaces/${encodeURIComponent(tenantId)}`, {
+        method: 'get',
+        timeoutMs: 2500,
+    })
+}
+
+export async function writeOfflineWorkspaceViaLocalAgent(bridge, tenantId, workspace) {
+    return requestLocalAgent(bridge, `/v1/workspaces/${encodeURIComponent(tenantId)}`, {
+        method: 'put',
+        body: workspace,
+        timeoutMs: 2500,
     })
 }

@@ -6,6 +6,7 @@ import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import {
+    configureOfflineWorkspaceBridge,
     createOfflineCustomer,
     createOfflineOrderDraft,
     discardOfflinePendingSale,
@@ -13,6 +14,7 @@ import {
     getOfflineOrderSummaries,
     getOfflinePendingCheckoutSummaries,
     getOfflineWorkspaceSnapshot,
+    hydrateOfflineWorkspace,
     queueOfflineSaleFinalize,
     removeOfflineOrderDraft,
     resolveOfflineEntityId,
@@ -68,7 +70,7 @@ export default function OrdersIndex({
     initialDraft,
     productCatalog = [],
 }) {
-    const { auth, tenant } = usePage().props
+    const { auth, tenant, localAgentBridge } = usePage().props
     const moduleState = useModules()
     const initialDraftState = initialDraft ? mapOrderToDraft(initialDraft) : null
     const tenantId = tenant?.id
@@ -135,6 +137,9 @@ export default function OrdersIndex({
             return undefined
         }
 
+        let cancelled = false
+        let unsubscribe = () => {}
+
         const applyWorkspaceState = (state) => {
             setCustomerOptions(sortCustomerOptions(state.catalogs.customers))
             setDrafts(sortDrafts(getOfflineOrderSummaries(tenantId)))
@@ -151,31 +156,45 @@ export default function OrdersIndex({
             })
         }
 
-        seedOfflineWorkspace(tenantId, {
-            categories,
-            customers,
-            products: productCatalog,
-            orders: draftDetails,
-        })
-
-        applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
-
-        const unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
-            applyWorkspaceState(state)
-        })
-
         const handleOnline = () => {
             syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
         }
 
-        handleOnline()
+        const bootstrap = async () => {
+            configureOfflineWorkspaceBridge(tenantId, localAgentBridge)
+            await hydrateOfflineWorkspace(tenantId).catch(() => {})
+
+            if (cancelled) {
+                return
+            }
+
+            seedOfflineWorkspace(tenantId, {
+                categories,
+                customers,
+                products: productCatalog,
+                orders: draftDetails,
+            })
+
+            if (cancelled) {
+                return
+            }
+
+            applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
+            unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
+                applyWorkspaceState(state)
+            })
+            handleOnline()
+        }
+
+        bootstrap()
         window.addEventListener('online', handleOnline)
 
         return () => {
+            cancelled = true
             unsubscribe()
             window.removeEventListener('online', handleOnline)
         }
-    }, [categories, customers, draftDetails, productCatalog, tenantId])
+    }, [categories, customers, draftDetails, localAgentBridge, productCatalog, tenantId])
 
     useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()

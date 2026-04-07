@@ -1,6 +1,17 @@
+import {
+    loadIndexedDbWorkspaceSnapshot,
+    loadLocalAgentWorkspaceSnapshot,
+    saveIndexedDbWorkspaceSnapshot,
+    saveLocalAgentWorkspaceSnapshot,
+} from './persistence'
+
 const STORAGE_PREFIX = 'nimvo:offline-workspace'
 const CHANGE_EVENT = 'nimvo:offline-workspace:change'
 const SCHEMA_VERSION = 1
+const bridgeByTenant = new Map()
+const hydrationLocks = new Map()
+const persistenceTimers = new Map()
+const memoryStateByTenant = new Map()
 
 function nowIso() {
     return new Date().toISOString()
@@ -29,6 +40,7 @@ function createEmptyState(tenantId) {
             lastSyncAttemptAt: null,
             lastSyncAt: null,
             lastSyncError: null,
+            lastUpdatedAt: null,
         },
         cashRegister: null,
         catalogs: {
@@ -342,19 +354,33 @@ function readState(tenantId) {
         return createEmptyState('anonymous')
     }
 
+    const tenantKey = String(tenantId)
+    const memoryState = memoryStateByTenant.get(tenantKey)
+    if (memoryState) {
+        return cloneValue(memoryState)
+    }
+
     if (!hasWindowStorage()) {
-        return createEmptyState(tenantId)
+        const emptyState = createEmptyState(tenantId)
+        memoryStateByTenant.set(tenantKey, emptyState)
+        return emptyState
     }
 
     try {
         const raw = window.localStorage.getItem(buildStorageKey(tenantId))
         if (!raw) {
-            return createEmptyState(tenantId)
+            const emptyState = createEmptyState(tenantId)
+            memoryStateByTenant.set(tenantKey, emptyState)
+            return emptyState
         }
 
-        return ensureStateShape(JSON.parse(raw), tenantId)
+        const state = ensureStateShape(JSON.parse(raw), tenantId)
+        memoryStateByTenant.set(tenantKey, state)
+        return cloneValue(state)
     } catch {
-        return createEmptyState(tenantId)
+        const emptyState = createEmptyState(tenantId)
+        memoryStateByTenant.set(tenantKey, emptyState)
+        return emptyState
     }
 }
 
@@ -393,17 +419,55 @@ function dispatchWorkspaceChange(tenantId, state) {
     }))
 }
 
-function writeState(tenantId, nextState) {
+function schedulePersistenceWrite(tenantId, state) {
+    if (!tenantId || typeof window === 'undefined') {
+        return
+    }
+
+    const tenantKey = String(tenantId)
+    const snapshot = cloneValue(state)
+
+    if (persistenceTimers.has(tenantKey)) {
+        window.clearTimeout(persistenceTimers.get(tenantKey))
+    }
+
+    persistenceTimers.set(tenantKey, window.setTimeout(() => {
+        persistenceTimers.delete(tenantKey)
+
+        void saveIndexedDbWorkspaceSnapshot(tenantId, snapshot).catch(() => {})
+        void saveLocalAgentWorkspaceSnapshot(tenantId, snapshot, bridgeByTenant.get(tenantKey) || null).catch(() => {})
+    }, 120))
+}
+
+function commitState(tenantId, nextState, options = {}) {
     const normalized = ensureStateShape(nextState, tenantId)
+    const shouldTouchUpdatedAt = options.touchUpdatedAt !== false
+    const shouldPersistRemotely = options.persist !== false
+
+    normalized.meta.lastUpdatedAt = shouldTouchUpdatedAt
+        ? nowIso()
+        : (normalized.meta.lastUpdatedAt || nowIso())
+    memoryStateByTenant.set(String(tenantId), normalized)
 
     if (!hasWindowStorage()) {
+        if (shouldPersistRemotely) {
+            schedulePersistenceWrite(tenantId, normalized)
+        }
         return normalized
     }
 
     window.localStorage.setItem(buildStorageKey(tenantId), JSON.stringify(normalized))
     dispatchWorkspaceChange(tenantId, normalized)
 
+    if (shouldPersistRemotely) {
+        schedulePersistenceWrite(tenantId, normalized)
+    }
+
     return normalized
+}
+
+function writeState(tenantId, nextState) {
+    return commitState(tenantId, nextState)
 }
 
 function updateState(tenantId, updater) {
@@ -412,6 +476,40 @@ function updateState(tenantId, updater) {
     const nextState = updater(draft) || draft
 
     return writeState(tenantId, nextState)
+}
+
+function normalizeTimestamp(value) {
+    if (!value) {
+        return 0
+    }
+
+    const timestamp = new Date(value).getTime()
+    return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function resolveStateTimestamp(state, fallback = null) {
+    return normalizeTimestamp(
+        state?.meta?.lastUpdatedAt
+        || state?.meta?.lastSyncAt
+        || state?.meta?.lastSeededAt
+        || fallback,
+    )
+}
+
+function pickNewestWorkspaceSnapshot(tenantId, snapshots = []) {
+    const currentState = readState(tenantId)
+    const currentTimestamp = resolveStateTimestamp(currentState)
+
+    return snapshots.reduce((latest, snapshot) => {
+        if (!snapshot?.state) {
+            return latest
+        }
+
+        const snapshotTimestamp = resolveStateTimestamp(snapshot.state, snapshot.updatedAt || null)
+        return snapshotTimestamp > latest.timestamp
+            ? { state: snapshot.state, timestamp: snapshotTimestamp }
+            : latest
+    }, { state: currentState, timestamp: currentTimestamp })
 }
 
 function replaceQueueRecord(queueItems, nextRecord) {
@@ -623,6 +721,56 @@ export function getOfflineWorkspaceSnapshot(tenantId) {
 
 export function getOfflineWorkspaceSummary(tenantId) {
     return buildSummary(readState(tenantId))
+}
+
+export function configureOfflineWorkspaceBridge(tenantId, bridge) {
+    if (!tenantId) {
+        return
+    }
+
+    const tenantKey = String(tenantId)
+
+    if (bridge?.enabled && bridge?.agent_key && bridge?.base_url) {
+        bridgeByTenant.set(tenantKey, bridge)
+        return
+    }
+
+    bridgeByTenant.delete(tenantKey)
+}
+
+export async function hydrateOfflineWorkspace(tenantId) {
+    if (!tenantId) {
+        return createEmptyState('anonymous')
+    }
+
+    if (hydrationLocks.has(tenantId)) {
+        return hydrationLocks.get(tenantId)
+    }
+
+    const hydrationPromise = (async () => {
+        const tenantKey = String(tenantId)
+        const bridge = bridgeByTenant.get(tenantKey) || null
+        const snapshots = await Promise.all([
+            loadIndexedDbWorkspaceSnapshot(tenantId).catch(() => null),
+            loadLocalAgentWorkspaceSnapshot(tenantId, bridge).catch(() => null),
+        ])
+
+        const freshest = pickNewestWorkspaceSnapshot(tenantId, snapshots)
+
+        if (freshest?.state) {
+            return commitState(tenantId, freshest.state, {
+                touchUpdatedAt: false,
+                persist: false,
+            })
+        }
+
+        return readState(tenantId)
+    })().finally(() => {
+        hydrationLocks.delete(tenantId)
+    })
+
+    hydrationLocks.set(tenantId, hydrationPromise)
+    return hydrationPromise
 }
 
 export function subscribeOfflineWorkspace(tenantId, callback) {

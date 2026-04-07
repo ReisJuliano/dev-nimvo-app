@@ -7,6 +7,7 @@ import useModules from '@/hooks/useModules'
 import { formatDateTime } from '@/lib/format'
 import { useFlashPopup } from '@/lib/errorPopup'
 import useOfflineStatus from '@/lib/offline/useOfflineStatus'
+import { configureOfflineWorkspaceBridge, hydrateOfflineWorkspace } from '@/lib/offline/workspace'
 import './app-layout.css'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app-sidebar-collapsed'
@@ -20,7 +21,7 @@ export default function AppLayout({
     navigationMode = 'default',
     defaultCollapsed = false,
 }) {
-    const { auth, flash, tenant, tenantNavigationCatalog, license } = usePage().props
+    const { auth, flash, tenant, tenantNavigationCatalog, license, localAgentBridge } = usePage().props
     const currentUrl = usePage().url
     const currentPath = currentUrl.split('?')[0]
     const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
@@ -63,6 +64,20 @@ export default function AppLayout({
 
         window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
     }, [collapsed, isOverlayNavigation, shouldStartCollapsed])
+
+    useEffect(() => {
+        if (!tenant?.id) {
+            return
+        }
+
+        configureOfflineWorkspaceBridge(tenant.id, localAgentBridge)
+        hydrateOfflineWorkspace(tenant.id).catch(() => {})
+    }, [
+        localAgentBridge?.agent_key,
+        localAgentBridge?.base_url,
+        localAgentBridge?.enabled,
+        tenant?.id,
+    ])
 
     function handleLogout() {
         router.post('/logout')

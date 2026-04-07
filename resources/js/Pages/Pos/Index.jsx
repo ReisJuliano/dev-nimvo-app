@@ -11,6 +11,7 @@ import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCash
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import {
+    configureOfflineWorkspaceBridge,
     createOfflineCompany,
     createOfflineCustomer,
     discardOfflinePendingSale,
@@ -18,6 +19,7 @@ import {
     getOfflinePendingCheckoutSummaries,
     getOfflinePendingSale,
     getOfflineWorkspaceSnapshot,
+    hydrateOfflineWorkspace,
     queueOfflineSaleFinalize,
     resolveOfflineEntityId,
     saveOfflinePendingSale,
@@ -145,7 +147,7 @@ export default function PosIndex({
     recommendations: initialRecommendations,
     posCapabilities = {},
 }) {
-    const { tenant, auth } = usePage().props
+    const { tenant, auth, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const moduleState = useModules()
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
@@ -242,6 +244,9 @@ export default function PosIndex({
             return undefined
         }
 
+        let cancelled = false
+        let unsubscribe = () => {}
+
         const applyWorkspaceState = () => {
             const snapshot = getOfflineWorkspaceSnapshot(tenantId)
             setCustomers(snapshot.catalogs.customers)
@@ -262,31 +267,45 @@ export default function PosIndex({
             }
         }
 
-        seedOfflineWorkspace(tenantId, {
-            categories,
-            products: productCatalog,
-            customers: initialCustomers,
-            companies: initialCompanies,
-            orders: pendingOrderDraftDetails,
-            cashRegister,
-            pendingSaleUserId: auth?.user?.id,
-            pendingSale: initialPendingSale,
-        })
-
-        applyWorkspaceState()
-
-        const unsubscribe = subscribeOfflineWorkspace(tenantId, () => {
-            applyWorkspaceState()
-        })
-
         const handleOnline = () => {
             syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
         }
 
-        handleOnline()
+        const bootstrap = async () => {
+            configureOfflineWorkspaceBridge(tenantId, localAgentBridge)
+            await hydrateOfflineWorkspace(tenantId).catch(() => {})
+
+            if (cancelled) {
+                return
+            }
+
+            seedOfflineWorkspace(tenantId, {
+                categories,
+                products: productCatalog,
+                customers: initialCustomers,
+                companies: initialCompanies,
+                orders: pendingOrderDraftDetails,
+                cashRegister,
+                pendingSaleUserId: auth?.user?.id,
+                pendingSale: initialPendingSale,
+            })
+
+            if (cancelled) {
+                return
+            }
+
+            applyWorkspaceState()
+            unsubscribe = subscribeOfflineWorkspace(tenantId, () => {
+                applyWorkspaceState()
+            })
+            handleOnline()
+        }
+
+        bootstrap()
         window.addEventListener('online', handleOnline)
 
         return () => {
+            cancelled = true
             unsubscribe()
             window.removeEventListener('online', handleOnline)
         }
@@ -297,6 +316,7 @@ export default function PosIndex({
         initialCompanies,
         initialCustomers,
         initialPendingSale,
+        localAgentBridge,
         pendingOrderDraftDetails,
         preloadedOrderDraft,
         productCatalog,

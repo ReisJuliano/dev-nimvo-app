@@ -8,7 +8,9 @@ import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import {
+    configureOfflineWorkspaceBridge,
     getOfflineWorkspaceSnapshot,
+    hydrateOfflineWorkspace,
     removeOfflineProduct,
     resolveOfflineEntityId,
     seedOfflineWorkspace,
@@ -39,7 +41,7 @@ function normalizeProductRecord(product) {
 }
 
 export default function ProductsIndex({ products, categories, suppliers }) {
-    const { tenant } = usePage().props
+    const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
@@ -60,6 +62,9 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             return undefined
         }
 
+        let cancelled = false
+        let unsubscribe = () => {}
+
         const applyWorkspaceState = (state) => {
             setCollectionItems(state.catalogs.products.map((product) => normalizeProductRecord(product)))
             setCategoryOptions(state.catalogs.categories)
@@ -73,30 +78,44 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             })
         }
 
-        seedOfflineWorkspace(tenantId, {
-            products,
-            categories,
-            suppliers,
-        })
-
-        applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
-
-        const unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
-            applyWorkspaceState(state)
-        })
-
         const handleOnline = () => {
             syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
         }
 
-        handleOnline()
+        const bootstrap = async () => {
+            configureOfflineWorkspaceBridge(tenantId, localAgentBridge)
+            await hydrateOfflineWorkspace(tenantId).catch(() => {})
+
+            if (cancelled) {
+                return
+            }
+
+            seedOfflineWorkspace(tenantId, {
+                products,
+                categories,
+                suppliers,
+            })
+
+            if (cancelled) {
+                return
+            }
+
+            applyWorkspaceState(getOfflineWorkspaceSnapshot(tenantId))
+            unsubscribe = subscribeOfflineWorkspace(tenantId, ({ state }) => {
+                applyWorkspaceState(state)
+            })
+            handleOnline()
+        }
+
+        bootstrap()
         window.addEventListener('online', handleOnline)
 
         return () => {
+            cancelled = true
             unsubscribe()
             window.removeEventListener('online', handleOnline)
         }
-    }, [categories, products, suppliers, tenantId])
+    }, [categories, localAgentBridge, products, suppliers, tenantId])
     const collections = useMemo(
         () =>
             Array.from(
