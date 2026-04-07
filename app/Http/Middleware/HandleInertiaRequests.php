@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Central\TenantLicenseService;
+use App\Services\Tenant\LocalAgentBridgeService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Services\Tenant\TenantNavigationService;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class HandleInertiaRequests extends Middleware
         $settings = $tenant ? app(TenantSettingsService::class)->get() : null;
         $navigationCatalog = $tenant ? app(TenantNavigationService::class)->catalog() : null;
         $licenseState = $tenant ? app(TenantLicenseService::class)->stateForTenant((string) $tenant->getTenantKey()) : null;
+        $localAgentBridge = $tenant ? app(LocalAgentBridgeService::class)->forCurrentTenant() : null;
         $centralAdmin = auth('central_admin')->user();
 
         return [
@@ -49,6 +51,7 @@ class HandleInertiaRequests extends Middleware
             ] : null,
             'appSettings' => $settings,
             'license' => $licenseState,
+            'localAgentBridge' => $localAgentBridge,
             'tenantNavigationCatalog' => $navigationCatalog,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
