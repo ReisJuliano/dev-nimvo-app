@@ -10,7 +10,6 @@ import {
     FeedbackHeader,
     getProductOptionLabel,
     ListCard,
-    MetricGrid,
     parseNumber,
     upsertRecord,
 } from './shared'
@@ -195,12 +194,6 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     const billingPreview = parseNumber(form.billing_amount, 0)
     const supplierName = suppliers.find((supplier) => String(supplier.id) === String(form.supplier_id))?.name || '-'
 
-    const metrics = useMemo(() => [
-        { label: 'Entradas', value: records.length, caption: 'Recebimentos salvos' },
-        { label: 'Volume', value: records.reduce((total, record) => total + Number(record.quantity_total || 0), 0), caption: 'Quantidade recebida', format: 'number' },
-        { label: 'Total', value: records.reduce((total, record) => total + Number(record.total || 0), 0), caption: 'Custo registrado', format: 'money' },
-    ], [records])
-
     function resetForm() {
         setForm(emptyForm)
         setStep(0)
@@ -314,7 +307,6 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack ops-inbound-workspace">
-            <MetricGrid items={metrics} />
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel ops-compact-panel">
                     <div className="ops-stepper-row">
@@ -477,7 +469,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                                 description={formatMoney(record.total || 0)}
                                 meta={[`${formatNumber(record.quantity_total || 0)} un`, record.billing_due_date || 'Sem vencimento']}
                             />
-                        )) : <EmptyState title="Nenhuma entrada" text="As entradas salvas aparecem aqui." />}
+                        )) : <EmptyState title="Sem entradas" text="Nenhum recebimento salvo." />}
                     </div>
                 </section>
             </div>
@@ -509,12 +501,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
     const targetStock = parseNumber(form.counted_quantity, Number(selectedProduct?.stock_quantity || 0))
     const deltaPreview = targetStock - Number(selectedProduct?.stock_quantity || 0)
-
-    const metrics = useMemo(() => [
-        { label: 'Ajustes', value: records.length, caption: 'Historico recente' },
-        { label: 'Entradas', value: records.filter((record) => Number(record.quantity_delta || 0) > 0).reduce((total, record) => total + Number(record.quantity_delta || 0), 0), caption: 'Delta positivo', format: 'number' },
-        { label: 'Saidas', value: Math.abs(records.filter((record) => Number(record.quantity_delta || 0) < 0).reduce((total, record) => total + Number(record.quantity_delta || 0), 0)), caption: 'Delta negativo', format: 'number' },
-    ], [records])
 
     function selectProduct(product) {
         setForm((current) => ({
@@ -598,7 +584,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack ops-stock-movement-workspace">
-            <MetricGrid items={metrics} />
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel ops-compact-panel">
                     <FeedbackHeader title="Movimentacao" subtitle={selectedProduct ? selectedProduct.name : 'Bipagem'} />
@@ -667,7 +652,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 </button>
                             </div>
                         </form>
-                    ) : <EmptyState title="Nenhum produto" text="Bipe um item para ajustar o saldo." />}
+                    ) : <EmptyState title="Nenhum produto" text="Selecione um item para ajustar." />}
                 </section>
 
                 <section className="ops-workspace-panel ops-compact-panel">
@@ -683,7 +668,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 description={record.reason || 'Ajuste manual'}
                                 meta={[`${formatNumber(record.stock_before || 0)} -> ${formatNumber(record.stock_after || 0)}`, record.product_code || '-']}
                             />
-                        )) : <EmptyState title="Sem ajustes" text="Os ajustes recentes aparecem aqui." />}
+                        )) : <EmptyState title="Sem ajustes" text="Nenhum movimento registrado." />}
                     </div>
                 </section>
             </div>

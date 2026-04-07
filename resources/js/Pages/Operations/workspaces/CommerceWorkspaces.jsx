@@ -13,7 +13,6 @@ import {
     FeedbackHeader,
     getProductOptionLabel,
     ListCard,
-    MetricGrid,
     parseNumber,
     SectionTabs,
     upsertRecord,
@@ -86,12 +85,6 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     const [feedback, setFeedback] = useState(null)
 
     const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
-    const metrics = useMemo(() => [
-        { label: 'Entregas', value: records.length, caption: 'Cadastros totais' },
-        { label: 'Em rota', value: records.filter((record) => record.status === 'dispatched').length, caption: 'Pedidos em deslocamento' },
-        { label: 'Taxas', value: records.reduce((total, record) => total + Number(record.delivery_fee || 0), 0), caption: 'Total em taxas', format: 'money' },
-    ], [records])
-
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -134,7 +127,6 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     return (
         <div className="ops-workspace-stack">
             <SectionTabs tabs={[{ key: 'pending', label: 'Pendentes', icon: 'fa-motorcycle' }, { key: 'dispatched', label: 'Em rota', icon: 'fa-route' }, { key: 'delivered', label: 'Entregues', icon: 'fa-house-chimney-check' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <MetricGrid items={metrics} />
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel">
                     <FeedbackHeader title="Fila de entrega" subtitle={`${filteredRecords.length} registro(s)`} />
@@ -150,11 +142,11 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                                 description={record.address}
                                 meta={[record.customer_name || 'Sem cliente', formatMoney(parseNumber(record.order_total, 0) + parseNumber(record.delivery_fee, 0))]}
                             />
-                        )) : <EmptyState title="Sem entregas nesse status" text="Acompanhe entrega, retirada e status do atendimento externo." />}
+                        )) : <EmptyState title="Sem entregas" text="Nenhum registro nesta etapa." />}
                     </div>
                 </section>
                 <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar entrega' : 'Nova entrega'} subtitle="Painel do delivery" />
+                    <FeedbackHeader title={form.id ? 'Editar entrega' : 'Nova entrega'} subtitle="Dados e status" />
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Nao informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
                         <label><span>Referencia</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
@@ -189,12 +181,6 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
     const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
     const subtotalPreview = useMemo(() => form.items.reduce((total, item) => total + parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0), 0), [form.items])
     const totalPreview = subtotalPreview + parseNumber(form.freight, 0)
-    const metrics = useMemo(() => [
-        { label: 'Compras', value: records.length, caption: 'Pedidos cadastrados' },
-        { label: 'Recebidas', value: records.filter((record) => record.status === 'received').length, caption: 'Ja entrou no estoque' },
-        { label: 'Total', value: records.reduce((total, record) => total + Number(record.total || 0), 0), caption: 'Volume de compras', format: 'money' },
-    ], [records])
-
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -241,7 +227,6 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
             {workspaceMode !== 'manual' ? null : (
                 <>
                     <SectionTabs tabs={[{ key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' }, { key: 'ordered', label: 'Solicitadas', icon: 'fa-cart-shopping' }, { key: 'received', label: 'Recebidas', icon: 'fa-box-open' }]} activeTab={activeTab} onChange={setActiveTab} />
-                    <MetricGrid items={metrics} />
                     <div className="ops-workspace-grid two-columns">
                         <section className="ops-workspace-panel">
                             <FeedbackHeader title="Compras" subtitle={`${filteredRecords.length} registro(s)`} />
@@ -257,11 +242,11 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
                                         description={record.supplier_name || 'Sem origem definida'}
                                         meta={[`${record.items?.length || 0} item(ns)`, formatMoney(record.total || 0)]}
                                     />
-                                )) : <EmptyState title="Sem compras nesse status" text="Cadastre entradas planejadas e receba itens direto no estoque." />}
+                                )) : <EmptyState title="Sem compras" text="Nenhum pedido nesta etapa." />}
                             </div>
                         </section>
                         <section className="ops-workspace-panel">
-                            <FeedbackHeader title={form.id ? 'Editar compra' : 'Nova compra'} subtitle="Pedido com entrada automatica no estoque" />
+                            <FeedbackHeader title={form.id ? 'Editar compra' : 'Nova compra'} subtitle="Itens e recebimento" />
                             <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                                 <label><FieldLabel icon="fa-truck-ramp-box" text="Fornecedor" /><select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}><option value="">Nao informado</option>{payload.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
                                 <label><FieldLabel icon="fa-flag" text="Status" /><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Rascunho</option><option value="ordered">Solicitada</option><option value="received">Recebida</option></select></label>
