@@ -4,7 +4,9 @@ import AppSidebar from '@/Components/Layout/AppSidebar'
 import AppTopbar from '@/Components/Layout/AppTopbar'
 import { buildNavigationGroups } from '@/Components/Layout/navigation'
 import useModules from '@/hooks/useModules'
+import { formatDateTime } from '@/lib/format'
 import { useFlashPopup } from '@/lib/errorPopup'
+import useOfflineStatus from '@/lib/offline/useOfflineStatus'
 import './app-layout.css'
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app-sidebar-collapsed'
@@ -18,7 +20,7 @@ export default function AppLayout({
     navigationMode = 'default',
     defaultCollapsed = false,
 }) {
-    const { auth, flash, tenantNavigationCatalog, license } = usePage().props
+    const { auth, flash, tenant, tenantNavigationCatalog, license } = usePage().props
     const currentUrl = usePage().url
     const currentPath = currentUrl.split('?')[0]
     const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
@@ -38,6 +40,7 @@ export default function AppLayout({
         return window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
     })
     const moduleState = useModules(settingsOverride)
+    const offlineStatus = useOfflineStatus(tenant?.id)
     useFlashPopup(flash)
 
     useEffect(() => {
@@ -94,6 +97,28 @@ export default function AppLayout({
         }),
         [auth?.user?.role, moduleState.capabilities, moduleState.modules, tenantNavigationCatalog],
     )
+    const shouldShowOfflineBanner = Boolean(
+        tenant?.id
+        && (offlineStatus.isOffline || offlineStatus.pendingCount > 0 || offlineStatus.lastSyncError),
+    )
+    const offlineBannerTone = offlineStatus.isOffline
+        ? 'offline'
+        : offlineStatus.lastSyncError
+            ? 'warning'
+            : 'syncing'
+    const offlineBannerTitle = offlineStatus.isOffline
+        ? 'Modo offline ativo'
+        : offlineStatus.pendingCount > 0
+            ? 'Reconectado com fila pendente'
+            : 'Sincronizacao requer revisao'
+    const offlineBannerText = offlineStatus.isOffline
+        ? `As alteracoes ficam salvas nesta maquina e serao sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
+        : offlineStatus.pendingCount > 0
+            ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronizacao com o servidor.`
+            : offlineStatus.lastSyncError || 'Existe uma sincronizacao que precisa de atencao.'
+    const offlineBannerMeta = offlineStatus.lastSyncAt
+        ? `Ultima sincronizacao concluida em ${formatDateTime(offlineStatus.lastSyncAt)}.`
+        : 'Ainda nao houve uma sincronizacao concluida nesta maquina.'
 
     return (
         <>
@@ -149,6 +174,19 @@ export default function AppLayout({
                                 <div className="app-license-banner-copy">
                                     <strong>{license.status === 'blocked' ? 'Licenca bloqueada' : 'Licenca requer atencao'}</strong>
                                     <span>{license.message}</span>
+                                </div>
+                            </section>
+                        ) : null}
+
+                        {shouldShowOfflineBanner ? (
+                            <section className={`app-offline-banner ${offlineBannerTone}`}>
+                                <div className="app-offline-banner-icon">
+                                    <i className={`fa-solid ${offlineStatus.isOffline ? 'fa-wifi-slash' : offlineStatus.lastSyncError ? 'fa-triangle-exclamation' : 'fa-rotate'}`} />
+                                </div>
+                                <div className="app-offline-banner-copy">
+                                    <strong>{offlineBannerTitle}</strong>
+                                    <span>{offlineBannerText}</span>
+                                    <small>{offlineBannerMeta}</small>
                                 </div>
                             </section>
                         ) : null}

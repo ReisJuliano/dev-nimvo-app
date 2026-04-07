@@ -673,6 +673,63 @@
     color: var(--app-text-secondary);
 }
 
+.app-offline-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 0 var(--app-content-gutter) 1rem;
+    padding: 1rem 1.1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(29, 111, 214, 0.18);
+    background: linear-gradient(135deg, rgba(232, 244, 255, 0.98), rgba(255, 255, 255, 0.94));
+    box-shadow: var(--app-shadow-sm);
+}
+
+.app-offline-banner.offline {
+    border-color: rgba(184, 91, 14, 0.24);
+    background: linear-gradient(135deg, rgba(255, 241, 228, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.app-offline-banner.warning {
+    border-color: rgba(197, 65, 84, 0.22);
+    background: linear-gradient(135deg, rgba(255, 235, 239, 0.98), rgba(255, 255, 255, 0.94));
+}
+
+.app-offline-banner-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    background: rgba(29, 111, 214, 0.12);
+    color: #1d67c8;
+    flex-shrink: 0;
+}
+
+.app-offline-banner.offline .app-offline-banner-icon {
+    background: rgba(184, 91, 14, 0.14);
+    color: #b46516;
+}
+
+.app-offline-banner.warning .app-offline-banner-icon {
+    background: rgba(197, 65, 84, 0.14);
+    color: #bf3f53;
+}
+
+.app-offline-banner-copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.app-offline-banner-copy strong {
+    color: var(--app-text-primary);
+}
+
+.app-offline-banner-copy span,
+.app-offline-banner-copy small {
+    color: var(--app-text-secondary);
+}
+
 .app-page-content > * {
     animation: app-page-enter 0.32s ease;
 }

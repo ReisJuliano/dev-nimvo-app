@@ -5,6 +5,9 @@ import GlobalErrorPopup from '@/Components/GlobalErrorPopup'
 import { createRoot } from 'react-dom/client'
 import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
+import { registerOfflineServiceWorker } from '@/lib/offline/serviceWorker'
+
+registerOfflineServiceWorker()
 
 createInertiaApp({
   resolve: name => resolvePageComponent(
