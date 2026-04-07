@@ -1,5 +1,9 @@
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { formatMoney, formatNumber } from '@/lib/format'
+import ActionButton from '@/Components/UI/ActionButton'
+import DataList from '@/Components/UI/DataList'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 
 export function EmptyState({ title, text }) {
     return (
@@ -76,6 +80,73 @@ export function MetricGrid({ items }) {
                 </article>
             ))}
         </section>
+    )
+}
+
+function formatMetricValue(item) {
+    return item.format === 'money' ? formatMoney(item.value) : formatNumber(item.value)
+}
+
+export function WorkspaceCollectionShell({
+    tabs,
+    activeTab,
+    onTabChange,
+    listTitle,
+    listIcon = 'fa-table-list',
+    listCount,
+    createLabel,
+    onCreate,
+    emptyState,
+    listChildren,
+    summaryItems = [],
+    formTitle,
+    formSubtitle = null,
+    formChildren,
+}) {
+    return (
+        <div className="ops-workspace-stack">
+            <SectionTabs tabs={tabs} activeTab={activeTab} onChange={onTabChange} />
+
+            <PageContainer
+                sidebar={(
+                    <RightSidebarPanel>
+                        {summaryItems.length ? (
+                            <RightSidebarSection title="Contexto" subtitle="Resumo do modulo">
+                                <div className="ops-workspace-sidebar-meta">
+                                    {summaryItems.map((item) => (
+                                        <div key={item.label} className="right-sidebar-meta-item">
+                                            <div className="ops-workspace-sidebar-copy">
+                                                <span>{item.label}</span>
+                                                <small>{item.caption}</small>
+                                            </div>
+                                            <strong>{formatMetricValue(item)}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+                            </RightSidebarSection>
+                        ) : null}
+
+                        <RightSidebarSection title={formTitle} subtitle={formSubtitle}>
+                            {formChildren}
+                        </RightSidebarSection>
+                    </RightSidebarPanel>
+                )}
+            >
+                <DataList
+                    title={listTitle}
+                    icon={listIcon}
+                    count={listCount}
+                    actions={(
+                        <ActionButton icon="fa-plus" onClick={onCreate}>
+                            {createLabel}
+                        </ActionButton>
+                    )}
+                    empty={emptyState}
+                >
+                    {listChildren}
+                </DataList>
+            </PageContainer>
+        </div>
     )
 }
 

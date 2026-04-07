@@ -46,6 +46,26 @@
     gap: 1.25rem;
 }
 
+.ops-workspace-sidebar-meta {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.ops-workspace-sidebar-copy {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.ops-workspace-sidebar-copy span {
+    color: #425066;
+    font-size: 0.88rem;
+}
+
+.ops-workspace-sidebar-copy small {
+    color: #7b8798;
+    font-size: 0.78rem;
+}
+
 .ops-workspace-tabs {
     align-items: stretch;
 }

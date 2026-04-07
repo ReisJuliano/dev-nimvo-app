@@ -5,17 +5,10 @@ import { StockInboundWorkspace, StockMovementsWorkspace } from './workspaces/Inv
 import { UsersWorkspace } from './workspaces/PeopleWorkspaces'
 import './operations-workspace.css'
 
-export default function OperationsWorkspace({ moduleKey, moduleTitle, moduleDescription, payload }) {
+export default function OperationsWorkspace({ moduleKey, moduleTitle, payload }) {
     return (
         <AppLayout title={moduleTitle}>
             <div className="ops-workspace-page">
-                <section className="ops-workspace-hero">
-                    <div>
-                        <span>Operacoes</span>
-                        <h1>{moduleTitle}</h1>
-                    </div>
-                </section>
-
                 {moduleKey === 'clientes' ? <CustomersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'fornecedores' ? <SuppliersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'categorias' ? <CategoriesWorkspace moduleKey={moduleKey} payload={payload} /> : null}

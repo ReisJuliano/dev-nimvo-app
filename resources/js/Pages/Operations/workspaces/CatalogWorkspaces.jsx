@@ -2,7 +2,16 @@ import { useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
-import { Badge, buildRecordsUrl, EmptyState, Feedback, FeedbackHeader, ListCard, MetricGrid, SectionTabs, upsertRecord } from './shared'
+import ActionButton from '@/Components/UI/ActionButton'
+import {
+    Badge,
+    buildRecordsUrl,
+    EmptyState,
+    Feedback,
+    ListCard,
+    WorkspaceCollectionShell,
+    upsertRecord,
+} from './shared'
 
 function FieldLabel({ icon, text }) {
     return (
@@ -33,6 +42,10 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         ],
         [records],
     )
+
+    function handleCreate() {
+        setForm(emptyForm)
+    }
 
     async function handleSubmit(event) {
         event.preventDefault()
@@ -80,41 +93,25 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <SectionTabs
+        <>
+            <Feedback feedback={feedback} />
+            <WorkspaceCollectionShell
                 tabs={[
                     { key: 'active', label: 'Ativas', icon: 'fa-layer-group' },
                     { key: 'inactive', label: 'Inativas', icon: 'fa-ban' },
                 ]}
                 activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Categorias" subtitle={`${filteredRecords.length} registro(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? (
-                            filteredRecords.map((record) => (
-                                <ListCard
-                                    key={record.id}
-                                    active={form.id === record.id}
-                                    onClick={() => setForm({ ...emptyForm, ...record })}
-                                    title={record.name}
-                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativa' : 'Inativa'}</Badge>}
-                                    description={record.description || 'Sem descricao'}
-                                    meta={[`${record.products_count || 0} produto(s)`, formatMoney(record.stock_value || 0)]}
-                                />
-                            ))
-                        ) : (
-                            <EmptyState title="Sem categorias nesse filtro" text="Cadastre categorias para organizar melhor o catalogo." />
-                        )}
-                    </div>
-                </section>
-
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar categoria' : 'Nova categoria'} subtitle="Cadastro real com status e descricao" />
+                onTabChange={setActiveTab}
+                listTitle="Categorias"
+                listIcon="fa-layer-group"
+                listCount={`${filteredRecords.length} registro(s)`}
+                createLabel="Nova categoria"
+                onCreate={handleCreate}
+                summaryItems={metrics}
+                emptyState={<EmptyState title="Sem categorias nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
+                formTitle={form.id ? 'Editar categoria' : 'Nova categoria'}
+                formSubtitle="Nome, status e descricao"
+                formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-layer-group" text="Nome" />
@@ -125,22 +122,36 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
                                 Limpar
-                            </button>
+                            </ActionButton>
                             {form.id ? (
-                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                <ActionButton tone="danger" onClick={handleDelete}>
                                     Excluir
-                                </button>
+                                </ActionButton>
                             ) : null}
-                            <button type="submit" className="ui-button" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Atualizar categoria' : 'Salvar categoria'}
-                            </button>
+                            <ActionButton type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar categoria'}
+                            </ActionButton>
                         </div>
                     </form>
-                </section>
-            </div>
-        </div>
+                )}
+            >
+                <div className="ops-workspace-list-stack">
+                    {filteredRecords.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={form.id === record.id}
+                            onClick={() => setForm({ ...emptyForm, ...record })}
+                            title={record.name}
+                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativa' : 'Inativa'}</Badge>}
+                            description={record.description || 'Sem descricao'}
+                            meta={[`${record.products_count || 0} produto(s)`, formatMoney(record.stock_value || 0)]}
+                        />
+                    ))}
+                </div>
+            </WorkspaceCollectionShell>
+        </>
     )
 }
 
@@ -164,6 +175,10 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         ],
         [records],
     )
+
+    function handleCreate() {
+        setForm(emptyForm)
+    }
 
     async function handleSubmit(event) {
         event.preventDefault()
@@ -211,41 +226,25 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <SectionTabs
+        <>
+            <Feedback feedback={feedback} />
+            <WorkspaceCollectionShell
                 tabs={[
                     { key: 'active', label: 'Ativos', icon: 'fa-truck-ramp-box' },
                     { key: 'inactive', label: 'Inativos', icon: 'fa-ban' },
                 ]}
                 activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Fornecedores" subtitle={`${filteredRecords.length} registro(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? (
-                            filteredRecords.map((record) => (
-                                <ListCard
-                                    key={record.id}
-                                    active={form.id === record.id}
-                                    onClick={() => setForm({ ...emptyForm, ...record })}
-                                    title={record.name}
-                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                    description={record.document || record.email || 'Sem documento fiscal'}
-                                    meta={[record.phone || 'Sem telefone', `${record.products_count || 0} produto(s)`]}
-                                />
-                            ))
-                        ) : (
-                            <EmptyState title="Sem fornecedores nesse filtro" text="Cadastre fornecedores para acelerar compras e reposicoes." />
-                        )}
-                    </div>
-                </section>
-
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar fornecedor' : 'Novo fornecedor'} subtitle="Contato e status comercial" />
+                onTabChange={setActiveTab}
+                listTitle="Fornecedores"
+                listIcon="fa-truck-ramp-box"
+                listCount={`${filteredRecords.length} registro(s)`}
+                createLabel="Novo fornecedor"
+                onCreate={handleCreate}
+                summaryItems={metrics}
+                emptyState={<EmptyState title="Sem fornecedores nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
+                formTitle={form.id ? 'Editar fornecedor' : 'Novo fornecedor'}
+                formSubtitle="Contato e dados comerciais"
+                formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-building" text="Nome" />
@@ -280,22 +279,36 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                             <input type="email" value={form.email || ''} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
                                 Limpar
-                            </button>
+                            </ActionButton>
                             {form.id ? (
-                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                <ActionButton tone="danger" onClick={handleDelete}>
                                     Excluir
-                                </button>
+                                </ActionButton>
                             ) : null}
-                            <button type="submit" className="ui-button" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Atualizar fornecedor' : 'Salvar fornecedor'}
-                            </button>
+                            <ActionButton type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar fornecedor'}
+                            </ActionButton>
                         </div>
                     </form>
-                </section>
-            </div>
-        </div>
+                )}
+            >
+                <div className="ops-workspace-list-stack">
+                    {filteredRecords.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={form.id === record.id}
+                            onClick={() => setForm({ ...emptyForm, ...record })}
+                            title={record.name}
+                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
+                            description={record.document || record.email || 'Sem documento fiscal'}
+                            meta={[record.phone || 'Sem telefone', `${record.products_count || 0} produto(s)`]}
+                        />
+                    ))}
+                </div>
+            </WorkspaceCollectionShell>
+        </>
     )
 }
 
@@ -319,6 +332,10 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         ],
         [records],
     )
+
+    function handleCreate() {
+        setForm(emptyForm)
+    }
 
     async function handleSubmit(event) {
         event.preventDefault()
@@ -374,47 +391,25 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <SectionTabs
+        <>
+            <Feedback feedback={feedback} />
+            <WorkspaceCollectionShell
                 tabs={[
                     { key: 'active', label: 'Ativos', icon: 'fa-user-group' },
                     { key: 'inactive', label: 'Inativos', icon: 'fa-user-slash' },
                 ]}
                 activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Clientes" subtitle={`${filteredRecords.length} registro(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? (
-                            filteredRecords.map((record) => (
-                                <ListCard
-                                    key={record.id}
-                                    active={form.id === record.id}
-                                    onClick={() =>
-                                        setForm({
-                                            ...emptyForm,
-                                            ...record,
-                                            credit_limit: String(record.credit_limit || 0),
-                                        })
-                                    }
-                                    title={record.name}
-                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                    description={record.phone || 'Sem telefone'}
-                                    meta={[`Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
-                                />
-                            ))
-                        ) : (
-                            <EmptyState title="Sem clientes nesse filtro" text="Cadastre clientes para vendas recorrentes e credito." />
-                        )}
-                    </div>
-                </section>
-
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar cliente' : 'Novo cliente'} subtitle="Cadastro com limite de credito" />
+                onTabChange={setActiveTab}
+                listTitle="Clientes"
+                listIcon="fa-user-group"
+                listCount={`${filteredRecords.length} registro(s)`}
+                createLabel="Novo cliente"
+                onCreate={handleCreate}
+                summaryItems={metrics}
+                emptyState={<EmptyState title="Sem clientes nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
+                formTitle={form.id ? 'Editar cliente' : 'Novo cliente'}
+                formSubtitle="Contato e limite de credito"
+                formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-user" text="Nome" />
@@ -429,21 +424,41 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
                                 Limpar
-                            </button>
+                            </ActionButton>
                             {form.id ? (
-                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                <ActionButton tone="danger" onClick={handleDelete}>
                                     Excluir
-                                </button>
+                                </ActionButton>
                             ) : null}
-                            <button type="submit" className="ui-button" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Atualizar cliente' : 'Salvar cliente'}
-                            </button>
+                            <ActionButton type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar cliente'}
+                            </ActionButton>
                         </div>
                     </form>
-                </section>
-            </div>
-        </div>
+                )}
+            >
+                <div className="ops-workspace-list-stack">
+                    {filteredRecords.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={form.id === record.id}
+                            onClick={() =>
+                                setForm({
+                                    ...emptyForm,
+                                    ...record,
+                                    credit_limit: String(record.credit_limit || 0),
+                                })
+                            }
+                            title={record.name}
+                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
+                            description={record.phone || 'Sem telefone'}
+                            meta={[`Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
+                        />
+                    ))}
+                </div>
+            </WorkspaceCollectionShell>
+        </>
     )
 }

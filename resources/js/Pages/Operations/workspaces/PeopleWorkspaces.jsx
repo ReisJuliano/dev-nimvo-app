@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
+import ActionButton from '@/Components/UI/ActionButton'
 import {
     Badge,
     buildRecordsUrl,
@@ -10,6 +11,7 @@ import {
     ListCard,
     MetricGrid,
     SectionTabs,
+    WorkspaceCollectionShell,
     upsertRecord,
 } from './shared'
 
@@ -221,6 +223,10 @@ export function UsersWorkspace({ moduleKey, payload }) {
         [records],
     )
 
+    function handleCreate() {
+        setForm(emptyForm)
+    }
+
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -272,52 +278,25 @@ export function UsersWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <SectionTabs
+        <>
+            <Feedback feedback={feedback} />
+            <WorkspaceCollectionShell
                 tabs={[
                     { key: 'active', label: 'Ativos', icon: 'fa-user-check' },
                     { key: 'inactive', label: 'Inativos', icon: 'fa-user-slash' },
                 ]}
                 activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Usuarios" subtitle={`${filteredRecords.length} registro(s) no filtro`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? (
-                            filteredRecords.map((record) => (
-                                <ListCard
-                                    key={record.id}
-                                    active={form.id === record.id}
-                                    onClick={() =>
-                                        setForm({
-                                            ...emptyForm,
-                                            ...record,
-                                            password: '',
-                                            discount_authorization_password: '',
-                                        })
-                                    }
-                                    title={record.name}
-                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.role}</Badge>}
-                                    description={`Usuario: ${record.username}`}
-                                    meta={[
-                                        record.must_change_password ? 'Troca obrigatoria de senha' : 'Senha livre',
-                                        record.is_supervisor ? 'Supervisor de fechamento' : 'Sem perfil de supervisor',
-                                        record.has_discount_authorization_password ? 'Senha gerencial ativa' : 'Sem senha gerencial',
-                                    ]}
-                                />
-                            ))
-                        ) : (
-                            <EmptyState title="Sem usuarios nesse recorte" text="Cadastre perfis para separar operacao, gerencia e administracao." />
-                        )}
-                    </div>
-                </section>
-
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar usuario' : 'Novo usuario'} subtitle="Perfis, supervisor e senha de autorizacao" />
+                onTabChange={setActiveTab}
+                listTitle="Usuarios"
+                listIcon="fa-user-check"
+                listCount={`${filteredRecords.length} registro(s)`}
+                createLabel="Novo usuario"
+                onCreate={handleCreate}
+                summaryItems={metrics}
+                emptyState={<EmptyState title="Sem usuarios nesse recorte" text="Ajuste o recorte ou crie um novo cadastro." />}
+                formTitle={form.id ? 'Editar usuario' : 'Novo usuario'}
+                formSubtitle="Perfis e autorizacoes"
+                formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-user" text="Nome" />
@@ -380,21 +359,46 @@ export function UsersWorkspace({ moduleKey, payload }) {
                             <span>Exigir troca de senha no proximo login</span>
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
                                 Limpar
-                            </button>
+                            </ActionButton>
                             {form.id ? (
-                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                <ActionButton tone="danger" onClick={handleDelete}>
                                     Excluir
-                                </button>
+                                </ActionButton>
                             ) : null}
-                            <button type="submit" className="ui-button" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Atualizar usuario' : 'Salvar usuario'}
-                            </button>
+                            <ActionButton type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar usuario'}
+                            </ActionButton>
                         </div>
                     </form>
-                </section>
-            </div>
-        </div>
+                )}
+            >
+                <div className="ops-workspace-list-stack">
+                    {filteredRecords.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={form.id === record.id}
+                            onClick={() =>
+                                setForm({
+                                    ...emptyForm,
+                                    ...record,
+                                    password: '',
+                                    discount_authorization_password: '',
+                                })
+                            }
+                            title={record.name}
+                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.role}</Badge>}
+                            description={`Usuario: ${record.username}`}
+                            meta={[
+                                record.must_change_password ? 'Troca obrigatoria de senha' : 'Senha livre',
+                                record.is_supervisor ? 'Supervisor de fechamento' : 'Sem perfil de supervisor',
+                                record.has_discount_authorization_password ? 'Senha gerencial ativa' : 'Sem senha gerencial',
+                            ]}
+                        />
+                    ))}
+                </div>
+            </WorkspaceCollectionShell>
+        </>
     )
 }
