@@ -1027,8 +1027,8 @@ class ReportBrowserService
     protected function baseSalesQuery(array $filters)
     {
         return Sale::query()
-            ->where('status', 'finalized')
-            ->whereBetween('created_at', [$filters['from'], $filters['to']]);
+            ->where('sales.status', 'finalized')
+            ->whereBetween('sales.created_at', [$filters['from'], $filters['to']]);
     }
 
     protected function summaryCard(string $label, mixed $value, string $format, string $icon): array
