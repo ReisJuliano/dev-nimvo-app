@@ -48,6 +48,8 @@ func runInstall(args []string) error {
 	targetLogo := filepath.Join(installRoot, "assets", "nimvo-logo.png")
 	targetRunCmd := filepath.Join(installRoot, "run-agent.cmd")
 	targetRunVbs := filepath.Join(installRoot, "run-agent.vbs")
+	targetOpenAppCmd := filepath.Join(installRoot, "open-nimvo-app.cmd")
+	targetOpenAppVbs := filepath.Join(installRoot, "open-nimvo-app.vbs")
 	targetUninstall := filepath.Join(installRoot, "uninstall-agent.cmd")
 	targetReadme := filepath.Join(installRoot, "README.txt")
 
@@ -107,6 +109,20 @@ func runInstall(args []string) error {
 		return err
 	}
 
+	if strings.TrimSpace(config.TenantApp.BaseURL) != "" {
+		if err := os.WriteFile(targetOpenAppCmd, []byte(buildOpenAppScript(config.TenantApp.BaseURL)), 0o644); err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(targetOpenAppVbs, []byte(buildLauncherVBSScript(targetOpenAppCmd)), 0o644); err != nil {
+			return err
+		}
+
+		if err := installAppLaunchers(targetOpenAppVbs); err != nil {
+			return err
+		}
+	}
+
 	if err := os.WriteFile(targetUninstall, []byte(buildUninstallScript(targetExe, installRoot)), 0o644); err != nil {
 		return err
 	}
@@ -138,6 +154,7 @@ func runInstall(args []string) error {
 		"printer_target":                  printerTarget(config.Printer),
 		"logo_path":                       strings.TrimSpace(config.Printer.LogoPath),
 		"backend_baseurl":                 strings.TrimSpace(config.Backend.BaseURL),
+		"tenant_app_baseurl":              strings.TrimSpace(config.TenantApp.BaseURL),
 		"certificate_path":                strings.TrimSpace(config.Certificate.Path),
 		"certificate_password_configured": fmt.Sprintf("%t", strings.TrimSpace(config.Certificate.Password) != ""),
 	}
@@ -182,6 +199,8 @@ func runStatus(args []string) error {
 		status["printer_target"] = printerTarget(config.Printer)
 		status["local_api_url"] = localAPIBaseURL(config)
 		status["local_api_enabled"] = config.LocalAPI.Enabled
+		status["tenant_app_baseurl"] = strings.TrimSpace(config.TenantApp.BaseURL)
+		status["app_launcher_installed"] = installedAppLaunchersExist()
 	}
 
 	payload, _ := json.MarshalIndent(status, "", "  ")
@@ -208,6 +227,10 @@ func runUninstall(args []string) error {
 	}
 
 	if err := deleteInstalledAgentConfig(); err != nil {
+		return err
+	}
+
+	if err := removeInstalledAppLaunchers(); err != nil {
 		return err
 	}
 
@@ -247,6 +270,32 @@ func buildVBSScript() string {
 	}, "\r\n")
 }
 
+func buildLauncherVBSScript(targetCmd string) string {
+	return strings.Join([]string{
+		`Set shell = CreateObject("WScript.Shell")`,
+		fmt.Sprintf(`shell.Run Chr(34) & "%s" & Chr(34), 0, False`, escapeVBString(targetCmd)),
+		"",
+	}, "\r\n")
+}
+
+func buildOpenAppScript(baseURL string) string {
+	return strings.Join([]string{
+		"@echo off",
+		"setlocal",
+		fmt.Sprintf(`set "NIMVO_URL=%s"`, strings.TrimSpace(baseURL)),
+		`set "EDGE_STABLE=%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"`,
+		`set "EDGE_X64=%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"`,
+		`set "CHROME_X64=%ProgramFiles%\Google\Chrome\Application\chrome.exe"`,
+		`set "CHROME_X86=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"`,
+		`if exist "%EDGE_STABLE%" start "" "%EDGE_STABLE%" --app="%NIMVO_URL%" & exit /b 0`,
+		`if exist "%EDGE_X64%" start "" "%EDGE_X64%" --app="%NIMVO_URL%" & exit /b 0`,
+		`if exist "%CHROME_X64%" start "" "%CHROME_X64%" --app="%NIMVO_URL%" & exit /b 0`,
+		`if exist "%CHROME_X86%" start "" "%CHROME_X86%" --app="%NIMVO_URL%" & exit /b 0`,
+		`start "" "%NIMVO_URL%"`,
+		"",
+	}, "\r\n")
+}
+
 func buildUninstallScript(exePath, installDir string) string {
 	return strings.Join([]string{
 		"@echo off",
@@ -270,14 +319,95 @@ func buildReadme(installDir string) string {
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
 		"4. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
-		"5. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"6. O agente grava a execucao em logs\\agent.log.",
+		"5. Use open-nimvo-app.vbs para abrir a loja em modo app neste PC.",
+		"6. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
+		"7. O agente grava a execucao em logs\\agent.log.",
 		"",
 		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
 		"",
 	}
 
 	return strings.Join(lines, "\r\n")
+}
+
+func installAppLaunchers(sourceVBS string) error {
+	if strings.TrimSpace(sourceVBS) == "" || !fileExists(sourceVBS) {
+		return nil
+	}
+
+	for _, target := range installedAppLauncherTargets() {
+		if strings.TrimSpace(target) == "" {
+			continue
+		}
+
+		if err := ensureDir(filepath.Dir(target)); err != nil {
+			return err
+		}
+
+		if err := copyFile(sourceVBS, target); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func removeInstalledAppLaunchers() error {
+	for _, target := range installedAppLauncherTargets() {
+		if strings.TrimSpace(target) == "" || !fileExists(target) {
+			continue
+		}
+
+		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func installedAppLaunchersExist() bool {
+	for _, target := range installedAppLauncherTargets() {
+		if strings.TrimSpace(target) != "" && fileExists(target) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func installedAppLauncherTargets() []string {
+	targets := []string{}
+
+	if desktop := desktopDir(); strings.TrimSpace(desktop) != "" {
+		targets = append(targets, filepath.Join(desktop, "Nimvo PDV.vbs"))
+	}
+
+	if startMenuPrograms := startMenuProgramsDir(); strings.TrimSpace(startMenuPrograms) != "" {
+		targets = append(targets, filepath.Join(startMenuPrograms, "Nimvo", "Nimvo PDV.vbs"))
+	}
+
+	return targets
+}
+
+func desktopDir() string {
+	if home, err := os.UserHomeDir(); err == nil && strings.TrimSpace(home) != "" {
+		return filepath.Join(home, "Desktop")
+	}
+
+	return ""
+}
+
+func startMenuProgramsDir() string {
+	if appData := strings.TrimSpace(os.Getenv("APPDATA")); appData != "" {
+		return filepath.Join(appData, "Microsoft", "Windows", "Start Menu", "Programs")
+	}
+
+	return ""
+}
+
+func escapeVBString(value string) string {
+	return strings.ReplaceAll(value, `"`, `""`)
 }
 
 func setStartupEntry(vbsPath string) error {
@@ -374,6 +504,7 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 	}
 	config.Backend = activatedConfig.Backend
 	config.Agent = activatedConfig.Agent
+	config.TenantApp = activatedConfig.TenantApp
 
 	if interactive {
 		config.Certificate, err = promptInstallationCertificate(config.Certificate)
@@ -596,6 +727,7 @@ func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, 
 
 	config.Agent.Key = strings.TrimSpace(stringValueFromMap(decoded, "credentials.key"))
 	config.Agent.Secret = strings.TrimSpace(stringValueFromMap(decoded, "credentials.secret"))
+	config.TenantApp.BaseURL = strings.TrimSpace(stringValueFromMap(decoded, "tenant_app.base_url"))
 	if pollInterval := maxInt(0, intValueFromMap(decoded, "credentials.poll_interval_seconds")); pollInterval > 0 {
 		config.Agent.PollInterval = pollInterval
 	}

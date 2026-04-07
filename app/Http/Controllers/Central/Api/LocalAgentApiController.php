@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Central\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Central\LocalAgent;
 use App\Models\Central\LocalAgentCommand;
+use App\Models\Tenant;
 use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentConfigService;
@@ -42,6 +43,9 @@ class LocalAgentApiController extends Controller
             ],
             'backend' => [
                 'base_url' => rtrim((string) config('app.url', url('/')), '/'),
+            ],
+            'tenant_app' => [
+                'base_url' => $this->tenantAppUrl((string) $agent->tenant_id),
             ],
             'credentials' => [
                 'key' => $agent->agent_key,
@@ -168,5 +172,30 @@ class LocalAgentApiController extends Controller
                 'status' => $command->status,
             ],
         ]);
+    }
+
+    protected function tenantAppUrl(string $tenantId): ?string
+    {
+        $tenant = Tenant::query()
+            ->with(['client', 'domains'])
+            ->find($tenantId);
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $domain = $tenant->domains->first()?->domain ?? $tenant->client?->domain;
+
+        if (! filled($domain)) {
+            return null;
+        }
+
+        if (str_starts_with($domain, 'http://') || str_starts_with($domain, 'https://')) {
+            return rtrim($domain, '/');
+        }
+
+        $scheme = request()->isSecure() ? 'https' : 'http';
+
+        return sprintf('%s://%s', $scheme, $domain);
     }
 }

@@ -13,11 +13,12 @@ import (
 )
 
 type AgentConfig struct {
-	Backend     BackendConfig  `json:"backend"`
-	Agent       AgentAuth      `json:"agent"`
-	Certificate Certificate    `json:"certificate"`
-	Printer     PrinterConfig  `json:"printer"`
-	LocalAPI    LocalAPIConfig `json:"local_api"`
+	Backend     BackendConfig   `json:"backend"`
+	Agent       AgentAuth       `json:"agent"`
+	Certificate Certificate     `json:"certificate"`
+	Printer     PrinterConfig   `json:"printer"`
+	LocalAPI    LocalAPIConfig  `json:"local_api"`
+	TenantApp   TenantAppConfig `json:"tenant_app"`
 }
 
 type BackendConfig struct {
@@ -54,6 +55,10 @@ type LocalAPIConfig struct {
 	Port    int    `json:"port"`
 }
 
+type TenantAppConfig struct {
+	BaseURL string `json:"base_url"`
+}
+
 func defaultAgentConfig() AgentConfig {
 	return AgentConfig{
 		Backend: BackendConfig{
@@ -81,6 +86,9 @@ func defaultAgentConfig() AgentConfig {
 			Enabled: true,
 			Host:    "127.0.0.1",
 			Port:    18123,
+		},
+		TenantApp: TenantAppConfig{
+			BaseURL: "",
 		},
 	}
 }
@@ -150,6 +158,8 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 		config.LocalAPI.Port = 18123
 	}
 
+	config.TenantApp.BaseURL = strings.TrimRight(strings.TrimSpace(config.TenantApp.BaseURL), "/")
+
 	return config
 }
 
@@ -181,6 +191,7 @@ func loadInstalledAgentConfig() (AgentConfig, error) {
 	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
 	config.LocalAPI.Host = values.stringValue("LocalAPIHost")
 	config.LocalAPI.Port = values.intValue("LocalAPIPort", config.LocalAPI.Port)
+	config.TenantApp.BaseURL = values.stringValue("TenantAppBaseURL")
 
 	return normalizeAgentConfig(config), nil
 }
@@ -214,6 +225,7 @@ func saveInstalledAgentConfig(config AgentConfig) error {
 		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},
 		{name: "LocalAPIHost", kind: "REG_SZ", value: config.LocalAPI.Host},
 		{name: "LocalAPIPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.LocalAPI.Port)},
+		{name: "TenantAppBaseURL", kind: "REG_SZ", value: strings.TrimSpace(config.TenantApp.BaseURL)},
 	}
 
 	for _, write := range writes {
