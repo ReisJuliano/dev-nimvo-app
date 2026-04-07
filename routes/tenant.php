@@ -83,7 +83,21 @@ Route::middleware('auth')->group(function () {
                 'section' => 'products',
             ], fn ($value) => filled($value)));
         })->name('demand.index');
-        Route::get('/faltas', OperationsPageController::class)->defaults('module', 'faltas')->name('shortages.index');
+        Route::get('/faltas', function (Request $request) {
+            return redirect()->route('reports.show', array_filter([
+                'report' => 'stock-shortages',
+                'scope' => $request->query('scope'),
+                'date' => $request->query('date'),
+                'month' => $request->query('month'),
+                'month_from' => $request->query('month_from'),
+                'month_to' => $request->query('month_to'),
+                'year' => $request->query('year'),
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+                'per_page' => $request->query('per_page'),
+                'page' => $request->query('page'),
+            ], fn ($value) => filled($value)));
+        })->name('shortages.index');
         Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
         Route::prefix('/api')->group(function () {

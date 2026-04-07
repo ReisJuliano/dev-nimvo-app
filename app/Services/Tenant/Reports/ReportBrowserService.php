@@ -90,6 +90,7 @@ class ReportBrowserService
             'sales-products', 'product-demand' => $this->salesProductsReport($resolvedFilters),
             'sales-operators' => $this->salesOperatorsReport($resolvedFilters),
             'sales-customers', 'customer-ranking' => $this->salesCustomersReport($resolvedFilters),
+            'stock-shortages' => $this->stockShortagesReport($resolvedFilters),
             'stock-position' => $this->stockPositionReport($resolvedFilters),
             'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
             'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
@@ -208,6 +209,14 @@ class ReportBrowserService
                 'description' => 'Curva de demanda dos itens vendidos no periodo.',
                 'icon' => 'fa-arrow-trend-up',
                 'tags' => ['Giro', 'Receita', 'Produto'],
+            ],
+            [
+                'key' => 'stock-shortages',
+                'category' => 'stock',
+                'title' => 'Faltas e giro',
+                'description' => 'Itens abaixo do minimo com saldo atual, falta e saida no periodo.',
+                'icon' => 'fa-triangle-exclamation',
+                'tags' => ['Falta', 'Giro', 'Reposicao'],
             ],
             [
                 'key' => 'stock-position',
@@ -662,6 +671,81 @@ class ReportBrowserService
             rows: $rows,
             paginator: $paginator,
             emptyText: 'Nenhum produto ativo encontrado para o estoque.',
+        );
+    }
+
+    protected function stockShortagesReport(array $filters): array
+    {
+        $salesSubquery = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.status', 'finalized')
+            ->whereBetween('sales.created_at', [$filters['from'], $filters['to']])
+            ->groupBy('sale_items.product_id')
+            ->selectRaw('sale_items.product_id, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold');
+
+        $query = Product::query()
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->leftJoin('suppliers', 'suppliers.id', '=', 'products.supplier_id')
+            ->leftJoinSub($salesSubquery, 'period_sales', fn ($join) => $join->on('period_sales.product_id', '=', 'products.id'))
+            ->where('products.active', true)
+            ->whereColumn('products.stock_quantity', '<=', 'products.min_stock')
+            ->selectRaw("
+                products.code,
+                products.name,
+                COALESCE(categories.name, 'Sem categoria') as category_name,
+                COALESCE(suppliers.name, 'Sem fornecedor') as supplier_name,
+                products.stock_quantity,
+                products.min_stock,
+                GREATEST(products.min_stock - products.stock_quantity, 0) as missing,
+                COALESCE(period_sales.quantity_sold, 0) as quantity_sold
+            ")
+            ->orderBy('products.stock_quantity')
+            ->orderBy('products.name');
+
+        $summary = Product::query()
+            ->leftJoinSub($salesSubquery, 'period_sales', fn ($join) => $join->on('period_sales.product_id', '=', 'products.id'))
+            ->where('products.active', true)
+            ->whereColumn('products.stock_quantity', '<=', 'products.min_stock')
+            ->selectRaw('
+                COUNT(*) as low_stock,
+                COALESCE(SUM(CASE WHEN products.stock_quantity <= 0 THEN 1 ELSE 0 END), 0) as out_of_stock,
+                COALESCE(SUM(GREATEST(products.min_stock - products.stock_quantity, 0)), 0) as missing_total,
+                COALESCE(SUM(period_sales.quantity_sold), 0) as quantity_sold
+            ')
+            ->first();
+
+        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
+        $rows = collect($paginator->items())->map(fn ($row) => [
+            'code' => $row->code ?: '-',
+            'name' => $row->name,
+            'category_name' => $row->category_name,
+            'supplier_name' => $row->supplier_name,
+            'stock_quantity' => (float) $row->stock_quantity,
+            'min_stock' => (float) $row->min_stock,
+            'missing' => (float) $row->missing,
+            'quantity_sold' => (float) $row->quantity_sold,
+        ])->all();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Itens em falta', (int) ($summary->out_of_stock ?? 0), 'number', 'fa-ban'),
+                $this->summaryCard('Baixo estoque', (int) ($summary->low_stock ?? 0), 'number', 'fa-triangle-exclamation'),
+                $this->summaryCard('Falta minima', (float) ($summary->missing_total ?? 0), 'number', 'fa-box-open'),
+                $this->summaryCard('Saida no periodo', (float) ($summary->quantity_sold ?? 0), 'number', 'fa-arrow-trend-down'),
+            ],
+            columns: [
+                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'name', 'label' => 'Produto'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'supplier_name', 'label' => 'Fornecedor'],
+                ['key' => 'stock_quantity', 'label' => 'Saldo', 'format' => 'decimal'],
+                ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'decimal'],
+                ['key' => 'missing', 'label' => 'Falta', 'format' => 'decimal'],
+                ['key' => 'quantity_sold', 'label' => 'Giro', 'format' => 'decimal'],
+            ],
+            rows: $rows,
+            paginator: $paginator,
+            emptyText: 'Nenhum item com falta ou baixo estoque.',
         );
     }
 
