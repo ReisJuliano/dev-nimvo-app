@@ -10,13 +10,27 @@ class PosRecommendationService
 {
     protected const TOP_SELLERS_WINDOW_DAYS = 30;
 
+    protected const CUSTOMER_HISTORY_WINDOW_DAYS = 180;
+
     protected const ASSOCIATION_WINDOW_DAYS = 45;
 
     protected const MIN_ASSOCIATION_SUPPORT = 2;
 
-    public function build(?int $anchorProductId = null, array $excludeProductIds = [], int $topLimit = 8, int $associationLimit = 6): array
+    public function build(
+        ?int $anchorProductId = null,
+        array $excludeProductIds = [],
+        ?int $customerId = null,
+        int $topLimit = 8,
+        int $associationLimit = 6,
+        int $customerHistoryLimit = 6,
+    ): array
     {
         $topSellers = $this->resolveTopSellers($topLimit);
+        $customerHistoryPayload = $this->resolveCustomerHistory(
+            customerId: $customerId,
+            excludeProductIds: $excludeProductIds,
+            limit: $customerHistoryLimit,
+        );
         $associationsPayload = $this->resolveAssociations(
             $anchorProductId,
             $excludeProductIds,
@@ -30,6 +44,8 @@ class PosRecommendationService
                 'window_days' => $topSellers['window_days'],
             ],
             'top_sellers' => $topSellers['items'],
+            'customer_context' => $customerHistoryPayload['context'],
+            'customer_recommendations' => $customerHistoryPayload['items'],
             'association_context' => $associationsPayload['context'],
             'associations' => $associationsPayload['items'],
         ];
@@ -137,6 +153,95 @@ class PosRecommendationService
         ];
     }
 
+    protected function resolveCustomerHistory(?int $customerId, array $excludeProductIds, int $limit): array
+    {
+        if (! $customerId) {
+            return [
+                'context' => null,
+                'items' => [],
+            ];
+        }
+
+        $customer = DB::table('customers')
+            ->where('active', true)
+            ->where('id', $customerId)
+            ->first(['id', 'name']);
+
+        if (! $customer) {
+            return [
+                'context' => null,
+                'items' => [],
+            ];
+        }
+
+        $excludeIds = collect($excludeProductIds)
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $recentWindowStart = now()->subDays(self::CUSTOMER_HISTORY_WINDOW_DAYS)->startOfDay();
+        $recentItems = $this->customerHistoryRows(
+            customerId: (int) $customer->id,
+            excludeProductIds: $excludeIds,
+            limit: $limit,
+            windowStart: $recentWindowStart,
+        );
+
+        if ($recentItems->isNotEmpty()) {
+            return [
+                'context' => [
+                    'customer_id' => (int) $customer->id,
+                    'customer_name' => $customer->name,
+                    'mode' => 'recent',
+                    'window_days' => self::CUSTOMER_HISTORY_WINDOW_DAYS,
+                ],
+                'items' => $recentItems->all(),
+            ];
+        }
+
+        return [
+            'context' => [
+                'customer_id' => (int) $customer->id,
+                'customer_name' => $customer->name,
+                'mode' => 'all_time',
+                'window_days' => null,
+            ],
+            'items' => $this->customerHistoryRows(
+                customerId: (int) $customer->id,
+                excludeProductIds: $excludeIds,
+                limit: $limit,
+            )->all(),
+        ];
+    }
+
+    protected function customerHistoryRows(
+        int $customerId,
+        array $excludeProductIds,
+        int $limit,
+        mixed $windowStart = null,
+    ): Collection {
+        return $this->productSalesBaseQuery(
+            windowStart: $windowStart,
+            customerId: $customerId,
+            excludeProductIds: $excludeProductIds,
+        )
+            ->orderByDesc(DB::raw('COUNT(DISTINCT sales.id)'))
+            ->orderByDesc(DB::raw('SUM(sale_items.quantity)'))
+            ->orderByDesc(DB::raw('MAX(sales.created_at)'))
+            ->limit($limit)
+            ->get()
+            ->map(function ($row) {
+                return $this->serializeProductRow($row, [
+                    'customer_sales_count' => (int) $row->sales_count,
+                    'customer_quantity_sold' => (float) $row->quantity_sold,
+                    'customer_revenue' => (float) $row->revenue,
+                    'last_customer_sale_at' => $row->last_sold_at,
+                ]);
+            });
+    }
+
     protected function associationRows(
         int $anchorProductId,
         array $excludeProductIds,
@@ -214,7 +319,11 @@ class PosRecommendationService
             ->count('sales.id');
     }
 
-    protected function productSalesBaseQuery(mixed $windowStart = null)
+    protected function productSalesBaseQuery(
+        mixed $windowStart = null,
+        ?int $customerId = null,
+        array $excludeProductIds = [],
+    )
     {
         return DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
@@ -222,6 +331,11 @@ class PosRecommendationService
             ->where('sales.status', 'finalized')
             ->where('products.active', true)
             ->when($windowStart, fn ($query) => $query->where('sales.created_at', '>=', $windowStart))
+            ->when($customerId, fn ($query) => $query->where('sales.customer_id', $customerId))
+            ->when(
+                $excludeProductIds !== [],
+                fn ($query) => $query->whereNotIn('sale_items.product_id', $excludeProductIds),
+            )
             ->groupBy(
                 'products.id',
                 'products.code',

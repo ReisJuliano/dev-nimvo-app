@@ -78,6 +78,7 @@ class PosApiController extends Controller
     ): JsonResponse {
         $validated = $request->validate([
             'anchor_product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'exclude_product_ids' => ['nullable', 'array'],
             'exclude_product_ids.*' => ['integer', 'exists:products,id'],
         ]);
@@ -86,6 +87,7 @@ class PosApiController extends Controller
             'recommendations' => $recommendationService->build(
                 anchorProductId: $validated['anchor_product_id'] ?? null,
                 excludeProductIds: $validated['exclude_product_ids'] ?? [],
+                customerId: $validated['customer_id'] ?? null,
             ),
         ]);
     }

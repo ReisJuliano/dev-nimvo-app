@@ -53,6 +53,8 @@ function createEmptyRecommendations() {
         generated_at: null,
         top_sellers_context: { mode: 'recent', window_days: 30 },
         top_sellers: [],
+        customer_context: null,
+        customer_recommendations: [],
         association_context: null,
         associations: [],
     }
@@ -66,6 +68,8 @@ function normalizeRecommendations(payload) {
         ...payload,
         top_sellers_context: payload?.top_sellers_context || defaults.top_sellers_context,
         top_sellers: Array.isArray(payload?.top_sellers) ? payload.top_sellers : [],
+        customer_context: payload?.customer_context || null,
+        customer_recommendations: Array.isArray(payload?.customer_recommendations) ? payload.customer_recommendations : [],
         association_context: payload?.association_context || null,
         associations: Array.isArray(payload?.associations) ? payload.associations : [],
     }
@@ -398,8 +402,8 @@ export default function PosIndex({
     )
 
     const recommendationSignature = useMemo(
-        () => recommendationProductIds.join(','),
-        [recommendationProductIds],
+        () => `${selectedCustomer || 'guest'}:${recommendationProductIds.join(',')}`,
+        [recommendationProductIds, selectedCustomer],
     )
 
     const recommendationAnchorProductId = useMemo(() => {
@@ -510,6 +514,7 @@ export default function PosIndex({
                 const response = await apiRequest('/api/pdv/recommendations', {
                     params: {
                         anchor_product_id: recommendationAnchorProductId || undefined,
+                        customer_id: selectedCustomer || undefined,
                         exclude_product_ids: recommendationProductIds,
                     },
                 })
@@ -2903,6 +2908,8 @@ function PosWorkspace({
                     <RecommendationRail
                         topSellers={recommendations.top_sellers}
                         topSellersContext={recommendations.top_sellers_context}
+                        customerRecommendations={recommendations.customer_recommendations}
+                        customerContext={recommendations.customer_context}
                         associations={recommendations.associations}
                         associationContext={recommendations.association_context}
                         loading={loadingRecommendations}

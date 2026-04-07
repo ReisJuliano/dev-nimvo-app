@@ -35,17 +35,28 @@ function resolveAssociationMeta(product) {
     return `${formatNumber(product.paired_sales_count)} venda(s) com esse combo`
 }
 
+function resolveCustomerHistoryInsight(product) {
+    return `${formatNumber(product.customer_quantity_sold, { maximumFractionDigits: 0 })} un. em ${formatNumber(product.customer_sales_count)} compra(s)`
+}
+
+function resolveCustomerHistoryMeta(product) {
+    return product.last_customer_sale_at ? 'Ultima compra registrada' : 'Historico do cliente'
+}
+
 export default function RecommendationRail({
     topSellers,
     topSellersContext,
+    customerRecommendations,
+    customerContext,
     associations,
     associationContext,
     loading,
     onAddProduct,
 }) {
     const showAssociations = Boolean(associationContext?.anchor_product_name)
+    const showCustomerHistory = Boolean(customerContext?.customer_name)
 
-    if (!showAssociations && !topSellers.length && !loading) {
+    if (!showAssociations && !showCustomerHistory && !topSellers.length && !loading) {
         return (
             <section className="pos-recommendation-rail" aria-label="Recomendacoes de produtos">
                 <RecommendationLane
@@ -66,6 +77,48 @@ export default function RecommendationRail({
 
     return (
         <section className="pos-recommendation-rail" aria-label="Recomendacoes de produtos">
+            {showCustomerHistory ? (
+                loading && customerRecommendations.length === 0 ? (
+                    <RecommendationLane
+                        title={`Historico de ${customerContext.customer_name}`}
+                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
+                        icon="customer"
+                        tone="customer"
+                        products={[]}
+                        loading
+                        onAddProduct={onAddProduct}
+                        renderInsight={resolveCustomerHistoryInsight}
+                        renderMeta={resolveCustomerHistoryMeta}
+                        emptyMessage=""
+                    />
+                ) : customerRecommendations.length ? (
+                    <RecommendationLane
+                        title={`Historico de ${customerContext.customer_name}`}
+                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
+                        icon="customer"
+                        tone="customer"
+                        products={customerRecommendations}
+                        loading={loading && customerRecommendations.length === 0}
+                        onAddProduct={onAddProduct}
+                        renderInsight={resolveCustomerHistoryInsight}
+                        renderMeta={resolveCustomerHistoryMeta}
+                    />
+                ) : (
+                    <div className="pos-recommendation-empty-card customer">
+                        <span className="pos-recommendation-empty-icon customer">
+                            <RecommendationIcon name="customer" />
+                        </span>
+                        <div>
+                            <strong>Sem historico suficiente desse cliente</strong>
+                            <p>
+                                Assim que <span>{customerContext.customer_name}</span> acumular compras finalizadas,
+                                os acessos rapidos vao destacar os itens recorrentes aqui.
+                            </p>
+                        </div>
+                    </div>
+                )
+            ) : null}
+
             <RecommendationLane
                 title="Mais vendidos"
                 subtitle={`Acesso rapido com base em ${resolveWindowLabel(topSellersContext, 'historico recente')}.`}
@@ -164,10 +217,12 @@ function RecommendationLane({
                             >
                                 <div className="pos-recommendation-card-head">
                                     <span className={`pos-recommendation-chip ${tone}`}>
-                                        <RecommendationIcon name={tone === 'association' ? 'spark' : 'trend'} />
+                                        <RecommendationIcon name={tone === 'association' ? 'spark' : tone === 'customer' ? 'customer' : 'trend'} />
                                         {tone === 'association'
                                             ? `${formatNumber(product.association_rate, { maximumFractionDigits: 1 })}%`
-                                            : `${formatNumber(product.quantity_sold, { maximumFractionDigits: 0 })} un.`}
+                                            : tone === 'customer'
+                                                ? `${formatNumber(product.customer_sales_count, { maximumFractionDigits: 0 })} compra(s)`
+                                                : `${formatNumber(product.quantity_sold, { maximumFractionDigits: 0 })} un.`}
                                     </span>
                                     <span className="pos-recommendation-code">{resolveProductCode(product)}</span>
                                 </div>
@@ -221,6 +276,13 @@ function RecommendationIcon({ name }) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8Z" />
                     <path d="m18.5 15 .8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8Z" />
+                </svg>
+            )
+        case 'customer':
+            return (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+                    <path d="M5 20a7 7 0 0 1 14 0" />
                 </svg>
             )
         case 'plus':

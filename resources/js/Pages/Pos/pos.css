@@ -192,6 +192,10 @@
     background: linear-gradient(180deg, rgba(239, 247, 238, 0.98), rgba(255, 255, 255, 0.96));
 }
 
+.pos-recommendation-lane.customer {
+    background: linear-gradient(180deg, rgba(255, 246, 232, 0.98), rgba(255, 255, 255, 0.96));
+}
+
 .pos-recommendation-header {
     display: flex;
     align-items: flex-start;
@@ -240,6 +244,11 @@
     color: var(--pos-green);
 }
 
+.pos-recommendation-badge.customer {
+    background: rgba(180, 108, 22, 0.12);
+    color: #9a5a08;
+}
+
 .pos-recommendation-badge svg,
 .pos-recommendation-chip svg,
 .pos-recommendation-add svg,
@@ -281,6 +290,10 @@
 
 .pos-recommendation-card.association:hover {
     border-color: rgba(59, 109, 17, 0.2);
+}
+
+.pos-recommendation-card.customer:hover {
+    border-color: rgba(180, 108, 22, 0.22);
 }
 
 .pos-recommendation-card.is-placeholder {
@@ -337,6 +350,11 @@
 .pos-recommendation-chip.association {
     background: rgba(59, 109, 17, 0.12);
     color: var(--pos-green);
+}
+
+.pos-recommendation-chip.customer {
+    background: rgba(255, 221, 153, 0.32);
+    color: #9a5a08;
 }
 
 .pos-recommendation-code {
@@ -405,6 +423,11 @@
     padding: 12px;
 }
 
+.pos-recommendation-empty-card.customer {
+    border-color: rgba(180, 108, 22, 0.22);
+    background: rgba(255, 251, 244, 0.96);
+}
+
 .pos-recommendation-empty-icon {
     width: 32px;
     height: 32px;
@@ -413,6 +436,11 @@
     border-radius: 10px;
     background: rgba(59, 109, 17, 0.12);
     color: var(--pos-green);
+}
+
+.pos-recommendation-empty-icon.customer {
+    background: rgba(180, 108, 22, 0.12);
+    color: #9a5a08;
 }
 
 .pos-recommendation-empty-card strong {

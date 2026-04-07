@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Tenant\CashRegister;
+use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\User;
@@ -72,6 +73,44 @@ class PosRecommendationsTest extends TestCase
         $response->assertJsonPath('recommendations.associations.0.association_rate', 66.7);
     }
 
+    public function test_it_returns_customer_history_recommendations_when_a_customer_is_selected(): void
+    {
+        $user = $this->authenticateOperator();
+        $customer = Customer::query()->create([
+            'name' => 'Cliente Recorrente',
+            'phone' => null,
+            'credit_limit' => 0,
+            'active' => true,
+        ]);
+
+        $paoDeQueijo = $this->createProduct('PAOQ', 'Pao de queijo', 5);
+        $cafe = $this->createProduct('CAFE', 'Cafe coado', 4);
+        $suco = $this->createProduct('SUCO', 'Suco natural', 7);
+
+        $this->createSale($user, [
+            [$paoDeQueijo, 2],
+            [$cafe, 1],
+        ], now()->subDays(10), $customer->id);
+
+        $this->createSale($user, [
+            [$paoDeQueijo, 1],
+            [$suco, 1],
+        ], now()->subDays(4), $customer->id);
+
+        $this->createSale($user, [
+            [$cafe, 2],
+        ], now()->subDays(2));
+
+        $response = $this->getJson('/api/pdv/recommendations?customer_id='.$customer->id.'&exclude_product_ids[]='.$paoDeQueijo->id);
+
+        $response->assertOk();
+        $response->assertJsonPath('recommendations.customer_context.customer_id', $customer->id);
+        $response->assertJsonPath('recommendations.customer_context.customer_name', 'Cliente Recorrente');
+        $response->assertJsonPath('recommendations.customer_recommendations.0.id', $cafe->id);
+        $response->assertJsonPath('recommendations.customer_recommendations.0.customer_sales_count', 1);
+        $response->assertJsonPath('recommendations.customer_recommendations.1.id', $suco->id);
+    }
+
     public function test_it_preloads_top_sellers_in_the_pos_page_payload(): void
     {
         $user = $this->authenticateOperator();
@@ -134,13 +173,14 @@ class PosRecommendationsTest extends TestCase
         ]);
     }
 
-    protected function createSale(User $user, array $items, mixed $createdAt): Sale
+    protected function createSale(User $user, array $items, mixed $createdAt, ?int $customerId = null): Sale
     {
         $subtotal = collect($items)->sum(fn (array $entry) => (float) $entry[0]->sale_price * $entry[1]);
         $costTotal = collect($items)->sum(fn (array $entry) => (float) $entry[0]->cost_price * $entry[1]);
 
         $sale = Sale::query()->create([
             'sale_number' => 'VND-TEST-'.(Sale::query()->count() + 1),
+            'customer_id' => $customerId,
             'user_id' => $user->id,
             'cash_register_id' => CashRegister::query()->where('user_id', $user->id)->value('id'),
             'subtotal' => $subtotal,
