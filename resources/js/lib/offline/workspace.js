@@ -723,6 +723,22 @@ export function getOfflineWorkspaceSummary(tenantId) {
     return buildSummary(readState(tenantId))
 }
 
+export function hasOfflineWorkspaceData(tenantId) {
+    const state = readState(tenantId)
+
+    return Boolean(
+        state.catalogs.products.length
+        || state.catalogs.categories.length
+        || state.catalogs.customers.length
+        || state.catalogs.companies.length
+        || state.catalogs.suppliers.length
+        || state.orders.details.length
+        || state.cashRegister
+        || Object.values(state.pendingSalesByUser || {}).some(Boolean)
+        || countPending(state) > 0,
+    )
+}
+
 export function configureOfflineWorkspaceBridge(tenantId, bridge) {
     if (!tenantId) {
         return

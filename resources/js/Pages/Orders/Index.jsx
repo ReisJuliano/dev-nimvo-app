@@ -10,6 +10,7 @@ import {
     createOfflineCustomer,
     createOfflineOrderDraft,
     discardOfflinePendingSale,
+    hasOfflineWorkspaceData,
     getOfflineOrderDetail,
     getOfflineOrderSummaries,
     getOfflinePendingCheckoutSummaries,
@@ -168,12 +169,19 @@ export default function OrdersIndex({
                 return
             }
 
-            seedOfflineWorkspace(tenantId, {
-                categories,
-                customers,
-                products: productCatalog,
-                orders: draftDetails,
-            })
+            const shouldSeedSnapshot =
+                typeof navigator === 'undefined'
+                || navigator.onLine !== false
+                || !hasOfflineWorkspaceData(tenantId)
+
+            if (shouldSeedSnapshot) {
+                seedOfflineWorkspace(tenantId, {
+                    categories,
+                    customers,
+                    products: productCatalog,
+                    orders: draftDetails,
+                })
+            }
 
             if (cancelled) {
                 return

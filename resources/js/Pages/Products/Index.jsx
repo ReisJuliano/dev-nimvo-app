@@ -10,6 +10,7 @@ import { formatMoney, formatNumber } from '@/lib/format'
 import {
     configureOfflineWorkspaceBridge,
     getOfflineWorkspaceSnapshot,
+    hasOfflineWorkspaceData,
     hydrateOfflineWorkspace,
     removeOfflineProduct,
     resolveOfflineEntityId,
@@ -90,11 +91,18 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 return
             }
 
-            seedOfflineWorkspace(tenantId, {
-                products,
-                categories,
-                suppliers,
-            })
+            const shouldSeedSnapshot =
+                typeof navigator === 'undefined'
+                || navigator.onLine !== false
+                || !hasOfflineWorkspaceData(tenantId)
+
+            if (shouldSeedSnapshot) {
+                seedOfflineWorkspace(tenantId, {
+                    products,
+                    categories,
+                    suppliers,
+                })
+            }
 
             if (cancelled) {
                 return

@@ -15,6 +15,7 @@ import {
     createOfflineCompany,
     createOfflineCustomer,
     discardOfflinePendingSale,
+    hasOfflineWorkspaceData,
     getOfflineOrderDetail,
     getOfflinePendingCheckoutSummaries,
     getOfflinePendingSale,
@@ -279,16 +280,23 @@ export default function PosIndex({
                 return
             }
 
-            seedOfflineWorkspace(tenantId, {
-                categories,
-                products: productCatalog,
-                customers: initialCustomers,
-                companies: initialCompanies,
-                orders: pendingOrderDraftDetails,
-                cashRegister,
-                pendingSaleUserId: auth?.user?.id,
-                pendingSale: initialPendingSale,
-            })
+            const shouldSeedSnapshot =
+                typeof navigator === 'undefined'
+                || navigator.onLine !== false
+                || !hasOfflineWorkspaceData(tenantId)
+
+            if (shouldSeedSnapshot) {
+                seedOfflineWorkspace(tenantId, {
+                    categories,
+                    products: productCatalog,
+                    customers: initialCustomers,
+                    companies: initialCompanies,
+                    orders: pendingOrderDraftDetails,
+                    cashRegister,
+                    pendingSaleUserId: auth?.user?.id,
+                    pendingSale: initialPendingSale,
+                })
+            }
 
             if (cancelled) {
                 return
