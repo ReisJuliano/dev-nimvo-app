@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'nimvo-offline-v1'
+const CACHE_VERSION = 'nimvo-offline-v2'
 const APP_CACHE = `${CACHE_VERSION}:app`
 const PAGE_CACHE = `${CACHE_VERSION}:pages`
 
@@ -27,16 +27,36 @@ async function warmWorkspacePaths(paths = []) {
     await Promise.all(
         paths.map(async (path) => {
             try {
-                const response = await fetch(new Request(path, { credentials: 'same-origin', cache: 'no-store' }))
+                const request = new Request(path, { credentials: 'same-origin', cache: 'no-store' })
+                const response = await fetch(request)
 
-                if (response.ok) {
-                    await cache.put(path, response.clone())
+                if (isCacheableNavigationResponse(request, response)) {
+                    await cache.put(request, response.clone())
                 }
             } catch {
                 // Ignore warm failures and keep the latest cached shell.
             }
         }),
     )
+}
+
+function isCacheableNavigationResponse(request, response) {
+    if (!response?.ok) {
+        return false
+    }
+
+    if (!response.url) {
+        return true
+    }
+
+    if (response.redirected) {
+        return false
+    }
+
+    const requestUrl = new URL(request.url)
+    const responseUrl = new URL(response.url, self.location.origin)
+
+    return requestUrl.origin === responseUrl.origin && requestUrl.pathname === responseUrl.pathname
 }
 
 self.addEventListener('message', (event) => {
@@ -70,7 +90,7 @@ async function networkFirst(request) {
     try {
         const response = await fetch(request)
 
-        if (response.ok) {
+        if (isCacheableNavigationResponse(request, response)) {
             await cache.put(request, response.clone())
         }
 
