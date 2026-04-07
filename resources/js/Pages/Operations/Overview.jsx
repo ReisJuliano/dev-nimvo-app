@@ -24,7 +24,7 @@ function buildFilterPayload(filters, overrides = {}) {
 
 export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
-    const isReportsShowcase = module.view === 'reports_showcase'
+    const isReportsCatalog = module.view === 'reports_catalog'
     const hasSections = Array.isArray(module.sections) && module.sections.length > 0
     const currentSection = hasSections
         ? module.sections.find((section) => section.key === module.activeSection) || module.sections[0]
@@ -88,24 +88,29 @@ export default function OperationsOverview({ module }) {
                     </div>
                     <div className="operations-hero-badges">
                         <span className="ui-badge success">
-                            {isReportsShowcase
-                                ? '6 mockups'
+                            {isReportsCatalog
+                                ? `${module.catalog?.categories?.length || 0} categoria(s)`
                                 : hasSections
                                 ? `${module.sections.length} aba(s)`
                                 : modulePanels.length
                                   ? `${modulePanels.length} painel(is)`
                                   : `${moduleTables.length} tabela(s)`}
                         </span>
-                        {!isReportsShowcase && module.filters?.product ? (
+                        {isReportsCatalog ? (
+                            <span className="ui-badge warning">
+                                {module.catalog?.categories?.reduce((total, category) => total + (category.report_count || 0), 0) || 0} relatorio(s)
+                            </span>
+                        ) : null}
+                        {!isReportsCatalog && module.filters?.product ? (
                             <span className="ui-badge warning">Produto: {module.filters.product}</span>
                         ) : null}
                     </div>
                 </section>
 
-                {isReportsShowcase ? null : <FilterBar filters={module.filters} />}
+                {isReportsCatalog ? null : <FilterBar filters={module.filters} />}
 
-                {isReportsShowcase ? (
-                    <ReportsShowcase />
+                {isReportsCatalog ? (
+                    <ReportsShowcase module={module} />
                 ) : hasSections ? (
                     <>
                         <section className="operations-section-tabs">

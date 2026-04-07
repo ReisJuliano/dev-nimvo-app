@@ -9,6 +9,10 @@ function renderValue(metric) {
         return formatPercent(metric.value)
     }
 
+    if (metric.format === 'text') {
+        return metric.value || '-'
+    }
+
     return formatNumber(metric.value)
 }
 
@@ -19,7 +23,7 @@ export default function MetricGrid({ metrics }) {
                 <article key={metric.label} className={`operations-metric-card tone-${index % 4}`}>
                     <div className="operations-metric-top">
                         <span>{metric.label}</span>
-                        <i className="fa-solid fa-chart-column" />
+                        <i className={`fa-solid ${metric.icon || 'fa-chart-column'}`} />
                     </div>
                     <strong>{renderValue(metric)}</strong>
                     <small>{metric.caption || 'Sem observacao'}</small>

@@ -5,6 +5,7 @@ namespace App\Services\Tenant;
 use App\Services\Tenant\Operations\InventoryOverviewService;
 use App\Services\Tenant\Operations\SalesOverviewService;
 use App\Services\Tenant\Operations\UsersOverviewService;
+use App\Services\Tenant\Reports\ReportBrowserService;
 
 class OperationsOverviewService
 {
@@ -14,8 +15,8 @@ class OperationsOverviewService
         protected SalesOverviewService $sales,
         protected InventoryOverviewService $inventory,
         protected UsersOverviewService $users,
-    ) {
-    }
+        protected ReportBrowserService $reports,
+    ) {}
 
     public function build(string $module, array $filters = [], array $context = []): array
     {
@@ -30,7 +31,7 @@ class OperationsOverviewService
             'entrada-estoque' => $this->inventory->stockInbound(),
             'ajuste-estoque' => $this->inventory->stockAdjustments(),
             'movimentacao-estoque' => $this->inventory->stockHistory($filters),
-            'relatorios' => $this->sales->reportsHub($filters, data_get($context, 'enabledModules', [])),
+            'relatorios' => $this->reports->catalog(data_get($context, 'enabledModules', [])),
             'vendas' => $this->sales->sales($filters),
             'demanda' => $this->sales->demand($filters),
             'faltas' => $this->inventory->shortages(),

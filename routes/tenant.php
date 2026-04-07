@@ -15,9 +15,10 @@ use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
-use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
+use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
+use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
@@ -65,6 +66,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/ajuste-estoque', OperationsPageController::class)->defaults('module', 'ajuste-estoque')->name('stock.adjustments');
         Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.history');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
+        Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {
             return redirect()->route('reports.index', array_filter([
                 'from' => $request->query('from'),

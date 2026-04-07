@@ -125,7 +125,7 @@ class TenantNavigationService
                         'label' => 'Relatorios',
                         'icon' => 'fa-chart-bar',
                         'access_key' => 'relatorios',
-                        'request_patterns' => ['relatorios', 'vendas', 'demanda'],
+                        'request_patterns' => ['relatorios*', 'vendas', 'demanda'],
                     ],
                     [
                         'href' => '/faltas',
@@ -184,6 +184,6 @@ class TenantNavigationService
         $item ??= $this->resolveItem($request);
         $requiredRole = $item['required_role'] ?? null;
 
-        return !$requiredRole || $request->user()?->role === $requiredRole;
+        return ! $requiredRole || $request->user()?->role === $requiredRole;
     }
 }
