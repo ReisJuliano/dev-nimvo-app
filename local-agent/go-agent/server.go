@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -124,6 +125,16 @@ func (server *localAgentHTTPServer) ServeHTTP(writer http.ResponseWriter, reques
 			return
 		}
 		server.handlePaymentReceipt(writer, request)
+	case strings.HasPrefix(request.URL.Path, "/v1/workspaces/") && request.Method == http.MethodGet:
+		if !server.authorize(writer, request) {
+			return
+		}
+		server.handleWorkspaceGet(writer, request)
+	case strings.HasPrefix(request.URL.Path, "/v1/workspaces/") && request.Method == http.MethodPut:
+		if !server.authorize(writer, request) {
+			return
+		}
+		server.handleWorkspacePut(writer, request)
 	default:
 		server.writeJSON(writer, http.StatusNotFound, localAPIResponse{
 			Status: "not_found",
@@ -238,6 +249,84 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 	})
 }
 
+func (server *localAgentHTTPServer) handleWorkspaceGet(writer http.ResponseWriter, request *http.Request) {
+	tenantID := strings.TrimPrefix(request.URL.Path, "/v1/workspaces/")
+	if strings.TrimSpace(tenantID) == "" {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
+			Status: "invalid_request",
+			Error:  "tenant_id nao informado para o workspace offline local",
+		})
+		return
+	}
+
+	snapshot, err := loadWorkspaceSnapshot(tenantID)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			server.writeJSON(writer, http.StatusNotFound, localAPIResponse{
+				Status: "not_found",
+				Error:  "workspace offline local ainda nao foi salvo para este tenant",
+			})
+			return
+		}
+
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":     "ok",
+		"tenant_id":  snapshot.TenantID,
+		"updated_at": snapshot.UpdatedAt,
+		"workspace":  snapshot.Workspace,
+	})
+}
+
+func (server *localAgentHTTPServer) handleWorkspacePut(writer http.ResponseWriter, request *http.Request) {
+	tenantID := strings.TrimPrefix(request.URL.Path, "/v1/workspaces/")
+	if strings.TrimSpace(tenantID) == "" {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
+			Status: "invalid_request",
+			Error:  "tenant_id nao informado para o workspace offline local",
+		})
+		return
+	}
+
+	payload := json.RawMessage{}
+	if err := server.decodeJSONBody(request, &payload); err != nil {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
+			Status: "invalid_request",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	if len(bytes.TrimSpace(payload)) == 0 {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{
+			Status: "invalid_request",
+			Error:  "workspace offline local vazio",
+		})
+		return
+	}
+
+	snapshot, err := saveWorkspaceSnapshot(tenantID, payload)
+	if err != nil {
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{
+			Status: "error",
+			Error:  err.Error(),
+		})
+		return
+	}
+
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":     "saved",
+		"tenant_id":  snapshot.TenantID,
+		"updated_at": snapshot.UpdatedAt,
+	})
+}
+
 func (server *localAgentHTTPServer) authorize(writer http.ResponseWriter, request *http.Request) bool {
 	config, err := loadNormalizedAgentConfig(server.configPath)
 	if err != nil {
@@ -284,7 +373,7 @@ func (server *localAgentHTTPServer) writeCORSHeaders(writer http.ResponseWriter)
 	headers := writer.Header()
 	headers.Set("Access-Control-Allow-Origin", "*")
 	headers.Set("Access-Control-Allow-Headers", "Content-Type, X-Nimvo-Agent-Key")
-	headers.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	headers.Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
 	headers.Set("Content-Type", "application/json; charset=utf-8")
 }
 
