@@ -25,9 +25,11 @@ export default function AppLayout({
     const currentUrl = usePage().url
     const currentPath = currentUrl.split('?')[0]
     const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
+    const isDashboardPage = currentPath === '/dashboard'
     const isOverlayNavigation = navigationMode === 'overlay'
     const isHiddenNavigation = navigationMode === 'hidden'
-    const shouldStartCollapsed = isPosPage || defaultCollapsed
+    const shouldAutoCompact = !isHiddenNavigation && !isOverlayNavigation && !isPosPage && !isDashboardPage
+    const shouldStartCollapsed = isPosPage || defaultCollapsed || shouldAutoCompact
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') {

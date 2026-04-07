@@ -1,6 +1,7 @@
 import './bootstrap';
 import '../css/app.css'
 import '@/Components/components.css'
+import '@/Components/ui-shell.css'
 import GlobalErrorPopup from '@/Components/GlobalErrorPopup'
 import { createRoot } from 'react-dom/client'
 import { createInertiaApp } from '@inertiajs/react'

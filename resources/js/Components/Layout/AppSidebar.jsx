@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import AppSidebarSection from '@/Components/Layout/AppSidebarSection'
+import CompactSidebar from '@/Components/Layout/CompactSidebar'
 
 export default function AppSidebar({
     auth,
@@ -66,7 +67,7 @@ export default function AppSidebar({
             .toUpperCase() || 'U'
 
     return (
-        <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''} ${sidebarOpen ? 'mobile-open' : ''}`}>
+        <CompactSidebar collapsed={collapsed} sidebarOpen={sidebarOpen}>
             <div className="app-sidebar-header">
                 <div className="app-logo">
                     <div className="app-logo-icon">
@@ -119,6 +120,6 @@ export default function AppSidebar({
                     <span>Sair</span>
                 </button>
             </div>
-        </aside>
+        </CompactSidebar>
     )
 }
