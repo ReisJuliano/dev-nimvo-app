@@ -9,12 +9,19 @@ import './admin-layout.css'
 export default function AdminLayout({ title = 'Admin', subtitle = '', children }) {
     const { centralAuth, flash } = usePage().props
     const currentUrl = usePage().url
+    const currentPath = currentUrl.split('?')[0]
+    const isDashboardPage = currentPath === '/admin/painel'
     const [mobileOpen, setMobileOpen] = useState(false)
+    const [collapsed, setCollapsed] = useState(!isDashboardPage)
     useFlashPopup(flash)
 
     useEffect(() => {
         setMobileOpen(false)
     }, [currentUrl])
+
+    useEffect(() => {
+        setCollapsed(!isDashboardPage)
+    }, [isDashboardPage])
 
     useEffect(() => {
         if (typeof document === 'undefined') {
@@ -56,15 +63,17 @@ export default function AdminLayout({ title = 'Admin', subtitle = '', children }
                     navigationGroups={CENTRAL_ADMIN_NAVIGATION}
                     currentUrl={currentUrl}
                     mobileOpen={mobileOpen}
+                    collapsed={collapsed}
                     onCloseMobile={() => setMobileOpen(false)}
                 />
 
-                <div className="central-admin-main-shell">
+                <div className={`central-admin-main-shell ${collapsed ? 'is-collapsed' : ''}`}>
                     <CentralAdminTopbar
                         title={title}
                         subtitle={subtitle}
                         userName={centralAuth?.user?.name || 'Administrador'}
                         onLogout={handleLogout}
+                        onToggleCollapsed={() => setCollapsed((current) => !current)}
                         onToggleMobileSidebar={() => setMobileOpen(true)}
                     />
 

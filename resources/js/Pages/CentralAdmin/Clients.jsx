@@ -1,5 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AdminLayout from '@/Layouts/AdminLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { formatMoney } from '@/lib/format'
@@ -1353,101 +1355,80 @@ export default function CentralAdminClients({
     return (
         <AdminLayout title={isFeatureFlagsPage ? 'Configuracoes' : 'Tenants'}>
             <div className="central-admin-page">
-                <section className="central-admin-card central-admin-hero">
-                    <div className="central-admin-hero-copy">
-                        <h1>{isFeatureFlagsPage ? 'Configuracoes' : 'Tenants'}</h1>
-                    </div>
+                <PageContainer
+                    sidebar={(
+                        <RightSidebarPanel>
+                            <RightSidebarSection title="Contexto" subtitle={isFeatureFlagsPage ? 'Configuracoes por tenant' : 'Base de tenants'}>
+                                <div className="right-sidebar-meta">
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Tenants</span>
+                                        <strong>{safeTenantStats.total}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Ativos</span>
+                                        <strong>{safeTenantStats.active}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Inativos</span>
+                                        <strong>{safeTenantStats.inactive}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>{isFeatureFlagsPage ? 'Modulos' : 'Agentes online'}</span>
+                                        <strong>{isFeatureFlagsPage ? trackedModules.length : `${safeAgentStats.online}/${safeAgentStats.total}`}</strong>
+                                    </div>
+                                </div>
+                            </RightSidebarSection>
 
-                    <div className="central-admin-hero-actions">
-                        {isFeatureFlagsPage ? (
-                            <Link href="/admin/clientes" className="central-admin-secondary-button">
-                                <i className="fa-solid fa-table-list" />
-                                <span>Tenants</span>
-                            </Link>
-                        ) : (
-                            <button type="button" className="central-admin-primary-button" onClick={openCreateModal}>
-                                <i className="fa-solid fa-plus" />
-                                <span>Novo</span>
-                            </button>
-                        )}
+                            <RightSidebarSection title="Acoes" subtitle="Atalhos">
+                                {isFeatureFlagsPage ? (
+                                    <Link href="/admin/clientes" className="action-button tone-ghost">
+                                        <i className="fa-solid fa-table-list" />
+                                        <span>Tenants</span>
+                                    </Link>
+                                ) : (
+                                    <button type="button" className="action-button tone-primary" onClick={openCreateModal}>
+                                        <i className="fa-solid fa-plus" />
+                                        <span>Novo tenant</span>
+                                    </button>
+                                )}
 
-                        <Link
-                            href={isFeatureFlagsPage ? '/admin/painel' : '/admin/feature-flags'}
-                            className="central-admin-secondary-button"
-                        >
-                            <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-house' : 'fa-sliders'}`} />
-                            <span>{isFeatureFlagsPage ? 'Home' : 'Modulos'}</span>
-                        </Link>
-                    </div>
-                </section>
+                                <Link
+                                    href={isFeatureFlagsPage ? '/admin/painel' : '/admin/feature-flags'}
+                                    className="action-button tone-ghost"
+                                >
+                                    <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-house' : 'fa-sliders'}`} />
+                                    <span>{isFeatureFlagsPage ? 'Home' : 'Modulos'}</span>
+                                </Link>
 
-                {feedback ? (
-                    <div className={`central-admin-feedback is-${feedback.type}`}>
-                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
-                        <span>{feedback.text}</span>
-                    </div>
-                ) : null}
-
-                <section className="central-admin-stats-grid">
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-buildings" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{safeTenantStats.total}</strong>
-                            <span>Tenants</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-circle-check" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{safeTenantStats.active}</strong>
-                            <span>Ativos</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-circle-pause" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{safeTenantStats.inactive}</strong>
-                            <span>Inativos</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-toggle-on' : 'fa-desktop'}`} />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{isFeatureFlagsPage ? trackedModules.length : `${safeAgentStats.online}/${safeAgentStats.total}`}</strong>
-                            <span>{isFeatureFlagsPage ? 'Modulos' : 'Agentes online'}</span>
-                        </div>
-                    </article>
-                </section>
-
-                {isFeatureFlagsPage ? (
-                    <FeatureFlagsList
-                        tenants={tenantSummaries}
-                        moduleSections={safeModuleSections}
-                        rowState={rowState}
-                        highlightedTenantId={highlightedTenantId}
-                        onToggle={handleToggleModule}
-                    />
-                ) : (
-                    <TenantsTable
-                        tenants={tenantSummaries}
-                        onCreate={openCreateModal}
-                        onEdit={openEditModal}
-                        onManageLicense={openLicenseModal}
-                        onManageAgent={openLocalAgentModal}
-                        onDelete={setTenantToDelete}
-                    />
-                )}
+                                {feedback ? (
+                                    <div className={`central-admin-feedback is-${feedback.type}`}>
+                                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
+                                        <span>{feedback.text}</span>
+                                    </div>
+                                ) : null}
+                            </RightSidebarSection>
+                        </RightSidebarPanel>
+                    )}
+                >
+                    {isFeatureFlagsPage ? (
+                        <FeatureFlagsList
+                            tenants={tenantSummaries}
+                            moduleSections={safeModuleSections}
+                            rowState={rowState}
+                            highlightedTenantId={highlightedTenantId}
+                            onToggle={handleToggleModule}
+                        />
+                    ) : (
+                        <TenantsTable
+                            tenants={tenantSummaries}
+                            onCreate={openCreateModal}
+                            onEdit={openEditModal}
+                            onManageLicense={openLicenseModal}
+                            onManageAgent={openLocalAgentModal}
+                            onDelete={setTenantToDelete}
+                        />
+                    )}
+                </PageContainer>
             </div>
 
             <TenantFormModal

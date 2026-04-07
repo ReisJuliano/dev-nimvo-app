@@ -11,7 +11,7 @@ function normalizePath(input) {
     return normalized.length ? normalized : '/'
 }
 
-export default function CentralAdminSidebarSection({ section, currentUrl, onNavigate }) {
+export default function CentralAdminSidebarSection({ section, currentUrl, collapsed, onNavigate }) {
     function isActive(href) {
         const currentPath = normalizePath(currentUrl)
         const hrefPath = normalizePath(href)
@@ -21,7 +21,7 @@ export default function CentralAdminSidebarSection({ section, currentUrl, onNavi
 
     return (
         <section className="central-admin-nav-section">
-            <span className="central-admin-nav-section-title">{section.section}</span>
+            {collapsed ? null : <span className="central-admin-nav-section-title">{section.section}</span>}
 
             <div className="central-admin-nav-section-list">
                 {section.items.map((item) => (
@@ -30,11 +30,12 @@ export default function CentralAdminSidebarSection({ section, currentUrl, onNavi
                         href={item.href}
                         className={`central-admin-nav-item ${isActive(item.href) ? 'is-active' : ''}`}
                         onClick={onNavigate}
+                        title={item.label}
                     >
                         <span className="central-admin-nav-icon">
                             <i className={`fa-solid ${item.icon}`} />
                         </span>
-                        <span className="central-admin-nav-label">{item.label}</span>
+                        {collapsed ? null : <span className="central-admin-nav-label">{item.label}</span>}
                     </Link>
                 ))}
             </div>

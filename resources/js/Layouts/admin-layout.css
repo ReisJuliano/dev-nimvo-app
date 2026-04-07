@@ -12,6 +12,7 @@
     --central-admin-shadow: 0 24px 48px rgba(2, 6, 23, 0.42);
     --central-admin-shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.3);
     --central-admin-sidebar-width: 290px;
+    --central-admin-sidebar-width-collapsed: 94px;
 }
 
 * {
@@ -90,6 +91,10 @@ a {
     z-index: 50;
 }
 
+.central-admin-sidebar.is-collapsed {
+    width: var(--central-admin-sidebar-width-collapsed);
+}
+
 .central-admin-sidebar-header {
     display: flex;
     align-items: center;
@@ -146,6 +151,7 @@ a {
 
 .central-admin-sidebar-close,
 .central-admin-topbar-mobile,
+.central-admin-topbar-collapse,
 .central-admin-action-button,
 .central-admin-user-chip {
     display: inline-flex;
@@ -168,12 +174,14 @@ a {
 
 .central-admin-action-button,
 .central-admin-topbar-mobile,
+.central-admin-topbar-collapse,
 .central-admin-sidebar-close {
     cursor: pointer;
 }
 
 .central-admin-action-button:hover,
 .central-admin-topbar-mobile:hover,
+.central-admin-topbar-collapse:hover,
 .central-admin-sidebar-close:hover {
     transform: translateY(-1px);
     border-color: rgba(47, 128, 237, 0.35);
@@ -268,6 +276,10 @@ a {
     flex-direction: column;
 }
 
+.central-admin-main-shell.is-collapsed {
+    margin-left: var(--central-admin-sidebar-width-collapsed);
+}
+
 .central-admin-topbar {
     position: sticky;
     top: 0;
@@ -290,6 +302,10 @@ a {
 
 .central-admin-topbar-mobile {
     display: none;
+}
+
+.central-admin-topbar-collapse {
+    display: inline-flex;
 }
 
 .central-admin-topbar-copy {
@@ -337,6 +353,25 @@ a {
     padding: 0 1.5rem 1.5rem;
 }
 
+.central-admin-sidebar.is-collapsed .central-admin-brand-copy,
+.central-admin-sidebar.is-collapsed .central-admin-nav-label {
+    display: none;
+}
+
+.central-admin-sidebar.is-collapsed .central-admin-sidebar-header,
+.central-admin-sidebar.is-collapsed .central-admin-brand,
+.central-admin-sidebar.is-collapsed .central-admin-nav-item {
+    justify-content: center;
+}
+
+.central-admin-sidebar.is-collapsed .central-admin-nav-section-list {
+    justify-items: center;
+}
+
+.central-admin-sidebar.is-collapsed .central-admin-nav-item {
+    padding-inline: 0.75rem;
+}
+
 @media (max-width: 1080px) {
     .central-admin-content {
         padding: 0 1rem 1.25rem;
@@ -363,8 +398,29 @@ a {
         display: inline-flex;
     }
 
+    .central-admin-topbar-collapse {
+        display: none;
+    }
+
     .central-admin-main-shell {
         margin-left: 0;
+    }
+
+    .central-admin-main-shell.is-collapsed {
+        margin-left: 0;
+    }
+
+    .central-admin-sidebar.is-collapsed .central-admin-brand-copy,
+    .central-admin-sidebar.is-collapsed .central-admin-nav-label {
+        display: grid;
+    }
+
+    .central-admin-sidebar.is-collapsed .central-admin-sidebar-header,
+    .central-admin-sidebar.is-collapsed .central-admin-brand,
+    .central-admin-sidebar.is-collapsed .central-admin-nav-item,
+    .central-admin-sidebar.is-collapsed .central-admin-nav-section-list {
+        justify-content: initial;
+        justify-items: initial;
     }
 }
 

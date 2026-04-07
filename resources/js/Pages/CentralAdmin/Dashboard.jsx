@@ -1,4 +1,6 @@
 import { Link } from '@inertiajs/react'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AdminLayout from '@/Layouts/AdminLayout'
 import { getPresetLabel, normalizeSettings } from '@/lib/modules'
 import '../admin-dashboard.css'
@@ -46,152 +48,122 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
     return (
         <AdminLayout title="Home">
             <div className="central-admin-page">
-                <section className="central-admin-card central-admin-hero">
-                    <div className="central-admin-hero-copy">
-                        <h1>Painel</h1>
-                    </div>
+                <PageContainer
+                    sidebar={(
+                        <RightSidebarPanel>
+                            <RightSidebarSection title="Contexto" subtitle="Base administrativa">
+                                <div className="right-sidebar-meta">
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Tenants</span>
+                                        <strong>{tenantStats.total}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Ativos</span>
+                                        <strong>{tenantStats.active}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Inativos</span>
+                                        <strong>{tenantStats.inactive}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Media de modulos</span>
+                                        <strong>{averageModules}</strong>
+                                    </div>
+                                </div>
+                            </RightSidebarSection>
 
-                    <div className="central-admin-hero-actions">
-                        <Link href="/admin/clientes" className="central-admin-primary-button">
-                            <i className="fa-solid fa-plus" />
-                            <span>Novo</span>
-                        </Link>
-                        <Link href="/admin/feature-flags" className="central-admin-secondary-button">
-                            <i className="fa-solid fa-sliders" />
-                            <span>Modulos</span>
-                        </Link>
-                    </div>
-                </section>
-
-                <section className="central-admin-stats-grid">
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-buildings" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.total}</strong>
-                            <span>Tenants</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-circle-check" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.active}</strong>
-                            <span>Ativos</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-circle-pause" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{tenantStats.inactive}</strong>
-                            <span>Inativos</span>
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-stat-card">
-                        <div className="central-admin-stat-icon">
-                            <i className="fa-solid fa-toggle-on" />
-                        </div>
-                        <div className="central-admin-stat-copy">
-                            <strong>{averageModules}</strong>
-                            <span>Media</span>
-                        </div>
-                    </article>
-                </section>
-
-                <section className="central-admin-page-grid">
-                    <article className="central-admin-card">
-                        <div className="central-admin-section-head">
-                            <div>
-                                <h2>Ultimos cadastrados</h2>
-                            </div>
-                            <div className="central-admin-section-head-actions">
-                                <Link href="/admin/clientes" className="central-admin-secondary-button">
-                                    <i className="fa-solid fa-table-list" />
+                            <RightSidebarSection title="Acoes" subtitle="Atalhos">
+                                <Link href="/admin/clientes" className="action-button tone-primary">
+                                    <i className="fa-solid fa-buildings" />
                                     <span>Tenants</span>
                                 </Link>
-                            </div>
-                        </div>
-
-                        <div className="central-admin-list">
-                            {latestTenants.length === 0 ? (
-                                <div className="central-admin-empty-state">
-                                    <i className="fa-solid fa-buildings" />
-                                    <h3>Nenhum tenant</h3>
+                                <Link href="/admin/feature-flags" className="action-button tone-ghost">
+                                    <i className="fa-solid fa-sliders" />
+                                    <span>Configuracoes</span>
+                                </Link>
+                                <div className="right-sidebar-note">
+                                    {trackedModules.length} modulos mapeados e {customPresetCount} tenants personalizados.
                                 </div>
-                            ) : null}
-
-                            {latestTenants.map((tenant) => (
-                                <div key={tenant.id} className="central-admin-list-row">
-                                    <div className="central-admin-list-copy">
-                                        <strong>{tenant.name}</strong>
-                                        <small>{tenant.domain || tenant.id}</small>
-                                    </div>
-                                    <div className="central-admin-list-meta">
-                                        <span className={`central-admin-status-pill ${tenant.active ? 'is-active' : 'is-inactive'}`}>
-                                            {tenant.active ? 'Ativo' : 'Inativo'}
-                                        </span>
-                                        <span className="central-admin-badge is-info">{tenant.activeModules} modulos</span>
-                                    </div>
+                            </RightSidebarSection>
+                        </RightSidebarPanel>
+                    )}
+                >
+                    <section className="central-admin-page-grid">
+                        <article className="central-admin-card">
+                            <div className="central-admin-section-head">
+                                <div>
+                                    <h2>Ultimos cadastrados</h2>
                                 </div>
-                            ))}
-                        </div>
-                    </article>
-
-                    <article className="central-admin-card central-admin-note-card">
-                        <h3>Configurações</h3>
-                        <div className="central-admin-pill-row">
-                            <span className="central-admin-badge is-info">{trackedModules.length} modulos</span>
-                            <span className="central-admin-badge is-success">{customPresetCount} customizados</span>
-                        </div>
-                        <Link href="/admin/feature-flags" className="central-admin-primary-button">
-                            <i className="fa-solid fa-sliders" />
-                            <span>Abrir</span>
-                        </Link>
-                    </article>
-                </section>
-
-                <section className="central-admin-card">
-                    <div className="central-admin-section-head">
-                        <div>
-                            <h2>Modulos mais usados</h2>
-                        </div>
-                    </div>
-
-                    <div className="central-admin-list">
-                        {moduleUsage.length === 0 ? (
-                            <div className="central-admin-empty-state">
-                                <i className="fa-solid fa-toggle-on" />
-                                <h3>Sem modulos ativos</h3>
+                                <div className="central-admin-section-head-actions">
+                                    <Link href="/admin/clientes" className="central-admin-secondary-button">
+                                        <i className="fa-solid fa-table-list" />
+                                        <span>Tenants</span>
+                                    </Link>
+                                </div>
                             </div>
-                        ) : null}
 
-                        {moduleUsage.map((module) => {
-                            const percentage = tenantStats.total ? Math.round((module.count / tenantStats.total) * 100) : 0
-
-                            return (
-                                <div key={module.key} className="central-admin-list-row">
-                                    <div className="central-admin-list-copy">
-                                        <strong>{module.label}</strong>
-                                        <small>{module.count} ativos</small>
+                            <div className="central-admin-list">
+                                {latestTenants.length === 0 ? (
+                                    <div className="central-admin-empty-state">
+                                        <i className="fa-solid fa-buildings" />
+                                        <h3>Nenhum tenant</h3>
                                     </div>
-                                    <div className="central-admin-list-meta">
-                                        <div className="central-admin-mini-progress" aria-hidden="true">
-                                            <span style={{ width: `${percentage}%` }} />
+                                ) : null}
+
+                                {latestTenants.map((tenant) => (
+                                    <div key={tenant.id} className="central-admin-list-row">
+                                        <div className="central-admin-list-copy">
+                                            <strong>{tenant.name}</strong>
+                                            <small>{tenant.domain || tenant.id}</small>
                                         </div>
-                                        <span className="central-admin-badge">{percentage}%</span>
+                                        <div className="central-admin-list-meta">
+                                            <span className={`central-admin-status-pill ${tenant.active ? 'is-active' : 'is-inactive'}`}>
+                                                {tenant.active ? 'Ativo' : 'Inativo'}
+                                            </span>
+                                            <span className="central-admin-badge is-info">{tenant.activeModules} modulos</span>
+                                        </div>
                                     </div>
+                                ))}
+                            </div>
+                        </article>
+
+                        <article className="central-admin-card">
+                            <div className="central-admin-section-head">
+                                <div>
+                                    <h2>Modulos mais usados</h2>
                                 </div>
-                            )
-                        })}
-                    </div>
-                </section>
+                            </div>
+
+                            <div className="central-admin-list">
+                                {moduleUsage.length === 0 ? (
+                                    <div className="central-admin-empty-state">
+                                        <i className="fa-solid fa-toggle-on" />
+                                        <h3>Sem modulos ativos</h3>
+                                    </div>
+                                ) : null}
+
+                                {moduleUsage.map((module) => {
+                                    const percentage = tenantStats.total ? Math.round((module.count / tenantStats.total) * 100) : 0
+
+                                    return (
+                                        <div key={module.key} className="central-admin-list-row">
+                                            <div className="central-admin-list-copy">
+                                                <strong>{module.label}</strong>
+                                                <small>{module.count} ativos</small>
+                                            </div>
+                                            <div className="central-admin-list-meta">
+                                                <div className="central-admin-mini-progress" aria-hidden="true">
+                                                    <span style={{ width: `${percentage}%` }} />
+                                                </div>
+                                                <span className="central-admin-badge">{percentage}%</span>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </article>
+                    </section>
+                </PageContainer>
             </div>
         </AdminLayout>
     )

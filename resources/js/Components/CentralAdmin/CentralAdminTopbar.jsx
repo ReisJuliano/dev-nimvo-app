@@ -3,11 +3,16 @@ export default function CentralAdminTopbar({
     subtitle,
     userName,
     onLogout,
+    onToggleCollapsed,
     onToggleMobileSidebar,
 }) {
     return (
         <header className="central-admin-topbar">
             <div className="central-admin-topbar-main">
+                <button type="button" className="central-admin-topbar-collapse" onClick={onToggleCollapsed}>
+                    <i className="fa-solid fa-bars-staggered" />
+                </button>
+
                 <button type="button" className="central-admin-topbar-mobile" onClick={onToggleMobileSidebar}>
                     <i className="fa-solid fa-bars" />
                 </button>
