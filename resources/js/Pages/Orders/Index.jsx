@@ -403,7 +403,6 @@ export default function OrdersIndex({
     const currentDraftStatus = currentDraft ? getOrderStatusMeta(currentDraft.status) : null
     const draftOnlyCount = drafts.filter((draft) => draft.status !== 'sent_to_cashier').length
     const cashierCount = drafts.length - draftOnlyCount
-    const identifiedCustomersCount = drafts.filter((draft) => draft.customer?.name).length
     const activeFilterMeta = filterMetaByStatus[listFilter] || filterMetaByStatus.draft
     const filteredDrafts = useMemo(() => drafts.filter((draft) => draft.status === listFilter), [drafts, listFilter])
     const searchResults = useMemo(() => {
@@ -1293,9 +1292,7 @@ export default function OrdersIndex({
                         <div className="orders-tools-head">
                             {!sidebarCollapsed ? (
                                 <div>
-                                    <span className="orders-page-kicker">Ferramentas</span>
                                     <strong>Atendimentos</strong>
-                                    <small>Fluxo rapido e centralizado.</small>
                                 </div>
                             ) : null}
                             <button
@@ -1374,26 +1371,9 @@ export default function OrdersIndex({
                     <section className="orders-stage">
                         <header className="orders-stage-header">
                             <div>
-                                <span className="orders-page-kicker">Area principal</span>
                                 <h1>{activeFilterMeta.title}</h1>
                             </div>
-                            <div className="orders-stage-stats">
-                                <div className="orders-stage-stat">
-                                    <small>Ativas</small>
-                                    <strong>{drafts.length}</strong>
-                                    <span>registros em andamento</span>
-                                </div>
-                                <div className="orders-stage-stat">
-                                    <small>Clientes</small>
-                                    <strong>{identifiedCustomersCount}</strong>
-                                    <span>com cadastro vinculado</span>
-                                </div>
-                                <div className="orders-stage-stat">
-                                    <small>No caixa</small>
-                                    <strong>{cashierCount}</strong>
-                                    <span>aguardando fechamento</span>
-                                </div>
-                            </div>
+                            <span className="ui-badge info">{filteredDrafts.length} registro(s)</span>
                         </header>
 
                         {filteredDrafts.length ? (
@@ -1454,13 +1434,7 @@ export default function OrdersIndex({
                         ) : (
                             <section className="orders-empty-state ui-card">
                                 <div className="ui-card-body">
-                                    <span className="orders-page-kicker">Fila vazia</span>
                                     <h2>Nenhum atendimento neste recorte</h2>
-                                    <p>
-                                        {listFilter === 'draft'
-                                            ? 'Abra um novo atendimento ou pesquise um existente.'
-                                            : 'Nao ha itens aguardando cobranca agora.'}
-                                    </p>
                                     <div className="orders-empty-state-actions">
                                         <button type="button" className="ui-button" onClick={() => setNewDraftModalOpen(true)}>
                                             <i className="fa-solid fa-plus" />
