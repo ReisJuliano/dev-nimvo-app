@@ -29,8 +29,7 @@ export default function Login() {
     return (
         <GuestLayout
             title="Login - Nimvo"
-            heading="Entrar no sistema"
-            description="Informe suas credenciais para continuar no ambiente de gestao."
+            heading="Entrar"
             centered
         >
             <LoginForm

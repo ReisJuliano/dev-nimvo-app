@@ -25,8 +25,7 @@ export default function ChangePassword() {
     return (
         <GuestLayout
             title="Atualizar Senha - Nimvo"
-            heading="Atualize sua senha"
-            description="Para continuar no sistema, defina uma nova senha de acesso."
+            heading="Trocar senha"
             centered
         >
             <ChangePasswordForm

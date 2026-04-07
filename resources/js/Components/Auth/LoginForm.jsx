@@ -49,8 +49,6 @@ export default function LoginForm({
                         />
                         Permanecer conectado
                     </label>
-
-                    <span className="guest-inline-note">Login administrativo</span>
                 </div>
 
                 <button type="submit" className="guest-submit" disabled={processing}>
@@ -68,9 +66,6 @@ export default function LoginForm({
                 </button>
             </form>
 
-            <div className="guest-card-note">
-                Use seu usuario e senha cadastrados para acessar o sistema.
-            </div>
         </>
     )
 }

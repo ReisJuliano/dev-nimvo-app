@@ -44,7 +44,7 @@ export default function GuestLayout({
                                 </div>
 
                                 <h2>{heading}</h2>
-                                <p>{description}</p>
+                                {description ? <p>{description}</p> : null}
                             </div>
 
                             {children}

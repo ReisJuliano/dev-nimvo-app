@@ -55,9 +55,6 @@ export default function ChangePasswordForm({
                 </button>
             </form>
 
-            <div className="guest-card-note">
-                Seu usuario precisa trocar a senha antes de acessar o dashboard, como no sistema antigo.
-            </div>
         </>
     )
 }

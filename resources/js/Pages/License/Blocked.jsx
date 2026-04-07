@@ -15,9 +15,8 @@ export default function LicenseBlocked({ license }) {
                 </div>
 
                 <div className="license-blocked-copy">
-                    <span className="license-blocked-kicker">Licenca expirada</span>
-                    <h1>Sistema temporariamente bloqueado</h1>
-                    <p>{license?.message || 'A licenca deste tenant venceu e precisa ser regularizada para liberar o uso novamente.'}</p>
+                    <h1>Acesso bloqueado</h1>
+                    <p>{license?.message || 'Regularize a licenca para liberar o acesso.'}</p>
                 </div>
 
                 <div className="license-blocked-grid">
@@ -38,7 +37,7 @@ export default function LicenseBlocked({ license }) {
                 <div className="license-blocked-actions">
                     <button type="button" className="license-blocked-button secondary" onClick={() => window.location.reload()}>
                         <i className="fa-solid fa-rotate-right" />
-                        Atualizar status
+                        Atualizar
                     </button>
                     <button type="button" className="license-blocked-button" onClick={handleLogout}>
                         <i className="fa-solid fa-right-from-bracket" />

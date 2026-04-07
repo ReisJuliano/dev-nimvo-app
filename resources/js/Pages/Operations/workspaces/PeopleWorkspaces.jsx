@@ -7,10 +7,7 @@ import {
     buildRecordsUrl,
     EmptyState,
     Feedback,
-    FeedbackHeader,
     ListCard,
-    MetricGrid,
-    SectionTabs,
     WorkspaceCollectionShell,
     upsertRecord,
 } from './shared'
@@ -104,64 +101,48 @@ export function ProducersWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <SectionTabs
+        <>
+            <Feedback feedback={feedback} />
+            <WorkspaceCollectionShell
                 tabs={[
                     { key: 'active', label: 'Ativos', icon: 'fa-tractor' },
                     { key: 'inactive', label: 'Inativos', icon: 'fa-ban' },
                 ]}
                 activeTab={activeTab}
-                onChange={setActiveTab}
-            />
-            <MetricGrid items={metrics} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Cadastro" subtitle={`${filteredRecords.length} registro(s) no filtro`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? (
-                            filteredRecords.map((record) => (
-                                <ListCard
-                                    key={record.id}
-                                    active={form.id === record.id}
-                                    onClick={() => setForm({ ...emptyForm, ...record })}
-                                    title={record.name}
-                                    badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                    description={record.region || 'Sem regiao informada'}
-                                    meta={[record.document || 'Sem documento', record.phone || record.email || 'Sem contato']}
-                                />
-                            ))
-                        ) : (
-                            <EmptyState title="Sem produtores nesse recorte" text="Cadastre produtores para abastecimento e relacionamento do agro." />
-                        )}
-                    </div>
-                </section>
-
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar produtor' : 'Novo produtor'} subtitle="Cadastro real no tenant" />
+                onTabChange={setActiveTab}
+                listTitle="Produtores"
+                listIcon="fa-tractor"
+                listCount={`${filteredRecords.length} registro(s)`}
+                createLabel="Novo produtor"
+                onCreate={() => setForm(emptyForm)}
+                summaryItems={metrics}
+                emptyState={<EmptyState title="Sem produtores" text="Nenhum cadastro neste filtro." />}
+                formTitle={form.id ? 'Editar produtor' : 'Novo produtor'}
+                formSubtitle="Contato e status"
+                formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
-                            <span>Nome</span>
+                            <FieldLabel icon="fa-signature" text="Nome" />
                             <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
                         </label>
                         <label>
-                            <span>Documento</span>
+                            <FieldLabel icon="fa-id-card" text="Documento" />
                             <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} />
                         </label>
                         <label>
-                            <span>Telefone</span>
+                            <FieldLabel icon="fa-phone" text="Telefone" />
                             <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
                         </label>
                         <label>
-                            <span>E-mail</span>
+                            <FieldLabel icon="fa-envelope" text="E-mail" />
                             <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
                         </label>
                         <label className="span-2">
-                            <span>Regiao</span>
+                            <FieldLabel icon="fa-location-dot" text="Regiao" />
                             <input value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))} />
                         </label>
                         <label className="span-2">
-                            <span>Observacoes</span>
+                            <FieldLabel icon="fa-note-sticky" text="Observacoes" />
                             <textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
                         </label>
                         <label className="ops-workspace-inline-toggle span-2">
@@ -169,22 +150,36 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                             <span>Produtor ativo</span>
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
                                 Limpar
-                            </button>
+                            </ActionButton>
                             {form.id ? (
-                                <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>
+                                <ActionButton tone="danger" onClick={handleDelete}>
                                     Excluir
-                                </button>
+                                </ActionButton>
                             ) : null}
-                            <button type="submit" className="ui-button" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Atualizar produtor' : 'Salvar produtor'}
-                            </button>
+                            <ActionButton type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar produtor'}
+                            </ActionButton>
                         </div>
                     </form>
-                </section>
-            </div>
-        </div>
+                )}
+            >
+                <div className="ops-workspace-list-stack">
+                    {filteredRecords.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={form.id === record.id}
+                            onClick={() => setForm({ ...emptyForm, ...record })}
+                            title={record.name}
+                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
+                            description={record.region || 'Sem regiao'}
+                            meta={[record.document || 'Sem documento', record.phone || record.email || 'Sem contato']}
+                        />
+                    ))}
+                </div>
+            </WorkspaceCollectionShell>
+        </>
     )
 }
 

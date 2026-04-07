@@ -287,11 +287,6 @@ body {
     accent-color: var(--guest-accent);
 }
 
-.guest-inline-note {
-    color: var(--guest-muted);
-    font-size: 0.82rem;
-}
-
 .guest-submit {
     width: 100%;
     margin-top: 8px;
@@ -320,13 +315,6 @@ body {
 .guest-submit:disabled {
     cursor: not-allowed;
     opacity: 0.72;
-}
-
-.guest-card-note {
-    margin-top: 18px;
-    color: var(--guest-muted);
-    font-size: 0.84rem;
-    line-height: 1.6;
 }
 
 @media (max-width: 960px) {

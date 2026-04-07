@@ -30,7 +30,6 @@ export default function AdminLogin() {
         <GuestLayout
             title="Admin Central - Nimvo"
             heading="Admin central"
-            description="Seu acesso para criar tenants e ligar ou desligar os modulos de cada um."
             centered
         >
             <LoginForm
