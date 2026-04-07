@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
 import { router } from '@inertiajs/react'
+import ActionButton from '@/Components/UI/ActionButton'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
@@ -102,150 +105,152 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     return (
         <AppLayout title="Configuracoes" settingsOverride={form}>
             <div className="settings-page">
-                <section className="settings-hero">
-                    <div>
-                        <span>Plataforma modular</span>
-                        <h1>Modulos do sistema</h1>
-                    </div>
-                    <div className="settings-hero-metrics">
-                        <div>
-                            <small>Preset ativo</small>
-                            <strong>{moduleState.presetLabel}</strong>
-                        </div>
-                        <div>
-                            <small>Modulos ativos</small>
-                            <strong>{enabledModulesCount}</strong>
-                        </div>
-                        <div>
-                            <small>Telas visiveis</small>
-                            <strong>{enabledCapabilitiesCount}</strong>
-                        </div>
-                    </div>
-                </section>
-
                 <form className="settings-form" onSubmit={handleSubmit}>
-                    <section className="settings-section">
-                        <div className="settings-section-header">
-                            <div>
-                                <span>Configuracao base</span>
-                                <h2>Presets</h2>
-                            </div>
-                        </div>
-
-                        <div className="settings-preset-grid">
-                            {businessPresets.map((preset) => {
-                                const isActive = preset.key === activePreset
-                                const activeCount = Object.values(preset.modules || {}).filter(Boolean).length
-
-                                return (
-                                    <button
-                                        key={preset.key}
-                                        type="button"
-                                        className={`settings-preset-card ${isActive ? 'active' : ''}`}
-                                        onClick={() => applyPreset(preset)}
-                                    >
-                                        <div className="settings-preset-top">
-                                            <span>{preset.label}</span>
-                                            <strong>{activeCount} modulos</strong>
+                    <PageContainer
+                        sidebar={(
+                            <RightSidebarPanel>
+                                <RightSidebarSection title="Contexto" subtitle="Estado atual">
+                                    <div className="right-sidebar-meta">
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Preset</span>
+                                            <strong>{moduleState.presetLabel}</strong>
                                         </div>
-                                        <small>{isActive ? 'Ativo' : 'Aplicar'}</small>
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </section>
-
-                    {generalOptions.map((option) => {
-                        const active = Boolean(getValueByPath(form, option.key))
-
-                        return (
-                            <section key={option.key} className={`settings-inline-option ${active ? 'active' : ''}`}>
-                                <div>
-                                    <strong>{option.label}</strong>
-                                    <p>{option.description}</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    className={`settings-toggle-button ${active ? 'active' : ''}`}
-                                    onClick={() => handleToggle(option.key)}
-                                >
-                                    <span>{active ? 'Ativado' : 'Desativado'}</span>
-                                </button>
-                            </section>
-                        )
-                    })}
-
-                    <section className="settings-section">
-                        <div className="settings-section-header">
-                            <div>
-                                <span>Modulos do sistema</span>
-                                <h2>Por area</h2>
-                            </div>
-                            <div className="settings-summary-badges">
-                                {activeLabels.slice(0, 6).map((label) => (
-                                    <span key={label} className="settings-summary-badge">
-                                        {label}
-                                    </span>
-                                ))}
-                                {activeLabels.length > 6 ? (
-                                    <span className="settings-summary-badge muted">+{activeLabels.length - 6} ativos</span>
-                                ) : null}
-                            </div>
-                        </div>
-
-                        <div className="settings-modules-stack">
-                            {moduleSections.map((section) => (
-                                <section key={section.section} className="settings-module-section">
-                                    <header>
-                                        <div>
-                                            <strong>{section.section}</strong>
-                                            <small>
-                                                {section.items.filter((item) => moduleState.modules?.[item.key]).length} ativo(s)
-                                            </small>
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Modulos ativos</span>
+                                            <strong>{enabledModulesCount}</strong>
                                         </div>
-                                    </header>
-
-                                    <div className="settings-card-grid">
-                                        {section.items.map((item) => {
-                                            const active = Boolean(moduleState.modules?.[item.key])
-
-                                            return (
-                                                <article key={item.key} className={`settings-toggle-card ${active ? 'active' : ''}`}>
-                                                    <div>
-                                                        <strong>{item.label}</strong>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        className={`settings-toggle-button ${active ? 'active' : ''}`}
-                                                        onClick={() => handleToggle(`modules.${item.key}`)}
-                                                    >
-                                                        <span>{active ? 'Ligado' : 'Desligado'}</span>
-                                                    </button>
-                                                </article>
-                                            )
-                                        })}
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Telas visiveis</span>
+                                            <strong>{enabledCapabilitiesCount}</strong>
+                                        </div>
                                     </div>
-                                </section>
-                            ))}
-                        </div>
-                    </section>
+                                </RightSidebarSection>
 
-                    <div className="settings-actions">
-                        {feedback ? (
-                            <div className={`settings-feedback ${feedback.type}`}>
-                                <strong>{feedback.text}</strong>
-                            </div>
-                        ) : (
-                            <div className="settings-feedback neutral">
-                                <strong>O menu lateral ja esta sendo simulado com os modulos do formulario atual.</strong>
-                            </div>
+                                <RightSidebarSection title="Ativos" subtitle="Resumo rapido">
+                                    <div className="settings-summary-badges">
+                                        {activeLabels.slice(0, 6).map((label) => (
+                                            <span key={label} className="settings-summary-badge">
+                                                {label}
+                                            </span>
+                                        ))}
+                                        {activeLabels.length > 6 ? (
+                                            <span className="settings-summary-badge muted">+{activeLabels.length - 6}</span>
+                                        ) : null}
+                                    </div>
+                                </RightSidebarSection>
+
+                                <RightSidebarSection title="Publicar" subtitle="Aplicar no tenant">
+                                    {feedback ? (
+                                        <div className={`settings-feedback ${feedback.type}`}>
+                                            <strong>{feedback.text}</strong>
+                                        </div>
+                                    ) : (
+                                        <div className="settings-feedback neutral">
+                                            <strong>O menu lateral ja acompanha os modulos do formulario atual.</strong>
+                                        </div>
+                                    )}
+
+                                    <ActionButton icon="fa-floppy-disk" type="submit" disabled={saving}>
+                                        {saving ? 'Salvando...' : 'Salvar configuracoes'}
+                                    </ActionButton>
+                                </RightSidebarSection>
+                            </RightSidebarPanel>
                         )}
+                    >
+                        <section className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h2>Presets</h2>
+                                </div>
+                            </div>
 
-                        <button className="settings-save-button" type="submit" disabled={saving}>
-                            <i className="fa-solid fa-floppy-disk" />
-                            {saving ? 'Salvando...' : 'Salvar configuracoes'}
-                        </button>
-                    </div>
+                            <div className="settings-preset-grid">
+                                {businessPresets.map((preset) => {
+                                    const isActive = preset.key === activePreset
+                                    const activeCount = Object.values(preset.modules || {}).filter(Boolean).length
+
+                                    return (
+                                        <button
+                                            key={preset.key}
+                                            type="button"
+                                            className={`settings-preset-card ${isActive ? 'active' : ''}`}
+                                            onClick={() => applyPreset(preset)}
+                                        >
+                                            <div className="settings-preset-top">
+                                                <span>{preset.label}</span>
+                                                <strong>{activeCount} modulos</strong>
+                                            </div>
+                                            <small>{isActive ? 'Ativo' : 'Aplicar'}</small>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </section>
+
+                        {generalOptions.map((option) => {
+                            const active = Boolean(getValueByPath(form, option.key))
+
+                            return (
+                                <section key={option.key} className={`settings-inline-option ${active ? 'active' : ''}`}>
+                                    <div>
+                                        <strong>{option.label}</strong>
+                                        <p>{option.description}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={`settings-toggle-button ${active ? 'active' : ''}`}
+                                        onClick={() => handleToggle(option.key)}
+                                    >
+                                        <span>{active ? 'Ativado' : 'Desativado'}</span>
+                                    </button>
+                                </section>
+                            )
+                        })}
+
+                        <section className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h2>Modulos por area</h2>
+                                </div>
+                            </div>
+
+                            <div className="settings-modules-stack">
+                                {moduleSections.map((section) => (
+                                    <section key={section.section} className="settings-module-section">
+                                        <header>
+                                            <div>
+                                                <strong>{section.section}</strong>
+                                                <small>
+                                                    {section.items.filter((item) => moduleState.modules?.[item.key]).length} ativo(s)
+                                                </small>
+                                            </div>
+                                        </header>
+
+                                        <div className="settings-card-grid">
+                                            {section.items.map((item) => {
+                                                const active = Boolean(moduleState.modules?.[item.key])
+
+                                                return (
+                                                    <article key={item.key} className={`settings-toggle-card ${active ? 'active' : ''}`}>
+                                                        <div>
+                                                            <strong>{item.label}</strong>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className={`settings-toggle-button ${active ? 'active' : ''}`}
+                                                            onClick={() => handleToggle(`modules.${item.key}`)}
+                                                        >
+                                                            <span>{active ? 'Ligado' : 'Desligado'}</span>
+                                                        </button>
+                                                    </article>
+                                                )
+                                            })}
+                                        </div>
+                                    </section>
+                                ))}
+                            </div>
+                        </section>
+                    </PageContainer>
                 </form>
             </div>
         </AppLayout>

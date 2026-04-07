@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { usePage } from '@inertiajs/react'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import ActiveRegisterPanel from '@/Components/CashRegister/ActiveRegisterPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import OpenRegisterCard from '@/Components/CashRegister/OpenRegisterCard'
@@ -352,65 +354,72 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                     </div>
                 ) : null}
 
-                <section className="cash-register-hero ui-card">
-                    <div className="ui-card-body">
-                        <div className="cash-register-hero-grid">
-                            <div>
-                                <span className={`ui-badge ${openRegisterState ? 'success' : 'warning'}`}>
-                                    {openRegisterState ? 'Caixa aberto' : 'Caixa fechado'}
-                                </span>
-                                <h1>Caixa</h1>
-                            </div>
-                            <div className="cash-register-hero-metrics">
-                                <div>
-                                    <small>Historico</small>
-                                    <strong>{history.length}</strong>
+                <PageContainer
+                    toolbar={(
+                        <section className="ui-tabs">
+                            <button
+                                type="button"
+                                className={`ui-tab ${activeTab === 'active' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('active')}
+                            >
+                                <i className="fa-solid fa-vault" />
+                                <span>Atual</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`ui-tab ${activeTab === 'history' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('history')}
+                            >
+                                <i className="fa-solid fa-clock-rotate-left" />
+                                <span>Historico</span>
+                            </button>
+                        </section>
+                    )}
+                    sidebar={(
+                        <RightSidebarPanel>
+                            <RightSidebarSection title="Contexto" subtitle="Estado do caixa">
+                                <div className="right-sidebar-meta">
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Status</span>
+                                        <strong>{openRegisterState ? 'Aberto' : 'Fechado'}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Historico</span>
+                                        <strong>{history.length}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Conferencia</span>
+                                        <strong>{requireConference ? 'Obrigatoria' : 'Opcional'}</strong>
+                                    </div>
+                                    {openRegisterState?.cashRegister?.user_name ? (
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Operador</span>
+                                            <strong>{openRegisterState.cashRegister.user_name}</strong>
+                                        </div>
+                                    ) : null}
                                 </div>
-                                <div>
-                                    <small>Conferencia guiada</small>
-                                    <strong>{requireConference ? 'Obrigatoria' : 'Opcional'}</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                            </RightSidebarSection>
+                        </RightSidebarPanel>
+                    )}
+                >
+                    {activeTab === 'active' ? (
+                        openRegisterState ? (
+                            <ActiveRegisterPanel
+                                report={openRegisterState}
+                                onMovement={handleMovement}
+                                onClose={handleClose}
+                                onStartCloseConference={handleStartCloseConference}
+                                requireConference={requireConference}
+                            />
+                        ) : (
+                            <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
+                        )
+                    ) : null}
 
-                <section className="ui-tabs">
-                    <button
-                        type="button"
-                        className={`ui-tab ${activeTab === 'active' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('active')}
-                    >
-                        <i className="fa-solid fa-vault" />
-                        <span>Atual</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`ui-tab ${activeTab === 'history' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('history')}
-                    >
-                        <i className="fa-solid fa-clock-rotate-left" />
-                        <span>Historico</span>
-                    </button>
-                </section>
-
-                {activeTab === 'active' ? (
-                    openRegisterState ? (
-                        <ActiveRegisterPanel
-                            report={openRegisterState}
-                            onMovement={handleMovement}
-                            onClose={handleClose}
-                            onStartCloseConference={handleStartCloseConference}
-                            requireConference={requireConference}
-                        />
-                    ) : (
-                        <OpenRegisterCard onSubmit={handleOpen} loading={loading} />
-                    )
-                ) : null}
-
-                {activeTab === 'history' ? (
-                    <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
-                ) : null}
+                    {activeTab === 'history' ? (
+                        <RegisterHistoryTable history={history} onViewReport={handleViewReport} />
+                    ) : null}
+                </PageContainer>
             </div>
 
             {closeConferenceModal ? (

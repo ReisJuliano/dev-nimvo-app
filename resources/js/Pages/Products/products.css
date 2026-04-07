@@ -3,6 +3,22 @@
     gap: 1rem;
 }
 
+.products-sidebar-field {
+    display: grid;
+    gap: 0.42rem;
+}
+
+.products-sidebar-field span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--app-text-secondary);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
 .products-hero,
 .products-toolbar,
 .products-table-card,

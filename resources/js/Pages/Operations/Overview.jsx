@@ -1,5 +1,7 @@
 import { router } from '@inertiajs/react'
 import { useState } from 'react'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import DataTable from '@/Components/Operations/DataTable'
 import FilterBar from '@/Components/Operations/FilterBar'
@@ -81,110 +83,109 @@ export default function OperationsOverview({ module }) {
     return (
         <AppLayout title={module.title} defaultCollapsed={isReportsCatalog}>
             <div className="operations-page">
-                <section className="operations-hero">
-                    <div>
-                        <span>{isReportsCatalog ? 'Relatorios' : 'Operacoes'}</span>
-                        <h1>{heroTitle}</h1>
-                    </div>
-                    <div className="operations-hero-badges">
-                        <span className="ui-badge success">
-                            {isReportsCatalog
-                                ? `${module.catalog?.categories?.length || 0} categoria(s)`
-                                : hasSections
-                                ? `${module.sections.length} aba(s)`
-                                : modulePanels.length
-                                  ? `${modulePanels.length} painel(is)`
-                                  : `${moduleTables.length} tabela(s)`}
-                        </span>
-                        {isReportsCatalog ? (
-                            <span className="ui-badge warning">
-                                {module.catalog?.categories?.reduce((total, category) => total + (category.report_count || 0), 0) || 0} relatorio(s)
-                            </span>
-                        ) : null}
-                        {!isReportsCatalog && module.filters?.product ? (
-                            <span className="ui-badge warning">Produto: {module.filters.product}</span>
-                        ) : null}
-                    </div>
-                </section>
-
-                {isReportsCatalog ? null : <FilterBar filters={module.filters} />}
-
-                {isReportsCatalog ? (
-                    <ReportsShowcase module={module} />
-                ) : hasSections ? (
-                    <>
-                        <section className="operations-section-tabs">
-                            {module.sections.map((section) => (
+                <PageContainer
+                    toolbar={!isReportsCatalog && !hasSections && availableTabs.length > 1 ? (
+                        <section className="ui-tabs">
+                            {availableTabs.map((tab) => (
                                 <button
-                                    key={section.key}
+                                    key={tab.key}
                                     type="button"
-                                    className={`operations-section-tab ${section.key === currentSection.key ? 'active' : ''}`}
-                                    onClick={() => handleSectionChange(section.key)}
+                                    className={`ui-tab ${resolvedActiveTab === tab.key ? 'active' : ''}`}
+                                    onClick={() => setActiveTab(tab.key)}
                                 >
-                                    <i className={`fa-solid ${section.icon || 'fa-layer-group'}`} />
-                                    <span>{section.label || section.title}</span>
+                                    <i className={`fa-solid ${tab.icon}`} />
+                                    <span>{tab.label}</span>
                                 </button>
                             ))}
                         </section>
+                    ) : null}
+                    sidebar={(
+                        <RightSidebarPanel>
+                            {!isReportsCatalog ? (
+                                <RightSidebarSection title="Filtros" subtitle="Atualizar recorte">
+                                    <FilterBar filters={module.filters} />
+                                </RightSidebarSection>
+                            ) : null}
 
-                        <section className="operations-section-hero">
-                            <div>
-                                <span className="operations-section-kicker">Visao ativa</span>
-                                <h2>{currentSection.title}</h2>
-                            </div>
-                            <div className="operations-section-badges">
-                                {currentSection.metrics?.length ? (
-                                    <span className="ui-badge success">{currentSection.metrics.length} indicador(es)</span>
-                                ) : null}
-                                {currentSection.tables?.length ? (
-                                    <span className="ui-badge warning">{currentSection.tables.length} tabela(s)</span>
-                                ) : null}
-                                {currentSection.panels?.length ? (
-                                    <span className="ui-badge">{currentSection.panels.length} painel(is)</span>
-                                ) : null}
-                            </div>
-                        </section>
-
-                        <MetricGrid metrics={currentSection.metrics} />
-                        <InfoPanels panels={currentSection.panels} />
-
-                        <div className="operations-table-grid">
-                            {currentSection.tables.map((table) => (
-                                <DataTable key={`${currentSection.key}-${table.title}`} table={table} />
-                            ))}
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        {availableTabs.length > 1 ? (
-                            <section className="ui-tabs">
-                                {availableTabs.map((tab) => (
+                            <RightSidebarSection title="Contexto" subtitle={isReportsCatalog ? heroTitle : currentSection?.title || heroTitle}>
+                                <div className="right-sidebar-meta">
+                                    <div className="right-sidebar-meta-item">
+                                        <span>{isReportsCatalog ? 'Categorias' : 'Abas'}</span>
+                                        <strong>
+                                            {isReportsCatalog
+                                                ? module.catalog?.categories?.length || 0
+                                                : hasSections
+                                                    ? module.sections.length
+                                                    : 0}
+                                        </strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Indicadores</span>
+                                        <strong>{(currentSection?.metrics || moduleMetrics).length || 0}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Tabelas</span>
+                                        <strong>{(currentSection?.tables || moduleTables).length || 0}</strong>
+                                    </div>
+                                    {isReportsCatalog ? (
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Relatorios</span>
+                                            <strong>{module.catalog?.categories?.reduce((total, category) => total + (category.report_count || 0), 0) || 0}</strong>
+                                        </div>
+                                    ) : null}
+                                    {!isReportsCatalog && module.filters?.product ? (
+                                        <div className="right-sidebar-note">
+                                            Produto em foco: {module.filters.product}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </RightSidebarSection>
+                        </RightSidebarPanel>
+                    )}
+                >
+                    {isReportsCatalog ? (
+                        <ReportsShowcase module={module} />
+                    ) : hasSections ? (
+                        <>
+                            <section className="operations-section-tabs">
+                                {module.sections.map((section) => (
                                     <button
-                                        key={tab.key}
+                                        key={section.key}
                                         type="button"
-                                        className={`ui-tab ${resolvedActiveTab === tab.key ? 'active' : ''}`}
-                                        onClick={() => setActiveTab(tab.key)}
+                                        className={`operations-section-tab ${section.key === currentSection.key ? 'active' : ''}`}
+                                        onClick={() => handleSectionChange(section.key)}
                                     >
-                                        <i className={`fa-solid ${tab.icon}`} />
-                                        <span>{tab.label}</span>
+                                        <i className={`fa-solid ${section.icon || 'fa-layer-group'}`} />
+                                        <span>{section.label || section.title}</span>
                                     </button>
                                 ))}
                             </section>
-                        ) : null}
 
-                        {resolvedActiveTab !== 'tables' && moduleMetrics.length ? <MetricGrid metrics={moduleMetrics} /> : null}
+                            <MetricGrid metrics={currentSection.metrics} />
+                            <InfoPanels panels={currentSection.panels} />
 
-                        {resolvedActiveTab !== 'tables' ? <InfoPanels panels={modulePanels} /> : null}
-
-                        {resolvedActiveTab !== 'insights' && moduleTables.length ? (
                             <div className="operations-table-grid">
-                                {moduleTables.map((table) => (
-                                    <DataTable key={table.title} table={table} />
+                                {currentSection.tables.map((table) => (
+                                    <DataTable key={`${currentSection.key}-${table.title}`} table={table} />
                                 ))}
                             </div>
-                        ) : null}
-                    </>
-                )}
+                        </>
+                    ) : (
+                        <>
+                            {resolvedActiveTab !== 'tables' && moduleMetrics.length ? <MetricGrid metrics={moduleMetrics} /> : null}
+
+                            {resolvedActiveTab !== 'tables' ? <InfoPanels panels={modulePanels} /> : null}
+
+                            {resolvedActiveTab !== 'insights' && moduleTables.length ? (
+                                <div className="operations-table-grid">
+                                    {moduleTables.map((table) => (
+                                        <DataTable key={table.title} table={table} />
+                                    ))}
+                                </div>
+                            ) : null}
+                        </>
+                    )}
+                </PageContainer>
             </div>
 
             {currentDialog?.type === 'cash_register_closing_report' ? (

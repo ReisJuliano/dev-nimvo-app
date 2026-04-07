@@ -1,9 +1,12 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { usePage } from '@inertiajs/react'
+import ActionButton from '@/Components/UI/ActionButton'
+import DataList from '@/Components/UI/DataList'
+import PageContainer from '@/Components/UI/PageContainer'
+import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
-import ProductToolbar from '@/Components/Products/ProductToolbar'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
@@ -409,123 +412,171 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     return (
         <AppLayout title="Produtos">
             <div className="products-page">
-                <section className="products-hero ui-card">
-                    <div className="ui-card-body">
-                        <div className="products-hero-grid">
-                            <div>
-                                <h1>Catalogo de produtos</h1>
-                                <p>
-                                    Cadastro, consulta e ajuste de produtos.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="ui-tabs">
-                    <button
-                        type="button"
-                        className={`ui-tab ${activeTab === 'catalog' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('catalog')}
-                    >
-                        <i className="fa-solid fa-box-open" />
-                        <span>Catalogo</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`ui-tab ${activeTab === 'stock' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('stock')}
-                    >
-                        <i className="fa-solid fa-triangle-exclamation" />
-                        <span>Reposicao</span>
-                    </button>
-                    {isFashionMode ? (
-                        <>
+                <PageContainer
+                    toolbar={(
+                        <section className="ui-tabs">
                             <button
                                 type="button"
-                                className={`ui-tab ${activeTab === 'grade' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('grade')}
+                                className={`ui-tab ${activeTab === 'catalog' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('catalog')}
                             >
-                                <i className="fa-solid fa-shirt" />
-                                <span>Grade</span>
+                                <i className="fa-solid fa-box-open" />
+                                <span>Catalogo</span>
                             </button>
                             <button
                                 type="button"
-                                className={`ui-tab ${activeTab === 'showcase' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('showcase')}
+                                className={`ui-tab ${activeTab === 'stock' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('stock')}
                             >
-                                <i className="fa-solid fa-store" />
-                                <span>Vitrine</span>
+                                <i className="fa-solid fa-triangle-exclamation" />
+                                <span>Reposicao</span>
                             </button>
-                        </>
-                    ) : (
-                        <button
-                            type="button"
-                            className={`ui-tab ${activeTab === 'pricing' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('pricing')}
-                        >
-                            <i className="fa-solid fa-tags" />
-                            <span>Precificacao</span>
-                        </button>
+                            {isFashionMode ? (
+                                <>
+                                    <button
+                                        type="button"
+                                        className={`ui-tab ${activeTab === 'grade' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('grade')}
+                                    >
+                                        <i className="fa-solid fa-shirt" />
+                                        <span>Grade</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`ui-tab ${activeTab === 'showcase' ? 'active' : ''}`}
+                                        onClick={() => setActiveTab('showcase')}
+                                    >
+                                        <i className="fa-solid fa-store" />
+                                        <span>Vitrine</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className={`ui-tab ${activeTab === 'pricing' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('pricing')}
+                                >
+                                    <i className="fa-solid fa-tags" />
+                                    <span>Precificacao</span>
+                                </button>
+                            )}
+                        </section>
                     )}
-                </section>
+                    sidebar={(
+                        <RightSidebarPanel>
+                            <RightSidebarSection title="Filtros" subtitle="Busca e recortes">
+                                <label className="products-sidebar-field">
+                                    <span>
+                                        <i className="fa-solid fa-magnifying-glass" />
+                                        Busca
+                                    </span>
+                                    <input
+                                        className="products-input"
+                                        type="search"
+                                        placeholder={isFashionMode ? 'Nome, codigo, grade ou colecao' : 'Nome, codigo ou EAN'}
+                                        value={search}
+                                        onChange={(event) => setSearch(event.target.value)}
+                                    />
+                                </label>
 
-                <ProductToolbar
-                    search={search}
-                    onSearchChange={setSearch}
-                    categoryId={categoryId}
-                    onCategoryChange={setCategoryId}
-                    collection={collection}
-                    onCollectionChange={setCollection}
-                    collections={collections}
-                    visibility={visibility}
-                    onVisibilityChange={setVisibility}
-                    categories={categoryOptions}
-                    onCreate={handleCreate}
-                    isFashionMode={isFashionMode}
-                />
+                                <label className="products-sidebar-field">
+                                    <span>
+                                        <i className="fa-solid fa-layer-group" />
+                                        Categoria
+                                    </span>
+                                    <select className="products-input" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                                        <option value="">Todas</option>
+                                        {categoryOptions.map((category) => (
+                                            <option key={category.id} value={category.id}>
+                                                {category.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
 
-                <section className="products-summary-card">
-                    <div className="products-summary-grid">
-                        <article className="tone-primary">
-                            <span className="products-summary-kicker">Produtos</span>
-                            <span>Total filtrado</span>
-                            <strong>{formatNumber(summary.total)}</strong>
-                        </article>
-                        <article className="tone-warning">
-                            <span className="products-summary-kicker">Estoque</span>
-                            <span>Estoque baixo</span>
-                            <strong>{formatNumber(summary.lowStock)}</strong>
-                        </article>
-                        {isFashionMode ? (
-                            <>
-                                <article className="tone-accent">
-                                    <span className="products-summary-kicker">Colecoes</span>
-                                    <span>Colecoes no filtro</span>
-                                    <strong>{formatNumber(summary.collections)}</strong>
-                                </article>
-                                <article className="tone-success">
-                                    <span className="products-summary-kicker">Vitrine</span>
-                                    <span>Itens publicados</span>
-                                    <strong>{formatNumber(summary.published)}</strong>
-                                </article>
-                            </>
-                        ) : (
-                            <article className="tone-success">
-                                <span className="products-summary-kicker">Valor</span>
-                                <span>Valor em estoque</span>
-                                <strong>{formatMoney(summary.stockValue)}</strong>
-                            </article>
+                                {isFashionMode ? (
+                                    <label className="products-sidebar-field">
+                                        <span>
+                                            <i className="fa-solid fa-shirt" />
+                                            Colecao
+                                        </span>
+                                        <select className="products-input" value={collection} onChange={(event) => setCollection(event.target.value)}>
+                                            <option value="">Todas</option>
+                                            {collections.map((collectionName) => (
+                                                <option key={collectionName} value={collectionName}>
+                                                    {collectionName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                ) : null}
+
+                                {isFashionMode ? (
+                                    <label className="products-sidebar-field">
+                                        <span>
+                                            <i className="fa-solid fa-store" />
+                                            Vitrine
+                                        </span>
+                                        <select className="products-input" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
+                                            <option value="all">Tudo</option>
+                                            <option value="published">Publicado</option>
+                                            <option value="hidden">Oculto</option>
+                                        </select>
+                                    </label>
+                                ) : null}
+                            </RightSidebarSection>
+
+                            <RightSidebarSection title="Contexto" subtitle="Resumo do recorte">
+                                <div className="right-sidebar-meta">
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Total</span>
+                                        <strong>{formatNumber(summary.total)}</strong>
+                                    </div>
+                                    <div className="right-sidebar-meta-item">
+                                        <span>Estoque baixo</span>
+                                        <strong>{formatNumber(summary.lowStock)}</strong>
+                                    </div>
+                                    {isFashionMode ? (
+                                        <>
+                                            <div className="right-sidebar-meta-item">
+                                                <span>Colecoes</span>
+                                                <strong>{formatNumber(summary.collections)}</strong>
+                                            </div>
+                                            <div className="right-sidebar-meta-item">
+                                                <span>Publicados</span>
+                                                <strong>{formatNumber(summary.published)}</strong>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="right-sidebar-meta-item">
+                                            <span>Valor em estoque</span>
+                                            <strong>{formatMoney(summary.stockValue)}</strong>
+                                        </div>
+                                    )}
+                                </div>
+                            </RightSidebarSection>
+                        </RightSidebarPanel>
+                    )}
+                >
+                    <DataList
+                        title="Produtos"
+                        icon="fa-box-open"
+                        count={`${formatNumber(filteredProducts.length)} item(ns)`}
+                        actions={(
+                            <ActionButton icon="fa-plus" onClick={handleCreate}>
+                                Novo produto
+                            </ActionButton>
                         )}
-                    </div>
-                </section>
-
-                <ProductsTable
-                    products={filteredProducts}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    isFashionMode={isFashionMode}
-                />
+                    >
+                        <ProductsTable
+                            products={filteredProducts}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            isFashionMode={isFashionMode}
+                            showHeader={false}
+                        />
+                    </DataList>
+                </PageContainer>
             </div>
 
             <ProductFormModal

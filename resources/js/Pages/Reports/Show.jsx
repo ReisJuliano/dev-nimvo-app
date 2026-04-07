@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
+import PageContainer from '@/Components/UI/PageContainer'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import './reports.css'
@@ -221,147 +222,151 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                     </div>
                 </header>
 
-                <form className="report-filter-panel" onSubmit={handleSubmit}>
-                    <div className="report-filter-modes">
-                        {SCOPE_OPTIONS.map((option) => (
-                            <button
-                                key={option.key}
-                                type="button"
-                                className={`report-scope-button ${scope === option.key ? 'active' : ''}`}
-                                onClick={() => setScope(option.key)}
-                            >
-                                <i className={`fa-solid ${option.icon}`} />
-                                <span>{option.label}</span>
-                            </button>
+                <PageContainer
+                    sidebar={(
+                        <form className="report-filter-panel" onSubmit={handleSubmit}>
+                            <div className="report-filter-modes">
+                                {SCOPE_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.key}
+                                        type="button"
+                                        className={`report-scope-button ${scope === option.key ? 'active' : ''}`}
+                                        onClick={() => setScope(option.key)}
+                                    >
+                                        <i className={`fa-solid ${option.icon}`} />
+                                        <span>{option.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="report-filter-grid">
+                                {scope === 'date' ? (
+                                    <label>
+                                        <span>
+                                            <i className="fa-solid fa-calendar-day" />
+                                            Data
+                                        </span>
+                                        <input name="date" type="date" defaultValue={filters.date} />
+                                    </label>
+                                ) : null}
+
+                                {scope === 'month' ? (
+                                    <label>
+                                        <span>
+                                            <i className="fa-solid fa-calendar" />
+                                            Mes
+                                        </span>
+                                        <input name="month" type="month" defaultValue={filters.month} />
+                                    </label>
+                                ) : null}
+
+                                {scope === 'months' ? (
+                                    <>
+                                        <label>
+                                            <span>
+                                                <i className="fa-solid fa-calendar-plus" />
+                                                Mes de
+                                            </span>
+                                            <input name="month_from" type="month" defaultValue={filters.month_from} />
+                                        </label>
+                                        <label>
+                                            <span>
+                                                <i className="fa-solid fa-calendar-check" />
+                                                Mes ate
+                                            </span>
+                                            <input name="month_to" type="month" defaultValue={filters.month_to} />
+                                        </label>
+                                    </>
+                                ) : null}
+
+                                {scope === 'range' ? (
+                                    <>
+                                        <label>
+                                            <span>
+                                                <i className="fa-solid fa-calendar-plus" />
+                                                Data de
+                                            </span>
+                                            <input name="from" type="date" defaultValue={filters.from} />
+                                        </label>
+                                        <label>
+                                            <span>
+                                                <i className="fa-solid fa-calendar-check" />
+                                                Data ate
+                                            </span>
+                                            <input name="to" type="date" defaultValue={filters.to} />
+                                        </label>
+                                    </>
+                                ) : null}
+
+                                {scope === 'year' ? (
+                                    <label>
+                                        <span>
+                                            <i className="fa-solid fa-hashtag" />
+                                            Ano
+                                        </span>
+                                        <input name="year" type="number" min="2000" max="2100" defaultValue={filters.year} />
+                                    </label>
+                                ) : null}
+
+                                <label>
+                                    <span>
+                                        <i className="fa-solid fa-list-ol" />
+                                        Linhas
+                                    </span>
+                                    <select name="per_page" defaultValue={String(filters.per_page)}>
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div className="report-filter-actions">
+                                <button className="report-button report-button-primary" type="submit">
+                                    <i className="fa-solid fa-filter" />
+                                    <span>Aplicar</span>
+                                </button>
+                                <button className="report-button" type="button" onClick={handleReset}>
+                                    <i className="fa-solid fa-rotate-left" />
+                                    <span>Padrao</span>
+                                </button>
+                            </div>
+                        </form>
+                    )}
+                >
+                    <section className="report-summary-grid">
+                        {summary.map((item) => (
+                            <SummaryCard key={item.label} item={item} />
                         ))}
-                    </div>
+                    </section>
 
-                    <div className="report-filter-grid">
-                        {scope === 'date' ? (
-                            <label>
+                    <section className="report-table-card">
+                        <div className="report-table-toolbar">
+                            <div className="report-table-count">
+                                <span>{pagination.total || 0} registros</span>
+                            </div>
+
+                            <div className="report-table-pagination">
+                                <button type="button" onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1}>
+                                    <i className="fa-solid fa-chevron-left" />
+                                </button>
                                 <span>
-                                    <i className="fa-solid fa-calendar-day" />
-                                    Data
+                                    {pagination.current_page}/{pagination.last_page || 1}
                                 </span>
-                                <input name="date" type="date" defaultValue={filters.date} />
-                            </label>
-                        ) : null}
-
-                        {scope === 'month' ? (
-                            <label>
-                                <span>
-                                    <i className="fa-solid fa-calendar" />
-                                    Mes
-                                </span>
-                                <input name="month" type="month" defaultValue={filters.month} />
-                            </label>
-                        ) : null}
-
-                        {scope === 'months' ? (
-                            <>
-                                <label>
-                                    <span>
-                                        <i className="fa-solid fa-calendar-plus" />
-                                        Mes de
-                                    </span>
-                                    <input name="month_from" type="month" defaultValue={filters.month_from} />
-                                </label>
-                                <label>
-                                    <span>
-                                        <i className="fa-solid fa-calendar-check" />
-                                        Mes ate
-                                    </span>
-                                    <input name="month_to" type="month" defaultValue={filters.month_to} />
-                                </label>
-                            </>
-                        ) : null}
-
-                        {scope === 'range' ? (
-                            <>
-                                <label>
-                                    <span>
-                                        <i className="fa-solid fa-calendar-plus" />
-                                        Data de
-                                    </span>
-                                    <input name="from" type="date" defaultValue={filters.from} />
-                                </label>
-                                <label>
-                                    <span>
-                                        <i className="fa-solid fa-calendar-check" />
-                                        Data ate
-                                    </span>
-                                    <input name="to" type="date" defaultValue={filters.to} />
-                                </label>
-                            </>
-                        ) : null}
-
-                        {scope === 'year' ? (
-                            <label>
-                                <span>
-                                    <i className="fa-solid fa-hashtag" />
-                                    Ano
-                                </span>
-                                <input name="year" type="number" min="2000" max="2100" defaultValue={filters.year} />
-                            </label>
-                        ) : null}
-
-                        <label>
-                            <span>
-                                <i className="fa-solid fa-list-ol" />
-                                Linhas
-                            </span>
-                            <select name="per_page" defaultValue={String(filters.per_page)}>
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </label>
-                    </div>
-
-                    <div className="report-filter-actions">
-                        <button className="report-button report-button-primary" type="submit">
-                            <i className="fa-solid fa-filter" />
-                            <span>Aplicar</span>
-                        </button>
-                        <button className="report-button" type="button" onClick={handleReset}>
-                            <i className="fa-solid fa-rotate-left" />
-                            <span>Padrao</span>
-                        </button>
-                    </div>
-                </form>
-
-                <section className="report-summary-grid">
-                    {summary.map((item) => (
-                        <SummaryCard key={item.label} item={item} />
-                    ))}
-                </section>
-
-                <section className="report-table-card">
-                    <div className="report-table-toolbar">
-                        <div className="report-table-count">
-                            <span>{pagination.total || 0} registros</span>
+                                <button
+                                    type="button"
+                                    onClick={() => goToPage(pagination.current_page + 1)}
+                                    disabled={pagination.current_page >= pagination.last_page}
+                                >
+                                    <i className="fa-solid fa-chevron-right" />
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="report-table-pagination">
-                            <button type="button" onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1}>
-                                <i className="fa-solid fa-chevron-left" />
-                            </button>
-                            <span>
-                                {pagination.current_page}/{pagination.last_page || 1}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => goToPage(pagination.current_page + 1)}
-                                disabled={pagination.current_page >= pagination.last_page}
-                            >
-                                <i className="fa-solid fa-chevron-right" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <ReportTable columns={columns} rows={rows} />
-                </section>
+                        <ReportTable columns={columns} rows={rows} />
+                    </section>
+                </PageContainer>
             </div>
         </AppLayout>
     )

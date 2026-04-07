@@ -99,6 +99,30 @@
     align-items: center;
 }
 
+.dashboard-sidebar-summary {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.dashboard-sidebar-card {
+    display: grid;
+    gap: 0.22rem;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    background: rgba(248, 250, 253, 0.9);
+}
+
+.dashboard-sidebar-card span,
+.dashboard-sidebar-card small {
+    color: var(--app-text-muted);
+}
+
+.dashboard-sidebar-card strong {
+    color: var(--app-text-primary);
+    font-size: 1.1rem;
+}
+
 .dashboard-metrics-grid {
     display: grid;
     gap: 1rem;

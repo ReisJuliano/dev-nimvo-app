@@ -1,23 +1,25 @@
 import { formatMoney, formatNumber } from '@/lib/format'
 
-export default function ProductsTable({ products, onEdit, onDelete, isFashionMode = false }) {
+export default function ProductsTable({ products, onEdit, onDelete, isFashionMode = false, showHeader = true }) {
     if (!products.length) {
         return <div className="products-empty-state">Nenhum produto encontrado para os filtros atuais.</div>
     }
 
     return (
         <section className="products-table-card ui-table-card">
-            <div className="products-table-header">
-                <div>
-                    <h2>{isFashionMode ? 'Pecas e variacoes cadastradas' : 'Produtos cadastrados'}</h2>
-                    <p>
-                        {isFashionMode
-                            ? 'Catalogo com referencia, grade, colecao, vitrine e saldo por item.'
-                            : 'Lista de produtos, precos e saldo.'}
-                    </p>
+            {showHeader ? (
+                <div className="products-table-header">
+                    <div>
+                        <h2>{isFashionMode ? 'Pecas e variacoes cadastradas' : 'Produtos cadastrados'}</h2>
+                        <p>
+                            {isFashionMode
+                                ? 'Catalogo com referencia, grade, colecao, vitrine e saldo por item.'
+                                : 'Lista de produtos, precos e saldo.'}
+                        </p>
+                    </div>
+                    <span className="products-table-counter">{formatNumber(products.length)} item(ns)</span>
                 </div>
-                <span className="products-table-counter">{formatNumber(products.length)} item(ns)</span>
-            </div>
+            ) : null}
             <div className="products-table-scroll ui-table-wrap">
                 <table className="products-table ui-table">
                     <thead>
