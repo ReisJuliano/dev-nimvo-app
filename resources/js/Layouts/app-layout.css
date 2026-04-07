@@ -15,6 +15,16 @@
     overflow: hidden;
 }
 
+.app-layout-root.overlay-nav,
+.app-layout-root.no-sidebar {
+    background: #f5f6f8;
+}
+
+.app-layout-root.overlay-nav .app-layout-backdrop,
+.app-layout-root.no-sidebar .app-layout-backdrop {
+    display: none;
+}
+
 .app-layout-backdrop {
     position: fixed;
     inset: auto;
@@ -36,6 +46,22 @@
     position: relative;
     display: flex;
     min-height: 100vh;
+}
+
+.app-layout-root.overlay-nav .app-sidebar {
+    width: min(86vw, 320px);
+    transform: translateX(-120%);
+}
+
+.app-layout-root.overlay-nav .app-sidebar.mobile-open {
+    transform: translateX(0);
+}
+
+.app-layout-root.overlay-nav .app-main,
+.app-layout-root.overlay-nav .app-main.collapsed,
+.app-layout-root.no-sidebar .app-main,
+.app-layout-root.no-sidebar .app-main.collapsed {
+    margin-left: 0;
 }
 
 .app-sidebar {
@@ -416,6 +442,11 @@
     backdrop-filter: blur(18px);
 }
 
+.app-layout-root.overlay-nav .app-topbar {
+    background: #f5f6f8;
+    backdrop-filter: none;
+}
+
 .app-topbar-left,
 .app-topbar-right {
     display: flex;
@@ -479,6 +510,12 @@
 
 .app-mobile-toggle:hover {
     background: white;
+}
+
+.app-layout-root.overlay-nav .app-mobile-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .app-mobile-toggle-floating {
@@ -582,6 +619,10 @@
 
 .app-page-content.app-page-content-flush {
     padding: 0;
+}
+
+.app-layout-root.no-sidebar .app-page-content {
+    padding-inline: 0;
 }
 
 .app-license-banner {

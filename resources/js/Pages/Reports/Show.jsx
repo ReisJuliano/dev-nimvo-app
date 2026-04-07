@@ -7,7 +7,8 @@ import './reports.css'
 const SCOPE_OPTIONS = [
     { key: 'date', label: 'Data', icon: 'fa-calendar-day' },
     { key: 'month', label: 'Mes', icon: 'fa-calendar' },
-    { key: 'range', label: 'Periodo', icon: 'fa-calendar-days' },
+    { key: 'months', label: 'Mes a mes', icon: 'fa-calendar-days' },
+    { key: 'range', label: 'Periodo', icon: 'fa-arrow-right-long' },
     { key: 'year', label: 'Ano', icon: 'fa-hashtag' },
 ]
 
@@ -17,6 +18,8 @@ function buildPayload(filters, overrides = {}) {
             scope: overrides.scope ?? filters.scope,
             date: overrides.date ?? filters.date,
             month: overrides.month ?? filters.month,
+            month_from: overrides.month_from ?? filters.month_from,
+            month_to: overrides.month_to ?? filters.month_to,
             year: overrides.year ?? filters.year,
             from: overrides.from ?? filters.from,
             to: overrides.to ?? filters.to,
@@ -56,26 +59,30 @@ function renderValue(value, format) {
 
 function buildPeriodLabel(filters) {
     if (filters.scope === 'date') {
-        return `Data: ${formatDate(filters.date)}`
+        return formatDate(filters.date)
     }
 
     if (filters.scope === 'year') {
-        return `Ano: ${filters.year}`
+        return filters.year
+    }
+
+    if (filters.scope === 'months') {
+        return `${filters.month_from} ate ${filters.month_to}`
     }
 
     if (filters.scope === 'range') {
-        return `Periodo: ${formatDate(filters.from)} ate ${formatDate(filters.to)}`
+        return `${formatDate(filters.from)} ate ${formatDate(filters.to)}`
     }
 
-    return `Mes: ${filters.month}`
+    return filters.month
 }
 
 function SummaryCard({ item }) {
     return (
         <article className="report-summary-card">
-            <div className="report-summary-icon">
+            <span className="report-summary-icon">
                 <i className={`fa-solid ${item.icon || 'fa-chart-column'}`} />
-            </div>
+            </span>
             <div className="report-summary-copy">
                 <small>{item.label}</small>
                 <strong>{renderValue(item.value, item.format)}</strong>
@@ -84,14 +91,12 @@ function SummaryCard({ item }) {
     )
 }
 
-function ReportTable({ columns, rows, emptyText }) {
+function ReportTable({ columns, rows }) {
     if (!rows.length) {
         return (
             <div className="report-empty-state">
-                <span className="report-empty-icon">
-                    <i className="fa-solid fa-table-list" />
-                </span>
-                <p>{emptyText}</p>
+                <i className="fa-solid fa-table-list" />
+                <span>Sem dados</span>
             </div>
         )
     }
@@ -120,7 +125,7 @@ function ReportTable({ columns, rows, emptyText }) {
     )
 }
 
-export default function Show({ report, filters, summary, columns, rows, pagination, emptyText, backHref }) {
+export default function Show({ report, filters, summary, columns, rows, pagination, backHref }) {
     const [scope, setScope] = useState(filters.scope)
 
     useEffect(() => {
@@ -138,6 +143,8 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                 scope,
                 date: String(formData.get('date') || filters.date),
                 month: String(formData.get('month') || filters.month),
+                month_from: String(formData.get('month_from') || filters.month_from),
+                month_to: String(formData.get('month_to') || filters.month_to),
                 year: String(formData.get('year') || filters.year),
                 from: String(formData.get('from') || filters.from),
                 to: String(formData.get('to') || filters.to),
@@ -181,33 +188,41 @@ export default function Show({ report, filters, summary, columns, rows, paginati
     }
 
     return (
-        <AppLayout title={report.title}>
-            <div className="report-page">
-                <section className="report-hero">
-                    <div className="report-hero-main">
+        <AppLayout
+            title={report.title}
+            showTopbar={false}
+            navigationMode="hidden"
+            contentClassName="app-page-content-flush"
+        >
+            <div className="report-screen">
+                <header className="report-toolbar">
+                    <div className="report-toolbar-left">
                         <Link href={backHref} className="report-back-link">
                             <i className="fa-solid fa-arrow-left" />
-                            <span>Voltar aos relatorios</span>
                         </Link>
 
-                        <div className="report-hero-title">
-                            <span className="report-hero-kicker">
-                                <i className={`fa-solid ${report.category.icon}`} />
-                                {report.category.label}
-                            </span>
+                        <div className="report-toolbar-title">
                             <h1>{report.title}</h1>
-                            <p>{report.description}</p>
+                            <div className="report-toolbar-meta">
+                                <span>
+                                    <i className={`fa-solid ${report.category.icon}`} />
+                                    {report.category.label}
+                                </span>
+                                <span>
+                                    <i className="fa-solid fa-calendar" />
+                                    {buildPeriodLabel(filters)}
+                                </span>
+                                <span>
+                                    <i className="fa-solid fa-table-list" />
+                                    {pagination.total || 0}
+                                </span>
+                            </div>
                         </div>
                     </div>
+                </header>
 
-                    <div className="report-hero-badges">
-                        <span className="ui-badge success">{buildPeriodLabel(filters)}</span>
-                        <span className="ui-badge warning">{pagination.total || 0} registro(s)</span>
-                    </div>
-                </section>
-
-                <form className="report-filter-card" onSubmit={handleSubmit}>
-                    <div className="report-filter-scope">
+                <form className="report-filter-panel" onSubmit={handleSubmit}>
+                    <div className="report-filter-modes">
                         {SCOPE_OPTIONS.map((option) => (
                             <button
                                 key={option.key}
@@ -221,7 +236,7 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                         ))}
                     </div>
 
-                    <div className="report-filter-fields">
+                    <div className="report-filter-grid">
                         {scope === 'date' ? (
                             <label>
                                 <span>
@@ -242,19 +257,38 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                             </label>
                         ) : null}
 
+                        {scope === 'months' ? (
+                            <>
+                                <label>
+                                    <span>
+                                        <i className="fa-solid fa-calendar-plus" />
+                                        Mes de
+                                    </span>
+                                    <input name="month_from" type="month" defaultValue={filters.month_from} />
+                                </label>
+                                <label>
+                                    <span>
+                                        <i className="fa-solid fa-calendar-check" />
+                                        Mes ate
+                                    </span>
+                                    <input name="month_to" type="month" defaultValue={filters.month_to} />
+                                </label>
+                            </>
+                        ) : null}
+
                         {scope === 'range' ? (
                             <>
                                 <label>
                                     <span>
                                         <i className="fa-solid fa-calendar-plus" />
-                                        De
+                                        Data de
                                     </span>
                                     <input name="from" type="date" defaultValue={filters.from} />
                                 </label>
                                 <label>
                                     <span>
                                         <i className="fa-solid fa-calendar-check" />
-                                        Ate
+                                        Data ate
                                     </span>
                                     <input name="to" type="date" defaultValue={filters.to} />
                                 </label>
@@ -273,7 +307,7 @@ export default function Show({ report, filters, summary, columns, rows, paginati
 
                         <label>
                             <span>
-                                <i className="fa-solid fa-table-list" />
+                                <i className="fa-solid fa-list-ol" />
                                 Linhas
                             </span>
                             <select name="per_page" defaultValue={String(filters.per_page)}>
@@ -286,12 +320,11 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                     </div>
 
                     <div className="report-filter-actions">
-                        <button className="ui-button" type="submit">
+                        <button className="report-button report-button-primary" type="submit">
                             <i className="fa-solid fa-filter" />
                             <span>Aplicar</span>
                         </button>
-
-                        <button className="ui-button-ghost" type="button" onClick={handleReset}>
+                        <button className="report-button" type="button" onClick={handleReset}>
                             <i className="fa-solid fa-rotate-left" />
                             <span>Padrao</span>
                         </button>
@@ -305,19 +338,18 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                 </section>
 
                 <section className="report-table-card">
-                    <header className="report-table-header">
-                        <div>
-                            <small>Layout fixo</small>
-                            <h2>Resultado do relatorio</h2>
+                    <div className="report-table-toolbar">
+                        <div className="report-table-count">
+                            <span>{pagination.total || 0} registros</span>
                         </div>
 
                         <div className="report-table-pagination">
-                            <span>
-                                Pagina {pagination.current_page} de {pagination.last_page || 1}
-                            </span>
                             <button type="button" onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1}>
                                 <i className="fa-solid fa-chevron-left" />
                             </button>
+                            <span>
+                                {pagination.current_page}/{pagination.last_page || 1}
+                            </span>
                             <button
                                 type="button"
                                 onClick={() => goToPage(pagination.current_page + 1)}
@@ -326,9 +358,9 @@ export default function Show({ report, filters, summary, columns, rows, paginati
                                 <i className="fa-solid fa-chevron-right" />
                             </button>
                         </div>
-                    </header>
+                    </div>
 
-                    <ReportTable columns={columns} rows={rows} emptyText={emptyText} />
+                    <ReportTable columns={columns} rows={rows} />
                 </section>
             </div>
         </AppLayout>

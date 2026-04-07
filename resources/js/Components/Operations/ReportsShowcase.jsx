@@ -36,7 +36,6 @@ function ReportOpenCard({ report }) {
             </div>
             <div className="operations-report-open-copy">
                 <strong>{report.title}</strong>
-                <p>{report.description}</p>
             </div>
             <div className="operations-report-open-tags">
                 {report.tags.map((tag) => (
@@ -66,7 +65,6 @@ export default function ReportsShowcase({ module }) {
                 <div>
                     <span className="operations-section-kicker">Relatorios</span>
                     <h2>Nenhum relatorio disponivel</h2>
-                    <p>As categorias de relatorio ainda nao foram configuradas para este tenant.</p>
                 </div>
             </section>
         )
@@ -87,9 +85,8 @@ export default function ReportsShowcase({ module }) {
 
             <section className="operations-report-preview-hero">
                 <div>
-                    <span className="operations-section-kicker">Categoria ativa</span>
+                    <span className="operations-section-kicker">Categoria</span>
                     <h2>{currentCategory.label}</h2>
-                    <p>{currentCategory.description}</p>
                 </div>
                 <div className="operations-report-preview-badges">
                     <span className="ui-badge success">{currentCategory.report_count} opcao(oes)</span>

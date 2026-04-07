@@ -79,11 +79,11 @@ export default function OperationsOverview({ module }) {
     }
 
     return (
-        <AppLayout title={module.title}>
+        <AppLayout title={module.title} navigationMode={isReportsCatalog ? 'overlay' : 'default'}>
             <div className="operations-page">
                 <section className="operations-hero">
                     <div>
-                        <span>Operacoes</span>
+                        <span>{isReportsCatalog ? 'Relatorios' : 'Operacoes'}</span>
                         <h1>{heroTitle}</h1>
                     </div>
                     <div className="operations-hero-badges">

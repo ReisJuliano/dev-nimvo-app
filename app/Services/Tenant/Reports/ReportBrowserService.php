@@ -264,12 +264,19 @@ class ReportBrowserService
     protected function resolveFilters(array $filters): array
     {
         $today = now();
-        $scope = in_array(($filters['scope'] ?? 'month'), ['date', 'month', 'range', 'year'], true)
+        $scope = in_array(($filters['scope'] ?? 'month'), ['date', 'month', 'months', 'range', 'year'], true)
             ? (string) $filters['scope']
             : 'month';
 
         $selectedDate = $this->parseDateOrDefault($filters['date'] ?? null, $today->copy()->startOfDay());
         $selectedMonth = $this->parseMonthOrDefault($filters['month'] ?? null, $today->copy()->startOfMonth());
+        $selectedMonthFrom = $this->parseMonthOrDefault($filters['month_from'] ?? null, $selectedMonth->copy());
+        $selectedMonthTo = $this->parseMonthOrDefault($filters['month_to'] ?? null, $selectedMonth->copy());
+
+        if ($selectedMonthFrom->greaterThan($selectedMonthTo)) {
+            [$selectedMonthFrom, $selectedMonthTo] = [$selectedMonthTo->copy(), $selectedMonthFrom->copy()];
+        }
+
         $selectedYear = (int) ($filters['year'] ?? $today->year);
 
         if ($selectedYear < 2000 || $selectedYear > 2100) {
@@ -281,6 +288,7 @@ class ReportBrowserService
 
         [$from, $to] = match ($scope) {
             'date' => [$selectedDate->copy()->startOfDay(), $selectedDate->copy()->endOfDay()],
+            'months' => [$selectedMonthFrom->copy()->startOfMonth()->startOfDay(), $selectedMonthTo->copy()->endOfMonth()->endOfDay()],
             'year' => [
                 Carbon::create($selectedYear, 1, 1)->startOfDay(),
                 Carbon::create($selectedYear, 12, 31)->endOfDay(),
@@ -301,6 +309,8 @@ class ReportBrowserService
             'scope' => $scope,
             'date' => $selectedDate,
             'month' => $selectedMonth,
+            'month_from' => $selectedMonthFrom,
+            'month_to' => $selectedMonthTo,
             'year' => $selectedYear,
             'from' => $from,
             'to' => $to,
@@ -315,6 +325,8 @@ class ReportBrowserService
             'scope' => $filters['scope'],
             'date' => $filters['date']->format('Y-m-d'),
             'month' => $filters['month']->format('Y-m'),
+            'month_from' => $filters['month_from']->format('Y-m'),
+            'month_to' => $filters['month_to']->format('Y-m'),
             'year' => (string) $filters['year'],
             'from' => $filters['from']->format('Y-m-d'),
             'to' => $filters['to']->format('Y-m-d'),

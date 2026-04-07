@@ -7,6 +7,7 @@ export default function AppSidebar({
     currentUrl,
     collapsed,
     sidebarOpen,
+    allowCollapse = true,
     onToggleCollapsed,
     onCloseMobile,
     onLogout,
@@ -84,9 +85,11 @@ export default function AppSidebar({
                     </div>
                 </div>
 
-                <button className="app-sidebar-toggle" onClick={onToggleCollapsed} type="button">
-                    <i className="fas fa-bars" />
-                </button>
+                {allowCollapse ? (
+                    <button className="app-sidebar-toggle" onClick={onToggleCollapsed} type="button">
+                        <i className="fas fa-bars" />
+                    </button>
+                ) : null}
             </div>
 
             <div className="app-sidebar-user">

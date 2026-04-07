@@ -21,6 +21,8 @@ class ReportPageController extends Controller
             'scope' => $request->query('scope'),
             'date' => $request->query('date'),
             'month' => $request->query('month'),
+            'month_from' => $request->query('month_from'),
+            'month_to' => $request->query('month_to'),
             'year' => $request->query('year'),
             'from' => $request->query('from'),
             'to' => $request->query('to'),

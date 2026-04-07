@@ -15,18 +15,21 @@ export default function AppLayout({
     settingsOverride = null,
     showTopbar = true,
     contentClassName = '',
+    navigationMode = 'default',
 }) {
     const { auth, flash, tenantNavigationCatalog, license } = usePage().props
     const currentUrl = usePage().url
     const currentPath = currentUrl.split('?')[0]
     const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
+    const isOverlayNavigation = navigationMode === 'overlay'
+    const isHiddenNavigation = navigationMode === 'hidden'
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
-            return isPosPage
+            return isPosPage || isOverlayNavigation
         }
 
-        if (isPosPage) {
+        if (isPosPage || isOverlayNavigation) {
             return true
         }
 
@@ -40,31 +43,39 @@ export default function AppLayout({
             return
         }
 
-        if (isPosPage) {
+        if (isPosPage || isOverlayNavigation) {
             setCollapsed(true)
             return
         }
 
         setCollapsed(window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true')
-    }, [isPosPage])
+    }, [isOverlayNavigation, isPosPage])
 
     useEffect(() => {
-        if (typeof window === 'undefined' || isPosPage) {
+        if (typeof window === 'undefined' || isPosPage || isOverlayNavigation) {
             return
         }
 
         window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
-    }, [collapsed, isPosPage])
+    }, [collapsed, isOverlayNavigation, isPosPage])
 
     function handleLogout() {
         router.post('/logout')
     }
 
     function toggleCollapsed() {
+        if (isHiddenNavigation || isOverlayNavigation) {
+            return
+        }
+
         setCollapsed((current) => !current)
     }
 
     function toggleMobileSidebar() {
+        if (isHiddenNavigation) {
+            return
+        }
+
         setSidebarOpen((current) => !current)
     }
 
@@ -90,24 +101,31 @@ export default function AppLayout({
                 rel="stylesheet"
             />
 
-            <div className="app-layout-root">
+            <div
+                className={`app-layout-root ${isOverlayNavigation ? 'overlay-nav' : ''} ${isHiddenNavigation ? 'no-sidebar' : ''}`.trim()}
+            >
                 <div className="app-layout-backdrop app-layout-backdrop-two" />
                 <div className="app-layout-shell">
-                    <div
-                        className={`app-sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-                        onClick={closeMobileSidebar}
-                    />
+                    {isHiddenNavigation ? null : (
+                        <div
+                            className={`app-sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+                            onClick={closeMobileSidebar}
+                        />
+                    )}
 
-                    <AppSidebar
-                        auth={auth}
-                        navigationGroups={navigationGroups}
-                        currentUrl={currentUrl}
-                        collapsed={collapsed}
-                        sidebarOpen={sidebarOpen}
-                        onToggleCollapsed={toggleCollapsed}
-                        onCloseMobile={closeMobileSidebar}
-                        onLogout={handleLogout}
-                    />
+                    {isHiddenNavigation ? null : (
+                        <AppSidebar
+                            auth={auth}
+                            navigationGroups={navigationGroups}
+                            currentUrl={currentUrl}
+                            collapsed={collapsed}
+                            sidebarOpen={sidebarOpen}
+                            allowCollapse={!isOverlayNavigation}
+                            onToggleCollapsed={toggleCollapsed}
+                            onCloseMobile={closeMobileSidebar}
+                            onLogout={handleLogout}
+                        />
+                    )}
 
                     <div className={`app-main ${collapsed ? 'collapsed' : ''} ${showTopbar ? '' : 'no-topbar'}`}>
                         {showTopbar ? (
@@ -115,11 +133,11 @@ export default function AppLayout({
                                 title={title}
                                 onToggleMobileSidebar={toggleMobileSidebar}
                             />
-                        ) : (
+                        ) : !isHiddenNavigation ? (
                             <button className="app-mobile-toggle app-mobile-toggle-floating" onClick={toggleMobileSidebar} type="button">
                                 <i className="fas fa-bars" />
                             </button>
-                        )}
+                        ) : null}
 
                         {license && license.status !== 'active' ? (
                             <section className={`app-license-banner ${license.status}`}>
