@@ -3,6 +3,8 @@
 namespace App\Services\Tenant;
 
 use App\Models\Central\LocalAgent;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class LocalAgentBridgeService
 {
@@ -14,7 +16,17 @@ class LocalAgentBridgeService
             return null;
         }
 
-        $agent = LocalAgent::query()->firstWhere('tenant_id', (string) $tenantId);
+        try {
+            $connection = (new LocalAgent())->getConnectionName();
+
+            if (!Schema::connection($connection)->hasTable('local_agents')) {
+                return null;
+            }
+
+            $agent = LocalAgent::query()->firstWhere('tenant_id', (string) $tenantId);
+        } catch (Throwable $exception) {
+            return null;
+        }
 
         if (!$agent) {
             return null;

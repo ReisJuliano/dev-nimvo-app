@@ -130,8 +130,17 @@ class TenancyServiceProvider extends ServiceProvider
 
     protected function configureMissingTenantHandling(): void
     {
-        Middleware\InitializeTenancyByDomain::$onFail = static fn () => abort(404);
-        Middleware\InitializeTenancyBySubdomain::$onFail = static fn () => abort(404);
+        $missingTenantHandler = static fn (...$args) => abort(404);
+
+        foreach ([
+            Middleware\InitializeTenancyByDomain::class,
+            Middleware\InitializeTenancyBySubdomain::class,
+            Middleware\InitializeTenancyByDomainOrSubdomain::class,
+        ] as $middleware) {
+            if (property_exists($middleware, 'onFail')) {
+                $middleware::$onFail = $missingTenantHandler;
+            }
+        }
     }
 
     protected function makeTenancyMiddlewareHighestPriority()
