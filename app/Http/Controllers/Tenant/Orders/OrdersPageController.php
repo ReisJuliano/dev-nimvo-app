@@ -6,20 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
 use App\Services\Tenant\OrderDraftService;
+use App\Services\Tenant\ProductService;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OrdersPageController extends Controller
 {
-    public function __invoke(OrderDraftService $orderDraftService): Response
+    public function __invoke(
+        OrderDraftService $orderDraftService,
+        ProductService $productService,
+    ): Response
     {
         $draftId = request()->integer('draft');
+        $activeDrafts = $orderDraftService->activeDrafts();
         $initialDraft = $draftId
             ? $orderDraftService->findForEditing($draftId)
             : null;
 
         if (!$initialDraft) {
-            $firstDraftId = data_get($orderDraftService->activeDrafts(), '0.id');
+            $firstDraftId = data_get($activeDrafts, '0.id');
             $initialDraft = $firstDraftId ? $orderDraftService->findForEditing((int) $firstDraftId) : null;
         }
 
@@ -29,8 +34,10 @@ class OrdersPageController extends Controller
                 ->where('active', true)
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone']),
-            'drafts' => $orderDraftService->activeDrafts(),
+            'drafts' => $activeDrafts,
+            'draftDetails' => $orderDraftService->activeDraftsDetailed(),
             'initialDraft' => $initialDraft ? $orderDraftService->toDetail($initialDraft) : null,
+            'productCatalog' => $productService->activeCatalog(),
         ]);
     }
 }

@@ -25,6 +25,24 @@ class OrderDraftService
             ->all();
     }
 
+    public function activeDraftsDetailed(array $channels = [OrderDraft::CHANNEL_STORE]): array
+    {
+        return OrderDraft::query()
+            ->with([
+                'customer:id,name,phone',
+                'user:id,name',
+                'items' => fn ($query) => $query->with('product:id,stock_quantity')->orderBy('id'),
+            ])
+            ->whereIn('status', [OrderDraft::STATUS_DRAFT, OrderDraft::STATUS_SENT_TO_CASHIER])
+            ->when($channels !== [], fn ($query) => $query->whereIn('channel', $channels))
+            ->orderByRaw("CASE WHEN status = ? THEN 0 ELSE 1 END", [OrderDraft::STATUS_DRAFT])
+            ->latest('updated_at')
+            ->get()
+            ->map(fn (OrderDraft $draft) => $this->toDetail($draft))
+            ->values()
+            ->all();
+    }
+
     public function pendingCheckoutDrafts(?array $channels = null): array
     {
         return OrderDraft::query()
@@ -35,6 +53,24 @@ class OrderDraftService
             ->latest('sent_to_cashier_at')
             ->get()
             ->map(fn (OrderDraft $draft) => $this->toSummary($draft))
+            ->values()
+            ->all();
+    }
+
+    public function pendingCheckoutDraftsDetailed(?array $channels = null): array
+    {
+        return OrderDraft::query()
+            ->with([
+                'customer:id,name,phone',
+                'user:id,name',
+                'items' => fn ($query) => $query->with('product:id,stock_quantity')->orderBy('id'),
+            ])
+            ->where('status', OrderDraft::STATUS_SENT_TO_CASHIER)
+            ->whereNull('sale_id')
+            ->when(is_array($channels), fn ($query) => $query->whereIn('channel', $channels))
+            ->latest('sent_to_cashier_at')
+            ->get()
+            ->map(fn (OrderDraft $draft) => $this->toDetail($draft))
             ->values()
             ->all();
     }

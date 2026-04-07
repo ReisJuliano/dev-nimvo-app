@@ -11,6 +11,7 @@ use App\Models\Tenant\User;
 use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PosRecommendationService;
+use App\Services\Tenant\ProductService;
 use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
@@ -26,6 +27,7 @@ class PosPageController extends Controller
         OrderDraftService $orderDraftService,
         PendingSaleService $pendingSaleService,
         PosRecommendationService $recommendationService,
+        ProductService $productService,
         TenantSettingsService $settingsService,
     ): Response {
         $userId = auth()->user()?->getKey();
@@ -44,6 +46,7 @@ class PosPageController extends Controller
 
         return Inertia::render('Pos/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
+            'productCatalog' => $productService->activeCatalog(),
             'customers' => $this->customersPayload(),
             'companies' => $this->companiesPayload(),
             'managers' => User::query()
@@ -54,6 +57,7 @@ class PosPageController extends Controller
                 ->get(['id', 'name', 'username', 'role']),
             'supervisors' => $this->supervisorsPayload(),
             'pendingOrderDrafts' => $ordersEnabled ? $orderDraftService->pendingCheckoutDrafts() : [],
+            'pendingOrderDraftDetails' => $ordersEnabled ? $orderDraftService->pendingCheckoutDraftsDetailed() : [],
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'pendingSale' => $pendingSaleService->serialize($pendingSale),
             'recommendations' => $recommendationService->build(),
