@@ -70,6 +70,7 @@ export default function OrdersIndex({
     draftDetails = [],
     initialDraft,
     productCatalog = [],
+    cashRegister = null,
 }) {
     const { auth, tenant, localAgentBridge } = usePage().props
     const moduleState = useModules()
@@ -180,6 +181,7 @@ export default function OrdersIndex({
                     customers,
                     products: productCatalog,
                     orders: draftDetails,
+                    cashRegister,
                 })
             }
 
@@ -202,7 +204,7 @@ export default function OrdersIndex({
             unsubscribe()
             window.removeEventListener('online', handleOnline)
         }
-    }, [categories, customers, draftDetails, localAgentBridge, productCatalog, tenantId])
+    }, [cashRegister, categories, customers, draftDetails, localAgentBridge, productCatalog, tenantId])
 
     useEffect(() => {
         const trimmedSearchTerm = searchTerm.trim()
@@ -1054,12 +1056,19 @@ export default function OrdersIndex({
         setFeedback(null)
         try {
             await saveDraftNow(currentDraft)
+            const currentCashRegisterId = getOfflineWorkspaceSnapshot(tenantId).cashRegister?.id || null
             const salePayload = {
+                cash_register_id: currentCashRegisterId,
                 order_draft_id: currentDraft.id,
                 customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
                 discount: pricing.discount,
                 notes: currentDraft.notes || null,
-                items: pricing.items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                items: pricing.items.map((item) => ({
+                    id: item.id,
+                    qty: Number(item.qty),
+                    unit_price: Number(item.sale_price || 0),
+                    discount: Number(item.lineDiscount || 0),
+                })),
                 payments: [{ method: resolvedPaymentMethod, amount: pricing.total }],
                 total: pricing.total,
                 fiscal_decision: 'close',
@@ -1087,11 +1096,13 @@ export default function OrdersIndex({
                 method: 'post',
                 data: {
                     ...salePayload,
+                    cash_register_id: salePayload.cash_register_id,
                     order_draft_id: resolveOfflineEntityId(tenantId, 'orders', currentDraft.id),
                     customer_id: currentDraft.customerId ? Number(resolveOfflineEntityId(tenantId, 'customers', currentDraft.customerId)) : null,
                     items: pricing.items.map((item) => ({
                         id: Number(resolveOfflineEntityId(tenantId, 'products', item.id)),
                         qty: Number(item.qty),
+                        unit_price: Number(item.sale_price || 0),
                         discount: Number(item.lineDiscount || 0),
                     })),
                 },
@@ -1110,12 +1121,19 @@ export default function OrdersIndex({
             showFeedback('success', `Venda ${response.sale.sale_number} finalizada com sucesso.`)
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
+                const currentCashRegisterId = getOfflineWorkspaceSnapshot(tenantId).cashRegister?.id || null
                 const response = queueOfflineSaleFinalize(tenantId, {
+                    cash_register_id: currentCashRegisterId,
                     order_draft_id: currentDraft.id,
                     customer_id: currentDraft.customerId ? Number(currentDraft.customerId) : null,
                     discount: pricing.discount,
                     notes: currentDraft.notes || null,
-                    items: pricing.items.map((item) => ({ id: item.id, qty: Number(item.qty), discount: Number(item.lineDiscount || 0) })),
+                    items: pricing.items.map((item) => ({
+                        id: item.id,
+                        qty: Number(item.qty),
+                        unit_price: Number(item.sale_price || 0),
+                        discount: Number(item.lineDiscount || 0),
+                    })),
                     payments: [{ method: resolvedPaymentMethod, amount: pricing.total }],
                     total: pricing.total,
                     fiscal_decision: 'close',

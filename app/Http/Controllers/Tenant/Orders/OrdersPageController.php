@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant\Orders;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
 use App\Services\Tenant\OrderDraftService;
@@ -17,8 +18,14 @@ class OrdersPageController extends Controller
         ProductService $productService,
     ): Response
     {
+        $userId = auth()->user()?->getKey();
         $draftId = request()->integer('draft');
         $activeDrafts = $orderDraftService->activeDrafts();
+        $cashRegister = CashRegister::query()
+            ->where('user_id', $userId)
+            ->where('status', 'open')
+            ->latest('opened_at')
+            ->first();
         $initialDraft = $draftId
             ? $orderDraftService->findForEditing($draftId)
             : null;
@@ -38,6 +45,14 @@ class OrdersPageController extends Controller
             'draftDetails' => $orderDraftService->activeDraftsDetailed(),
             'initialDraft' => $initialDraft ? $orderDraftService->toDetail($initialDraft) : null,
             'productCatalog' => $productService->activeCatalog(),
+            'cashRegister' => $cashRegister ? [
+                'id' => $cashRegister->id,
+                'user_name' => auth()->user()?->name,
+                'status' => $cashRegister->status,
+                'opened_at' => $cashRegister->opened_at?->toIso8601String(),
+                'opening_amount' => (float) $cashRegister->opening_amount,
+                'opening_notes' => $cashRegister->opening_notes,
+            ] : null,
         ]);
     }
 }

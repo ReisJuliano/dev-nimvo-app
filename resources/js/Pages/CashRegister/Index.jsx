@@ -1,22 +1,128 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { usePage } from '@inertiajs/react'
 import ActiveRegisterPanel from '@/Components/CashRegister/ActiveRegisterPanel'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import OpenRegisterCard from '@/Components/CashRegister/OpenRegisterCard'
 import RegisterHistoryTable from '@/Components/CashRegister/RegisterHistoryTable'
 import AppLayout from '@/Layouts/AppLayout'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows } from '@/lib/cashRegister'
 import { formatMoney } from '@/lib/format'
+import {
+    buildOfflineCashRegisterReport,
+    configureOfflineWorkspaceBridge,
+    createOfflineCashRegister,
+    getOfflineWorkspaceSnapshot,
+    hasOfflineWorkspaceData,
+    hydrateOfflineWorkspace,
+    seedOfflineWorkspace,
+    subscribeOfflineWorkspace,
+    syncOfflineWorkspace,
+} from '@/lib/offline/workspace'
 import './cash-register.css'
 
+function toCashRegisterSnapshot(report) {
+    if (!report?.cashRegister) {
+        return null
+    }
+
+    return {
+        id: report.cashRegister.id,
+        user_name: report.cashRegister.user_name || null,
+        status: report.cashRegister.status,
+        opened_at: report.cashRegister.opened_at,
+        opening_amount: report.cashRegister.opening_amount,
+        opening_notes: report.cashRegister.opening_notes || null,
+    }
+}
+
 export default function CashRegisterIndex({ openRegister, history, settings }) {
+    const { auth, tenant, localAgentBridge } = usePage().props
+    const tenantId = tenant?.id
     const [loading, setLoading] = useState(false)
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [reportModal, setReportModal] = useState(null)
     const [closeConferenceModal, setCloseConferenceModal] = useState(null)
     const [refreshAfterClose, setRefreshAfterClose] = useState(false)
     const [activeTab, setActiveTab] = useState(openRegister ? 'active' : 'history')
+    const [openRegisterState, setOpenRegisterState] = useState(openRegister)
+    const [feedback, setFeedback] = useState(null)
     const requireConference = settings?.cash_closing?.require_conference !== false
+
+    useEffect(() => {
+        if (!tenantId) {
+            return undefined
+        }
+
+        let cancelled = false
+        let unsubscribe = () => {}
+
+        const applyWorkspaceState = () => {
+            const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+
+            setOpenRegisterState(
+                snapshot.cashRegister
+                    ? buildOfflineCashRegisterReport(tenantId, {
+                        userName: auth?.user?.name,
+                        fallbackReport: openRegister,
+                    })
+                    : null,
+            )
+        }
+
+        const handleOnline = () => {
+            syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
+        }
+
+        const bootstrap = async () => {
+            configureOfflineWorkspaceBridge(tenantId, localAgentBridge)
+            await hydrateOfflineWorkspace(tenantId).catch(() => {})
+
+            if (cancelled) {
+                return
+            }
+
+            const shouldSeedSnapshot =
+                typeof navigator === 'undefined'
+                || navigator.onLine !== false
+                || !hasOfflineWorkspaceData(tenantId)
+
+            if (shouldSeedSnapshot) {
+                seedOfflineWorkspace(tenantId, {
+                    cashRegister: toCashRegisterSnapshot(openRegister),
+                })
+            }
+
+            if (cancelled) {
+                return
+            }
+
+            applyWorkspaceState()
+            unsubscribe = subscribeOfflineWorkspace(tenantId, () => {
+                applyWorkspaceState()
+            })
+            handleOnline()
+        }
+
+        bootstrap()
+        window.addEventListener('online', handleOnline)
+
+        return () => {
+            cancelled = true
+            unsubscribe()
+            window.removeEventListener('online', handleOnline)
+        }
+    }, [auth?.user?.name, localAgentBridge, openRegister, tenantId])
+
+    useEffect(() => {
+        if (openRegisterState && activeTab !== 'active') {
+            setActiveTab('active')
+        }
+
+        if (!openRegisterState && activeTab === 'active') {
+            setActiveTab('history')
+        }
+    }, [activeTab, openRegisterState])
 
     function closeReportModal() {
         setReportModal(null)
@@ -33,19 +139,45 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     async function handleOpen(event) {
         event.preventDefault()
         setLoading(true)
+        setFeedback(null)
 
         const formData = new FormData(event.currentTarget)
+        const payload = {
+            opening_amount: Number(formData.get('opening_amount') || 0),
+            opening_notes: formData.get('opening_notes') || null,
+        }
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                createOfflineCashRegister(tenantId, payload, { userName: auth?.user?.name })
+                setActiveTab('active')
+                setFeedback({
+                    type: 'warning',
+                    text: 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                })
+                return
+            }
+
             await apiRequest('/api/cash-registers', {
                 method: 'post',
-                data: {
-                    opening_amount: Number(formData.get('opening_amount') || 0),
-                    opening_notes: formData.get('opening_notes') || null,
-                },
+                data: payload,
             })
 
             window.location.reload()
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                createOfflineCashRegister(tenantId, payload, { userName: auth?.user?.name })
+                setActiveTab('active')
+                setFeedback({
+                    type: 'warning',
+                    text: 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                })
+            } else {
+                setFeedback({
+                    type: 'error',
+                    text: error.message,
+                })
+            }
         } finally {
             setLoading(false)
         }
@@ -54,13 +186,21 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     async function handleMovement(event, type) {
         event.preventDefault()
 
-        if (!openRegister) {
+        if (!openRegisterState) {
+            return
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setFeedback({
+                type: 'error',
+                text: 'Movimentacoes manuais do caixa ainda exigem conexao ativa.',
+            })
             return
         }
 
         const formData = new FormData(event.currentTarget)
 
-        await apiRequest(`/api/cash-registers/${openRegister.cashRegister.id}/movements`, {
+        await apiRequest(`/api/cash-registers/${openRegisterState.cashRegister.id}/movements`, {
             method: 'post',
             data: {
                 type,
@@ -75,12 +215,20 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     async function handleClose(event) {
         event.preventDefault()
 
-        if (!openRegister) {
+        if (!openRegisterState) {
+            return
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setFeedback({
+                type: 'error',
+                text: 'Fechamento de caixa ainda exige conexao ativa.',
+            })
             return
         }
 
         const formData = new FormData(event.currentTarget)
-        const response = await apiRequest(`/api/cash-registers/${openRegister.cashRegister.id}/close`, {
+        const response = await apiRequest(`/api/cash-registers/${openRegisterState.cashRegister.id}/close`, {
             method: 'post',
             data: {
                 closing_amount: Number(formData.get('closing_amount') || 0),
@@ -96,11 +244,19 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     }
 
     function handleStartCloseConference() {
-        if (!openRegister) {
+        if (!openRegisterState) {
             return
         }
 
-        setCloseConferenceModal(buildCloseCashRegisterModal(openRegister))
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setFeedback({
+                type: 'error',
+                text: 'Conferencia e fechamento de caixa ainda exigem conexao ativa.',
+            })
+            return
+        }
+
+        setCloseConferenceModal(buildCloseCashRegisterModal(openRegisterState))
     }
 
     function handleCloseConferenceAmountChange(field, value) {
@@ -137,7 +293,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     async function handleConfirmCloseConference(event) {
         event.preventDefault()
 
-        if (!openRegister || !closeConferenceModal) {
+        if (!openRegisterState || !closeConferenceModal) {
             return
         }
 
@@ -148,7 +304,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         setClosingCashRegister(true)
 
         try {
-            const response = await apiRequest(`/api/cash-registers/${openRegister.cashRegister.id}/close`, {
+            const response = await apiRequest(`/api/cash-registers/${openRegisterState.cashRegister.id}/close`, {
                 method: 'post',
                 data: {
                     closing_amount: Number(closeConferenceModal.form.amounts.cash || 0),
@@ -168,6 +324,14 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     }
 
     async function handleViewReport(id) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setFeedback({
+                type: 'error',
+                text: 'Relatorios detalhados de caixas fechados exigem conexao ativa.',
+            })
+            return
+        }
+
         const response = await apiRequest(`/api/cash-registers/${id}/report`)
         setRefreshAfterClose(false)
         setReportModal(response.report)
@@ -178,12 +342,22 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     return (
         <AppLayout title="Caixa">
             <div className="cash-register-page">
+                {feedback ? (
+                    <div className={`ui-alert ${feedback.type}`}>
+                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
+                        <div>
+                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <p>{feedback.text}</p>
+                        </div>
+                    </div>
+                ) : null}
+
                 <section className="cash-register-hero ui-card">
                     <div className="ui-card-body">
                         <div className="cash-register-hero-grid">
                             <div>
-                                <span className={`ui-badge ${openRegister ? 'success' : 'warning'}`}>
-                                    {openRegister ? 'Caixa aberto' : 'Caixa fechado'}
+                                <span className={`ui-badge ${openRegisterState ? 'success' : 'warning'}`}>
+                                    {openRegisterState ? 'Caixa aberto' : 'Caixa fechado'}
                                 </span>
                                 <h1>Caixa</h1>
                             </div>
@@ -221,9 +395,9 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 </section>
 
                 {activeTab === 'active' ? (
-                    openRegister ? (
+                    openRegisterState ? (
                         <ActiveRegisterPanel
-                            report={openRegister}
+                            report={openRegisterState}
                             onMovement={handleMovement}
                             onClose={handleClose}
                             onStartCloseConference={handleStartCloseConference}

@@ -12,6 +12,13 @@ const bridgeByTenant = new Map()
 const hydrationLocks = new Map()
 const persistenceTimers = new Map()
 const memoryStateByTenant = new Map()
+const CASH_REGISTER_PAYMENT_LABELS = {
+    cash: 'Dinheiro',
+    pix: 'Pix',
+    debit_card: 'Cartao de debito',
+    credit_card: 'Cartao de credito',
+    credit: 'A Prazo',
+}
 
 function nowIso() {
     return new Date().toISOString()
@@ -55,12 +62,14 @@ function createEmptyState(tenantId) {
         },
         pendingSalesByUser: {},
         mappings: {
+            cashRegisters: {},
             products: {},
             customers: {},
             companies: {},
             orders: {},
         },
         queue: {
+            cashRegisters: [],
             products: [],
             customers: [],
             companies: [],
@@ -148,6 +157,21 @@ function normalizeCompanyRecord(company) {
         phone: company.phone || null,
         state_registration: company.state_registration || null,
         active: company.active !== false,
+    }
+}
+
+function normalizeCashRegisterRecord(cashRegister) {
+    if (!cashRegister) {
+        return null
+    }
+
+    return {
+        id: Number(cashRegister.id),
+        status: cashRegister.status || 'open',
+        opening_amount: normalizeNumber(cashRegister.opening_amount, 0),
+        opening_notes: cashRegister.opening_notes || null,
+        opened_at: cashRegister.opened_at || nowIso(),
+        user_name: cashRegister.user_name || null,
     }
 }
 
@@ -280,6 +304,7 @@ function normalizePendingSale(pendingSale) {
 
     return {
         ...pendingSale,
+        cash_register_id: pendingSale.cash_register_id == null || pendingSale.cash_register_id === '' ? null : Number(pendingSale.cash_register_id),
         customer_id: pendingSale.customer_id == null || pendingSale.customer_id === '' ? null : Number(pendingSale.customer_id),
         company_id: pendingSale.company_id == null || pendingSale.company_id === '' ? null : Number(pendingSale.company_id),
         order_draft_id: pendingSale.order_draft_id == null || pendingSale.order_draft_id === '' ? null : Number(pendingSale.order_draft_id),
@@ -336,16 +361,19 @@ function ensureStateShape(rawState, tenantId) {
         mappings: {
             ...fallback.mappings,
             ...(rawState.mappings || {}),
+            cashRegisters: rawState.mappings?.cashRegisters || {},
         },
         queue: {
             ...fallback.queue,
             ...(rawState.queue || {}),
+            cashRegisters: Array.isArray(rawState.queue?.cashRegisters) ? rawState.queue.cashRegisters : [],
             products: Array.isArray(rawState.queue?.products) ? rawState.queue.products : [],
             customers: Array.isArray(rawState.queue?.customers) ? rawState.queue.customers : [],
             companies: Array.isArray(rawState.queue?.companies) ? rawState.queue.companies : [],
             orders: Array.isArray(rawState.queue?.orders) ? rawState.queue.orders : [],
             sales: Array.isArray(rawState.queue?.sales) ? rawState.queue.sales : [],
         },
+        cashRegister: normalizeCashRegisterRecord(rawState.cashRegister),
     }
 }
 
@@ -386,6 +414,7 @@ function readState(tenantId) {
 
 function countPending(state) {
     return [
+        state.queue.cashRegisters.length,
         state.queue.products.length,
         state.queue.customers.length,
         state.queue.companies.length,
@@ -706,6 +735,35 @@ function replaceOrderReferences(state, localId, remoteOrder) {
     )
 }
 
+function replaceCashRegisterReferences(state, localId, remoteCashRegister) {
+    const normalizedRemote = normalizeCashRegisterRecord(remoteCashRegister)
+
+    if (state.cashRegister && String(state.cashRegister.id) === String(localId)) {
+        state.cashRegister = normalizedRemote
+    }
+
+    state.pendingSalesByUser = Object.fromEntries(
+        Object.entries(state.pendingSalesByUser).map(([userId, pendingSale]) => [
+            userId,
+            pendingSale && String(pendingSale.cash_register_id) === String(localId)
+                ? { ...pendingSale, cash_register_id: normalizedRemote.id }
+                : pendingSale,
+        ]),
+    )
+
+    state.queue.sales = state.queue.sales.map((entry) =>
+        String(entry.payload?.cash_register_id) === String(localId)
+            ? {
+                ...entry,
+                payload: {
+                    ...entry.payload,
+                    cash_register_id: normalizedRemote.id,
+                },
+            }
+            : entry,
+    )
+}
+
 export function isBrowserOffline() {
     return typeof navigator !== 'undefined' && navigator.onLine === false
 }
@@ -890,7 +948,9 @@ export function seedOfflineWorkspace(tenantId, snapshot = {}) {
         }
 
         if (Object.prototype.hasOwnProperty.call(snapshot, 'cashRegister')) {
-            state.cashRegister = snapshot.cashRegister || null
+            if (!state.queue.cashRegisters.length) {
+                state.cashRegister = normalizeCashRegisterRecord(snapshot.cashRegister)
+            }
         }
 
         if (snapshot.pendingSaleUserId != null && Object.prototype.hasOwnProperty.call(snapshot, 'pendingSale')) {
@@ -999,6 +1059,37 @@ export function discardOfflinePendingSale(tenantId, userId) {
         delete state.pendingSalesByUser[String(userId)]
         return state
     })
+}
+
+export function createOfflineCashRegister(tenantId, payload = {}, context = {}) {
+    let created = null
+
+    updateState(tenantId, (state) => {
+        if (state.cashRegister?.status === 'open') {
+            throw new Error('Ja existe um caixa aberto nesta maquina.')
+        }
+
+        const tempId = allocateTempId(state)
+        created = normalizeCashRegisterRecord({
+            id: tempId,
+            status: 'open',
+            opening_amount: payload.opening_amount,
+            opening_notes: payload.opening_notes || null,
+            opened_at: context.openedAt || nowIso(),
+            user_name: context.userName || null,
+        })
+
+        state.cashRegister = created
+        state.queue.cashRegisters = replaceQueueRecord(state.queue.cashRegisters, {
+            entityId: tempId,
+            action: 'open',
+            payload: created,
+        })
+
+        return state
+    })
+
+    return created
 }
 
 export function createOfflineCustomer(tenantId, payload) {
@@ -1250,6 +1341,7 @@ function normalizeSaleQueuePayload(state, payload) {
 
     return {
         ...payload,
+        cash_register_id: payload.cash_register_id == null || payload.cash_register_id === '' ? null : Number(payload.cash_register_id),
         order_draft_id: payload.order_draft_id == null ? null : Number(payload.order_draft_id),
         customer_id: payload.customer_id == null || payload.customer_id === '' ? null : Number(payload.customer_id),
         company_id: payload.company_id == null || payload.company_id === '' ? null : Number(payload.company_id),
@@ -1267,6 +1359,10 @@ export function queueOfflineSaleFinalize(tenantId, payload, context = {}) {
     let result = null
 
     updateState(tenantId, (state) => {
+        if (!state.cashRegister || state.cashRegister.status !== 'open') {
+            throw new Error('Abra um caixa antes de finalizar a venda no modo offline.')
+        }
+
         const salePayload = normalizeSaleQueuePayload(state, payload)
         const saleNumber = buildOfflineSaleNumber(state)
         const saleId = allocateTempId(state)
@@ -1312,6 +1408,7 @@ export function queueOfflineSaleFinalize(tenantId, payload, context = {}) {
                 action: 'finalize',
                 payload: {
                     ...salePayload,
+                    cash_register_id: salePayload.cash_register_id ?? state.cashRegister.id,
                     sale_id: saleId,
                     sale_number: saleNumber,
                     created_at: nowIso(),
@@ -1376,6 +1473,104 @@ function buildProductPayloadForSync(product) {
     }
 }
 
+function buildOfflineCashRegisterClosingBreakdown(report) {
+    return Object.entries(CASH_REGISTER_PAYMENT_LABELS).map(([paymentMethod, label]) => {
+        const expected = paymentMethod === 'cash'
+            ? Number(report.expected_cash || 0)
+            : Number(report.payment_totals?.[paymentMethod] || 0)
+
+        return {
+            payment_method: paymentMethod,
+            label,
+            expected,
+            informed: null,
+            difference: null,
+            recorded_at: null,
+        }
+    })
+}
+
+export function buildOfflineCashRegisterReport(tenantId, options = {}) {
+    const state = readState(tenantId)
+    const cashRegister = normalizeCashRegisterRecord(state.cashRegister)
+
+    if (!cashRegister) {
+        return null
+    }
+
+    const fallbackReport = options.fallbackReport
+    const useFallbackTotals = String(fallbackReport?.cashRegister?.id || '') === String(cashRegister.id)
+    const basePayments = useFallbackTotals ? (fallbackReport?.payments || []) : []
+    const paymentsMap = new Map(
+        basePayments.map((payment) => [
+            payment.payment_method,
+            {
+                payment_method: payment.payment_method,
+                label: payment.label || CASH_REGISTER_PAYMENT_LABELS[payment.payment_method] || payment.payment_method,
+                qtd: Number(payment.qtd || 0),
+                total: Number(payment.total || 0),
+            },
+        ]),
+    )
+
+    const queuedSales = state.queue.sales.filter((entry) =>
+        String(entry.payload?.cash_register_id) === String(cashRegister.id),
+    )
+
+    queuedSales.forEach((entry) => {
+        ;(entry.payload?.payments || []).forEach((payment) => {
+            const current = paymentsMap.get(payment.method) || {
+                payment_method: payment.method,
+                label: CASH_REGISTER_PAYMENT_LABELS[payment.method] || payment.method,
+                qtd: 0,
+                total: 0,
+            }
+
+            paymentsMap.set(payment.method, {
+                ...current,
+                qtd: Number(current.qtd || 0) + 1,
+                total: Number(current.total || 0) + Number(payment.amount || 0),
+            })
+        })
+    })
+
+    const payments = Array.from(paymentsMap.values())
+    const paymentTotals = Object.fromEntries(payments.map((payment) => [payment.payment_method, Number(payment.total || 0)]))
+    const baseTotalSales = useFallbackTotals ? Number(fallbackReport?.total_sales || 0) : 0
+    const baseSalesCount = useFallbackTotals ? Number(fallbackReport?.sales_count || 0) : 0
+    const baseSupplies = useFallbackTotals ? Number(fallbackReport?.total_supplies || 0) : 0
+    const baseWithdrawals = useFallbackTotals ? Number(fallbackReport?.total_withdrawals || 0) : 0
+    const totalSales = baseTotalSales + queuedSales.reduce((sum, entry) => sum + Number(entry.payload?.total || 0), 0)
+    const salesCount = baseSalesCount + queuedSales.length
+    const cashSales = Number(paymentTotals.cash || 0)
+    const expectedCash = Number(cashRegister.opening_amount || 0) + baseSupplies + cashSales - baseWithdrawals
+
+    return {
+        cashRegister: {
+            ...(useFallbackTotals ? fallbackReport.cashRegister : {}),
+            ...cashRegister,
+            user_name: cashRegister.user_name || fallbackReport?.cashRegister?.user_name || options.userName || 'Operador',
+            closing_amount: 0,
+            closing_notes: null,
+            closed_at: null,
+        },
+        payments,
+        payment_totals: paymentTotals,
+        movements: useFallbackTotals ? (fallbackReport?.movements || []) : [],
+        total_sales: totalSales,
+        sales_count: salesCount,
+        total_withdrawals: baseWithdrawals,
+        total_supplies: baseSupplies,
+        cash_sales: cashSales,
+        expected_cash: expectedCash,
+        difference: 0,
+        closing_breakdown: buildOfflineCashRegisterClosingBreakdown({
+            expected_cash: expectedCash,
+            payment_totals: paymentTotals,
+        }),
+    }
+}
+
 function buildOrderPayloadForSync(state, order) {
     return {
         type: order.type,
@@ -1421,6 +1616,38 @@ async function syncProductQueue(tenantId, state, request) {
         }
 
         state.queue.products = removeQueueRecord(state.queue.products, localId)
+        writeState(tenantId, state)
+    }
+}
+
+async function syncCashRegisterQueue(tenantId, state, request) {
+    for (const entry of [...state.queue.cashRegisters]) {
+        if (entry.action !== 'open') {
+            state.queue.cashRegisters = removeQueueRecord(state.queue.cashRegisters, entry.entityId)
+            writeState(tenantId, state)
+            continue
+        }
+
+        const response = await request('/api/cash-registers', {
+            method: 'post',
+            data: {
+                opening_amount: Number(entry.payload?.opening_amount || 0),
+                opening_notes: entry.payload?.opening_notes || null,
+            },
+        })
+
+        const remoteCashRegister = normalizeCashRegisterRecord({
+            id: response.cash_register_id,
+            status: 'open',
+            opening_amount: entry.payload?.opening_amount || 0,
+            opening_notes: entry.payload?.opening_notes || null,
+            opened_at: entry.payload?.opened_at || nowIso(),
+            user_name: entry.payload?.user_name || state.cashRegister?.user_name || null,
+        })
+
+        registerMapping(state, 'cashRegisters', entry.entityId, remoteCashRegister.id)
+        replaceCashRegisterReferences(state, entry.entityId, remoteCashRegister)
+        state.queue.cashRegisters = removeQueueRecord(state.queue.cashRegisters, entry.entityId)
         writeState(tenantId, state)
     }
 }
@@ -1542,6 +1769,9 @@ async function syncSaleQueue(tenantId, state, request) {
         const response = await request('/api/pdv/sales', {
             method: 'post',
             data: {
+                cash_register_id: payload.cash_register_id == null
+                    ? null
+                    : Number(resolveMappedId(state, 'cashRegisters', payload.cash_register_id)),
                 order_draft_id: resolvedOrderId,
                 customer_id: payload.customer_id == null ? null : Number(resolveMappedId(state, 'customers', payload.customer_id)),
                 company_id: payload.company_id == null ? null : Number(resolveMappedId(state, 'companies', payload.company_id)),
@@ -1559,6 +1789,7 @@ async function syncSaleQueue(tenantId, state, request) {
                 items: payload.items.map((item) => ({
                     id: Number(resolveMappedId(state, 'products', item.id)),
                     qty: Number(item.qty),
+                    unit_price: item.unit_price == null ? null : Number(item.unit_price),
                     discount: Number(item.discount || 0),
                     discount_percent: Number(item.discount_percent || 0),
                     discount_scope: item.discount_scope || null,
@@ -1618,6 +1849,7 @@ export async function syncOfflineWorkspace(tenantId, request) {
         writeState(tenantId, state)
 
         try {
+            await syncCashRegisterQueue(tenantId, state, request)
             await syncCustomerQueue(tenantId, state, request)
             await syncCompanyQueue(tenantId, state, request)
             await syncProductQueue(tenantId, state, request)

@@ -28,11 +28,22 @@ class PosService
 
     public function finalize(array $payload, int $userId): array
     {
-        $cashRegister = CashRegister::query()
-            ->where('user_id', $userId)
-            ->where('status', 'open')
-            ->latest('opened_at')
-            ->first();
+        $cashRegister = null;
+
+        if (!empty($payload['cash_register_id'])) {
+            $cashRegister = CashRegister::query()
+                ->where('user_id', $userId)
+                ->where('status', 'open')
+                ->find($payload['cash_register_id']);
+        }
+
+        if (! $cashRegister) {
+            $cashRegister = CashRegister::query()
+                ->where('user_id', $userId)
+                ->where('status', 'open')
+                ->latest('opened_at')
+                ->first();
+        }
 
         if (! $cashRegister) {
             throw ValidationException::withMessages([
@@ -65,6 +76,9 @@ class PosService
                 /** @var Product $product */
                 $product = Product::query()->lockForUpdate()->findOrFail($item['id']);
                 $quantity = (float) $item['qty'];
+                $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null
+                    ? round((float) $item['unit_price'], 2)
+                    : round((float) $product->sale_price, 2);
 
                 if ((float) $product->stock_quantity < $quantity) {
                     throw ValidationException::withMessages([
@@ -72,7 +86,7 @@ class PosService
                     ]);
                 }
 
-                $lineSubtotal = round((float) $product->sale_price * $quantity, 2);
+                $lineSubtotal = round($unitPrice * $quantity, 2);
                 $lineDiscount = round((float) ($item['discount'] ?? 0), 2);
 
                 if ($lineDiscount < 0 || $lineDiscount > $lineSubtotal) {
@@ -98,6 +112,7 @@ class PosService
                 return [
                     'product' => $product,
                     'quantity' => $quantity,
+                    'unitPrice' => $unitPrice,
                     'lineSubtotal' => $lineSubtotal,
                     'lineDiscount' => $lineDiscount,
                     'discountPercent' => $discountPercent,
@@ -252,7 +267,9 @@ class PosService
                 $product = $entry['product'];
                 $quantity = $entry['quantity'];
                 $lineTotal = round(max(0, $entry['lineSubtotal'] - $entry['lineDiscount']), 2);
-                $unitPrice = $quantity > 0 ? round($lineTotal / $quantity, 2) : 0;
+                $unitPrice = $quantity > 0
+                    ? round($lineTotal / $quantity, 2)
+                    : round((float) ($entry['unitPrice'] ?? 0), 2);
 
                 $saleItemAttributes = [
                     'product_id' => $product->id,

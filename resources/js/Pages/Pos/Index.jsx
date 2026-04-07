@@ -12,6 +12,7 @@ import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import {
     configureOfflineWorkspaceBridge,
+    createOfflineCashRegister,
     createOfflineCompany,
     createOfflineCustomer,
     discardOfflinePendingSale,
@@ -1568,6 +1569,19 @@ export default function PosIndex({
 
         try {
             const openingAmount = Number(openCashRegisterModal.openingAmount || 0)
+
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                createOfflineCashRegister(tenantId, {
+                    opening_amount: openingAmount,
+                    opening_notes: openCashRegisterModal.openingNotes.trim() || null,
+                }, {
+                    userName: auth?.user?.name,
+                })
+                setOpenCashRegisterModal(null)
+                showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
+                return
+            }
+
             const response = await apiRequest('/api/cash-registers', {
                 method: 'post',
                 data: {
@@ -1578,14 +1592,39 @@ export default function PosIndex({
 
             setCashRegisterState({
                 id: response.cash_register_id,
+                user_name: auth?.user?.name || null,
                 status: 'open',
                 opened_at: new Date().toISOString(),
                 opening_amount: openingAmount,
+                opening_notes: openCashRegisterModal.openingNotes.trim() || null,
+            })
+            seedOfflineWorkspace(tenantId, {
+                cashRegister: {
+                    id: response.cash_register_id,
+                    user_name: auth?.user?.name || null,
+                    status: 'open',
+                    opened_at: new Date().toISOString(),
+                    opening_amount: openingAmount,
+                    opening_notes: openCashRegisterModal.openingNotes.trim() || null,
+                },
             })
             setOpenCashRegisterModal(null)
             showFeedback('success', response.message || 'Caixa aberto com sucesso.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const openingAmount = Number(openCashRegisterModal.openingAmount || 0)
+
+                createOfflineCashRegister(tenantId, {
+                    opening_amount: openingAmount,
+                    opening_notes: openCashRegisterModal.openingNotes.trim() || null,
+                }, {
+                    userName: auth?.user?.name,
+                })
+                setOpenCashRegisterModal(null)
+                showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setOpeningCashRegister(false)
         }
@@ -1788,6 +1827,9 @@ export default function PosIndex({
 
             setCloseCashRegisterModal(null)
             setCashRegisterState(null)
+            seedOfflineWorkspace(tenantId, {
+                cashRegister: null,
+            })
             setCashReportModal(response.report)
             showFeedback('success', response.message || 'Caixa fechado com sucesso.')
         } catch (error) {
@@ -2022,6 +2064,7 @@ export default function PosIndex({
         return pricing.items.map((item) => ({
             id: item.id,
             qty: Number(item.qty),
+            unit_price: Number(item.sale_price || 0),
             discount: Number(item.lineDiscount || 0),
             discount_percent: Number(item.lineSubtotal || 0) > 0
                 ? roundCurrency((Number(item.lineDiscount || 0) / Number(item.lineSubtotal || 0)) * 100)
@@ -2034,6 +2077,7 @@ export default function PosIndex({
     async function finalizeSale({ fiscalDecision, requestedDocumentModel = '65', recipientPayload = null }) {
         const payments = buildPaymentsPayload()
         const salePayload = {
+            cash_register_id: cashRegisterState?.id || null,
             order_draft_id: activeOrderDraftId || null,
             customer_id: selectedCustomer || recipientPayload?.customer_id || null,
             company_id: selectedCompany || recipientPayload?.company_id || null,
@@ -2056,6 +2100,7 @@ export default function PosIndex({
                 method: 'post',
                 data: {
                     ...salePayload,
+                    cash_register_id: salePayload.cash_register_id,
                     order_draft_id: activeOrderDraftId ? resolveOfflineEntityId(tenantId, 'orders', activeOrderDraftId) : null,
                     customer_id: salePayload.customer_id ? resolveOfflineEntityId(tenantId, 'customers', salePayload.customer_id) : null,
                     company_id: salePayload.company_id ? resolveOfflineEntityId(tenantId, 'companies', salePayload.company_id) : null,

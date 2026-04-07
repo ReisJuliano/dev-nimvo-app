@@ -24,6 +24,7 @@ class FinalizeSaleRequest extends FormRequest
             : ['nullable', 'integer'];
 
         return [
+            'cash_register_id' => ['nullable', 'integer', 'exists:cash_registers,id'],
             'order_draft_id' => ['nullable', 'integer', 'exists:order_drafts,id'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'company_id' => $companyRules,
@@ -40,6 +41,7 @@ class FinalizeSaleRequest extends FormRequest
             'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'gt:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.discount_scope' => ['nullable', 'string', 'max:20'],

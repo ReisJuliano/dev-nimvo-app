@@ -63,9 +63,11 @@ class PosPageController extends Controller
             'recommendations' => $recommendationService->build(),
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,
+                'user_name' => auth()->user()?->name,
                 'status' => $cashRegister->status,
                 'opened_at' => $cashRegister->opened_at?->toIso8601String(),
                 'opening_amount' => (float) $cashRegister->opening_amount,
+                'opening_notes' => $cashRegister->opening_notes,
             ] : null,
             'posCapabilities' => [
                 'pending_sales' => $this->hasTable('pending_sales'),
