@@ -170,10 +170,19 @@ function buildPayload(data, overrides = {}) {
             balance_status: payload.balance_status,
             sort_by: payload.sort_by,
             sort_direction: payload.sort_direction,
+            export: payload.export,
             page: payload.page,
             per_page: payload.per_page,
         }).filter(([, value]) => value != null && value !== ''),
     )
+}
+
+function buildExportPayload(filters, schema, format) {
+    return buildPayload(buildFormState(filters, schema), {
+        applied: true,
+        export: format,
+        page: 1,
+    })
 }
 
 function renderValue(value, format) {
@@ -444,6 +453,20 @@ function ReportTable({ columns, rows }) {
     )
 }
 
+function ExportFormButton({ action, params, icon, label }) {
+    return (
+        <form className="report-export-form" action={action} method="get">
+            {Object.entries(params).map(([key, value]) => (
+                <input key={key} type="hidden" name={key} value={String(value)} />
+            ))}
+
+            <button type="submit" className="report-icon-button" aria-label={label} title={label}>
+                <i className={`fa-solid ${icon}`} />
+            </button>
+        </form>
+    )
+}
+
 export default function Show({
     report,
     filters,
@@ -468,6 +491,8 @@ export default function Show({
     )
     const visibleHighlights = useMemo(() => highlights.filter(Boolean), [highlights])
     const visibleCharts = useMemo(() => charts.filter(Boolean), [charts])
+    const pdfExportParams = useMemo(() => buildExportPayload(filters, filterSchema, 'pdf'), [filters, filterSchema])
+    const excelExportParams = useMemo(() => buildExportPayload(filters, filterSchema, 'excel'), [filters, filterSchema])
     const activeAdvancedCount = countActiveAdvancedFilters(form.data, visibleFields)
     const showPeriodFilters = visibleFields.includes('scope')
     const showSearch = visibleFields.includes('query')
@@ -722,6 +747,22 @@ export default function Show({
                         </div>
 
                         <div className="report-header-meta">
+                            {filtersApplied ? (
+                                <div className="report-header-actions">
+                                    <ExportFormButton
+                                        action={reportPath}
+                                        params={pdfExportParams}
+                                        icon="fa-file-pdf"
+                                        label="Exportar PDF"
+                                    />
+                                    <ExportFormButton
+                                        action={reportPath}
+                                        params={excelExportParams}
+                                        icon="fa-file-excel"
+                                        label="Exportar Excel"
+                                    />
+                                </div>
+                            ) : null}
                             <span className="report-chip soft">
                                 <i className="fa-solid fa-calendar" />
                                 {buildPeriodLabel(filters, filterSchema)}

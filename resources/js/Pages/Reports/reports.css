@@ -59,6 +59,7 @@
 
 .report-header-tags,
 .report-header-meta,
+.report-header-actions,
 .report-filter-presets,
 .report-scope-list,
 .report-filter-compact-actions {
@@ -114,6 +115,10 @@
     border-radius: 14px;
     text-decoration: none;
     cursor: pointer;
+}
+
+.report-export-form {
+    margin: 0;
 }
 
 .report-icon-button.wide {
