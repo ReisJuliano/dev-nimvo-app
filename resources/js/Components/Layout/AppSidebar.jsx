@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AppSidebarSection from '@/Components/Layout/AppSidebarSection'
 import CompactSidebar from '@/Components/Layout/CompactSidebar'
 
@@ -9,13 +9,18 @@ export default function AppSidebar({
     collapsed,
     sidebarOpen,
     allowCollapse = true,
-    onMouseEnter,
-    onMouseLeave,
     onToggleCollapsed,
     onCloseMobile,
     onLogout,
 }) {
     const navRef = useRef(null)
+    const [isHovered, setIsHovered] = useState(false)
+
+    useEffect(() => {
+        if (!collapsed || sidebarOpen) {
+            setIsHovered(false)
+        }
+    }, [collapsed, sidebarOpen])
 
     useEffect(() => {
         const nav = navRef.current
@@ -67,13 +72,26 @@ export default function AppSidebar({
             .join('')
             .slice(0, 2)
             .toUpperCase() || 'U'
+    const isCompact = collapsed && !isHovered && !sidebarOpen
+
+    function handleMouseEnter() {
+        if (!collapsed || sidebarOpen || !allowCollapse) {
+            return
+        }
+
+        setIsHovered(true)
+    }
+
+    function handleMouseLeave() {
+        setIsHovered(false)
+    }
 
     return (
         <CompactSidebar
-            collapsed={collapsed}
+            collapsed={isCompact}
             sidebarOpen={sidebarOpen}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
         >
             <div className="app-sidebar-header">
                 <div className="app-logo">
@@ -116,7 +134,7 @@ export default function AppSidebar({
                         section={group}
                         currentUrl={currentUrl}
                         onNavigate={handleNavigate}
-                        collapsed={collapsed}
+                        collapsed={isCompact}
                     />
                 ))}
             </nav>

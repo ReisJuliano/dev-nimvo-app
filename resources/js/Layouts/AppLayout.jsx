@@ -31,7 +31,6 @@ export default function AppLayout({
     const shouldAutoCompact = !isHiddenNavigation && !isOverlayNavigation && !isPosPage && !isDashboardPage
     const shouldStartCollapsed = isPosPage || defaultCollapsed || shouldAutoCompact
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const [isSidebarHovered, setIsSidebarHovered] = useState(false)
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
             return shouldStartCollapsed || isOverlayNavigation
@@ -59,12 +58,6 @@ export default function AppLayout({
 
         setCollapsed(window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true')
     }, [isOverlayNavigation, shouldStartCollapsed])
-
-    useEffect(() => {
-        if (!collapsed || isOverlayNavigation || isHiddenNavigation) {
-            setIsSidebarHovered(false)
-        }
-    }, [collapsed, isHiddenNavigation, isOverlayNavigation])
 
     useEffect(() => {
         if (typeof window === 'undefined' || shouldStartCollapsed || isOverlayNavigation) {
@@ -112,18 +105,6 @@ export default function AppLayout({
         setSidebarOpen(false)
     }
 
-    function handleSidebarMouseEnter() {
-        if (!collapsed || isOverlayNavigation || isHiddenNavigation) {
-            return
-        }
-
-        setIsSidebarHovered(true)
-    }
-
-    function handleSidebarMouseLeave() {
-        setIsSidebarHovered(false)
-    }
-
     const navigationGroups = useMemo(
         () => buildNavigationGroups({
             authRole: auth?.user?.role,
@@ -155,7 +136,7 @@ export default function AppLayout({
     const offlineBannerMeta = offlineStatus.lastSyncAt
         ? `Ultima sincronizacao concluida em ${formatDateTime(offlineStatus.lastSyncAt)}.`
         : 'Ainda nao houve uma sincronizacao concluida nesta maquina.'
-    const isSidebarCollapsed = collapsed && !isSidebarHovered
+    const isSidebarCollapsed = collapsed
 
     return (
         <>
@@ -185,8 +166,6 @@ export default function AppLayout({
                             collapsed={isSidebarCollapsed}
                             sidebarOpen={sidebarOpen}
                             allowCollapse={!isOverlayNavigation}
-                            onMouseEnter={handleSidebarMouseEnter}
-                            onMouseLeave={handleSidebarMouseLeave}
                             onToggleCollapsed={toggleCollapsed}
                             onCloseMobile={closeMobileSidebar}
                             onLogout={handleLogout}
