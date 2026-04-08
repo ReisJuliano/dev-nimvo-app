@@ -173,6 +173,55 @@ class FiscalDocumentsApiTest extends TestCase
         ], 'central');
     }
 
+    public function test_it_exposes_response_and_authorized_xml_after_completion(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        [$agent, $secret] = $this->makeAgentWithSecret();
+
+        $this->postJson('/api/fiscal/documents', [
+            'sale_id' => $sale->id,
+        ])->assertStatus(202);
+
+        $poll = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/commands/poll');
+
+        $commandId = $poll->json('command.id');
+        $documentId = FiscalDocument::query()->value('id');
+
+        $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson("/api/local-agents/commands/{$commandId}/complete", [
+            'successful' => true,
+            'request_xml' => '<NFe>request</NFe>',
+            'signed_xml' => '<NFe>signed</NFe>',
+            'response_xml' => '<retEnviNFe>response</retEnviNFe>',
+            'authorized_xml' => '<nfeProc>authorized</nfeProc>',
+            'access_key' => '35260412345678000123650010000000011000000010',
+            'receipt' => '123456789012345',
+            'protocol' => '135260000000001',
+            'sefaz_status_code' => '100',
+            'sefaz_status_reason' => 'Autorizado o uso da NF-e',
+        ])->assertOk();
+
+        $this->getJson("/api/fiscal/documents/{$documentId}")
+            ->assertOk()
+            ->assertJsonPath('document.response_xml_available', true)
+            ->assertJsonPath('document.authorized_xml_available', true);
+
+        $this->get("/api/fiscal/documents/{$documentId}/authorized-xml")
+            ->assertOk()
+            ->assertSee('<nfeProc>authorized</nfeProc>', false);
+
+        $this->get("/api/fiscal/documents/{$documentId}/response-xml")
+            ->assertOk()
+            ->assertSee('<retEnviNFe>response</retEnviNFe>', false);
+    }
+
     public function test_heartbeat_syncs_local_machine_data_without_returning_central_printer_overrides(): void
     {
         [$agent, $secret] = $this->makeAgentWithSecret();

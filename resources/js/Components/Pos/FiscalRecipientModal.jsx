@@ -101,6 +101,110 @@ export default function FiscalRecipientModal({
                                 placeholder="Opcional"
                             />
                         </label>
+
+                        {documentModel === '55' ? (
+                            <>
+                                <label className="pos-discount-form-field">
+                                    Telefone
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.phone}
+                                        onChange={(event) => onManualRecipientChange('phone', event.target.value)}
+                                        placeholder="Opcional"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Inscricao estadual
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.state_registration}
+                                        onChange={(event) => onManualRecipientChange('state_registration', event.target.value)}
+                                        placeholder="Nao contribuinte se vazio"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field span-2">
+                                    Logradouro
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.street}
+                                        onChange={(event) => onManualRecipientChange('street', event.target.value)}
+                                        placeholder="Rua, avenida, estrada"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Numero
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.number}
+                                        onChange={(event) => onManualRecipientChange('number', event.target.value)}
+                                        placeholder="Numero"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Complemento
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.complement}
+                                        onChange={(event) => onManualRecipientChange('complement', event.target.value)}
+                                        placeholder="Opcional"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Bairro
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.district}
+                                        onChange={(event) => onManualRecipientChange('district', event.target.value)}
+                                        placeholder="Bairro"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Municipio
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.city_name}
+                                        onChange={(event) => onManualRecipientChange('city_name', event.target.value)}
+                                        placeholder="Cidade"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    Codigo IBGE
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.city_code}
+                                        onChange={(event) => onManualRecipientChange('city_code', event.target.value)}
+                                        placeholder="7 digitos"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    UF
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.state}
+                                        onChange={(event) => onManualRecipientChange('state', event.target.value)}
+                                        placeholder="UF"
+                                    />
+                                </label>
+
+                                <label className="pos-discount-form-field">
+                                    CEP
+                                    <input
+                                        className="ui-input"
+                                        value={manualRecipient.zip_code}
+                                        onChange={(event) => onManualRecipientChange('zip_code', event.target.value)}
+                                        placeholder="Somente numeros"
+                                    />
+                                </label>
+                            </>
+                        ) : null}
                     </div>
                 ) : null}
 
@@ -259,6 +363,100 @@ export default function FiscalRecipientModal({
                                     placeholder="Opcional"
                                 />
                             </label>
+
+                            <label className="pos-discount-form-field span-2">
+                                Telefone
+                                <input
+                                    className="ui-input"
+                                    value={quickCompanyForm.phone}
+                                    onChange={(event) => onQuickCompanyFormChange('phone', event.target.value)}
+                                    placeholder="Opcional"
+                                />
+                            </label>
+
+                            {documentModel === '55' ? (
+                                <>
+                                    <label className="pos-discount-form-field span-2">
+                                        Logradouro
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.street}
+                                            onChange={(event) => onQuickCompanyFormChange('street', event.target.value)}
+                                            placeholder="Rua, avenida, estrada"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        Numero
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.number}
+                                            onChange={(event) => onQuickCompanyFormChange('number', event.target.value)}
+                                            placeholder="Numero"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        Complemento
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.complement}
+                                            onChange={(event) => onQuickCompanyFormChange('complement', event.target.value)}
+                                            placeholder="Opcional"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        Bairro
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.district}
+                                            onChange={(event) => onQuickCompanyFormChange('district', event.target.value)}
+                                            placeholder="Bairro"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        Municipio
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.city_name}
+                                            onChange={(event) => onQuickCompanyFormChange('city_name', event.target.value)}
+                                            placeholder="Cidade"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        Codigo IBGE
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.city_code}
+                                            onChange={(event) => onQuickCompanyFormChange('city_code', event.target.value)}
+                                            placeholder="7 digitos"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        UF
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.state}
+                                            onChange={(event) => onQuickCompanyFormChange('state', event.target.value)}
+                                            placeholder="UF"
+                                        />
+                                    </label>
+
+                                    <label className="pos-discount-form-field">
+                                        CEP
+                                        <input
+                                            className="ui-input"
+                                            value={quickCompanyForm.zip_code}
+                                            onChange={(event) => onQuickCompanyFormChange('zip_code', event.target.value)}
+                                            placeholder="Somente numeros"
+                                        />
+                                    </label>
+                                </>
+                            ) : null}
                         </div>
 
                         <div className="pos-quick-customer-actions">
@@ -276,7 +474,7 @@ export default function FiscalRecipientModal({
                     </button>
                     <button className="pos-finalize-button" type="submit" disabled={submitting}>
                         <i className="fa-solid fa-check" />
-                        {submitting ? 'Concluindo...' : documentModel === '55' ? 'Preparar NF-e / DANFE' : 'Emitir cupom'}
+                        {submitting ? 'Concluindo...' : documentModel === '55' ? 'Emitir NF-e / DANFE' : 'Emitir cupom'}
                     </button>
                 </div>
             </form>

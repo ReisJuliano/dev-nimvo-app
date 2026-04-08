@@ -175,10 +175,24 @@ class PosApiController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:255'],
             'state_registration' => ['nullable', 'string', 'max:30'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'number' => ['nullable', 'string', 'max:60'],
+            'complement' => ['nullable', 'string', 'max:255'],
+            'district' => ['nullable', 'string', 'max:255'],
+            'city_name' => ['nullable', 'string', 'max:255'],
+            'city_code' => ['nullable', 'string', 'max:10'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'zip_code' => ['nullable', 'string', 'max:12'],
         ]);
 
         $document = filled($validated['document'] ?? null)
             ? preg_replace('/\D+/', '', (string) $validated['document'])
+            : null;
+        $cityCode = filled($validated['city_code'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['city_code'])
+            : null;
+        $zipCode = filled($validated['zip_code'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['zip_code'])
             : null;
 
         $company = Company::query()->create([
@@ -189,6 +203,14 @@ class PosApiController extends Controller
             'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'state_registration' => $validated['state_registration'] ?? null,
+            'street' => $validated['street'] ?? null,
+            'number' => $validated['number'] ?? null,
+            'complement' => $validated['complement'] ?? null,
+            'district' => $validated['district'] ?? null,
+            'city_name' => $validated['city_name'] ?? null,
+            'city_code' => $cityCode,
+            'state' => filled($validated['state'] ?? null) ? strtoupper((string) $validated['state']) : null,
+            'zip_code' => $zipCode,
             'active' => true,
         ]);
 

@@ -118,6 +118,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/fiscal/documents/{fiscalDocument}/retry', [FiscalDocumentsApiController::class, 'retry'])->name('api.fiscal.documents.retry');
             Route::get('/fiscal/documents/{fiscalDocument}/preview', [FiscalDocumentsApiController::class, 'preview'])->name('api.fiscal.documents.preview');
             Route::get('/fiscal/documents/{fiscalDocument}/signed-xml', [FiscalDocumentsApiController::class, 'signedXml'])->name('api.fiscal.documents.signed-xml');
+            Route::get('/fiscal/documents/{fiscalDocument}/authorized-xml', [FiscalDocumentsApiController::class, 'authorizedXml'])->name('api.fiscal.documents.authorized-xml');
+            Route::get('/fiscal/documents/{fiscalDocument}/response-xml', [FiscalDocumentsApiController::class, 'responseXml'])->name('api.fiscal.documents.response-xml');
 
             Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');

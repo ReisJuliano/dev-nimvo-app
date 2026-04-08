@@ -69,8 +69,37 @@ const shortcutActionByCode = {
 const emptyDiscountAuthorizer = null
 const initialAuthorizationForm = { authorizer_user_id: '', authorizer_password: '' }
 const initialQuickCustomerForm = { name: '', phone: '', document: '', email: '' }
-const initialQuickCompanyForm = { name: '', trade_name: '', document: '', email: '', state_registration: '' }
-const initialManualRecipient = { name: '', document: '', email: '' }
+const initialQuickCompanyForm = {
+    name: '',
+    trade_name: '',
+    document: '',
+    email: '',
+    phone: '',
+    state_registration: '',
+    street: '',
+    number: '',
+    complement: '',
+    district: '',
+    city_name: '',
+    city_code: '',
+    state: '',
+    zip_code: '',
+}
+const initialManualRecipient = {
+    name: '',
+    document: '',
+    email: '',
+    phone: '',
+    state_registration: '',
+    street: '',
+    number: '',
+    complement: '',
+    district: '',
+    city_name: '',
+    city_code: '',
+    state: '',
+    zip_code: '',
+}
 const initialCustomerLinkForm = { name: '', document: '', email: '' }
 const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
 
@@ -2285,7 +2314,26 @@ export default function PosIndex({
         openInvoiceStep()
     }
 
-    function buildInlineRecipientPayload(requireEmail = false) {
+    function buildManualRecipientPayload(source) {
+        return {
+            type: 'document',
+            name: source.name.trim(),
+            document: normalizeDocument(source.document),
+            email: source.email.trim() || null,
+            phone: String(source.phone || '').replace(/\D/g, '') || null,
+            state_registration: String(source.state_registration || '').trim() || null,
+            street: String(source.street || '').trim() || null,
+            number: String(source.number || '').trim() || null,
+            complement: String(source.complement || '').trim() || null,
+            district: String(source.district || '').trim() || null,
+            city_name: String(source.city_name || '').trim() || null,
+            city_code: String(source.city_code || '').replace(/\D/g, '') || null,
+            state: String(source.state || '').trim().toUpperCase() || null,
+            zip_code: String(source.zip_code || '').replace(/\D/g, '') || null,
+        }
+    }
+
+    function buildInlineRecipientPayload(requireEmail = false, documentModel = '65') {
         const manualName = manualRecipient.name.trim()
         const manualDocument = normalizeDocument(manualRecipient.document)
         const manualEmail = manualRecipient.email.trim()
@@ -2295,12 +2343,18 @@ export default function PosIndex({
                 throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
             }
 
-            return {
-                type: 'document',
-                name: manualName,
-                document: manualDocument,
-                email: manualEmail || null,
+            const payload = buildManualRecipientPayload(manualRecipient)
+
+            if (documentModel === '55') {
+                const requiredFields = ['street', 'number', 'district', 'city_name', 'city_code', 'state', 'zip_code']
+                const hasAllFields = requiredFields.every((field) => Boolean(payload[field]))
+
+                if (!hasAllFields) {
+                    throw new Error('Informe o endereco completo do destinatario antes de emitir NF-e.')
+                }
             }
+
+            return payload
         }
 
         if (selectedCustomerData?.document) {
@@ -2330,12 +2384,16 @@ export default function PosIndex({
             throw new Error('Identifique o consumidor com nome e CPF/CNPJ antes de emitir o documento fiscal.')
         }
 
+        if (documentModel === '55') {
+            throw new Error('Use a etapa de destinatario da NF-e para informar endereco completo do recebedor.')
+        }
+
         if (requireEmail && !email) {
             throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
         }
 
         return {
-            type: 'document',
+            ...buildManualRecipientPayload(customerLinkForm),
             name,
             document,
             email: email || null,
@@ -2367,6 +2425,7 @@ export default function PosIndex({
             company_id: selectedCompany || recipientPayload?.company_id || null,
             discount: totals.discount,
             notes: notes || null,
+            cash_received: paymentMethod === 'cash' && cashReceived !== '' ? Number(cashReceived) : null,
             fiscal_decision: fiscalDecision,
             requested_document_model: requestedDocumentModel,
             recipient_payload: recipientPayload,
@@ -2465,7 +2524,7 @@ export default function PosIndex({
         setSubmitting(true)
 
         try {
-            const recipientPayload = buildInlineRecipientPayload(requireEmail)
+            const recipientPayload = buildInlineRecipientPayload(requireEmail, requestedDocumentModel)
             const finalizedOrderDraftId = activeOrderDraftId
             const response = await finalizeSale({
                 fiscalDecision: 'emit',
@@ -2492,7 +2551,7 @@ export default function PosIndex({
             showFeedback(
                 'success',
                 requestedDocumentModel === '55'
-                    ? `Venda ${response.sale.sale_number} preparada para NF-e / DANFE.`
+                    ? `Venda ${response.sale.sale_number} enviada para emissao de NF-e / DANFE.`
                     : invoiceChoice === 'email'
                         ? `Venda ${response.sale.sale_number} enviada para emissao com contato por e-mail.`
                         : `Venda ${response.sale.sale_number} enviada para emissao fiscal.`,
@@ -2609,12 +2668,26 @@ export default function PosIndex({
         const name = manualRecipient.name.trim()
         const document = manualRecipient.document.replace(/\D/g, '')
         if (!name || !document) throw new Error('Informe nome e CPF/CNPJ do destinatario antes de continuar.')
-        return {
-            type: 'document',
-            name,
-            document,
-            email: manualRecipient.email.trim() || null,
+
+        if (recipientDocumentModel === '55') {
+            const requiredFields = [
+                ['street', 'logradouro'],
+                ['number', 'numero'],
+                ['district', 'bairro'],
+                ['city_name', 'municipio'],
+                ['city_code', 'codigo IBGE do municipio'],
+                ['state', 'UF'],
+                ['zip_code', 'CEP'],
+            ]
+
+            const missingField = requiredFields.find(([field]) => !String(manualRecipient[field] || '').trim())
+
+            if (missingField) {
+                throw new Error(`Informe ${missingField[1]} do destinatario para emitir NF-e.`)
+            }
         }
+
+        return buildManualRecipientPayload(manualRecipient)
     }
 
     async function handleSubmitRecipient(event) {
@@ -2650,7 +2723,7 @@ export default function PosIndex({
                 showFeedback(
                     'success',
                     recipientDocumentModel === '55'
-                        ? `Venda ${response.sale.sale_number} preparada para NF-e / DANFE.`
+                        ? `Venda ${response.sale.sale_number} enviada para emissao de NF-e / DANFE.`
                         : `Venda ${response.sale.sale_number} enviada para emissao fiscal.`,
                 )
             } catch (error) {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\FiscalDocument;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\Fiscal\FiscalDocumentXmlStorage;
+use App\Support\DanfePdfRenderer;
 use App\Support\DanfcePdfRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,15 +51,26 @@ class FiscalDocumentsApiController extends Controller
         ]);
     }
 
-    public function preview(FiscalDocument $fiscalDocument, DanfcePdfRenderer $renderer): Response
+    public function preview(
+        FiscalDocument $fiscalDocument,
+        DanfcePdfRenderer $danfceRenderer,
+        DanfePdfRenderer $danfeRenderer,
+    ): Response
     {
         abort_unless(filled($fiscalDocument->authorized_xml), 422, 'O documento fiscal ainda nao possui XML autorizado.');
 
-        $pdf = $renderer->render($fiscalDocument->authorized_xml);
+        $documentModel = (string) data_get($fiscalDocument->payload, 'flags.document_model', '65');
+        $pdf = $documentModel === '55'
+            ? $danfeRenderer->render($fiscalDocument->authorized_xml)
+            : $danfceRenderer->render($fiscalDocument->authorized_xml);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => sprintf('inline; filename="danfce-%s.pdf"', $fiscalDocument->number),
+            'Content-Disposition' => sprintf(
+                'inline; filename="%s-%s.pdf"',
+                $documentModel === '55' ? 'danfe' : 'danfce',
+                $fiscalDocument->number,
+            ),
         ]);
     }
 
@@ -69,6 +81,26 @@ class FiscalDocumentsApiController extends Controller
         return response($fiscalDocument->signed_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
             'Content-Disposition' => sprintf('attachment; filename="signed-%s.xml"', $fiscalDocument->number),
+        ]);
+    }
+
+    public function authorizedXml(FiscalDocument $fiscalDocument): Response
+    {
+        abort_unless(filled($fiscalDocument->authorized_xml), 422, 'O documento fiscal ainda nao possui XML autorizado.');
+
+        return response($fiscalDocument->authorized_xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="authorized-%s.xml"', $fiscalDocument->number),
+        ]);
+    }
+
+    public function responseXml(FiscalDocument $fiscalDocument): Response
+    {
+        abort_unless(filled($fiscalDocument->response_xml), 422, 'O documento fiscal ainda nao possui retorno XML da SEFAZ.');
+
+        return response($fiscalDocument->response_xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="response-%s.xml"', $fiscalDocument->number),
         ]);
     }
 
@@ -83,12 +115,14 @@ class FiscalDocumentsApiController extends Controller
             'status' => $document->status,
             'type' => $document->type,
             'mode' => data_get($document->payload, 'flags.mode'),
+            'document_model' => (string) data_get($document->payload, 'flags.document_model', '65'),
             'series' => $document->series,
             'number' => $document->number,
             'access_key' => $document->access_key,
             'agent_key' => $document->agent_key,
             'agent_command_id' => $document->agent_command_id,
             'signed_xml_available' => filled($document->signed_xml),
+            'response_xml_available' => filled($document->response_xml),
             'authorized_xml_available' => filled($document->authorized_xml),
             'xml_files' => $xmlFiles,
             'sefaz_status_code' => $document->sefaz_status_code,
