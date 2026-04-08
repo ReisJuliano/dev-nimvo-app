@@ -1119,7 +1119,7 @@
 
 .products-search-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 220px auto;
+    grid-template-columns: minmax(0, 1fr) 220px auto auto;
     gap: 0.75rem;
     align-items: end;
 }

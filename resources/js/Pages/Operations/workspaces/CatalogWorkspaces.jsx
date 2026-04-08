@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
 import ModalForm from '@/Components/UI/ModalForm'
@@ -213,19 +214,20 @@ function SupplierListCard({ record, active, onClick }) {
 export function CategoriesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', description: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
-    const normalizedSearch = useMemo(() => normalizeCategorySearch(search), [search])
-    const hasFilters = normalizedSearch !== '' || statusFilter !== 'all' || productFilter !== 'all'
+    const normalizedSearch = useMemo(() => normalizeCategorySearch(searchControl.value), [searchControl.value])
+    const hasFilters = searchControl.draftValue !== '' || searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
+    const hasAppliedFilters = searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
 
     const filteredRecords = useMemo(
         () => {
-            if (!hasFilters) {
+            if (!hasAppliedFilters) {
                 return []
             }
 
@@ -241,7 +243,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 return matchesSearch && matchesStatus && matchesProducts
             })
         },
-        [hasFilters, normalizedSearch, productFilter, records, statusFilter],
+        [hasAppliedFilters, normalizedSearch, productFilter, records, statusFilter],
     )
     function handleCreate() {
         setForm(emptyForm)
@@ -259,9 +261,14 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     }
 
     function handleClearFilters() {
-        setSearch('')
+        searchControl.clear()
         setStatusFilter('all')
         setProductFilter('all')
+    }
+
+    function handleSearchSubmit(event) {
+        event.preventDefault()
+        searchControl.apply()
     }
 
     async function handleSubmit(event) {
@@ -275,7 +282,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
             setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record })
             setModalOpen(false)
-            setSearch(response.record.name || '')
+            searchControl.sync(response.record.name || '')
             setStatusFilter(response.record.active ? 'active' : 'inactive')
             setProductFilter('all')
             setFeedback({ type: 'success', text: response.message })
@@ -322,20 +329,20 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 onTabChange={() => {}}
                 listTitle="Categorias"
                 listIcon="fa-layer-group"
-                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
+                listCount={hasAppliedFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
                 createLabel="Nova categoria"
                 onCreate={handleCreate}
                 summaryItems={[]}
                 emptyState={null}
                 listChildren={(
                     <div className="ops-category-shell">
-                        <section className="ops-category-toolbar">
+                        <form className="ops-category-toolbar" onSubmit={handleSearchSubmit}>
                             <label className="ops-category-search-field">
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     type="search"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    value={searchControl.draftValue}
+                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
                                     placeholder="Buscar categoria"
                                 />
                             </label>
@@ -357,6 +364,9 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                                     ))}
                                 </select>
                             </label>
+                            <ActionButton icon="fa-magnifying-glass" type="submit">
+                                Buscar
+                            </ActionButton>
                             <ActionButton
                                 tone="ghost"
                                 icon="fa-rotate-left"
@@ -366,9 +376,9 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                                 aria-label="Limpar filtros"
                                 disabled={!hasFilters}
                             />
-                        </section>
+                        </form>
 
-                        {hasFilters ? (
+                        {hasAppliedFilters ? (
                             filteredRecords.length ? (
                                 <div className="ops-category-results">
                                     {filteredRecords.map((record) => (
@@ -434,25 +444,26 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 export function SuppliersWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', document: '', trade_name: '', state_registration: '', city_name: '', state: '', phone: '', email: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
-    const normalizedSearch = useMemo(() => normalizeSupplierSearch(search), [search])
-    const hasFilters = normalizedSearch !== '' || statusFilter !== 'all' || productFilter !== 'all'
+    const normalizedSearch = useMemo(() => normalizeSupplierSearch(searchControl.value), [searchControl.value])
+    const hasFilters = searchControl.draftValue !== '' || searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
+    const hasAppliedFilters = searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
 
     const filteredRecords = useMemo(
         () => {
-            if (!hasFilters) {
+            if (!hasAppliedFilters) {
                 return []
             }
 
             return records.filter((record) => matchesSupplierFilters(record, normalizedSearch, statusFilter, productFilter))
         },
-        [hasFilters, normalizedSearch, productFilter, records, statusFilter],
+        [hasAppliedFilters, normalizedSearch, productFilter, records, statusFilter],
     )
     const overviewItems = useMemo(
         () => [
@@ -479,9 +490,14 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     }
 
     function handleClearFilters() {
-        setSearch('')
+        searchControl.clear()
         setStatusFilter('all')
         setProductFilter('all')
+    }
+
+    function handleSearchSubmit(event) {
+        event.preventDefault()
+        searchControl.apply()
     }
 
     async function handleSubmit(event) {
@@ -494,8 +510,8 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => sortSuppliers(upsertRecord(current, response.record)))
             handleCloseModal()
-            if (!hasFilters || !matchesSupplierFilters(response.record, normalizedSearch, statusFilter, productFilter)) {
-                setSearch(response.record.name || '')
+            if (!hasAppliedFilters || !matchesSupplierFilters(response.record, normalizedSearch, statusFilter, productFilter)) {
+                searchControl.sync(response.record.name || '')
                 setStatusFilter('all')
                 setProductFilter('all')
             }
@@ -543,7 +559,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 onTabChange={() => {}}
                 listTitle="Fornecedores"
                 listIcon="fa-truck-ramp-box"
-                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Aplique filtros'}
+                listCount={hasAppliedFilters ? `${filteredRecords.length} resultado(s)` : 'Aplique filtros'}
                 createLabel="Novo"
                 onCreate={handleCreate}
                 summaryItems={[]}
@@ -565,13 +581,13 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                             ))}
                         </section>
 
-                        <section className="ops-supplier-toolbar">
+                        <form className="ops-supplier-toolbar" onSubmit={handleSearchSubmit}>
                             <label className="ops-supplier-search-field">
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     type="search"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    value={searchControl.draftValue}
+                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
                                     placeholder="Buscar fornecedor"
                                 />
                             </label>
@@ -593,6 +609,9 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                     ))}
                                 </select>
                             </label>
+                            <ActionButton icon="fa-magnifying-glass" type="submit">
+                                Buscar
+                            </ActionButton>
                             <ActionButton
                                 tone="ghost"
                                 icon="fa-rotate-left"
@@ -602,9 +621,9 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                 aria-label="Limpar filtros"
                                 disabled={!hasFilters}
                             />
-                        </section>
+                        </form>
 
-                        {hasFilters ? (
+                        {hasAppliedFilters ? (
                             filteredRecords.length ? (
                                 <div className="ops-supplier-results">
                                     {filteredRecords.map((record) => (
@@ -712,7 +731,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         active: true,
     }
     const [records, setRecords] = useState(payload.records || [])
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [activeModalTab, setActiveModalTab] = useState('registration')
@@ -720,8 +739,8 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const requestIdRef = useRef(0)
-    const normalizedSearch = useMemo(() => normalizeCustomerSearch(search), [search])
-    const normalizedSearchKey = useMemo(() => normalizeCustomerSearchKey(search), [search])
+    const normalizedSearch = useMemo(() => normalizeCustomerSearch(searchControl.value), [searchControl.value])
+    const normalizedSearchKey = useMemo(() => normalizeCustomerSearchKey(searchControl.value), [searchControl.value])
     const hasSearch = normalizedSearch !== ''
 
     useEffect(() => {
@@ -817,9 +836,20 @@ export function CustomersWorkspace({ moduleKey, payload }) {
 
     function handleClearSearch() {
         requestIdRef.current += 1
-        setSearch('')
+        searchControl.clear()
         setRecords([])
         setLoading(false)
+    }
+
+    function handleSearchSubmit(event) {
+        event.preventDefault()
+        const nextSearch = searchControl.apply()
+
+        if (normalizeCustomerSearch(nextSearch) === '') {
+            requestIdRef.current += 1
+            setRecords([])
+            setLoading(false)
+        }
     }
 
     async function handleSubmit(event) {
@@ -844,7 +874,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                     return sortCustomers(upsertRecord(current, response.record))
                 })
             } else {
-                setSearch(response.record.name || '')
+                searchControl.sync(response.record.name || '')
                 setRecords(sortCustomers([response.record]))
             }
 
@@ -899,16 +929,19 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                 emptyState={null}
                 listChildren={(
                     <div className="ops-category-shell">
-                        <section className="ops-customer-toolbar">
+                        <form className="ops-customer-toolbar" onSubmit={handleSearchSubmit}>
                             <label className="ops-category-search-field">
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     type="search"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    value={searchControl.draftValue}
+                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
                                     placeholder="Buscar cliente por nome"
                                 />
                             </label>
+                            <ActionButton icon="fa-magnifying-glass" type="submit">
+                                Buscar
+                            </ActionButton>
                             <ActionButton
                                 tone="ghost"
                                 icon="fa-rotate-left"
@@ -916,9 +949,9 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 onClick={handleClearSearch}
                                 title="Limpar busca"
                                 aria-label="Limpar busca"
-                                disabled={!hasSearch}
+                                disabled={!searchControl.draftValue && !searchControl.value}
                             />
-                        </section>
+                        </form>
 
                         {loading ? (
                             <EmptyState icon="fa-spinner fa-spin" title="Buscando clientes" text="Aguarde a consulta." />

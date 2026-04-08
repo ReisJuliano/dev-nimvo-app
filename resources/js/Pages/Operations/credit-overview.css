@@ -139,6 +139,19 @@
     outline: none;
 }
 
+.credit-search-apply {
+    min-height: 38px;
+    padding: 0 0.9rem;
+    border: 1px solid rgba(47, 124, 246, 0.14);
+    border-radius: 12px;
+    background: rgba(47, 124, 246, 0.1);
+    color: var(--app-primary-dark);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
 .credit-filter-row {
     display: grid;
     grid-template-columns: minmax(0, 4fr) minmax(280px, 3fr) auto auto;

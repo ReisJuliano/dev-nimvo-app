@@ -6,6 +6,7 @@ import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
@@ -126,6 +127,10 @@ function normalizeSearchValue(value) {
     return value == null || String(value).toLowerCase() === 'null' ? '' : String(value)
 }
 
+function normalizeDraftSearchValue(value) {
+    return normalizeSearchValue(value)
+}
+
 function normalizeCartItem(item) {
     return {
         ...item,
@@ -173,7 +178,7 @@ export default function PosIndex({
     const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
     const [refreshingPendingOrders, setRefreshingPendingOrders] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState('')
-    const [searchTerm, setSearchTerm] = useState('')
+    const productSearchControl = useConfirmedSearch('')
     const [products, setProducts] = useState([])
     const [loadingProducts, setLoadingProducts] = useState(false)
     const [recommendations, setRecommendations] = useState(normalizeRecommendations(initialRecommendations))
@@ -183,7 +188,7 @@ export default function PosIndex({
     const [selectedCustomer, setSelectedCustomer] = useState('')
     const [selectedCompany, setSelectedCompany] = useState('')
     const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
-    const [customerSearch, setCustomerSearch] = useState('')
+    const customerSearchControl = useConfirmedSearch('')
     const [discountConfig, setDiscountConfig] = useState({ type: 'none' })
     const [discountModalOpen, setDiscountModalOpen] = useState(false)
     const [discountDraft, setDiscountDraft] = useState(buildDiscountDraft({ type: 'none' }))
@@ -200,7 +205,7 @@ export default function PosIndex({
     const [recipientModalOpen, setRecipientModalOpen] = useState(false)
     const [recipientDocumentModel, setRecipientDocumentModel] = useState('65')
     const [recipientSelectionMode, setRecipientSelectionMode] = useState('document')
-    const [recipientSearch, setRecipientSearch] = useState('')
+    const recipientSearchControl = useConfirmedSearch('')
     const [manualRecipient, setManualRecipient] = useState(initialManualRecipient)
     const [quickCompanyForm, setQuickCompanyForm] = useState(initialQuickCompanyForm)
     const [creatingCompany, setCreatingCompany] = useState(false)
@@ -229,8 +234,12 @@ export default function PosIndex({
     const [discountReason, setDiscountReason] = useState('')
 
     const productSearchInputRef = useRef(null)
-    const deferredCustomerSearch = useDeferredValue(customerSearch)
-    const deferredRecipientSearch = useDeferredValue(recipientSearch)
+    const searchTerm = productSearchControl.draftValue
+    const appliedSearchTerm = productSearchControl.value
+    const customerSearch = customerSearchControl.draftValue
+    const recipientSearch = recipientSearchControl.draftValue
+    const deferredCustomerSearch = useDeferredValue(customerSearchControl.value)
+    const deferredRecipientSearch = useDeferredValue(recipientSearchControl.value)
 
     const paymentOptions = useMemo(
         () =>
@@ -388,10 +397,6 @@ export default function PosIndex({
     }, [initialRecommendations])
 
     useEffect(() => {
-        setSearchTerm(normalizeSearchValue(searchTerm))
-    }, [searchTerm])
-
-    useEffect(() => {
         if (preloadedOrderDraft) {
             applyOrderDraftToSale(preloadedOrderDraft, false)
             setPendingSalePromptOpen(false)
@@ -400,7 +405,7 @@ export default function PosIndex({
     }, [preloadedOrderDraft])
 
     useEffect(() => {
-        const trimmedSearchTerm = searchTerm.trim()
+        const trimmedSearchTerm = appliedSearchTerm.trim()
         let ignore = false
 
         if (trimmedSearchTerm === '') {
@@ -452,7 +457,7 @@ export default function PosIndex({
             ignore = true
             clearTimeout(timeout)
         }
-    }, [searchTerm, selectedCategory, tenantId])
+    }, [appliedSearchTerm, selectedCategory, tenantId])
 
     useEffect(() => {
         if (!supportsDeferredPayment || !selectedCustomer) {
@@ -712,7 +717,7 @@ export default function PosIndex({
         }
 
         if (searchTerm.trim()) {
-            return 'Digite mais detalhes ou pressione Enter para tentar localizar o produto.'
+            return 'Pressione Pesquisar ou Enter para consultar o produto digitado.'
         }
 
         return 'Bipe o codigo de barras ou digite o nome do produto e pressione Enter.'
@@ -949,9 +954,35 @@ export default function PosIndex({
         })
     }
 
+    function applyProductSearch(nextValue = searchTerm) {
+        return productSearchControl.apply(normalizeDraftSearchValue(nextValue))
+    }
+
+    function clearProductSearch() {
+        productSearchControl.clear()
+        setProducts([])
+        setLoadingProducts(false)
+    }
+
+    function applyCustomerSearch(nextValue = customerSearch) {
+        return customerSearchControl.apply(normalizeDraftSearchValue(nextValue))
+    }
+
+    function clearCustomerSearch() {
+        customerSearchControl.clear()
+    }
+
+    function applyRecipientSearch(nextValue = recipientSearch) {
+        return recipientSearchControl.apply(normalizeDraftSearchValue(nextValue))
+    }
+
+    function clearRecipientSearch() {
+        recipientSearchControl.clear()
+    }
+
     function closeCustomerPicker() {
         setCustomerPickerOpen(false)
-        setCustomerSearch('')
+        clearCustomerSearch()
     }
 
     function resetSale() {
@@ -1419,20 +1450,21 @@ export default function PosIndex({
 
         event.preventDefault()
 
-        const term = searchTerm.trim()
+        const term = normalizeDraftSearchValue(searchTerm).trim()
 
         if (!term) {
             showFeedback('error', 'Informe um codigo ou nome de produto antes de adicionar.')
             return
         }
 
+        applyProductSearch(term)
+
         const localMatch = resolveProductMatch(products, term)
 
         if (localMatch) {
             handleAddProduct(localMatch)
             setSelectedCartItemId(localMatch.id)
-            setSearchTerm('')
-            setProducts([])
+            clearProductSearch()
             return
         }
 
@@ -1455,8 +1487,7 @@ export default function PosIndex({
 
                 handleAddProduct(fallbackMatch)
                 setSelectedCartItemId(fallbackMatch.id)
-                setSearchTerm('')
-                setProducts([])
+                clearProductSearch()
                 return
             }
 
@@ -1472,8 +1503,7 @@ export default function PosIndex({
 
             handleAddProduct(match)
             setSelectedCartItemId(match.id)
-            setSearchTerm('')
-            setProducts([])
+            clearProductSearch()
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 const fallbackMatch = resolveProductMatch(
@@ -1489,8 +1519,7 @@ export default function PosIndex({
                 } else {
                     handleAddProduct(fallbackMatch)
                     setSelectedCartItemId(fallbackMatch.id)
-                    setSearchTerm('')
-                    setProducts([])
+                    clearProductSearch()
                 }
             } else {
                 showFeedback('error', error.message)
@@ -1507,8 +1536,7 @@ export default function PosIndex({
 
         handleAddProduct(product)
         setSelectedCartItemId(product.id)
-        setSearchTerm('')
-        setProducts([])
+        clearProductSearch()
         requestAnimationFrame(() => {
             productSearchInputRef.current?.focus()
         })
@@ -2758,7 +2786,9 @@ export default function PosIndex({
         linkedCustomerSummary,
         productSearchInputRef,
         searchTerm,
-        onSearchChange: setSearchTerm,
+        appliedSearchTerm,
+        onSearchChange: (value) => productSearchControl.setDraftValue(value),
+        onSearchSubmit: applyProductSearch,
         onSearchKeyDown: handleBarcodeInputKeyDown,
         barcodeHelperText,
         products,
@@ -2979,9 +3009,10 @@ export default function PosIndex({
                         selectedCategory={selectedCategory}
                         onCategoryChange={setSelectedCategory}
                         searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
+                        onSearchChange={(value) => productSearchControl.setDraftValue(value)}
+                        onSearchSubmit={applyProductSearch}
                         searchInputRef={productSearchInputRef}
-                        hasSearchTerm={searchTerm.trim() !== ''}
+                        hasSearchTerm={appliedSearchTerm.trim() !== ''}
                         products={products}
                         loading={loadingProducts}
                         onAddProduct={handleAddProduct}
@@ -3166,7 +3197,8 @@ export default function PosIndex({
                 selectionMode={recipientSelectionMode}
                 onSelectionModeChange={setRecipientSelectionMode}
                 searchTerm={recipientSearch}
-                onSearchTermChange={setRecipientSearch}
+                onSearchTermChange={(value) => recipientSearchControl.setDraftValue(value)}
+                onSearchTermSubmit={applyRecipientSearch}
                 filteredCustomers={filteredRecipientCustomers}
                 filteredCompanies={filteredRecipientCompanies}
                 selectedCustomerId={selectedCustomer}
@@ -3303,7 +3335,18 @@ export default function PosIndex({
 
                         <div className="pos-customer-picker-search">
                             <i className="fa-solid fa-magnifying-glass" />
-                            <input className="ui-input pos-customer-picker-input" placeholder="Buscar cliente por nome, telefone ou CPF" value={customerSearch} onChange={(event) => setCustomerSearch(event.target.value)} autoFocus />
+                            <input className="ui-input pos-customer-picker-input" placeholder="Buscar cliente por nome, telefone ou CPF" value={customerSearch} onChange={(event) => customerSearchControl.setDraftValue(event.target.value)} onKeyDown={(event) => {
+                                if (event.key !== 'Enter') {
+                                    return
+                                }
+
+                                event.preventDefault()
+                                applyCustomerSearch()
+                            }} autoFocus />
+                            <button type="button" className="ui-button-ghost" onClick={() => applyCustomerSearch()}>
+                                <i className="fa-solid fa-magnifying-glass" />
+                                Pesquisar
+                            </button>
                         </div>
 
                         <div className="pos-customer-picker-toolbar">
@@ -3373,7 +3416,9 @@ function PosWorkspace({
     linkedCustomerSummary,
     productSearchInputRef,
     searchTerm,
+    appliedSearchTerm,
     onSearchChange,
+    onSearchSubmit,
     onSearchKeyDown,
     barcodeHelperText,
     products,
@@ -3498,9 +3543,13 @@ function PosWorkspace({
                             placeholder="Codigo de barras ou nome do produto"
                             autoFocus
                         />
+                        <button type="button" className="ui-button-ghost" onClick={() => onSearchSubmit?.()}>
+                            <i className="fa-solid fa-magnifying-glass" />
+                            Pesquisar
+                        </button>
                     </div>
 
-                    {searchTerm.trim() ? (
+                    {appliedSearchTerm.trim() ? (
                         <div className="pos-suggestions-panel">
                             {loadingProducts ? (
                                 <div className="pos-suggestion-empty">Buscando produtos...</div>

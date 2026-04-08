@@ -2,7 +2,7 @@ import { formatDateTime, formatMoney } from '@/lib/format'
 import OrdersModal from './OrdersModal'
 import { getOrderStatusMeta } from './orderUtils'
 
-export default function OrderSearchModal({ term, setTerm, inputRef, results, onClose, onOpenDraft }) {
+export default function OrderSearchModal({ term, setTerm, onSearchSubmit, inputRef, results, onClose, onOpenDraft }) {
     return (
         <OrdersModal
             title="Pesquisar atendimento"
@@ -20,7 +20,19 @@ export default function OrderSearchModal({ term, setTerm, inputRef, results, onC
                         value={term}
                         placeholder="Ex.: Joao, referencia 12, atendimento 5"
                         onChange={(event) => setTerm(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+
+                            event.preventDefault()
+                            onSearchSubmit?.()
+                        }}
                     />
+                    <button type="button" className="ui-button-ghost" onClick={() => onSearchSubmit?.()}>
+                        <i className="fa-solid fa-magnifying-glass" />
+                        Pesquisar
+                    </button>
                 </label>
 
                 <div className="orders-search-results">

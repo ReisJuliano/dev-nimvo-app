@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import './shop.css'
 
@@ -40,7 +41,7 @@ function buildWhatsAppUrl(phone, lines) {
 }
 
 export default function ShopIndex({ store, catalog, whatsApp, collections, products }) {
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [activeCollection, setActiveCollection] = useState(catalog.featured_collection || '')
     const [cart, setCart] = useState([])
     const [customer, setCustomer] = useState(emptyCustomer)
@@ -51,7 +52,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     const filteredProducts = useMemo(() => {
-        const normalizedSearch = normalizeTextSearch(search)
+        const normalizedSearch = normalizeTextSearch(searchControl.value)
 
         return products.filter((product) => {
             const matchesCollection =
@@ -70,7 +71,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
 
             return matchesCollection && matchesSearch
         })
-    }, [activeCollection, products, search])
+    }, [activeCollection, products, searchControl.value])
 
     const cartItems = useMemo(() => buildCartIndex(products, cart), [cart, products])
     const cartCount = useMemo(
@@ -206,15 +207,21 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                 </section>
 
                 <section className="shop-filter-bar" id="colecoes">
-                    <div className="shop-search">
+                    <form className="shop-search" onSubmit={(event) => {
+                        event.preventDefault()
+                        searchControl.apply()
+                    }}>
                         <i className="fa-solid fa-magnifying-glass" />
                         <input
                             type="search"
                             placeholder="Buscar por nome, referencia, colecao, cor ou tamanho"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
+                            value={searchControl.draftValue}
+                            onChange={(event) => searchControl.setDraftValue(event.target.value)}
                         />
-                    </div>
+                        <button type="submit" className="shop-search-button">
+                            Pesquisar
+                        </button>
+                    </form>
 
                     <div className="shop-collections">
                         <button

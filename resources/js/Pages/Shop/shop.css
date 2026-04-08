@@ -162,6 +162,8 @@
 
 .shop-search {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .shop-search i {
@@ -178,7 +180,7 @@
     width: 100%;
     border: 1px solid var(--shop-line);
     border-radius: 18px;
-    padding: 0.9rem 1rem 0.9rem 2.9rem;
+    padding: 0.9rem 7.8rem 0.9rem 2.9rem;
     background: rgba(255, 255, 255, 0.82);
     font: inherit;
     color: var(--shop-ink);
@@ -195,6 +197,20 @@
 .shop-checkout-form textarea:focus {
     border-color: rgba(182, 83, 47, 0.4);
     box-shadow: 0 0 0 0.24rem rgba(182, 83, 47, 0.12);
+}
+
+.shop-search-button {
+    position: absolute;
+    right: 0.55rem;
+    min-height: 38px;
+    padding: 0 0.95rem;
+    border: 1px solid rgba(182, 83, 47, 0.18);
+    border-radius: 14px;
+    background: rgba(182, 83, 47, 0.12);
+    color: var(--shop-accent-dark);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .shop-collections {

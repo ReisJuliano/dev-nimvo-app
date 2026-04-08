@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
 import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
@@ -82,7 +83,7 @@ export default function OrdersIndex({
     const [currentDraft, setCurrentDraft] = useState(initialDraftState)
     const [selectedItemId, setSelectedItemId] = useState(initialDraft?.items?.[0]?.id ?? null)
     const [selectedCategory, setSelectedCategory] = useState('')
-    const [searchTerm, setSearchTerm] = useState('')
+    const productSearchControl = useConfirmedSearch('')
     const [products, setProducts] = useState([])
     const [loadingProducts, setLoadingProducts] = useState(false)
     const [loadingDraft, setLoadingDraft] = useState(false)
@@ -106,7 +107,7 @@ export default function OrdersIndex({
     const [deliveriesModalOpen, setDeliveriesModalOpen] = useState(false)
     const [creatingTransferCustomer, setCreatingTransferCustomer] = useState(false)
     const [newDraftForm, setNewDraftForm] = useState(getInitialNewDraftForm())
-    const [searchDraftTerm, setSearchDraftTerm] = useState('')
+    const searchDraftControl = useConfirmedSearch('')
     const [feedback, setFeedback] = useState(null)
     const [productQuickQty, setProductQuickQty] = useState('1')
     const [transferForm, setTransferForm] = useState({
@@ -125,6 +126,10 @@ export default function OrdersIndex({
     const [creditStatus, setCreditStatus] = useState(null)
     const [quantityDraft, setQuantityDraft] = useState(String(initialDraftState?.items?.[0]?.qty ?? '1'))
     const [clock, setClock] = useState(Date.now())
+    const searchTerm = productSearchControl.draftValue
+    const appliedSearchTerm = productSearchControl.value
+    const searchDraftTerm = searchDraftControl.draftValue
+    const appliedSearchDraftTerm = searchDraftControl.value
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
     const saveTimeoutRef = useRef(null)
     const searchInputRef = useRef(null)
@@ -207,7 +212,7 @@ export default function OrdersIndex({
     }, [cashRegister, categories, customers, draftDetails, localAgentBridge, productCatalog, tenantId])
 
     useEffect(() => {
-        const trimmedSearchTerm = searchTerm.trim()
+        const trimmedSearchTerm = appliedSearchTerm.trim()
         let ignore = false
 
         if (trimmedSearchTerm === '') {
@@ -263,7 +268,17 @@ export default function OrdersIndex({
             ignore = true
             clearTimeout(timeout)
         }
-    }, [searchTerm, selectedCategory, tenantId])
+    }, [appliedSearchTerm, selectedCategory, tenantId])
+
+    function applyProductSearch(nextValue = searchTerm) {
+        return productSearchControl.apply(nextValue)
+    }
+
+    function clearProductSearch() {
+        productSearchControl.clear()
+        setProducts([])
+        setLoadingProducts(false)
+    }
 
     const isAnyModalOpen =
         draftModalOpen ||
@@ -414,7 +429,7 @@ export default function OrdersIndex({
         [filteredDrafts],
     )
     const searchResults = useMemo(() => {
-        const normalizedTerm = normalizeTextSearch(searchDraftTerm)
+        const normalizedTerm = normalizeTextSearch(appliedSearchDraftTerm)
         if (!normalizedTerm) return drafts.slice(0, 8)
         return drafts.filter((draft) =>
             matchesTextSearchAny(
@@ -422,7 +437,7 @@ export default function OrdersIndex({
                 normalizedTerm,
             ),
         )
-    }, [drafts, searchDraftTerm])
+    }, [appliedSearchDraftTerm, drafts])
     const newDraftCustomerSuggestions = useMemo(() => {
         const normalizedTerm = normalizeTextSearch(newDraftForm.customerName)
         if (!normalizedTerm) return []
@@ -1518,17 +1533,18 @@ export default function OrdersIndex({
                         selectedCategory={selectedCategory}
                         setSelectedCategory={setSelectedCategory}
                         searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
+                        appliedSearchTerm={appliedSearchTerm}
+                        setSearchTerm={(value) => productSearchControl.setDraftValue(value)}
+                        onSearchSubmit={applyProductSearch}
                         searchInputRef={searchInputRef}
                         productQuickQty={productQuickQty}
                         setProductQuickQty={setProductQuickQty}
                         loadingProducts={loadingProducts}
                         products={products}
                         onResetProductFilters={() => {
-                            setSearchTerm('')
+                            clearProductSearch()
                             setSelectedCategory('')
                             setProductQuickQty('1')
-                            setProducts([])
                         }}
                         onAddProduct={(product) => handleAddProduct(product, productQuickQty)}
                         onClose={() => setProductsModalOpen(false)}
@@ -1552,7 +1568,8 @@ export default function OrdersIndex({
                 {searchModalOpen ? (
                     <OrderSearchModal
                         term={searchDraftTerm}
-                        setTerm={setSearchDraftTerm}
+                        setTerm={(value) => searchDraftControl.setDraftValue(value)}
+                        onSearchSubmit={() => searchDraftControl.apply()}
                         inputRef={searchDraftInputRef}
                         results={searchResults}
                         onClose={() => setSearchModalOpen(false)}

@@ -6,6 +6,7 @@ export default function ProductSearchPanel({
     onCategoryChange,
     searchTerm,
     onSearchChange,
+    onSearchSubmit,
     searchInputRef,
     hasSearchTerm,
     products,
@@ -35,7 +36,13 @@ export default function ProductSearchPanel({
                 {actions ? <div className="pos-card-header-actions">{actions}</div> : null}
             </div>
 
-            <div className="pos-search-grid">
+            <form
+                className="pos-search-grid"
+                onSubmit={(event) => {
+                    event.preventDefault()
+                    onSearchSubmit?.()
+                }}
+            >
                 <select className="ui-select" value={selectedCategory} onChange={(event) => onCategoryChange(event.target.value)}>
                     <option value="">{categoryPlaceholder}</option>
                     {categories.map((category) => (
@@ -53,7 +60,11 @@ export default function ProductSearchPanel({
                     value={normalizedSearchTerm}
                     onChange={(event) => onSearchChange(event.target.value)}
                 />
-            </div>
+                <button type="submit" className="ui-button">
+                    <i className="fa-solid fa-magnifying-glass" />
+                    Pesquisar
+                </button>
+            </form>
 
             <div className="pos-product-results">
                 {!hasSearchTerm ? (

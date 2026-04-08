@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, normalizeTextSearch } from '@/lib/textSearch'
 import './credit-overview.css'
 
@@ -229,7 +230,7 @@ export default function CreditOverview({ module }) {
         })
     }, [module.portfolio])
     const recentSales = Array.isArray(module.recent_sales) ? module.recent_sales : []
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('all')
     const [activeCustomerId, setActiveCustomerId] = useState(null)
     const [dateRange, setDateRange] = useState({
@@ -254,7 +255,7 @@ export default function CreditOverview({ module }) {
         }
     }, [activeCustomerId, customers])
 
-    const normalizedSearch = normalizeTextSearch(search)
+    const normalizedSearch = normalizeTextSearch(searchControl.value)
     const shouldShowResults = normalizedSearch.length > 0
 
     const filteredCustomers = useMemo(() => {
@@ -332,12 +333,23 @@ export default function CreditOverview({ module }) {
                             <i className="fa-solid fa-magnifying-glass" />
                             <input
                                 type="search"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
+                                value={searchControl.draftValue}
+                                onChange={(event) => searchControl.setDraftValue(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+
+                                    event.preventDefault()
+                                    searchControl.apply()
+                                }}
                                 placeholder="Buscar cliente por nome"
                             />
-                            {search ? (
-                                <button type="button" className="credit-icon-button subtle" onClick={() => setSearch('')} aria-label="Limpar busca">
+                            <button type="button" className="credit-search-apply" onClick={() => searchControl.apply()}>
+                                Pesquisar
+                            </button>
+                            {searchControl.draftValue || searchControl.value ? (
+                                <button type="button" className="credit-icon-button subtle" onClick={() => searchControl.clear()} aria-label="Limpar busca">
                                     <i className="fa-solid fa-xmark" />
                                 </button>
                             ) : null}

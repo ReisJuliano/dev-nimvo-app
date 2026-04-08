@@ -8,6 +8,7 @@ import ProductsTable from '@/Components/Products/ProductsTable'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatNumber } from '@/lib/format'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
     configureOfflineWorkspaceBridge,
@@ -74,15 +75,15 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
-    const [search, setSearch] = useState('')
+    const searchControl = useConfirmedSearch('')
     const [categoryId, setCategoryId] = useState('')
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
-    const deferredSearch = useDeferredValue(search)
+    const deferredSearch = useDeferredValue(searchControl.value)
     const normalizedSearch = normalizeTextSearch(deferredSearch)
     const hasSearch = normalizedSearch.length > 0
-    const hasFilters = search.trim() !== '' || categoryId !== ''
+    const hasFilters = searchControl.draftValue.trim() !== '' || searchControl.value.trim() !== '' || categoryId !== ''
 
     useEffect(() => {
         if (!tenantId) {
@@ -185,8 +186,13 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     }
 
     function handleResetFilters() {
-        setSearch('')
+        searchControl.clear()
         setCategoryId('')
+    }
+
+    function handleSearchSubmit(event) {
+        event.preventDefault()
+        searchControl.apply()
     }
 
     async function handleDelete(product) {
@@ -410,14 +416,14 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                     </header>
 
                     <section className="products-search-panel">
-                        <div className="products-search-row">
+                        <form className="products-search-row" onSubmit={handleSearchSubmit}>
                             <label className="products-search-input">
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     type="search"
                                     placeholder="Buscar por nome, codigo ou EAN"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    value={searchControl.draftValue}
+                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
                                 />
                             </label>
 
@@ -433,6 +439,10 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                                 </select>
                             </label>
 
+                            <ActionButton icon="fa-magnifying-glass" type="submit">
+                                Pesquisar
+                            </ActionButton>
+
                             {hasFilters ? (
                                 <ActionButton
                                     icon="fa-rotate-left"
@@ -444,7 +454,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                                     aria-label="Limpar filtros"
                                 />
                             ) : null}
-                        </div>
+                        </form>
                     </section>
 
                     <DataList

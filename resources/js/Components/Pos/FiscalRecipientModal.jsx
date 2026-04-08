@@ -7,6 +7,7 @@ export default function FiscalRecipientModal({
     onSelectionModeChange,
     searchTerm,
     onSearchTermChange,
+    onSearchTermSubmit,
     filteredCustomers,
     filteredCompanies,
     selectedCustomerId,
@@ -111,9 +112,21 @@ export default function FiscalRecipientModal({
                                 className="ui-input pos-customer-picker-input"
                                 value={searchTerm}
                                 onChange={(event) => onSearchTermChange(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+
+                                    event.preventDefault()
+                                    onSearchTermSubmit?.()
+                                }}
                                 placeholder="Buscar por nome ou CPF"
                                 autoFocus
                             />
+                            <button className="ui-button-ghost" type="button" onClick={() => onSearchTermSubmit?.()}>
+                                <i className="fa-solid fa-magnifying-glass" />
+                                Pesquisar
+                            </button>
                         </div>
 
                         <div className="pos-customer-picker-list">
@@ -152,9 +165,21 @@ export default function FiscalRecipientModal({
                                 className="ui-input pos-customer-picker-input"
                                 value={searchTerm}
                                 onChange={(event) => onSearchTermChange(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+
+                                    event.preventDefault()
+                                    onSearchTermSubmit?.()
+                                }}
                                 placeholder="Buscar por nome ou CNPJ"
                                 autoFocus
                             />
+                            <button className="ui-button-ghost" type="button" onClick={() => onSearchTermSubmit?.()}>
+                                <i className="fa-solid fa-magnifying-glass" />
+                                Pesquisar
+                            </button>
                         </div>
 
                         <div className="pos-customer-picker-list">

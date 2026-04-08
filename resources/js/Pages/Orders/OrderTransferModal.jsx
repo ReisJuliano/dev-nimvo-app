@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { hasTextSearchWildcard, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import OrdersModal from './OrdersModal'
 
 export default function OrderTransferModal({ form, setForm, customers, creatingCustomer = false, onCreateCustomer, onClose, onSubmit }) {
-    const [search, setSearch] = useState('')
-    const normalizedSearch = normalizeTextSearch(search)
-    const wildcardSearch = hasTextSearchWildcard(normalizedSearch)
-    const exactMatch = normalizedSearch && !wildcardSearch
-        ? customers.find((customer) => normalizeTextSearch(customer.name) === normalizedSearch)
+    const searchControl = useConfirmedSearch('')
+    const normalizedSearch = normalizeTextSearch(searchControl.value)
+    const normalizedDraftSearch = normalizeTextSearch(searchControl.draftValue)
+    const wildcardSearch = hasTextSearchWildcard(normalizedDraftSearch)
+    const exactMatch = normalizedDraftSearch && !wildcardSearch
+        ? customers.find((customer) => normalizeTextSearch(customer.name) === normalizedDraftSearch)
         : null
     const visibleCustomers = useMemo(() => {
         if (!normalizedSearch) {
@@ -44,20 +46,32 @@ export default function OrderTransferModal({ form, setForm, customers, creatingC
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     className="ui-input"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    value={searchControl.draftValue}
+                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key !== 'Enter') {
+                                            return
+                                        }
+
+                                        event.preventDefault()
+                                        searchControl.apply()
+                                    }}
                                     placeholder="Pesquisar cliente"
                                     aria-label="Pesquisar cliente"
                                 />
+                                <button type="button" className="orders-edit-customer-search-button" onClick={() => searchControl.apply()}>
+                                    <i className="fa-solid fa-magnifying-glass" />
+                                    Pesquisar
+                                </button>
                             </label>
 
                             <button
                                 type="button"
                                 className="orders-edit-customer-quick create"
-                                onClick={() => onCreateCustomer?.(search)}
+                                onClick={() => onCreateCustomer?.(searchControl.draftValue)}
                                 aria-label="Criar cliente"
                                 title="Criar cliente"
-                                disabled={!normalizedSearch || wildcardSearch || Boolean(exactMatch) || creatingCustomer}
+                                disabled={!normalizedDraftSearch || wildcardSearch || Boolean(exactMatch) || creatingCustomer}
                             >
                                 <i className={`fa-solid ${creatingCustomer ? 'fa-spinner fa-spin' : 'fa-user-plus'}`} />
                             </button>

@@ -1486,6 +1486,9 @@
 
 .orders-product-compact-search {
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
 }
 
 .orders-product-compact-search > i {
@@ -1498,7 +1501,13 @@
 }
 
 .orders-product-compact-search-input {
+    flex: 1;
     padding-left: 2rem;
+}
+
+.orders-product-compact-search-button {
+    min-height: 40px;
+    white-space: nowrap;
 }
 
 .orders-product-compact-results {
@@ -2594,6 +2603,7 @@
 }
 
 .orders-edit-customer-search .ui-input {
+    flex: 1;
     min-height: auto;
     padding: 0;
     border: 0;
@@ -2603,6 +2613,22 @@
 
 .orders-edit-customer-search .ui-input:focus {
     outline: none;
+}
+
+.orders-edit-customer-search-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 38px;
+    padding: 0 0.75rem;
+    border: 1px solid rgba(24, 95, 165, 0.12);
+    border-radius: 12px;
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--orders-terminal-blue);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .orders-edit-customer-quick {

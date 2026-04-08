@@ -21,7 +21,9 @@ export default function OrderProductModal({
     selectedCategory,
     setSelectedCategory,
     searchTerm,
+    appliedSearchTerm,
     setSearchTerm,
+    onSearchSubmit,
     searchInputRef,
     productQuickQty,
     setProductQuickQty,
@@ -37,7 +39,7 @@ export default function OrderProductModal({
 
     const quickQuantityValue = Number.parseFloat(productQuickQty)
     const quickQuantityLabel = productQuickQty?.trim() || '1'
-    const hasSearch = searchTerm.trim() !== ''
+    const hasSearch = appliedSearchTerm.trim() !== ''
 
     function handleQuickQuantityStep(delta) {
         const currentQuantity = Number.isFinite(quickQuantityValue) && quickQuantityValue > 0 ? quickQuantityValue : 1
@@ -125,7 +127,19 @@ export default function OrderProductModal({
                             value={searchTerm}
                             placeholder="Nome, codigo ou EAN"
                             onChange={(event) => setSearchTerm(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key !== 'Enter') {
+                                    return
+                                }
+
+                                event.preventDefault()
+                                onSearchSubmit?.()
+                            }}
                         />
+                        <button type="button" className="ui-button-ghost orders-product-compact-search-button" onClick={() => onSearchSubmit?.()}>
+                            <i className="fa-solid fa-magnifying-glass" />
+                            Pesquisar
+                        </button>
                     </div>
                 </label>
 

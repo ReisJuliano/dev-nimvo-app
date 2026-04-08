@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 
 function ReportCategoryButton({ category, active, onClick }) {
@@ -51,7 +52,7 @@ export default function ReportsShowcase({ module }) {
     const categories = Array.isArray(module?.catalog?.categories) ? module.catalog.categories : []
     const initialCategory = module?.catalog?.activeCategory || categories[0]?.key || null
     const [activeCategoryKey, setActiveCategoryKey] = useState(initialCategory)
-    const [searchTerm, setSearchTerm] = useState('')
+    const searchControl = useConfirmedSearch('')
 
     useEffect(() => {
         setActiveCategoryKey(module?.catalog?.activeCategory || categories[0]?.key || null)
@@ -59,7 +60,7 @@ export default function ReportsShowcase({ module }) {
 
     const currentCategory = categories.find((category) => category.key === activeCategoryKey) || categories[0]
     const filteredReports = useMemo(() => {
-        const normalizedTerm = normalizeTextSearch(searchTerm)
+        const normalizedTerm = normalizeTextSearch(searchControl.value)
 
         if (!currentCategory) {
             return []
@@ -72,7 +73,7 @@ export default function ReportsShowcase({ module }) {
         return currentCategory.reports.filter((report) =>
             matchesTextSearchAny([report.title, ...(report.tags || [])], normalizedTerm),
         )
-    }, [currentCategory, searchTerm])
+    }, [currentCategory, searchControl.value])
 
     if (!currentCategory) {
         return (
@@ -103,10 +104,22 @@ export default function ReportsShowcase({ module }) {
                     <i className="fa-solid fa-magnifying-glass" />
                     <input
                         type="text"
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
+                        value={searchControl.draftValue}
+                        onChange={(event) => searchControl.setDraftValue(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+
+                            event.preventDefault()
+                            searchControl.apply()
+                        }}
                         placeholder="Buscar relatorio"
                     />
+                    <button type="button" className="report-icon-button wide" onClick={() => searchControl.apply()}>
+                        <i className="fa-solid fa-magnifying-glass" />
+                        <span>Pesquisar</span>
+                    </button>
                 </label>
             </section>
 
