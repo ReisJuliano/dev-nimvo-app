@@ -2045,6 +2045,31 @@ export default function PosIndex({
         }
     }
 
+    async function discardPersistedPendingSale() {
+        if (!supportsPendingSales) {
+            discardOfflinePendingSale(tenantId, auth?.user?.id)
+            return 'disabled'
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            discardOfflinePendingSale(tenantId, auth?.user?.id)
+            return 'offline'
+        }
+
+        try {
+            await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
+            discardOfflinePendingSale(tenantId, auth?.user?.id)
+            return 'online'
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                discardOfflinePendingSale(tenantId, auth?.user?.id)
+                return 'offline'
+            }
+
+            throw error
+        }
+    }
+
     async function handleDiscardPendingSale() {
         if (!supportsPendingSales) {
             setPendingSaleServerState(null)
@@ -2056,28 +2081,37 @@ export default function PosIndex({
         setPendingSaleActionBusy(true)
 
         try {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-                discardOfflinePendingSale(tenantId, auth?.user?.id)
-            } else {
-                await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
-                discardOfflinePendingSale(tenantId, auth?.user?.id)
-            }
+            const discardMode = await discardPersistedPendingSale()
             setPendingSaleServerState(null)
             setPendingSaleResolved(true)
             setPendingSalePromptOpen(false)
-            showFeedback('success', 'Venda pendente descartada com seguranca.')
+            showFeedback(
+                discardMode === 'offline' ? 'warning' : 'success',
+                discardMode === 'offline'
+                    ? 'Venda pendente descartada no modo offline.'
+                    : 'Venda pendente descartada com seguranca.',
+            )
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
-                discardOfflinePendingSale(tenantId, auth?.user?.id)
-                setPendingSaleServerState(null)
-                setPendingSaleResolved(true)
-                setPendingSalePromptOpen(false)
-                showFeedback('warning', 'Venda pendente descartada no modo offline.')
-            } else {
-                showFeedback('error', error.message)
-            }
+            showFeedback('error', error.message)
         } finally {
             setPendingSaleActionBusy(false)
+        }
+    }
+
+    async function handleClearSale() {
+        setSubmitting(true)
+
+        try {
+            const discardMode = await discardPersistedPendingSale()
+            resetSale()
+
+            if (discardMode === 'offline') {
+                showFeedback('warning', 'Venda limpa no modo offline.')
+            }
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setSubmitting(false)
         }
     }
 
@@ -2538,10 +2572,23 @@ export default function PosIndex({
         }
     }
 
-    function handleCancelSale() {
-        resetSale()
-        setCancelModalOpen(false)
-        showFeedback('success', 'Venda cancelada e carrinho limpo.')
+    async function handleCancelSale() {
+        setSubmitting(true)
+
+        try {
+            const discardMode = await discardPersistedPendingSale()
+            resetSale()
+            showFeedback(
+                discardMode === 'offline' ? 'warning' : 'success',
+                discardMode === 'offline'
+                    ? 'Venda cancelada no modo offline.'
+                    : 'Venda cancelada e carrinho limpo.',
+            )
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setSubmitting(false)
+        }
     }
 
     function closeShortcutDrivenPanels() {
@@ -3016,7 +3063,7 @@ export default function PosIndex({
                                         Desconto
                                         <kbd>Shift + D</kbd>
                                     </button>
-                                    <button type="button" className="pos-inline-button" onClick={resetSale} disabled={!cart.length}>
+                                    <button type="button" className="pos-inline-button" onClick={handleClearSale} disabled={!cart.length || submitting}>
                                         <i className="fa-solid fa-broom-wide" />
                                         Limpar venda
                                     </button>
@@ -3938,7 +3985,7 @@ function PosWorkspace({
                     <button type="button" className="pos-button ghost" onClick={onCloseCancelModal}>
                         Voltar
                     </button>
-                    <button type="button" className="pos-button danger" onClick={onCancelSale}>
+                    <button type="button" className="pos-button danger" onClick={onCancelSale} disabled={submitting}>
                         Cancelar venda
                     </button>
                 </div>
