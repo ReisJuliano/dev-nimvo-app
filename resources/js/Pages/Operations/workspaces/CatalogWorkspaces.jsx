@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
@@ -37,6 +37,20 @@ function FieldLabel({ icon, text }) {
 
 function normalizeCategorySearch(value) {
     return String(value || '').trim().toLowerCase()
+}
+
+function normalizeCustomerSearch(value) {
+    return String(value || '').trim()
+}
+
+function normalizeCustomerSearchKey(value) {
+    return normalizeCustomerSearch(value).toLowerCase()
+}
+
+function sortCustomers(records) {
+    return [...records].sort((left, right) =>
+        String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR', { sensitivity: 'base' }),
+    )
 }
 
 function CategoryListCard({ record, active, onClick }) {
@@ -447,26 +461,97 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 export function CustomersWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', phone: '', credit_limit: '0', active: true }
     const [records, setRecords] = useState(payload.records || [])
-    const [activeTab, setActiveTab] = useState('active')
+    const [search, setSearch] = useState('')
     const [form, setForm] = useState(emptyForm)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const requestIdRef = useRef(0)
+    const normalizedSearch = useMemo(() => normalizeCustomerSearch(search), [search])
+    const normalizedSearchKey = useMemo(() => normalizeCustomerSearchKey(search), [search])
+    const hasSearch = normalizedSearch !== ''
 
-    const filteredRecords = useMemo(
-        () => records.filter((record) => (activeTab === 'active' ? record.active : !record.active)),
-        [records, activeTab],
-    )
-    const metrics = useMemo(
-        () => [
-            { label: 'Clientes', value: records.length, caption: 'Cadastro total' },
-            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Aptos para venda' },
-            { label: 'Limite concedido', value: records.reduce((total, record) => total + Number(record.credit_limit || 0), 0), caption: 'Somatoria de limites', format: 'money' },
-        ],
-        [records],
-    )
+    useEffect(() => {
+        if (!hasSearch) {
+            requestIdRef.current += 1
+            setRecords([])
+            setLoading(false)
+            return
+        }
+
+        const requestId = requestIdRef.current + 1
+        requestIdRef.current = requestId
+        setLoading(true)
+        let cancelled = false
+
+        const timer = window.setTimeout(async () => {
+            try {
+                const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                    params: { search: normalizedSearch },
+                })
+
+                if (cancelled || requestId !== requestIdRef.current) {
+                    return
+                }
+
+                setRecords(sortCustomers(response.records || []))
+            } catch (error) {
+                if (cancelled || requestId !== requestIdRef.current) {
+                    return
+                }
+
+                setRecords([])
+                setFeedback({ type: 'error', text: error.message })
+            } finally {
+                if (!cancelled && requestId === requestIdRef.current) {
+                    setLoading(false)
+                }
+            }
+        }, 300)
+
+        return () => {
+            cancelled = true
+            window.clearTimeout(timer)
+        }
+    }, [hasSearch, moduleKey, normalizedSearch])
+
+    function buildCustomerForm(record = null) {
+        return {
+            ...emptyForm,
+            ...(record || {}),
+            credit_limit: String(record?.credit_limit || 0),
+        }
+    }
+
+    function recordMatchesSearch(record) {
+        if (!normalizedSearchKey) {
+            return true
+        }
+
+        return normalizeCustomerSearchKey(record?.name).includes(normalizedSearchKey)
+    }
+
+    function handleSelectRecord(record) {
+        setForm(buildCustomerForm(record))
+        setModalOpen(true)
+    }
 
     function handleCreate() {
-        setForm(emptyForm)
+        setForm(buildCustomerForm())
+        setModalOpen(true)
+    }
+
+    function handleCloseModal() {
+        setForm(buildCustomerForm())
+        setModalOpen(false)
+    }
+
+    function handleClearSearch() {
+        requestIdRef.current += 1
+        setSearch('')
+        setRecords([])
+        setLoading(false)
     }
 
     async function handleSubmit(event) {
@@ -481,12 +566,21 @@ export function CustomersWorkspace({ moduleKey, payload }) {
             const response = form.id
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
-            setForm({
-                ...emptyForm,
-                ...response.record,
-                credit_limit: String(response.record.credit_limit || 0),
-            })
+
+            if (form.id) {
+                setRecords((current) => {
+                    if (!recordMatchesSearch(response.record)) {
+                        return current.filter((record) => record.id !== response.record.id)
+                    }
+
+                    return sortCustomers(upsertRecord(current, response.record))
+                })
+            } else {
+                setSearch(response.record.name || '')
+                setRecords(sortCustomers([response.record]))
+            }
+
+            handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -515,7 +609,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
+            handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -526,71 +620,106 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         <>
             <Feedback feedback={feedback} />
             <WorkspaceCollectionShell
-                tabs={[
-                    { key: 'active', label: 'Ativos', icon: 'fa-user-group' },
-                    { key: 'inactive', label: 'Inativos', icon: 'fa-user-slash' },
-                ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
+                tabs={[]}
+                activeTab={null}
+                onTabChange={() => {}}
                 listTitle="Clientes"
                 listIcon="fa-user-group"
-                listCount={`${filteredRecords.length} registro(s)`}
+                listCount={loading ? 'Buscando...' : hasSearch ? `${records.length} resultado(s)` : 'Digite o nome'}
                 createLabel="Novo cliente"
                 onCreate={handleCreate}
-                summaryItems={metrics}
-                emptyState={<EmptyState title="Sem clientes nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
-                formTitle={form.id ? 'Editar cliente' : 'Novo cliente'}
-                formSubtitle="Contato e limite de credito"
-                formChildren={(
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                        <label>
-                            <FieldLabel icon="fa-user" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-phone" text="Telefone" />
-                            <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
-                        </label>
-                        <label className="span-2">
-                            <FieldLabel icon="fa-credit-card" text="Limite de credito" />
-                            <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
-                        </label>
-                        <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
-                                Limpar
+                emptyState={null}
+                listChildren={(
+                    <div className="ops-category-shell">
+                        <section className="ops-customer-toolbar">
+                            <label className="ops-category-search-field">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    type="search"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Buscar cliente por nome"
+                                />
+                            </label>
+                            <ActionButton
+                                tone="ghost"
+                                icon="fa-rotate-left"
+                                iconOnly
+                                onClick={handleClearSearch}
+                                title="Limpar busca"
+                                aria-label="Limpar busca"
+                                disabled={!hasSearch}
+                            />
+                        </section>
+
+                        {loading ? (
+                            <EmptyState icon="fa-spinner fa-spin" title="Buscando clientes" text="Aguarde a consulta." />
+                        ) : hasSearch ? (
+                            records.length ? (
+                                <div className="ops-workspace-list-stack">
+                                    {records.map((record) => (
+                                        <ListCard
+                                            key={record.id}
+                                            active={modalOpen && form.id === record.id}
+                                            onClick={() => handleSelectRecord(record)}
+                                            title={record.name}
+                                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
+                                            description={record.phone || 'Sem telefone'}
+                                            meta={[`Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState icon="fa-user-slash" title="Nenhum cliente" text="Refine o nome pesquisado." />
+                            )
+                        ) : (
+                            <EmptyState icon="fa-magnifying-glass" title="Busque um cliente" text="Digite o nome para listar." />
+                        )}
+                    </div>
+                )}
+            />
+            <ModalForm
+                open={modalOpen}
+                title={form.id ? 'Editar cliente' : 'Novo cliente'}
+                description="Contato e limite de credito"
+                icon="fa-user-pen"
+                size="sm"
+                onClose={handleCloseModal}
+                footer={(
+                    <>
+                        {form.id ? (
+                            <ActionButton tone="danger" onClick={handleDelete}>
+                                Excluir
                             </ActionButton>
-                            {form.id ? (
-                                <ActionButton tone="danger" onClick={handleDelete}>
-                                    Excluir
-                                </ActionButton>
-                            ) : null}
-                            <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar cliente'}
-                            </ActionButton>
-                        </div>
-                    </form>
+                        ) : <span />}
+                        <ActionButton form="customer-modal-form" type="submit" disabled={saving}>
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar cliente'}
+                        </ActionButton>
+                    </>
                 )}
             >
-                <div className="ops-workspace-list-stack">
-                    {filteredRecords.map((record) => (
-                        <ListCard
-                            key={record.id}
-                            active={form.id === record.id}
-                            onClick={() =>
-                                setForm({
-                                    ...emptyForm,
-                                    ...record,
-                                    credit_limit: String(record.credit_limit || 0),
-                                })
-                            }
-                            title={record.name}
-                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                            description={record.phone || 'Sem telefone'}
-                            meta={[`Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
-                        />
-                    ))}
-                </div>
-            </WorkspaceCollectionShell>
+                <form id="customer-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                    <label>
+                        <FieldLabel icon="fa-user" text="Nome" />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-phone" text="Telefone" />
+                        <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-credit-card" text="Limite de credito" />
+                        <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-toggle-on" text="Status" />
+                        <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
+                            <option value="active">Ativo</option>
+                            <option value="inactive">Inativo</option>
+                        </select>
+                    </label>
+                </form>
+            </ModalForm>
         </>
     )
 }
