@@ -234,8 +234,7 @@ class ReportExportService
         $columns = (array) data_get($payload, 'columns', []);
         $rows = (array) data_get($payload, 'rows', []);
 
-        $pdf->setFont('Arial', 'B', 9);
-        $pdf->cell(0, 6, $this->pdfText((string) data_get($payload, 'table.title', 'Detalhamento')), 0, 1);
+        $this->renderPdfTableTitle($pdf, $payload);
 
         if (empty($columns)) {
             $pdf->setFont('Arial', '', 8);
@@ -255,20 +254,32 @@ class ReportExportService
         $pdf->setFont('Arial', '', 7.5);
 
         foreach ($rows as $row) {
-            if ($pdf->getY() > 186) {
+            $cells = array_map(
+                fn (array $column) => [
+                    'text' => $this->formattedValue(data_get($row, $column['key']), (string) data_get($column, 'format', 'text')),
+                    'align' => $this->pdfColumnAlign((string) data_get($column, 'format', 'text')),
+                ],
+                $columns,
+            );
+
+            $rowHeight = $this->pdfRowHeight($pdf, $cells, $widths, 4.2, 6);
+
+            if (($pdf->getY() + $rowHeight) > 198) {
                 $pdf->addPage();
                 $this->renderPdfHeader($pdf, $payload);
+                $this->renderPdfTableTitle($pdf, $payload);
                 $this->renderPdfTableHeader($pdf, $columns, $widths);
                 $pdf->setFont('Arial', '', 7.5);
             }
 
-            foreach ($columns as $index => $column) {
-                $value = $this->formattedValue(data_get($row, $column['key']), (string) data_get($column, 'format', 'text'));
-                $pdf->cell($widths[$index], 6, $this->pdfText(Str::limit($value, 28, '...')), 1, 0);
-            }
-
-            $pdf->ln();
+            $this->renderPdfTableRow($pdf, $cells, $widths, 4.2, $rowHeight);
         }
+    }
+
+    protected function renderPdfTableTitle(Fpdf $pdf, array $payload): void
+    {
+        $pdf->setFont('Arial', 'B', 9);
+        $pdf->cell(0, 6, $this->pdfText((string) data_get($payload, 'table.title', 'Detalhamento')), 0, 1);
     }
 
     protected function renderPdfTableHeader(Fpdf $pdf, array $columns, array $widths): void
@@ -276,27 +287,33 @@ class ReportExportService
         $pdf->setFont('Arial', 'B', 8);
         $pdf->setFillColor(226, 232, 240);
 
-        foreach ($columns as $index => $column) {
-            $pdf->cell($widths[$index], 7, $this->pdfText((string) data_get($column, 'label', '')), 1, 0, 'L', true);
-        }
-
-        $pdf->ln();
+        $this->renderPdfTableRow(
+            $pdf,
+            array_map(
+                fn (array $column) => ['text' => (string) data_get($column, 'label', ''), 'align' => 'L'],
+                $columns,
+            ),
+            $widths,
+            4.4,
+            null,
+            true,
+        );
     }
 
     protected function pdfColumnWidths(array $columns): array
     {
         $count = count($columns);
-        $baseWidth = 257 / max(1, $count);
+        $baseWidth = 277 / max(1, $count);
         $widths = array_fill(0, $count, $baseWidth);
 
         if ($count >= 4) {
-            $widths[0] = min(48, $baseWidth + 8);
+            $widths[0] = min(58, $baseWidth + 10);
 
             if ($count > 1) {
-                $widths[1] = min(54, $baseWidth + 10);
+                $widths[1] = min(64, $baseWidth + 12);
             }
 
-            $remaining = 257 - array_sum(array_slice($widths, 0, min(2, $count)));
+            $remaining = 277 - array_sum(array_slice($widths, 0, min(2, $count)));
             $restCount = max(1, $count - min(2, $count));
 
             for ($index = min(2, $count); $index < $count; $index++) {
@@ -370,5 +387,147 @@ class ReportExportService
     protected function pdfText(string $value): string
     {
         return iconv('UTF-8', 'windows-1252//TRANSLIT//IGNORE', $value) ?: $value;
+    }
+
+    protected function renderPdfTableRow(
+        Fpdf $pdf,
+        array $cells,
+        array $widths,
+        float $lineHeight,
+        ?float $rowHeight = null,
+        bool $fill = false,
+    ): void {
+        $startX = $pdf->getX();
+        $startY = $pdf->getY();
+        $resolvedRowHeight = $rowHeight ?? $this->pdfRowHeight($pdf, $cells, $widths, $lineHeight, 7);
+
+        foreach ($cells as $index => $cell) {
+            $x = $pdf->getX();
+            $y = $pdf->getY();
+            $text = $this->pdfText((string) ($cell['text'] ?? ''));
+            $align = (string) ($cell['align'] ?? 'L');
+
+            $pdf->rect($x, $y, $widths[$index], $resolvedRowHeight, $fill ? 'DF' : '');
+            $pdf->setXY($x + 1, $y + 1);
+            $pdf->multiCell($widths[$index] - 2, $lineHeight, $text, 0, $align);
+            $pdf->setXY($x + $widths[$index], $y);
+        }
+
+        $pdf->setXY($startX, $startY + $resolvedRowHeight);
+    }
+
+    protected function pdfRowHeight(Fpdf $pdf, array $cells, array $widths, float $lineHeight, float $minHeight): float
+    {
+        $lines = 1;
+
+        foreach ($cells as $index => $cell) {
+            $lines = max(
+                $lines,
+                $this->pdfLineCount(
+                    $pdf,
+                    (string) ($cell['text'] ?? ''),
+                    max(8, $widths[$index] - 2),
+                ),
+            );
+        }
+
+        return max($minHeight, ($lines * $lineHeight) + 2);
+    }
+
+    protected function pdfLineCount(Fpdf $pdf, string $text, float $width): int
+    {
+        $plainText = trim(preg_replace("/\r\n|\r/u", "\n", $text) ?? $text);
+
+        if ($plainText === '') {
+            return 1;
+        }
+
+        $paragraphs = preg_split("/\n/u", $plainText) ?: [$plainText];
+        $lines = 0;
+
+        foreach ($paragraphs as $paragraph) {
+            $segments = $this->pdfWrapText($pdf, $paragraph, $width);
+            $lines += max(1, count($segments));
+        }
+
+        return max(1, $lines);
+    }
+
+    protected function pdfWrapText(Fpdf $pdf, string $text, float $width): array
+    {
+        $normalized = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+
+        if ($normalized === '') {
+            return [''];
+        }
+
+        $words = preg_split('/ /u', $normalized) ?: [$normalized];
+        $lines = [];
+        $current = '';
+
+        foreach ($words as $word) {
+            $candidate = $current === '' ? $word : $current.' '.$word;
+
+            if ($pdf->GetStringWidth($this->pdfText($candidate)) <= $width) {
+                $current = $candidate;
+                continue;
+            }
+
+            if ($current !== '') {
+                $lines[] = $current;
+            }
+
+            if ($pdf->GetStringWidth($this->pdfText($word)) <= $width) {
+                $current = $word;
+                continue;
+            }
+
+            $chunks = $this->pdfSplitWord($pdf, $word, $width);
+
+            if (! empty($chunks)) {
+                $lines = array_merge($lines, array_slice($chunks, 0, -1));
+                $current = (string) end($chunks);
+            }
+        }
+
+        if ($current !== '') {
+            $lines[] = $current;
+        }
+
+        return empty($lines) ? [''] : $lines;
+    }
+
+    protected function pdfSplitWord(Fpdf $pdf, string $word, float $width): array
+    {
+        $chunks = [];
+        $current = '';
+        $characters = preg_split('//u', $word, -1, PREG_SPLIT_NO_EMPTY) ?: [$word];
+
+        foreach ($characters as $character) {
+            $candidate = $current.$character;
+
+            if ($current !== '' && $pdf->GetStringWidth($this->pdfText($candidate)) > $width) {
+                $chunks[] = $current;
+                $current = $character;
+                continue;
+            }
+
+            $current = $candidate;
+        }
+
+        if ($current !== '') {
+            $chunks[] = $current;
+        }
+
+        return empty($chunks) ? [$word] : $chunks;
+    }
+
+    protected function pdfColumnAlign(string $format): string
+    {
+        return match ($format) {
+            'money', 'percent', 'number', 'decimal' => 'R',
+            'date', 'datetime' => 'C',
+            default => 'L',
+        };
     }
 }
