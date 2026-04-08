@@ -10,12 +10,13 @@ use Illuminate\Http\Request;
 class OperationsApiController extends Controller
 {
     public function index(
+        Request $request,
         OperationsWorkspaceService $workspaceService,
         string $module,
     ): JsonResponse {
         abort_unless($workspaceService->isWorkspaceModule($module), 404);
 
-        return response()->json($workspaceService->records($module));
+        return response()->json($workspaceService->records($module, $request->query()));
     }
 
     public function store(

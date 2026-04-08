@@ -59,7 +59,9 @@ class OperationsWorkspaceService
                 'moduleKey' => 'clientes',
                 'moduleTitle' => 'Clientes',
                 'moduleDescription' => 'Cadastro completo de clientes com contato, limite de credito e status operacional.',
-                'payload' => $this->customersPayload(),
+                'payload' => [
+                    'records' => [],
+                ],
             ],
             'fornecedores' => [
                 'moduleKey' => 'fornecedores',
@@ -122,11 +124,14 @@ class OperationsWorkspaceService
         };
     }
 
-    public function records(string $module): array
+    public function records(string $module, array $filters = []): array
     {
-        return [
-            'records' => data_get($this->build($module), 'payload.records', []),
-        ];
+        return match ($module) {
+            'clientes' => $this->customersPayload($filters),
+            default => [
+                'records' => data_get($this->build($module), 'payload.records', []),
+            ],
+        };
     }
 
     public function update(string $module, int $recordId, array $input, int $userId): array
@@ -217,11 +222,20 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function customersPayload(): array
+    protected function customersPayload(array $filters = []): array
     {
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        if ($search === '') {
+            return [
+                'records' => [],
+            ];
+        }
+
         return [
             'records' => Customer::query()
                 ->withCount(['sales as sales_count' => fn ($query) => $query->where('status', 'finalized')])
+                ->where('name', 'like', '%'.$search.'%')
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Customer $customer) => $this->serializeCustomer($customer))
