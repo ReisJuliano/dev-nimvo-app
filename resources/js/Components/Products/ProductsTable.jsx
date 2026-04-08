@@ -1,118 +1,97 @@
 import { formatMoney, formatNumber } from '@/lib/format'
 
-export default function ProductsTable({ products, onEdit, onDelete, isFashionMode = false, showHeader = true }) {
+function getStockTone(product) {
+    if (Number(product.stock_quantity) <= 0) return 'danger'
+    if (Number(product.stock_quantity) <= Number(product.min_stock)) return 'warning'
+    return 'success'
+}
+
+function getStockLabel(product) {
+    if (Number(product.stock_quantity) <= 0) return 'Sem saldo'
+    if (Number(product.stock_quantity) <= Number(product.min_stock)) return 'Baixo'
+    return 'Saudavel'
+}
+
+export default function ProductsTable({ products, onEdit, onDelete }) {
     if (!products.length) {
-        return <div className="products-empty-state">Nenhum produto encontrado para os filtros atuais.</div>
+        return null
     }
 
     return (
-        <section className="products-table-card ui-table-card">
-            {showHeader ? (
-                <div className="products-table-header">
-                    <div>
-                        <h2>{isFashionMode ? 'Pecas e variacoes cadastradas' : 'Produtos cadastrados'}</h2>
-                        <p>
-                            {isFashionMode
-                                ? 'Catalogo com referencia, grade, colecao, vitrine e saldo por item.'
-                                : 'Lista de produtos, precos e saldo.'}
-                        </p>
-                    </div>
-                    <span className="products-table-counter">{formatNumber(products.length)} item(ns)</span>
-                </div>
-            ) : null}
+        <section className="products-table-card">
             <div className="products-table-scroll ui-table-wrap">
                 <table className="products-table ui-table">
                     <thead>
                         <tr>
-                            <th>Codigo</th>
-                            {isFashionMode ? <th>Referencia</th> : <th>EAN</th>}
                             <th>Produto</th>
-                            {isFashionMode ? <th>Grade</th> : <th>Categoria</th>}
-                            {isFashionMode ? <th>Colecao</th> : <th>Custo</th>}
-                            <th>Venda</th>
-                            {isFashionMode ? <th>Vitrine</th> : null}
+                            <th>Categoria</th>
+                            <th>Precos</th>
                             <th>Estoque</th>
                             <th>Acao</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {products.map((product) => (
-                            <tr key={product.id}>
-                                <td>{product.code}</td>
-                                <td>{isFashionMode ? product.style_reference || '-' : product.barcode || '-'}</td>
-                                <td>
-                                    <strong>{product.name}</strong>
-                                    <small>
-                                        {isFashionMode
-                                            ? [product.category_name, product.barcode].filter(Boolean).join(' | ') || product.unit
-                                            : product.unit}
-                                    </small>
-                                </td>
-                                {isFashionMode ? (
+                        {products.map((product) => {
+                            const stockTone = getStockTone(product)
+
+                            return (
+                                <tr key={product.id}>
                                     <td>
-                                        <strong>{[product.color, product.size].filter(Boolean).join(' / ') || '-'}</strong>
-                                        <small>{product.color || product.size ? 'Cor e tamanho' : 'Sem grade definida'}</small>
+                                        <div className="products-product-cell">
+                                            <strong>{product.name}</strong>
+                                            <div className="products-row-meta">
+                                                {product.code ? <span>#{product.code}</span> : null}
+                                                {product.barcode ? <span>{product.barcode}</span> : null}
+                                                <span>{product.unit}</span>
+                                            </div>
+                                        </div>
                                     </td>
-                                ) : (
                                     <td>
-                                        <span className="products-badge ui-badge primary">
+                                        <span className="products-category-pill">
                                             {product.category_name || 'Sem categoria'}
                                         </span>
                                     </td>
-                                )}
-                                {isFashionMode ? (
                                     <td>
-                                        <span className="products-badge ui-badge warning">
-                                            {product.collection || 'Sem colecao'}
-                                        </span>
+                                        <div className="products-price-cell">
+                                            <small>Custo {formatMoney(product.cost_price)}</small>
+                                            <strong>{formatMoney(product.sale_price)}</strong>
+                                        </div>
                                     </td>
-                                ) : (
-                                    <td>{formatMoney(product.cost_price)}</td>
-                                )}
-                                <td>{formatMoney(product.sale_price)}</td>
-                                {isFashionMode ? (
                                     <td>
-                                        <span className={`products-badge ui-badge ${product.catalog_visible ? 'success' : 'muted'}`}>
-                                            {product.catalog_visible ? 'Publicado' : 'Oculto'}
-                                        </span>
+                                        <div className="products-stock-cell">
+                                            <span className={`products-stock-pill is-${stockTone}`}>
+                                                {getStockLabel(product)}
+                                            </span>
+                                            <small>
+                                                {formatNumber(product.stock_quantity)} saldo / Min {formatNumber(product.min_stock)}
+                                            </small>
+                                        </div>
                                     </td>
-                                ) : null}
-                                <td>
-                                    <strong
-                                        className={
-                                            product.stock_quantity <= 0
-                                                ? 'stock-danger'
-                                                : product.stock_quantity <= product.min_stock
-                                                  ? 'stock-warning'
-                                                  : 'stock-ok'
-                                        }
-                                    >
-                                        {formatNumber(product.stock_quantity)}
-                                    </strong>
-                                    <small>Min. {formatNumber(product.min_stock)}</small>
-                                </td>
-                                <td>
-                                    <div className="products-actions">
-                                        <button
-                                            className="ui-tooltip"
-                                            data-tooltip="Editar cadastro"
-                                            onClick={() => onEdit(product)}
-                                        >
-                                            <i className="fa-solid fa-pen" />
-                                            Editar
-                                        </button>
-                                        <button
-                                            className="danger ui-tooltip"
-                                            data-tooltip="Desativar produto"
-                                            onClick={() => onDelete(product)}
-                                        >
-                                            <i className="fa-solid fa-trash-can" />
-                                            Excluir
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    <td>
+                                        <div className="products-actions">
+                                            <button
+                                                type="button"
+                                                className="ui-tooltip"
+                                                data-tooltip="Editar"
+                                                aria-label={`Editar ${product.name}`}
+                                                onClick={() => onEdit(product)}
+                                            >
+                                                <i className="fa-solid fa-pen" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="danger ui-tooltip"
+                                                data-tooltip="Desativar"
+                                                aria-label={`Desativar ${product.name}`}
+                                                onClick={() => onDelete(product)}
+                                            >
+                                                <i className="fa-solid fa-trash-can" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>

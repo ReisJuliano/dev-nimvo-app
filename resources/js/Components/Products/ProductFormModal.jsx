@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { showErrorPopup } from '@/lib/errorPopup'
+import { confirmPopup, showErrorPopup } from '@/lib/errorPopup'
 
 const ADD_NEW_OPTION = '__add_new__'
 
@@ -31,7 +31,6 @@ const emptyForm = {
     taxable_unit: 'UN',
     cost_price: '',
     sale_price: '',
-    stock_quantity: '',
     min_stock: '',
     icms_rate: '',
     pis_rate: '',
@@ -40,11 +39,10 @@ const emptyForm = {
 }
 
 const tabs = [
-    { id: 'general', label: 'Informacoes gerais', icon: 'fa-solid fa-circle-info' },
-    { id: 'description', label: 'Descricao', icon: 'fa-solid fa-align-left' },
+    { id: 'general', label: 'Geral', icon: 'fa-solid fa-circle-info' },
     { id: 'pricing', label: 'Precos', icon: 'fa-solid fa-tags' },
     { id: 'stock', label: 'Estoque', icon: 'fa-solid fa-boxes-stacked' },
-    { id: 'fiscal', label: 'Dados fiscais', icon: 'fa-solid fa-receipt' },
+    { id: 'fiscal', label: 'Fiscal', icon: 'fa-solid fa-receipt' },
 ]
 
 const fieldTabMap = {
@@ -55,11 +53,10 @@ const fieldTabMap = {
     category_id: 'general',
     supplier_id: 'general',
     unit: 'general',
-    description: 'description',
-    internal_notes: 'description',
+    description: 'general',
+    internal_notes: 'general',
     cost_price: 'pricing',
     sale_price: 'pricing',
-    stock_quantity: 'stock',
     min_stock: 'stock',
     ncm: 'fiscal',
     cfop: 'fiscal',
@@ -79,7 +76,6 @@ const fieldTabMap = {
 const numericFieldLabels = {
     cost_price: 'Custo',
     sale_price: 'Preco de venda',
-    stock_quantity: 'Estoque atual',
     min_stock: 'Estoque minimo',
     icms_rate: 'Aliquota de ICMS',
     pis_rate: 'Aliquota de PIS',
@@ -186,6 +182,43 @@ function validateForm(form) {
     return errors
 }
 
+function buildFormDraft(form) {
+    return JSON.stringify({
+        id: form.id ?? null,
+        code: form.code ?? '',
+        barcode: form.barcode ?? '',
+        ncm: form.ncm ?? '',
+        cfop: form.cfop ?? '',
+        cest: form.cest ?? '',
+        origin_code: form.origin_code ?? '0',
+        icms_csosn: form.icms_csosn ?? '102',
+        pis_cst: form.pis_cst ?? '49',
+        cofins_cst: form.cofins_cst ?? '49',
+        fiscal_enabled: Boolean(form.fiscal_enabled),
+        name: form.name ?? '',
+        description: form.description ?? '',
+        internal_notes: form.internal_notes ?? '',
+        style_reference: form.style_reference ?? '',
+        color: form.color ?? '',
+        size: form.size ?? '',
+        collection: form.collection ?? '',
+        catalog_visible: Boolean(form.catalog_visible),
+        active: Boolean(form.active),
+        category_id: form.category_id ?? '',
+        supplier_id: form.supplier_id ?? '',
+        unit: form.unit ?? 'UN',
+        commercial_unit: form.commercial_unit ?? 'UN',
+        taxable_unit: form.taxable_unit ?? 'UN',
+        cost_price: form.cost_price ?? '',
+        sale_price: form.sale_price ?? '',
+        min_stock: form.min_stock ?? '',
+        icms_rate: form.icms_rate ?? '',
+        pis_rate: form.pis_rate ?? '',
+        cofins_rate: form.cofins_rate ?? '',
+        ipi_rate: form.ipi_rate ?? '',
+    })
+}
+
 export default function ProductFormModal({
     open,
     product,
@@ -198,6 +231,7 @@ export default function ProductFormModal({
     onQuickCreateSupplier,
 }) {
     const [form, setForm] = useState(emptyForm)
+    const [initialForm, setInitialForm] = useState(emptyForm)
     const [activeTab, setActiveTab] = useState('general')
     const [errors, setErrors] = useState({})
     const [attemptedSubmit, setAttemptedSubmit] = useState(false)
@@ -215,7 +249,10 @@ export default function ProductFormModal({
     useEffect(() => {
         if (!open) return
 
-        setForm(normalizeFormData(product))
+        const nextForm = normalizeFormData(product)
+
+        setForm(nextForm)
+        setInitialForm(nextForm)
         setActiveTab('general')
         setErrors({})
         setAttemptedSubmit(false)
@@ -244,6 +281,24 @@ export default function ProductFormModal({
             return set
         }, new Set())
     }, [errors])
+
+    const hasUnsavedChanges = useMemo(() => {
+        if (!open) {
+            return false
+        }
+
+        const quickCategoryDirty =
+            showQuickCategory
+            || quickCategory.name.trim() !== ''
+            || quickCategory.description.trim() !== ''
+        const quickSupplierDirty =
+            showQuickSupplier
+            || quickSupplier.name.trim() !== ''
+            || quickSupplier.phone.trim() !== ''
+            || quickSupplier.email.trim() !== ''
+
+        return buildFormDraft(form) !== buildFormDraft(initialForm) || quickCategoryDirty || quickSupplierDirty
+    }, [form, initialForm, open, quickCategory.description, quickCategory.name, quickSupplier.email, quickSupplier.name, quickSupplier.phone, showQuickCategory, showQuickSupplier])
 
     if (!open) return null
 
@@ -374,17 +429,51 @@ export default function ProductFormModal({
         return <span className="products-editor-error">{errors[fieldName]}</span>
     }
 
+    async function requestClose() {
+        if (loading) {
+            return
+        }
+
+        if (!hasUnsavedChanges) {
+            onClose()
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Descartar alteracoes',
+            message: 'Fechar sem salvar este produto?',
+            confirmLabel: 'Descartar',
+            cancelLabel: 'Continuar',
+        })
+
+        if (confirmed) {
+            onClose()
+        }
+    }
+
     return (
-        <div className="products-modal-backdrop">
-            <div className="products-modal products-editor-modal" role="dialog" aria-modal="true">
+        <div
+            className="products-modal-backdrop"
+            onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                    requestClose()
+                }
+            }}
+        >
+            <div className="products-modal products-editor-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
                 <header className="products-modal-header products-editor-header">
                     <div>
                         <h2>{product ? 'Editar produto' : 'Novo produto'}</h2>
-                        <p>Cadastro organizado em abas com foco em velocidade e clareza no dia a dia.</p>
                     </div>
-                    <button className="ui-button-ghost" onClick={onClose} type="button">
+                    <button
+                        className="products-icon-button ui-tooltip"
+                        data-tooltip="Fechar"
+                        aria-label="Fechar cadastro"
+                        onClick={requestClose}
+                        type="button"
+                    >
                         <i className="fa-solid fa-xmark" />
-                        Fechar
                     </button>
                 </header>
 
@@ -505,17 +594,12 @@ export default function ProductFormModal({
                                         <button type="button" className={`products-editor-toggle ${!form.active ? 'active' : ''}`} onClick={() => updateField('active', false)}>Inativo</button>
                                     </div>
                                 </article>
-                            </section>
-                        ) : null}
-
-                        {activeTab === 'description' ? (
-                            <section className="products-editor-grid">
                                 <label className="products-editor-field span-2">
-                                    <span>Descricao detalhada</span>
+                                    <span>Descricao</span>
                                     <textarea rows="5" value={form.description ?? ''} onChange={(event) => updateField('description', event.target.value)} />
                                 </label>
                                 <label className="products-editor-field span-2">
-                                    <span>Observacoes internas</span>
+                                    <span>Observacoes</span>
                                     <textarea rows="4" value={form.internal_notes ?? ''} onChange={(event) => updateField('internal_notes', event.target.value)} />
                                 </label>
                             </section>
@@ -549,14 +633,10 @@ export default function ProductFormModal({
 
                         {activeTab === 'stock' ? (
                             <section className="products-editor-grid products-editor-grid-compact">
-                                <label className={`products-editor-field ${errors.stock_quantity ? 'has-error' : ''}`}>
-                                    <span>Estoque atual</span>
-                                    <div className="products-editor-input-wrap">
-                                        <i className="fa-solid fa-box-open" />
-                                        <input type="number" step="0.001" min="0" value={form.stock_quantity ?? ''} onChange={(event) => updateField('stock_quantity', event.target.value)} />
-                                    </div>
-                                    {renderFieldError('stock_quantity')}
-                                </label>
+                                <article className="products-editor-card">
+                                    <h3>Saldo via entrada</h3>
+                                    <small>Use movimentacoes para adicionar estoque.</small>
+                                </article>
                                 <label className={`products-editor-field ${errors.min_stock ? 'has-error' : ''}`}>
                                     <span>Estoque minimo</span>
                                     <div className="products-editor-input-wrap">
@@ -751,8 +831,8 @@ export default function ProductFormModal({
                             <span className="products-editor-submit-hint">Campos com * sao obrigatorios.</span>
                         )}
                         <div className="products-editor-action-buttons">
-                            <button className="ui-button-ghost" type="button" onClick={onClose}>Cancelar</button>
-                            <button className="products-primary-button" type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar produto'}</button>
+                            <button className="ui-button-ghost" type="button" onClick={requestClose}>Cancelar</button>
+                            <button className="products-primary-button" type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</button>
                         </div>
                     </footer>
                 </form>

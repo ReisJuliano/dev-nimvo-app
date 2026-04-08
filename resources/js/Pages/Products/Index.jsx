@@ -2,8 +2,6 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { usePage } from '@inertiajs/react'
 import ActionButton from '@/Components/UI/ActionButton'
 import DataList from '@/Components/UI/DataList'
-import PageContainer from '@/Components/UI/PageContainer'
-import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
@@ -44,6 +42,30 @@ function normalizeProductRecord(product) {
     }
 }
 
+function getSearchableValues(product) {
+    return [
+        product.name,
+        product.code,
+        product.barcode,
+        product.category_name,
+        product.supplier_name,
+    ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase())
+}
+
+function getProductSearchScore(product, searchTerm) {
+    const code = String(product.code || '').toLowerCase()
+    const barcode = String(product.barcode || '').toLowerCase()
+    const name = String(product.name || '').toLowerCase()
+
+    if ([code, barcode].includes(searchTerm)) return 0
+    if (name === searchTerm) return 1
+    if (code.startsWith(searchTerm) || barcode.startsWith(searchTerm)) return 2
+    if (name.startsWith(searchTerm)) return 3
+    return 4
+}
+
 export default function ProductsIndex({ products, categories, suppliers }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
@@ -52,14 +74,13 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
     const [search, setSearch] = useState('')
     const [categoryId, setCategoryId] = useState('')
-    const [collection, setCollection] = useState('')
-    const [visibility, setVisibility] = useState('all')
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
-    const isFashionMode = false
-    const [activeTab, setActiveTab] = useState(isFashionMode ? 'catalog' : 'catalog')
     const deferredSearch = useDeferredValue(search)
+    const normalizedSearch = deferredSearch.trim().toLowerCase()
+    const hasSearch = normalizedSearch.length > 0
+    const hasFilters = search.trim() !== '' || categoryId !== ''
 
     useEffect(() => {
         if (!tenantId) {
@@ -127,71 +148,43 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             window.removeEventListener('online', handleOnline)
         }
     }, [categories, localAgentBridge, products, suppliers, tenantId])
-    const collections = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    collectionItems
-                        .map((product) => product.collection)
-                        .filter(Boolean),
-                ),
-            ).sort((left, right) => left.localeCompare(right)),
-        [collectionItems],
-    )
 
     const filteredProducts = useMemo(() => {
-        return collectionItems.filter((product) => {
-            const matchesSearch =
-                deferredSearch === '' ||
-                [
-                    product.name,
-                    product.code,
-                    product.barcode,
-                    product.style_reference,
-                    product.color,
-                    product.size,
-                    product.collection,
-                ]
-                    .filter(Boolean)
-                    .some((value) => value.toLowerCase().includes(deferredSearch.toLowerCase()))
+        if (!hasSearch) {
+            return []
+        }
 
-            const matchesCategory = categoryId === '' || String(product.category_id) === String(categoryId)
-            const matchesCollection = collection === '' || String(product.collection || '') === String(collection)
-            const matchesVisibility =
-                !isFashionMode ||
-                visibility === 'all' ||
-                (visibility === 'published' ? Boolean(product.catalog_visible) : !product.catalog_visible)
-            const matchesTab =
-                activeTab === 'catalog'
-                    ? true
-                    : activeTab === 'stock'
-                        ? Number(product.stock_quantity) <= Number(product.min_stock)
-                        : activeTab === 'grade'
-                            ? [product.style_reference, product.color, product.size, product.collection].some(Boolean)
-                            : activeTab === 'showcase'
-                                ? Boolean(product.catalog_visible)
-                                : Number(product.sale_price) > Number(product.cost_price)
+        return collectionItems
+            .filter((product) => {
+                const matchesSearch = getSearchableValues(product).some((value) => value.includes(normalizedSearch))
+                const matchesCategory = categoryId === '' || String(product.category_id) === String(categoryId)
 
-            return matchesSearch && matchesCategory && matchesCollection && matchesVisibility && matchesTab
-        })
-    }, [collectionItems, deferredSearch, categoryId, collection, visibility, activeTab, isFashionMode])
+                return matchesSearch && matchesCategory
+            })
+            .sort((left, right) => {
+                const score = getProductSearchScore(left, normalizedSearch) - getProductSearchScore(right, normalizedSearch)
+
+                if (score !== 0) {
+                    return score
+                }
+
+                return String(left.name || '').localeCompare(String(right.name || ''))
+            })
+    }, [categoryId, collectionItems, hasSearch, normalizedSearch])
 
     const summary = useMemo(() => {
-        const stockValue = filteredProducts.reduce(
+        const stockValue = collectionItems.reduce(
             (total, product) => total + Number(product.stock_quantity) * Number(product.cost_price),
             0,
         )
-        const published = filteredProducts.filter((product) => product.catalog_visible).length
-        const collectionsCount = new Set(filteredProducts.map((product) => product.collection).filter(Boolean)).size
 
         return {
-            total: filteredProducts.length,
-            lowStock: filteredProducts.filter((product) => product.stock_quantity <= product.min_stock).length,
+            total: collectionItems.length,
+            lowStock: collectionItems.filter((product) => product.stock_quantity <= product.min_stock).length,
             stockValue,
-            published,
-            collections: collectionsCount,
+            categories: new Set(collectionItems.map((product) => product.category_id).filter(Boolean)).size,
         }
-    }, [filteredProducts])
+    }, [collectionItems])
 
     function handleCreate() {
         setSelectedProduct(null)
@@ -201,6 +194,11 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     function handleEdit(product) {
         setSelectedProduct(product)
         setModalOpen(true)
+    }
+
+    function handleResetFilters() {
+        setSearch('')
+        setCategoryId('')
     }
 
     async function handleDelete(product) {
@@ -277,7 +275,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 taxable_unit: form.taxable_unit?.trim() || form.commercial_unit?.trim() || form.unit?.trim() || 'UN',
                 cost_price: form.cost_price === '' ? null : Number(form.cost_price),
                 sale_price: form.sale_price === '' ? null : Number(form.sale_price),
-                stock_quantity: Number(form.stock_quantity || 0),
                 min_stock: Number(form.min_stock || 0),
                 icms_rate: form.icms_rate === '' ? null : Number(form.icms_rate),
                 pis_rate: form.pis_rate === '' ? null : Number(form.pis_rate),
@@ -412,171 +409,102 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     return (
         <AppLayout title="Produtos">
             <div className="products-page">
-                <PageContainer
-                    toolbar={(
-                        <section className="ui-tabs">
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'catalog' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('catalog')}
-                            >
-                                <i className="fa-solid fa-box-open" />
-                                <span>Catalogo</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'stock' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('stock')}
-                            >
-                                <i className="fa-solid fa-triangle-exclamation" />
-                                <span>Reposicao</span>
-                            </button>
-                            {isFashionMode ? (
-                                <>
-                                    <button
-                                        type="button"
-                                        className={`ui-tab ${activeTab === 'grade' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('grade')}
-                                    >
-                                        <i className="fa-solid fa-shirt" />
-                                        <span>Grade</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`ui-tab ${activeTab === 'showcase' ? 'active' : ''}`}
-                                        onClick={() => setActiveTab('showcase')}
-                                    >
-                                        <i className="fa-solid fa-store" />
-                                        <span>Vitrine</span>
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className={`ui-tab ${activeTab === 'pricing' ? 'active' : ''}`}
-                                    onClick={() => setActiveTab('pricing')}
-                                >
-                                    <i className="fa-solid fa-tags" />
-                                    <span>Precificacao</span>
-                                </button>
-                            )}
-                        </section>
-                    )}
-                    sidebar={(
-                        <RightSidebarPanel>
-                            <RightSidebarSection title="Filtros" subtitle="Busca e recortes">
-                                <label className="products-sidebar-field">
-                                    <span>
-                                        <i className="fa-solid fa-magnifying-glass" />
-                                        Busca
-                                    </span>
-                                    <input
-                                        className="products-input"
-                                        type="search"
-                                        placeholder={isFashionMode ? 'Nome, codigo, grade ou colecao' : 'Nome, codigo ou EAN'}
-                                        value={search}
-                                        onChange={(event) => setSearch(event.target.value)}
-                                    />
-                                </label>
+                <section className="products-shell">
+                    <header className="products-header">
+                        <div className="products-title-block">
+                            <span className="products-kicker">Catalogo</span>
+                            <h1>Produtos</h1>
+                        </div>
 
-                                <label className="products-sidebar-field">
-                                    <span>
-                                        <i className="fa-solid fa-layer-group" />
-                                        Categoria
-                                    </span>
-                                    <select className="products-input" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                                        <option value="">Todas</option>
-                                        {categoryOptions.map((category) => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
+                        <ActionButton icon="fa-plus" onClick={handleCreate}>
+                            Novo
+                        </ActionButton>
+                    </header>
 
-                                {isFashionMode ? (
-                                    <label className="products-sidebar-field">
-                                        <span>
-                                            <i className="fa-solid fa-shirt" />
-                                            Colecao
-                                        </span>
-                                        <select className="products-input" value={collection} onChange={(event) => setCollection(event.target.value)}>
-                                            <option value="">Todas</option>
-                                            {collections.map((collectionName) => (
-                                                <option key={collectionName} value={collectionName}>
-                                                    {collectionName}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                ) : null}
+                    <section className="products-search-panel">
+                        <div className="products-search-row">
+                            <label className="products-search-input">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    type="search"
+                                    placeholder="Buscar por nome, codigo ou EAN"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                />
+                            </label>
 
-                                {isFashionMode ? (
-                                    <label className="products-sidebar-field">
-                                        <span>
-                                            <i className="fa-solid fa-store" />
-                                            Vitrine
-                                        </span>
-                                        <select className="products-input" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
-                                            <option value="all">Tudo</option>
-                                            <option value="published">Publicado</option>
-                                            <option value="hidden">Oculto</option>
-                                        </select>
-                                    </label>
-                                ) : null}
-                            </RightSidebarSection>
+                            <label className="products-filter">
+                                <span>Categoria</span>
+                                <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                                    <option value="">Todas</option>
+                                    {categoryOptions.map((category) => (
+                                        <option key={category.id} value={category.id}>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
 
-                            <RightSidebarSection title="Contexto" subtitle="Resumo do recorte">
-                                <div className="right-sidebar-meta">
-                                    <div className="right-sidebar-meta-item">
-                                        <span>Total</span>
-                                        <strong>{formatNumber(summary.total)}</strong>
-                                    </div>
-                                    <div className="right-sidebar-meta-item">
-                                        <span>Estoque baixo</span>
-                                        <strong>{formatNumber(summary.lowStock)}</strong>
-                                    </div>
-                                    {isFashionMode ? (
-                                        <>
-                                            <div className="right-sidebar-meta-item">
-                                                <span>Colecoes</span>
-                                                <strong>{formatNumber(summary.collections)}</strong>
-                                            </div>
-                                            <div className="right-sidebar-meta-item">
-                                                <span>Publicados</span>
-                                                <strong>{formatNumber(summary.published)}</strong>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="right-sidebar-meta-item">
-                                            <span>Valor em estoque</span>
-                                            <strong>{formatMoney(summary.stockValue)}</strong>
-                                        </div>
-                                    )}
-                                </div>
-                            </RightSidebarSection>
-                        </RightSidebarPanel>
-                    )}
-                >
+                            {hasFilters ? (
+                                <ActionButton
+                                    icon="fa-rotate-left"
+                                    tone="ghost"
+                                    iconOnly
+                                    onClick={handleResetFilters}
+                                    className="ui-tooltip"
+                                    data-tooltip="Limpar filtros"
+                                    aria-label="Limpar filtros"
+                                />
+                            ) : null}
+                        </div>
+                    </section>
+
+                    <section className="products-summary-strip" aria-label="Resumo do catalogo">
+                        <article className="products-summary-tile">
+                            <span>Catalogo</span>
+                            <strong>{formatNumber(summary.total)}</strong>
+                        </article>
+                        <article className="products-summary-tile tone-warning">
+                            <span>Baixo estoque</span>
+                            <strong>{formatNumber(summary.lowStock)}</strong>
+                        </article>
+                        <article className="products-summary-tile">
+                            <span>Categorias</span>
+                            <strong>{formatNumber(summary.categories)}</strong>
+                        </article>
+                        <article className="products-summary-tile tone-accent">
+                            <span>Valor estoque</span>
+                            <strong>{formatMoney(summary.stockValue)}</strong>
+                        </article>
+                    </section>
+
                     <DataList
-                        title="Produtos"
+                        title="Resultados"
                         icon="fa-box-open"
-                        count={`${formatNumber(filteredProducts.length)} item(ns)`}
-                        actions={(
-                            <ActionButton icon="fa-plus" onClick={handleCreate}>
-                                Novo produto
-                            </ActionButton>
-                        )}
+                        count={hasSearch ? `${formatNumber(filteredProducts.length)} item(ns)` : 'Pesquise para listar'}
+                        className="products-data-list"
                     >
-                        <ProductsTable
-                            products={filteredProducts}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            isFashionMode={isFashionMode}
-                            showHeader={false}
-                        />
+                        {hasSearch ? (
+                            filteredProducts.length ? (
+                                <ProductsTable products={filteredProducts} onEdit={handleEdit} onDelete={handleDelete} />
+                            ) : (
+                                <div className="products-results-empty">
+                                    <span className="products-results-icon">
+                                        <i className="fa-solid fa-box-open" />
+                                    </span>
+                                    <strong>Sem resultados</strong>
+                                </div>
+                            )
+                        ) : (
+                            <div className="products-results-empty">
+                                <span className="products-results-icon">
+                                    <i className="fa-solid fa-magnifying-glass" />
+                                </span>
+                                <strong>Pesquise produtos</strong>
+                            </div>
+                        )}
                     </DataList>
-                </PageContainer>
+                </section>
             </div>
 
             <ProductFormModal
