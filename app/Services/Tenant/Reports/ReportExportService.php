@@ -174,33 +174,46 @@ class ReportExportService
         }
 
         $columns = min(4, max(1, count($summary)));
-        $cardWidth = (277 - (($columns - 1) * 2)) / $columns;
+        $gap = 2.0;
+        $cardHeight = 17.0;
+        $cardWidth = (277 - (($columns - 1) * $gap)) / $columns;
+        $startX = 10.0;
+        $startY = $pdf->getY();
 
         $pdf->setFont('Arial', 'B', 8);
 
         foreach ($summary as $index => $item) {
-            $x = 10 + (($index % $columns) * ($cardWidth + 2));
-            $y = $pdf->getY();
+            $columnIndex = $index % $columns;
+            $rowIndex = intdiv($index, $columns);
+            $x = $startX + ($columnIndex * ($cardWidth + $gap));
+            $y = $startY + ($rowIndex * ($cardHeight + $gap));
 
-            if ($index > 0 && $index % $columns === 0) {
-                $pdf->ln(14);
-                $y = $pdf->getY();
-                $x = 10;
-            }
-
-            $pdf->setXY($x, $y);
-            $pdf->setFillColor(248, 250, 252);
-            $pdf->cell($cardWidth, 6, $this->pdfText((string) data_get($item, 'label', '-')), 1, 2, 'L', true);
-            $pdf->setX($x);
-            $pdf->setFont('Arial', '', 9);
-            $pdf->cell($cardWidth, 6, $this->pdfText($this->formattedValue(data_get($item, 'value'), (string) data_get($item, 'format', 'text'))), 1, 2);
-            $pdf->setX($x);
-            $pdf->setFont('Arial', '', 7);
-            $pdf->cell($cardWidth, 5, $this->pdfText((string) data_get($item, 'meta', '')), 1, 0);
-            $pdf->setFont('Arial', 'B', 8);
+            $this->renderPdfSummaryCard($pdf, $item, $x, $y, $cardWidth);
         }
 
-        $pdf->ln(16);
+        $rows = (int) ceil(count($summary) / $columns);
+        $pdf->setXY($startX, $startY + ($rows * ($cardHeight + $gap)));
+    }
+
+    protected function renderPdfSummaryCard(Fpdf $pdf, array $item, float $x, float $y, float $width): void
+    {
+        $label = $this->pdfText((string) data_get($item, 'label', '-'));
+        $value = $this->pdfText($this->formattedValue(data_get($item, 'value'), (string) data_get($item, 'format', 'text')));
+        $meta = $this->pdfText((string) data_get($item, 'meta', ''));
+
+        $pdf->setFillColor(248, 250, 252);
+
+        $pdf->setFont('Arial', 'B', 8);
+        $pdf->setXY($x, $y);
+        $pdf->cell($width, 6, $label, 1, 0, 'L', true);
+
+        $pdf->setFont('Arial', '', 9);
+        $pdf->setXY($x, $y + 6);
+        $pdf->cell($width, 6, $value, 1, 0, 'L');
+
+        $pdf->setFont('Arial', '', 7);
+        $pdf->setXY($x, $y + 12);
+        $pdf->cell($width, 5, $meta, 1, 0, 'L');
     }
 
     protected function renderPdfHighlights(Fpdf $pdf, array $payload): void
