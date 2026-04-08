@@ -10,7 +10,6 @@ import {
     EmptyState,
     Feedback,
     ListCard,
-    MetricGrid,
     SectionTabs,
     WorkspaceCollectionShell,
     upsertRecord,
@@ -147,6 +146,66 @@ function CategoryListCard({ record, active, onClick }) {
                         {formatMoney(record.stock_value || 0)}
                     </span>
                 </div>
+            </div>
+        </button>
+    )
+}
+
+function supplierContactHighlights(record) {
+    const highlights = []
+
+    if (record.document) {
+        highlights.push({ icon: 'fa-id-card', label: record.document })
+    }
+
+    if (record.phone) {
+        highlights.push({ icon: 'fa-phone', label: record.phone })
+    } else if (record.email) {
+        highlights.push({ icon: 'fa-envelope', label: record.email })
+    }
+
+    if (!highlights.length) {
+        highlights.push({ icon: 'fa-address-card', label: 'Sem contato' })
+    }
+
+    return highlights
+}
+
+function SupplierListCard({ record, active, onClick }) {
+    const initial = String(record.trade_name || record.name || 'F').trim().charAt(0).toUpperCase() || 'F'
+    const highlights = supplierContactHighlights(record)
+
+    return (
+        <button type="button" className={`ops-supplier-card ${active ? 'active' : ''}`} onClick={onClick}>
+            <div className="ops-supplier-card-header">
+                <span className="ops-supplier-card-avatar">{initial}</span>
+                <div className="ops-supplier-card-copy">
+                    <div className="ops-supplier-card-top">
+                        <div className="ops-supplier-card-title">
+                            <strong>{record.name}</strong>
+                            {record.trade_name ? <small>{record.trade_name}</small> : null}
+                        </div>
+                        <Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>
+                    </div>
+                    <div className="ops-supplier-card-tags">
+                        {highlights.map((item) => (
+                            <span key={`${record.id}-${item.icon}-${item.label}`}>
+                                <i className={`fa-solid ${item.icon}`} />
+                                {item.label}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div className="ops-supplier-card-footer">
+                <span>
+                    <i className="fa-solid fa-location-dot" />
+                    {supplierLocationLabel(record)}
+                </span>
+                <span>
+                    <i className="fa-solid fa-boxes-stacked" />
+                    {record.products_count || 0} produto(s)
+                </span>
             </div>
         </button>
     )
@@ -397,11 +456,11 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         },
         [hasFilters, normalizedSearch, productFilter, records, statusFilter],
     )
-    const metrics = useMemo(
+    const overviewItems = useMemo(
         () => [
-            { label: 'Fornecedores', value: records.length, caption: 'Base cadastrada' },
-            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Disponiveis para compras' },
-            { label: 'Com produtos', value: records.filter((record) => Number(record.products_count || 0) > 0).length, caption: 'Vinculados ao catalogo' },
+            { label: 'Base', value: records.length, caption: 'Fornecedores', icon: 'fa-building' },
+            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Em operacao', icon: 'fa-circle-check' },
+            { label: 'Cobertura', value: records.filter((record) => Number(record.products_count || 0) > 0).length, caption: 'Com produtos', icon: 'fa-boxes-stacked' },
         ],
         [records],
     )
@@ -486,17 +545,30 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 onTabChange={() => {}}
                 listTitle="Fornecedores"
                 listIcon="fa-truck-ramp-box"
-                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
-                createLabel="Novo fornecedor"
+                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Aplique filtros'}
+                createLabel="Novo"
                 onCreate={handleCreate}
                 summaryItems={[]}
                 emptyState={null}
                 listChildren={(
-                    <div className="ops-category-shell">
-                        <MetricGrid items={metrics} />
+                    <div className="ops-supplier-shell">
+                        <section className="ops-supplier-overview">
+                            {overviewItems.map((item) => (
+                                <article key={item.label} className="ops-supplier-overview-card">
+                                    <span className="ops-supplier-overview-icon">
+                                        <i className={`fa-solid ${item.icon}`} />
+                                    </span>
+                                    <div className="ops-supplier-overview-copy">
+                                        <small>{item.label}</small>
+                                        <strong>{item.value.toLocaleString('pt-BR')}</strong>
+                                        <span>{item.caption}</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </section>
 
-                        <section className="ops-category-toolbar">
-                            <label className="ops-category-search-field">
+                        <section className="ops-supplier-toolbar">
+                            <label className="ops-supplier-search-field">
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     type="search"
@@ -505,7 +577,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                     placeholder="Buscar fornecedor"
                                 />
                             </label>
-                            <label className="ops-category-filter-field">
+                            <label className="ops-supplier-filter-field">
                                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                                     {SUPPLIER_STATUS_FILTERS.map((option) => (
                                         <option key={option.value} value={option.value}>
@@ -514,7 +586,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                     ))}
                                 </select>
                             </label>
-                            <label className="ops-category-filter-field">
+                            <label className="ops-supplier-filter-field">
                                 <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
                                     {SUPPLIER_PRODUCT_FILTERS.map((option) => (
                                         <option key={option.value} value={option.value}>
@@ -536,28 +608,21 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 
                         {hasFilters ? (
                             filteredRecords.length ? (
-                                <div className="ops-workspace-list-stack">
+                                <div className="ops-supplier-results">
                                     {filteredRecords.map((record) => (
-                                        <ListCard
+                                        <SupplierListCard
                                             key={record.id}
                                             active={modalOpen && form.id === record.id}
                                             onClick={() => handleSelectRecord(record)}
-                                            title={record.name}
-                                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                            description={record.document || record.email || 'Sem contato principal'}
-                                            meta={[
-                                                supplierLocationLabel(record),
-                                                record.phone || 'Sem telefone',
-                                                `${record.products_count || 0} produto(s)`,
-                                            ]}
+                                            record={record}
                                         />
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState icon="fa-building" title="Nenhum fornecedor" text="Ajuste a busca." />
+                                <EmptyState icon="fa-building" title="Nenhum fornecedor" text="Ajuste o recorte." />
                             )
                         ) : (
-                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Use busca, status ou produtos." />
+                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Use nome, status ou produtos." />
                         )}
                     </div>
                 )}
@@ -565,7 +630,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar fornecedor' : 'Novo fornecedor'}
-                description="Dados comerciais"
+                description="Cadastro e contato"
                 icon="fa-truck-ramp-box"
                 size="lg"
                 onClose={handleCloseModal}
