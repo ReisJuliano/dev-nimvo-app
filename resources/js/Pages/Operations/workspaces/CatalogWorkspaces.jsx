@@ -53,6 +53,16 @@ function sortCustomers(records) {
     )
 }
 
+function customerListDescription(record) {
+    return record.document || record.phone || record.email || 'Sem dados fiscais'
+}
+
+function customerLocationLabel(record) {
+    const location = [record.city_name, record.state].filter(Boolean).join(' / ')
+
+    return location || 'Sem endereco'
+}
+
 function CategoryListCard({ record, active, onClick }) {
     const initial = String(record.name || 'C').trim().charAt(0).toUpperCase() || 'C'
 
@@ -459,7 +469,25 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 }
 
 export function CustomersWorkspace({ moduleKey, payload }) {
-    const emptyForm = { id: null, name: '', phone: '', credit_limit: '0', active: true }
+    const emptyForm = {
+        id: null,
+        name: '',
+        document: '',
+        phone: '',
+        email: '',
+        state_registration: '',
+        street: '',
+        number: '',
+        complement: '',
+        district: '',
+        city_name: '',
+        city_code: '',
+        state: '',
+        zip_code: '',
+        consumer_final: true,
+        credit_limit: '0',
+        active: true,
+    }
     const [records, setRecords] = useState(payload.records || [])
     const [search, setSearch] = useState('')
     const [form, setForm] = useState(emptyForm)
@@ -520,6 +548,19 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         return {
             ...emptyForm,
             ...(record || {}),
+            document: String(record?.document || ''),
+            phone: String(record?.phone || ''),
+            email: String(record?.email || ''),
+            state_registration: String(record?.state_registration || ''),
+            street: String(record?.street || ''),
+            number: String(record?.number || ''),
+            complement: String(record?.complement || ''),
+            district: String(record?.district || ''),
+            city_name: String(record?.city_name || ''),
+            city_code: String(record?.city_code || ''),
+            state: String(record?.state || ''),
+            zip_code: String(record?.zip_code || ''),
+            consumer_final: record?.consumer_final ?? true,
             credit_limit: String(record?.credit_limit || 0),
         }
     }
@@ -664,8 +705,8 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                             onClick={() => handleSelectRecord(record)}
                                             title={record.name}
                                             badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                            description={record.phone || 'Sem telefone'}
-                                            meta={[`Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
+                                            description={customerListDescription(record)}
+                                            meta={[customerLocationLabel(record), `Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
                                         />
                                     ))}
                                 </div>
@@ -681,9 +722,9 @@ export function CustomersWorkspace({ moduleKey, payload }) {
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar cliente' : 'Novo cliente'}
-                description="Contato e limite de credito"
+                description="Dados cadastrais, fiscais e endereco"
                 icon="fa-user-pen"
-                size="sm"
+                size="lg"
                 onClose={handleCloseModal}
                 footer={(
                     <>
@@ -704,12 +745,23 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                         <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
                     </label>
                     <label>
+                        <FieldLabel icon="fa-id-card" text="CPF ou CNPJ" />
+                        <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} />
+                    </label>
+                    <label>
                         <FieldLabel icon="fa-phone" text="Telefone" />
                         <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
                     </label>
                     <label>
-                        <FieldLabel icon="fa-credit-card" text="Limite de credito" />
-                        <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
+                        <FieldLabel icon="fa-envelope" text="E-mail" />
+                        <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-user-check" text="Consumidor final" />
+                        <select value={form.consumer_final ? 'yes' : 'no'} onChange={(event) => setForm((current) => ({ ...current, consumer_final: event.target.value === 'yes' }))}>
+                            <option value="yes">Sim</option>
+                            <option value="no">Nao</option>
+                        </select>
                     </label>
                     <label>
                         <FieldLabel icon="fa-toggle-on" text="Status" />
@@ -717,6 +769,46 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             <option value="active">Ativo</option>
                             <option value="inactive">Inativo</option>
                         </select>
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
+                        <input value={form.state_registration} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-credit-card" text="Limite de credito" />
+                        <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
+                    </label>
+                    <label className="span-2">
+                        <FieldLabel icon="fa-map-location-dot" text="Logradouro" />
+                        <input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-hashtag" text="Numero" />
+                        <input value={form.number} onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-plus" text="Complemento" />
+                        <input value={form.complement} onChange={(event) => setForm((current) => ({ ...current, complement: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-map" text="Bairro" />
+                        <input value={form.district} onChange={(event) => setForm((current) => ({ ...current, district: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-city" text="Cidade" />
+                        <input value={form.city_name} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-hashtag" text="Codigo IBGE" />
+                        <input value={form.city_code} onChange={(event) => setForm((current) => ({ ...current, city_code: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-flag" text="UF" />
+                        <input maxLength="2" value={form.state} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
+                    </label>
+                    <label className="span-2">
+                        <FieldLabel icon="fa-location-dot" text="CEP" />
+                        <input value={form.zip_code} onChange={(event) => setForm((current) => ({ ...current, zip_code: event.target.value }))} />
                     </label>
                 </form>
             </ModalForm>
