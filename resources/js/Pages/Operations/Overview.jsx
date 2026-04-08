@@ -123,13 +123,11 @@ export default function OperationsOverview({ module }) {
                             ))}
                         </section>
                     ) : null}
-                    sidebar={(
+                    sidebar={isReportsCatalog ? null : (
                         <RightSidebarPanel>
-                            {!isReportsCatalog ? (
-                                <RightSidebarSection title="Filtros" subtitle="Atualizar recorte">
-                                    <FilterBar filters={module.filters} />
-                                </RightSidebarSection>
-                            ) : null}
+                            <RightSidebarSection title="Filtros" subtitle="Atualizar recorte">
+                                <FilterBar filters={module.filters} />
+                            </RightSidebarSection>
 
                             <RightSidebarSection title="Contexto" subtitle={isReportsCatalog ? heroTitle : currentSection?.title || heroTitle}>
                                 <div className="right-sidebar-meta">

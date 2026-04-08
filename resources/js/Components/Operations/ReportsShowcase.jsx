@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Link } from '@inertiajs/react'
+import { useEffect, useMemo, useState } from 'react'
 
 function ReportCategoryButton({ category, active, onClick }) {
     return (
@@ -11,8 +12,8 @@ function ReportCategoryButton({ category, active, onClick }) {
                 <i className={`fa-solid ${category.icon}`} />
             </span>
             <span className="operations-report-category-copy">
-                <small>{category.report_count} relatorios</small>
                 <strong>{category.label}</strong>
+                <small>{category.report_count} relatorios</small>
             </span>
         </button>
     )
@@ -20,31 +21,28 @@ function ReportCategoryButton({ category, active, onClick }) {
 
 function ReportOpenCard({ report }) {
     return (
-        <a
-            href={report.href}
-            target="_blank"
-            rel="noreferrer"
-            className="operations-report-open-card"
-        >
+        <Link href={report.href} className="operations-report-open-card">
             <div className="operations-report-open-top">
                 <span className="operations-report-category-icon">
                     <i className={`fa-solid ${report.icon}`} />
                 </span>
                 <span className="operations-report-open-action">
-                    <i className="fa-solid fa-up-right-from-square" />
+                    <i className="fa-solid fa-arrow-up-right-from-square" />
                 </span>
             </div>
+
             <div className="operations-report-open-copy">
                 <strong>{report.title}</strong>
             </div>
+
             <div className="operations-report-open-tags">
-                {report.tags.map((tag) => (
+                {report.tags.slice(0, 3).map((tag) => (
                     <span key={`${report.key}-${tag}`} className="ui-badge">
                         {tag}
                     </span>
                 ))}
             </div>
-        </a>
+        </Link>
     )
 }
 
@@ -52,12 +50,30 @@ export default function ReportsShowcase({ module }) {
     const categories = Array.isArray(module?.catalog?.categories) ? module.catalog.categories : []
     const initialCategory = module?.catalog?.activeCategory || categories[0]?.key || null
     const [activeCategoryKey, setActiveCategoryKey] = useState(initialCategory)
+    const [searchTerm, setSearchTerm] = useState('')
 
     useEffect(() => {
         setActiveCategoryKey(module?.catalog?.activeCategory || categories[0]?.key || null)
     }, [module?.catalog?.activeCategory, categories])
 
     const currentCategory = categories.find((category) => category.key === activeCategoryKey) || categories[0]
+    const filteredReports = useMemo(() => {
+        const normalizedTerm = searchTerm.trim().toLowerCase()
+
+        if (!currentCategory) {
+            return []
+        }
+
+        if (!normalizedTerm) {
+            return currentCategory.reports
+        }
+
+        return currentCategory.reports.filter((report) =>
+            [report.title, ...(report.tags || [])]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+        )
+    }, [currentCategory, searchTerm])
 
     if (!currentCategory) {
         return (
@@ -72,32 +88,47 @@ export default function ReportsShowcase({ module }) {
 
     return (
         <div className="operations-reports-showcase">
-            <section className="operations-report-category-bar">
-                {categories.map((category) => (
-                    <ReportCategoryButton
-                        key={category.key}
-                        category={category}
-                        active={category.key === currentCategory.key}
-                        onClick={() => setActiveCategoryKey(category.key)}
+            <section className="operations-report-toolbar">
+                <div className="operations-report-category-bar">
+                    {categories.map((category) => (
+                        <ReportCategoryButton
+                            key={category.key}
+                            category={category}
+                            active={category.key === currentCategory.key}
+                            onClick={() => setActiveCategoryKey(category.key)}
+                        />
+                    ))}
+                </div>
+
+                <label className="operations-report-search">
+                    <i className="fa-solid fa-magnifying-glass" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Buscar relatorio"
                     />
-                ))}
+                </label>
             </section>
 
-            <section className="operations-report-preview-hero">
+            <section className="operations-report-preview-hero compact">
                 <div>
                     <span className="operations-section-kicker">Categoria</span>
                     <h2>{currentCategory.label}</h2>
                 </div>
                 <div className="operations-report-preview-badges">
-                    <span className="ui-badge success">{currentCategory.report_count} opcao(oes)</span>
-                    <span className="ui-badge warning">Nova guia</span>
+                    <span className="ui-badge success">{filteredReports.length} visoes</span>
                 </div>
             </section>
 
             <section className="operations-report-open-grid">
-                {currentCategory.reports.map((report) => (
-                    <ReportOpenCard key={report.key} report={report} />
-                ))}
+                {filteredReports.length ? (
+                    filteredReports.map((report) => (
+                        <ReportOpenCard key={report.key} report={report} />
+                    ))
+                ) : (
+                    <div className="operations-empty-state">Sem relatorios</div>
+                )}
             </section>
         </div>
     )
