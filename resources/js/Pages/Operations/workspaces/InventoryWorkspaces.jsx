@@ -55,15 +55,16 @@ function findProductByScan(products, value) {
 function filterProductsByQuery(products, value, limit = 8) {
     const normalizedValue = String(value || '').trim().toLowerCase()
 
-    const filteredProducts = normalizedValue
-        ? products.filter((product) => (
+    if (!normalizedValue) {
+        return []
+    }
+
+    return products
+        .filter((product) => (
             String(product.name || '').toLowerCase().includes(normalizedValue)
             || String(product.code || '').toLowerCase().includes(normalizedValue)
             || String(product.barcode || '').toLowerCase().includes(normalizedValue)
         ))
-        : products
-
-    return filteredProducts
         .slice(0, limit)
 }
 
@@ -676,7 +677,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 </button>
                             </div>
                         </form>
-                    ) : (
+                    ) : productSearch.trim() ? (
                         <div className="ops-inline-search-results">
                             {visibleProducts.length ? visibleProducts.map((product) => (
                                 <button
@@ -693,6 +694,8 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 </button>
                             )) : <div className="ops-inline-search-empty">Nenhum produto encontrado.</div>}
                         </div>
+                    ) : (
+                        <EmptyState title="Nenhum produto" text="Busque um item para ajustar." />
                     )}
                 </section>
 
