@@ -2,6 +2,7 @@ package main
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -50,5 +51,23 @@ func TestValidateInstallationCertificateRejectsMissingFile(t *testing.T) {
 
 	if err := validateInstallationCertificate(certificate); err == nil {
 		t.Fatal("expected missing certificate file to be rejected")
+	}
+}
+
+func TestBuildUninstallScriptUsesPurgeFlag(t *testing.T) {
+	script := buildUninstallScript(`C:\Nimvo\bin\nimvo-fiscal-agent.exe`, `C:\Nimvo`)
+
+	if !strings.Contains(script, `uninstall -install-dir "C:\Nimvo" --purge`) {
+		t.Fatalf("expected uninstall script to use purge flag, got %q", script)
+	}
+}
+
+func TestPathWithinRoot(t *testing.T) {
+	if !pathWithinRoot(`C:\Nimvo\bin\nimvo-fiscal-agent.exe`, `C:\Nimvo`) {
+		t.Fatal("expected executable inside install root to be detected")
+	}
+
+	if pathWithinRoot(`C:\Outro\bin\nimvo-fiscal-agent.exe`, `C:\Nimvo`) {
+		t.Fatal("expected executable outside install root to be rejected")
 	}
 }

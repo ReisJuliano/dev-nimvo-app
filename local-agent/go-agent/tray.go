@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -30,10 +31,15 @@ const (
 	idiApplication    = 32512
 	menuStatusID      = 1001
 	menuPrintTestID   = 1002
-	menuExitID        = 1003
+	menuUninstallID   = 1003
+	menuExitID        = 1004
 	mbOK              = 0x00000000
+	mbYesNo           = 0x00000004
+	mbDefButton2      = 0x00000100
 	mbIconInformation = 0x00000040
 	mbIconError       = 0x00000010
+	mbIconQuestion    = 0x00000020
+	idYes             = 6
 )
 
 var (
@@ -287,6 +293,7 @@ func (controller *trayController) showContextMenu() {
 
 	appendMenuString(menuHandle, menuStatusID, "Status")
 	appendMenuString(menuHandle, menuPrintTestID, "Imprimir teste")
+	appendMenuString(menuHandle, menuUninstallID, "Desinstalar")
 	appendMenuString(menuHandle, menuExitID, "Sair")
 
 	cursor := point{}
@@ -351,15 +358,62 @@ func (controller *trayController) requestExit() {
 	procDestroyWindow.Call(controller.windowHandle)
 }
 
+func (controller *trayController) requestUninstall() {
+	if !controller.confirmMessage(
+		"Nimvo Fiscal Agent",
+		"Deseja desinstalar o Nimvo Fiscal Agent deste computador agora?\n\nA configuracao local, atalhos e arquivos instalados serao removidos.",
+	) {
+		return
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		controller.showMessage("Nimvo Fiscal Agent", err.Error(), mbIconError)
+		return
+	}
+
+	installRoot := currentInstallRoot(exePath)
+	command := exec.Command(exePath, "uninstall", "--install-dir", installRoot, "--purge")
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	if err := command.Start(); err != nil {
+		controller.showMessage("Nimvo Fiscal Agent", err.Error(), mbIconError)
+		return
+	}
+
+	controller.requestExit()
+}
+
 func (controller *trayController) showMessage(title, body string, flags uintptr) {
 	titlePtr, _ := syscall.UTF16PtrFromString(title)
 	bodyPtr, _ := syscall.UTF16PtrFromString(body)
 	procMessageBoxW.Call(controller.windowHandle, uintptr(unsafe.Pointer(bodyPtr)), uintptr(unsafe.Pointer(titlePtr)), mbOK|flags)
 }
 
+func (controller *trayController) confirmMessage(title, body string) bool {
+	titlePtr, _ := syscall.UTF16PtrFromString(title)
+	bodyPtr, _ := syscall.UTF16PtrFromString(body)
+	result, _, _ := procMessageBoxW.Call(
+		controller.windowHandle,
+		uintptr(unsafe.Pointer(bodyPtr)),
+		uintptr(unsafe.Pointer(titlePtr)),
+		mbYesNo|mbDefButton2|mbIconQuestion,
+	)
+
+	return result == idYes
+}
+
 func appendMenuString(menuHandle uintptr, itemID uintptr, text string) {
 	textPtr, _ := syscall.UTF16PtrFromString(text)
 	procAppendMenuW.Call(menuHandle, mfString, itemID, uintptr(unsafe.Pointer(textPtr)))
+}
+
+func currentInstallRoot(exePath string) string {
+	executableDir := filepath.Dir(exePath)
+	if strings.EqualFold(filepath.Base(executableDir), "bin") {
+		return filepath.Clean(filepath.Join(executableDir, ".."))
+	}
+
+	return defaultInstallDir()
 }
 
 func loadTrayIcon() (uintptr, error) {
@@ -420,6 +474,9 @@ func trayWindowProc(windowHandle uintptr, message uint32, wParam, lParam uintptr
 			return 0
 		case menuPrintTestID:
 			go controller.printTest()
+			return 0
+		case menuUninstallID:
+			go controller.requestUninstall()
 			return 0
 		case menuExitID:
 			controller.requestExit()

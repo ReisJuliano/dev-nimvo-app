@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -212,6 +213,8 @@ func runStatus(args []string) error {
 func runUninstall(args []string) error {
 	fs := flag.NewFlagSet("uninstall", flag.ContinueOnError)
 	installDir := fs.String("install-dir", defaultInstallDir(), "Pasta de instalacao do agente")
+	purge := fs.Bool("purge", false, "Remove tambem os arquivos instalados do agente")
+	cleanupSelf := fs.Bool("cleanup-self", false, "Uso interno para limpar o helper temporario de desinstalacao")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -222,6 +225,43 @@ func runUninstall(args []string) error {
 		return err
 	}
 
+	if err := removeInstalledAgentArtifacts(); err != nil {
+		return err
+	}
+
+	if !*purge {
+		fmt.Println("Inicializacao automatica e configuracao local removidas com sucesso.")
+		fmt.Printf("Se quiser apagar os arquivos do agente, remova a pasta: %s\n", installRoot)
+
+		return nil
+	}
+
+	if uninstallNeedsHelper(installRoot) {
+		if err := launchUninstallHelper(installRoot); err != nil {
+			return err
+		}
+
+		fmt.Println("Desinstalacao completa agendada em segundo plano.")
+
+		return nil
+	}
+
+	if err := purgeInstallRoot(installRoot); err != nil {
+		return err
+	}
+
+	if *cleanupSelf {
+		if err := scheduleHelperSelfCleanup(); err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf("Agente removido com sucesso de: %s\n", installRoot)
+
+	return nil
+}
+
+func removeInstalledAgentArtifacts() error {
 	if err := removeStartupEntry(); err != nil {
 		return err
 	}
@@ -234,10 +274,103 @@ func runUninstall(args []string) error {
 		return err
 	}
 
-	fmt.Println("Inicializacao automatica e configuracao local removidas com sucesso.")
-	fmt.Printf("Se quiser apagar os arquivos do agente, remova a pasta: %s\n", installRoot)
-
 	return nil
+}
+
+func uninstallNeedsHelper(installRoot string) bool {
+	currentExe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+
+	return pathWithinRoot(currentExe, installRoot)
+}
+
+func launchUninstallHelper(installRoot string) error {
+	currentExe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	helperDir, err := os.MkdirTemp("", "nimvo-agent-uninstall-*")
+	if err != nil {
+		return err
+	}
+
+	helperExe := filepath.Join(helperDir, filepath.Base(currentExe))
+	if err := copyFile(currentExe, helperExe); err != nil {
+		return err
+	}
+
+	command := exec.Command(helperExe, "uninstall", "--install-dir", installRoot, "--purge", "--cleanup-self")
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+
+	return command.Start()
+}
+
+func purgeInstallRoot(installRoot string) error {
+	if !dirExists(installRoot) {
+		return nil
+	}
+
+	var lastErr error
+	for attempt := 0; attempt < 20; attempt++ {
+		lastErr = os.RemoveAll(installRoot)
+		if lastErr == nil && !dirExists(installRoot) {
+			return nil
+		}
+
+		if !dirExists(installRoot) {
+			return nil
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("nao foi possivel remover a pasta de instalacao do agente: %w", lastErr)
+	}
+
+	return fmt.Errorf("nao foi possivel remover a pasta de instalacao do agente: %s", installRoot)
+}
+
+func scheduleHelperSelfCleanup() error {
+	currentExe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	helperDir := filepath.Dir(currentExe)
+	cleanupCommand := fmt.Sprintf(
+		`ping 127.0.0.1 -n 3 >nul & del /f /q "%s" >nul 2>&1 & rmdir /s /q "%s" >nul 2>&1`,
+		currentExe,
+		helperDir,
+	)
+
+	command := exec.Command("cmd.exe", "/C", cleanupCommand)
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+
+	return command.Start()
+}
+
+func pathWithinRoot(path, root string) bool {
+	normalizedPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+
+	normalizedRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+
+	normalizedPath = strings.TrimRight(strings.ToLower(filepath.Clean(normalizedPath)), `\/`)
+	normalizedRoot = strings.TrimRight(strings.ToLower(filepath.Clean(normalizedRoot)), `\/`)
+	if normalizedPath == normalizedRoot {
+		return true
+	}
+
+	return strings.HasPrefix(normalizedPath, normalizedRoot+`\`)
 }
 
 func defaultInstallDir() string {
@@ -300,7 +433,7 @@ func buildUninstallScript(exePath, installDir string) string {
 	return strings.Join([]string{
 		"@echo off",
 		"setlocal",
-		fmt.Sprintf(`"%s" uninstall -install-dir "%s"`, exePath, installDir),
+		fmt.Sprintf(`"%s" uninstall -install-dir "%s" --purge`, exePath, installDir),
 		"pause",
 		"",
 	}, "\r\n")
@@ -323,7 +456,7 @@ func buildReadme(installDir string) string {
 		"6. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
 		"7. O agente grava a execucao em logs\\agent.log.",
 		"",
-		"Para desabilitar a inicializacao automatica, execute uninstall-agent.cmd.",
+		"Para remover o agente local, execute uninstall-agent.cmd ou use a opcao Desinstalar no icone da bandeja.",
 		"",
 	}
 

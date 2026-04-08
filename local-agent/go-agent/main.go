@@ -328,7 +328,7 @@ func printUsage() {
 	fmt.Println("  list-printers Lista as impressoras Windows compativeis com o Nimvo")
 	fmt.Println("  local-test Imprime um cupom de teste usando a configuracao instalada")
 	fmt.Println("  status     Mostra o estado da instalacao local")
-	fmt.Println("  uninstall  Remove a inicializacao automatica e a configuracao local do agente")
+	fmt.Println("  uninstall  Remove a instalacao local do agente")
 	fmt.Println("")
 	fmt.Println("Exemplos:")
 	fmt.Println(`  nimvo-fiscal-agent install`)
