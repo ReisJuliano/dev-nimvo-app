@@ -519,9 +519,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         [products, productSearch],
     )
 
-    const targetStock = parseNumber(form.counted_quantity, Number(selectedProduct?.stock_quantity || 0))
-    const deltaPreview = targetStock - Number(selectedProduct?.stock_quantity || 0)
-
     function selectProduct(product) {
         setForm((current) => ({
             ...current,
@@ -652,11 +649,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 <FieldLabel icon="fa-pen" text="Motivo" />
                                 <input value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} />
                             </label>
-
-                            <div className="ops-workspace-total-bar span-2">
-                                <span>Delta</span>
-                                <strong>{formatNumber(deltaPreview)}</strong>
-                            </div>
 
                             <label className="span-2">
                                 <FieldLabel icon="fa-note-sticky" text="Observacao" />
