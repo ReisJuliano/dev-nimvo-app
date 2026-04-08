@@ -1,18 +1,20 @@
 import { useMemo, useState } from 'react'
+import { hasTextSearchWildcard, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import OrdersModal from './OrdersModal'
 
 export default function OrderTransferModal({ form, setForm, customers, creatingCustomer = false, onCreateCustomer, onClose, onSubmit }) {
     const [search, setSearch] = useState('')
-    const normalizedSearch = search.trim().toLowerCase()
-    const exactMatch = normalizedSearch
-        ? customers.find((customer) => String(customer.name || '').trim().toLowerCase() === normalizedSearch)
+    const normalizedSearch = normalizeTextSearch(search)
+    const wildcardSearch = hasTextSearchWildcard(normalizedSearch)
+    const exactMatch = normalizedSearch && !wildcardSearch
+        ? customers.find((customer) => normalizeTextSearch(customer.name) === normalizedSearch)
         : null
     const visibleCustomers = useMemo(() => {
         if (!normalizedSearch) {
             return []
         }
 
-        const matches = customers.filter((customer) => [customer.name, customer.phone].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedSearch)))
+        const matches = customers.filter((customer) => matchesTextSearchAny([customer.name, customer.phone], normalizedSearch))
 
         return [...matches].sort((left, right) => {
             const leftSelected = String(left.id) === String(form.customerId)
@@ -24,7 +26,7 @@ export default function OrderTransferModal({ form, setForm, customers, creatingC
 
             return String(left.name).localeCompare(String(right.name))
         })
-    }, [customers, normalizedSearch, form.customerId])
+    }, [customers, form.customerId, normalizedSearch])
 
     return (
         <OrdersModal
@@ -55,7 +57,7 @@ export default function OrderTransferModal({ form, setForm, customers, creatingC
                                 onClick={() => onCreateCustomer?.(search)}
                                 aria-label="Criar cliente"
                                 title="Criar cliente"
-                                disabled={!normalizedSearch || Boolean(exactMatch) || creatingCustomer}
+                                disabled={!normalizedSearch || wildcardSearch || Boolean(exactMatch) || creatingCustomer}
                             >
                                 <i className={`fa-solid ${creatingCustomer ? 'fa-spinner fa-spin' : 'fa-user-plus'}`} />
                             </button>

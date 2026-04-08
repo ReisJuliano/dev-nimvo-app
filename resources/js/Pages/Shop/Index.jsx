@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import './shop.css'
 
 const emptyCustomer = {
@@ -50,14 +51,14 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     const filteredProducts = useMemo(() => {
-        const normalizedSearch = search.trim().toLowerCase()
+        const normalizedSearch = normalizeTextSearch(search)
 
         return products.filter((product) => {
             const matchesCollection =
                 activeCollection === '' || String(product.collection || '') === String(activeCollection)
             const matchesSearch =
                 normalizedSearch === '' ||
-                [
+                matchesTextSearchAny([
                     product.name,
                     product.code,
                     product.style_reference,
@@ -65,9 +66,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                     product.color,
                     product.size,
                     product.category_name,
-                ]
-                    .filter(Boolean)
-                    .some((value) => String(value).toLowerCase().includes(normalizedSearch))
+                ], normalizedSearch)
 
             return matchesCollection && matchesSearch
         })

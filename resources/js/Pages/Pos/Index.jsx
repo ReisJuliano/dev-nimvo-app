@@ -10,6 +10,7 @@ import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
     cacheOfflineCashRegisterReport,
     closeOfflineCashRegister,
@@ -594,35 +595,29 @@ export default function PosIndex({
     }, [closeCashRegisterModal, requireCashClosingConference])
 
     const filteredCustomers = useMemo(() => {
-        const normalizedTerm = deferredCustomerSearch.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(deferredCustomerSearch)
         if (!normalizedTerm) return customers.slice(0, 20)
 
         return customers.filter((customer) =>
-            [customer.name, customer.phone, customer.document]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+            matchesTextSearchAny([customer.name, customer.phone, customer.document], normalizedTerm),
         )
     }, [customers, deferredCustomerSearch])
 
     const filteredRecipientCustomers = useMemo(() => {
-        const normalizedTerm = deferredRecipientSearch.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(deferredRecipientSearch)
         if (!normalizedTerm) return customers.slice(0, 20)
 
         return customers.filter((customer) =>
-            [customer.name, customer.document]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+            matchesTextSearchAny([customer.name, customer.document], normalizedTerm),
         )
     }, [customers, deferredRecipientSearch])
 
     const filteredRecipientCompanies = useMemo(() => {
-        const normalizedTerm = deferredRecipientSearch.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(deferredRecipientSearch)
         if (!normalizedTerm) return companies.slice(0, 20)
 
         return companies.filter((company) =>
-            [company.name, company.trade_name, company.document]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+            matchesTextSearchAny([company.name, company.trade_name, company.document], normalizedTerm),
         )
     }, [companies, deferredRecipientSearch])
 

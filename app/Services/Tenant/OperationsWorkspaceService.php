@@ -13,6 +13,7 @@ use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
 use App\Models\Tenant\User;
 use App\Services\Tenant\Purchases\IncomingNfeService;
+use App\Support\TextSearch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -224,7 +225,7 @@ class OperationsWorkspaceService
 
     protected function customersPayload(array $filters = []): array
     {
-        $search = trim((string) ($filters['search'] ?? ''));
+        $search = TextSearch::normalize($filters['search'] ?? null);
 
         if ($search === '') {
             return [
@@ -232,10 +233,15 @@ class OperationsWorkspaceService
             ];
         }
 
+        $query = Customer::query()
+            ->withCount(['sales as sales_count' => fn ($query) => $query->where('status', 'finalized')]);
+
+        if (! TextSearch::matchesAll($search)) {
+            $query->where('name', 'like', TextSearch::likePattern($search));
+        }
+
         return [
-            'records' => Customer::query()
-                ->withCount(['sales as sales_count' => fn ($query) => $query->where('status', 'finalized')])
-                ->where('name', 'like', '%'.$search.'%')
+            'records' => $query
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Customer $customer) => $this->serializeCustomer($customer))

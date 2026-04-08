@@ -8,6 +8,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
+use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -1978,7 +1979,11 @@ class ReportBrowserService
             return;
         }
 
-        $like = "%{$term}%";
+        if (TextSearch::matchesAll($term)) {
+            return;
+        }
+
+        $like = TextSearch::likePattern($term);
 
         $query->where(function ($nestedQuery) use ($columns, $like) {
             foreach ($columns as $index => $column) {

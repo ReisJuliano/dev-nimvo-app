@@ -8,6 +8,7 @@ import ProductsTable from '@/Components/Products/ProductsTable'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatNumber } from '@/lib/format'
+import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
     configureOfflineWorkspaceBridge,
     getOfflineWorkspaceSnapshot,
@@ -51,18 +52,19 @@ function getSearchableValues(product) {
         product.supplier_name,
     ]
         .filter(Boolean)
-        .map((value) => String(value).toLowerCase())
 }
 
 function getProductSearchScore(product, searchTerm) {
+    const normalizedSearch = normalizeTextSearch(searchTerm)
     const code = String(product.code || '').toLowerCase()
     const barcode = String(product.barcode || '').toLowerCase()
     const name = String(product.name || '').toLowerCase()
+    const usesWildcard = normalizedSearch.includes('%')
 
-    if ([code, barcode].includes(searchTerm)) return 0
-    if (name === searchTerm) return 1
-    if (code.startsWith(searchTerm) || barcode.startsWith(searchTerm)) return 2
-    if (name.startsWith(searchTerm)) return 3
+    if (!usesWildcard && [code, barcode].includes(normalizedSearch)) return 0
+    if (!usesWildcard && name === normalizedSearch) return 1
+    if (matchesTextSearchAny([code, barcode], normalizedSearch)) return 2
+    if (matchesTextSearch(name, normalizedSearch)) return 3
     return 4
 }
 
@@ -78,7 +80,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
     const deferredSearch = useDeferredValue(search)
-    const normalizedSearch = deferredSearch.trim().toLowerCase()
+    const normalizedSearch = normalizeTextSearch(deferredSearch)
     const hasSearch = normalizedSearch.length > 0
     const hasFilters = search.trim() !== '' || categoryId !== ''
 
@@ -156,7 +158,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
 
         return collectionItems
             .filter((product) => {
-                const matchesSearch = getSearchableValues(product).some((value) => value.includes(normalizedSearch))
+                const matchesSearch = matchesTextSearchAny(getSearchableValues(product), normalizedSearch)
                 const matchesCategory = categoryId === '' || String(product.category_id) === String(categoryId)
 
                 return matchesSearch && matchesCategory

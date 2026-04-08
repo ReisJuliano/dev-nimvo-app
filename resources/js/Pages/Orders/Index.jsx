@@ -5,6 +5,7 @@ import useModules from '@/hooks/useModules'
 import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import { hasTextSearchWildcard, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
     configureOfflineWorkspaceBridge,
     createOfflineCustomer,
@@ -413,19 +414,20 @@ export default function OrdersIndex({
         [filteredDrafts],
     )
     const searchResults = useMemo(() => {
-        const normalizedTerm = searchDraftTerm.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(searchDraftTerm)
         if (!normalizedTerm) return drafts.slice(0, 8)
         return drafts.filter((draft) =>
-            [draft.label, draft.reference, draft.customer?.name, draft.created_by, getOrderTypeLabel(draft.type), getDraftNumberLabel(draft)]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+            matchesTextSearchAny(
+                [draft.label, draft.reference, draft.customer?.name, draft.created_by, getOrderTypeLabel(draft.type), getDraftNumberLabel(draft)],
+                normalizedTerm,
+            ),
         )
     }, [drafts, searchDraftTerm])
     const newDraftCustomerSuggestions = useMemo(() => {
-        const normalizedTerm = newDraftForm.customerName.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(newDraftForm.customerName)
         if (!normalizedTerm) return []
         return customerOptions
-            .filter((customer) => [customer.name, customer.phone].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedTerm)))
+            .filter((customer) => matchesTextSearchAny([customer.name, customer.phone], normalizedTerm))
             .slice(0, 6)
     }, [customerOptions, newDraftForm.customerName])
     const resolvedPaymentMethod = paymentTab === 'card' ? cardType : paymentTab
@@ -749,6 +751,7 @@ export default function OrdersIndex({
         const typedName = newDraftForm.customerName.trim()
         if (!typedName) return null
         if (newDraftForm.customerId) return Number(newDraftForm.customerId)
+        if (hasTextSearchWildcard(typedName)) return null
 
         const existing = customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === typedName.toLowerCase())
         if (existing) return Number(existing.id)
@@ -778,6 +781,10 @@ export default function OrdersIndex({
     async function handleCreateTransferCustomer(name) {
         const typedName = String(name || '').trim()
         if (!typedName) return
+        if (hasTextSearchWildcard(typedName)) {
+            showFeedback('error', 'Use % apenas para pesquisar. Para criar cliente, digite o nome sem curinga.')
+            return
+        }
 
         const existing = customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === typedName.toLowerCase())
         if (existing) {
@@ -1069,8 +1076,10 @@ export default function OrdersIndex({
     }
 
     function handleNewDraftCustomerInput(value) {
-        const normalized = value.trim().toLowerCase()
-        const exactMatch = customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === normalized)
+        const normalized = normalizeTextSearch(value)
+        const exactMatch = normalized && !hasTextSearchWildcard(normalized)
+            ? customerOptions.find((customer) => String(customer.name).trim().toLowerCase() === normalized)
+            : null
         setNewDraftForm((current) => ({ ...current, customerName: value, customerId: exactMatch ? String(exactMatch.id) : '' }))
     }
 

@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 
 function ReportCategoryButton({ category, active, onClick }) {
     return (
@@ -58,7 +59,7 @@ export default function ReportsShowcase({ module }) {
 
     const currentCategory = categories.find((category) => category.key === activeCategoryKey) || categories[0]
     const filteredReports = useMemo(() => {
-        const normalizedTerm = searchTerm.trim().toLowerCase()
+        const normalizedTerm = normalizeTextSearch(searchTerm)
 
         if (!currentCategory) {
             return []
@@ -69,9 +70,7 @@ export default function ReportsShowcase({ module }) {
         }
 
         return currentCategory.reports.filter((report) =>
-            [report.title, ...(report.tags || [])]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(normalizedTerm)),
+            matchesTextSearchAny([report.title, ...(report.tags || [])], normalizedTerm),
         )
     }, [currentCategory, searchTerm])
 

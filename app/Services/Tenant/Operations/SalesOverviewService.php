@@ -7,6 +7,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\Operations\Concerns\BuildsOverviewPages;
+use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Facades\DB;
 
@@ -637,7 +638,11 @@ class SalesOverviewService
             return $query;
         }
 
-        $likeFilter = str_contains($productFilter, '%') ? $productFilter : "%{$productFilter}%";
+        if (TextSearch::matchesAll($productFilter)) {
+            return $query;
+        }
+
+        $likeFilter = TextSearch::likePattern($productFilter);
 
         return $query->where(function ($nestedQuery) use ($table, $productFilter, $likeFilter) {
             $nestedQuery

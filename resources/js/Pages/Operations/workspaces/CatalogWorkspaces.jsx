@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
 import ModalForm from '@/Components/UI/ModalForm'
 import {
@@ -56,11 +57,11 @@ function FieldLabel({ icon, text }) {
 }
 
 function normalizeCategorySearch(value) {
-    return String(value || '').trim().toLowerCase()
+    return normalizeTextSearch(value)
 }
 
 function normalizeSupplierSearch(value) {
-    return String(value || '').trim().toLowerCase()
+    return normalizeTextSearch(value)
 }
 
 function normalizeCustomerSearch(value) {
@@ -68,7 +69,7 @@ function normalizeCustomerSearch(value) {
 }
 
 function normalizeCustomerSearchKey(value) {
-    return normalizeCustomerSearch(value).toLowerCase()
+    return normalizeTextSearch(value)
 }
 
 function sortSuppliers(records) {
@@ -83,7 +84,7 @@ function supplierLocationLabel(record) {
     return location || 'Sem localizacao'
 }
 
-function supplierSearchLabel(record) {
+function supplierSearchValues(record) {
     return [
         record.name,
         record.trade_name,
@@ -94,12 +95,10 @@ function supplierSearchLabel(record) {
         record.state,
     ]
         .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
 }
 
 function matchesSupplierFilters(record, normalizedSearch, statusFilter, productFilter) {
-    const matchesSearch = normalizedSearch === '' || supplierSearchLabel(record).includes(normalizedSearch)
+    const matchesSearch = normalizedSearch === '' || matchesTextSearchAny(supplierSearchValues(record), normalizedSearch)
     const matchesStatus = statusFilter === 'all'
         || (statusFilter === 'active' ? record.active : !record.active)
     const hasProducts = Number(record.products_count || 0) > 0
@@ -232,8 +231,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 
             return records.filter((record) => {
                 const matchesSearch = normalizedSearch === ''
-                    || normalizeCategorySearch(record.name).includes(normalizedSearch)
-                    || normalizeCategorySearch(record.description).includes(normalizedSearch)
+                    || matchesTextSearchAny([record.name, record.description], normalizedSearch)
                 const matchesStatus = statusFilter === 'all'
                     || (statusFilter === 'active' ? record.active : !record.active)
                 const hasProducts = Number(record.products_count || 0) > 0
@@ -796,7 +794,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
             return true
         }
 
-        return normalizeCustomerSearchKey(record?.name).includes(normalizedSearchKey)
+        return matchesTextSearch(record?.name, normalizedSearchKey)
     }
 
     function handleSelectRecord(record) {

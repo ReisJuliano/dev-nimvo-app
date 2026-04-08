@@ -4,6 +4,7 @@ import {
     saveIndexedDbWorkspaceSnapshot,
     saveLocalAgentWorkspaceSnapshot,
 } from './persistence'
+import { matchesTextSearchAny, normalizeTextSearch } from '../textSearch'
 
 const STORAGE_PREFIX = 'nimvo:offline-workspace'
 const CHANGE_EVENT = 'nimvo:offline-workspace:change'
@@ -1168,22 +1169,19 @@ export function seedOfflineWorkspace(tenantId, snapshot = {}) {
 }
 
 export function searchOfflineProducts(tenantId, { term, categoryId } = {}) {
-    const normalizedTerm = String(term || '').trim().toLowerCase()
+    const normalizedTerm = normalizeTextSearch(term)
 
     if (!normalizedTerm) {
         return []
     }
 
     const state = readState(tenantId)
-    const likeMatcher = (value) => String(value || '').trim().toLowerCase().includes(normalizedTerm)
 
     return state.catalogs.products
         .filter((product) => product.active !== false)
         .filter((product) => !categoryId || String(product.category_id) === String(categoryId))
         .filter((product) =>
-            [product.barcode, product.code, product.name, product.description]
-                .filter(Boolean)
-                .some((value) => likeMatcher(value)),
+            matchesTextSearchAny([product.barcode, product.code, product.name, product.description], normalizedTerm),
         )
         .slice(0, 15)
 }

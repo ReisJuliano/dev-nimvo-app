@@ -18,6 +18,7 @@ use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
 use App\Services\Tenant\TenantSettingsService;
+use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,19 +34,21 @@ class PosApiController extends Controller
 
     public function searchProducts(Request $request): JsonResponse
     {
-        $term = trim((string) $request->string('term'));
+        $term = TextSearch::normalize($request->string('term'));
         $categoryId = $request->integer('category_id');
 
         if ($term === '') {
             return response()->json(['products' => []]);
         }
 
-        $likeTerm = str_contains($term, '%') ? $term : "%{$term}%";
-
-        $products = Product::query()
+        $productsQuery = Product::query()
             ->when($categoryId, fn ($query) => $query->where('category_id', $categoryId))
-            ->where('active', true)
-            ->where(function ($nested) use ($term, $likeTerm) {
+            ->where('active', true);
+
+        if (! TextSearch::matchesAll($term)) {
+            $likeTerm = TextSearch::likePattern($term);
+
+            $productsQuery->where(function ($nested) use ($term, $likeTerm) {
                 $nested
                     ->where('barcode', $term)
                     ->orWhere('code', $term)
@@ -53,7 +56,10 @@ class PosApiController extends Controller
                     ->orWhere('code', 'like', $likeTerm)
                     ->orWhere('name', 'like', $likeTerm)
                     ->orWhere('description', 'like', $likeTerm);
-            })
+            });
+        }
+
+        $products = $productsQuery
             ->orderBy('name')
             ->limit(15)
             ->get()

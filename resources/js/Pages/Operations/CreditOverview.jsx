@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
+import { matchesTextSearch, normalizeTextSearch } from '@/lib/textSearch'
 import './credit-overview.css'
 
 const quickRanges = [
@@ -253,7 +254,7 @@ export default function CreditOverview({ module }) {
         }
     }, [activeCustomerId, customers])
 
-    const normalizedSearch = search.trim().toLowerCase()
+    const normalizedSearch = normalizeTextSearch(search)
     const shouldShowResults = normalizedSearch.length > 0
 
     const filteredCustomers = useMemo(() => {
@@ -262,7 +263,7 @@ export default function CreditOverview({ module }) {
         }
 
         return customers.filter((customer) =>
-            String(customer.name || '').toLowerCase().includes(normalizedSearch)
+            matchesTextSearch(customer.name, normalizedSearch)
             && matchesCustomerFilter(customer, activeFilter),
         )
     }, [activeFilter, customers, normalizedSearch, shouldShowResults])

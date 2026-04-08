@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
     Badge,
     buildRecordsUrl,
@@ -53,7 +54,7 @@ function findProductByScan(products, value) {
 }
 
 function filterProductsByQuery(products, value, limit = 8) {
-    const normalizedValue = String(value || '').trim().toLowerCase()
+    const normalizedValue = normalizeTextSearch(value)
 
     if (!normalizedValue) {
         return []
@@ -61,9 +62,7 @@ function filterProductsByQuery(products, value, limit = 8) {
 
     return products
         .filter((product) => (
-            String(product.name || '').toLowerCase().includes(normalizedValue)
-            || String(product.code || '').toLowerCase().includes(normalizedValue)
-            || String(product.barcode || '').toLowerCase().includes(normalizedValue)
+            matchesTextSearchAny([product.name, product.code, product.barcode], normalizedValue)
         ))
         .slice(0, limit)
 }
