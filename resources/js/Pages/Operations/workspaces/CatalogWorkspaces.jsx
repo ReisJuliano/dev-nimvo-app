@@ -10,6 +10,7 @@ import {
     EmptyState,
     Feedback,
     ListCard,
+    MetricGrid,
     SectionTabs,
     WorkspaceCollectionShell,
     upsertRecord,
@@ -22,6 +23,18 @@ const CATEGORY_STATUS_FILTERS = [
 ]
 
 const CATEGORY_PRODUCT_FILTERS = [
+    { value: 'all', label: 'Produtos: todos' },
+    { value: 'with-products', label: 'Com produtos' },
+    { value: 'without-products', label: 'Sem produtos' },
+]
+
+const SUPPLIER_STATUS_FILTERS = [
+    { value: 'all', label: 'Status: todos' },
+    { value: 'active', label: 'Status: ativos' },
+    { value: 'inactive', label: 'Status: inativos' },
+]
+
+const SUPPLIER_PRODUCT_FILTERS = [
     { value: 'all', label: 'Produtos: todos' },
     { value: 'with-products', label: 'Com produtos' },
     { value: 'without-products', label: 'Sem produtos' },
@@ -47,12 +60,54 @@ function normalizeCategorySearch(value) {
     return String(value || '').trim().toLowerCase()
 }
 
+function normalizeSupplierSearch(value) {
+    return String(value || '').trim().toLowerCase()
+}
+
 function normalizeCustomerSearch(value) {
     return String(value || '').trim()
 }
 
 function normalizeCustomerSearchKey(value) {
     return normalizeCustomerSearch(value).toLowerCase()
+}
+
+function sortSuppliers(records) {
+    return [...records].sort((left, right) =>
+        String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR', { sensitivity: 'base' }),
+    )
+}
+
+function supplierLocationLabel(record) {
+    const location = [record.city_name, record.state].filter(Boolean).join(' / ')
+
+    return location || 'Sem localizacao'
+}
+
+function supplierSearchLabel(record) {
+    return [
+        record.name,
+        record.trade_name,
+        record.document,
+        record.phone,
+        record.email,
+        record.city_name,
+        record.state,
+    ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+}
+
+function matchesSupplierFilters(record, normalizedSearch, statusFilter, productFilter) {
+    const matchesSearch = normalizedSearch === '' || supplierSearchLabel(record).includes(normalizedSearch)
+    const matchesStatus = statusFilter === 'all'
+        || (statusFilter === 'active' ? record.active : !record.active)
+    const hasProducts = Number(record.products_count || 0) > 0
+    const matchesProducts = productFilter === 'all'
+        || (productFilter === 'with-products' ? hasProducts : !hasProducts)
+
+    return matchesSearch && matchesStatus && matchesProducts
 }
 
 function sortCustomers(records) {
@@ -322,14 +377,25 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 export function SuppliersWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', document: '', trade_name: '', state_registration: '', city_name: '', state: '', phone: '', email: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
-    const [activeTab, setActiveTab] = useState('active')
+    const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
+    const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const normalizedSearch = useMemo(() => normalizeSupplierSearch(search), [search])
+    const hasFilters = normalizedSearch !== '' || statusFilter !== 'all' || productFilter !== 'all'
 
     const filteredRecords = useMemo(
-        () => records.filter((record) => (activeTab === 'active' ? record.active : !record.active)),
-        [records, activeTab],
+        () => {
+            if (!hasFilters) {
+                return []
+            }
+
+            return records.filter((record) => matchesSupplierFilters(record, normalizedSearch, statusFilter, productFilter))
+        },
+        [hasFilters, normalizedSearch, productFilter, records, statusFilter],
     )
     const metrics = useMemo(
         () => [
@@ -342,6 +408,23 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 
     function handleCreate() {
         setForm(emptyForm)
+        setModalOpen(true)
+    }
+
+    function handleSelectRecord(record) {
+        setForm({ ...emptyForm, ...record })
+        setModalOpen(true)
+    }
+
+    function handleCloseModal() {
+        setForm(emptyForm)
+        setModalOpen(false)
+    }
+
+    function handleClearFilters() {
+        setSearch('')
+        setStatusFilter('all')
+        setProductFilter('all')
     }
 
     async function handleSubmit(event) {
@@ -352,8 +435,13 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
             const response = form.id
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
-            setRecords((current) => upsertRecord(current, response.record))
-            setForm({ ...emptyForm, ...response.record })
+            setRecords((current) => sortSuppliers(upsertRecord(current, response.record)))
+            handleCloseModal()
+            if (!hasFilters || !matchesSupplierFilters(response.record, normalizedSearch, statusFilter, productFilter)) {
+                setSearch(response.record.name || '')
+                setStatusFilter('all')
+                setProductFilter('all')
+            }
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -382,7 +470,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
+            handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -393,85 +481,149 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         <>
             <Feedback feedback={feedback} />
             <WorkspaceCollectionShell
-                tabs={[
-                    { key: 'active', label: 'Ativos', icon: 'fa-truck-ramp-box' },
-                    { key: 'inactive', label: 'Inativos', icon: 'fa-ban' },
-                ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
+                tabs={[]}
+                activeTab={null}
+                onTabChange={() => {}}
                 listTitle="Fornecedores"
                 listIcon="fa-truck-ramp-box"
-                listCount={`${filteredRecords.length} registro(s)`}
+                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
                 createLabel="Novo fornecedor"
                 onCreate={handleCreate}
-                summaryItems={metrics}
-                emptyState={<EmptyState title="Sem fornecedores nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
-                formTitle={form.id ? 'Editar fornecedor' : 'Novo fornecedor'}
-                formSubtitle="Contato e dados comerciais"
-                formChildren={(
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                        <label>
-                            <FieldLabel icon="fa-building" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />
-                            <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente numeros ou formatado" />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-store" text="Nome fantasia" />
-                            <input value={form.trade_name || ''} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
-                            <input value={form.state_registration || ''} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-city" text="Cidade" />
-                            <input value={form.city_name || ''} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-map-location-dot" text="UF" />
-                            <input maxLength="2" value={form.state || ''} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-phone" text="Telefone" />
-                            <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
-                        </label>
-                        <label className="span-2">
-                            <FieldLabel icon="fa-envelope" text="E-mail" />
-                            <input type="email" value={form.email || ''} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
-                        </label>
-                        <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
-                                Limpar
+                summaryItems={[]}
+                emptyState={null}
+                listChildren={(
+                    <div className="ops-category-shell">
+                        <MetricGrid items={metrics} />
+
+                        <section className="ops-category-toolbar">
+                            <label className="ops-category-search-field">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    type="search"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Buscar fornecedor"
+                                />
+                            </label>
+                            <label className="ops-category-filter-field">
+                                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                    {SUPPLIER_STATUS_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="ops-category-filter-field">
+                                <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+                                    {SUPPLIER_PRODUCT_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <ActionButton
+                                tone="ghost"
+                                icon="fa-rotate-left"
+                                iconOnly
+                                onClick={handleClearFilters}
+                                title="Limpar filtros"
+                                aria-label="Limpar filtros"
+                                disabled={!hasFilters}
+                            />
+                        </section>
+
+                        {hasFilters ? (
+                            filteredRecords.length ? (
+                                <div className="ops-workspace-list-stack">
+                                    {filteredRecords.map((record) => (
+                                        <ListCard
+                                            key={record.id}
+                                            active={modalOpen && form.id === record.id}
+                                            onClick={() => handleSelectRecord(record)}
+                                            title={record.name}
+                                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
+                                            description={record.document || record.email || 'Sem contato principal'}
+                                            meta={[
+                                                supplierLocationLabel(record),
+                                                record.phone || 'Sem telefone',
+                                                `${record.products_count || 0} produto(s)`,
+                                            ]}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState icon="fa-building" title="Nenhum fornecedor" text="Ajuste a busca." />
+                            )
+                        ) : (
+                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Use busca, status ou produtos." />
+                        )}
+                    </div>
+                )}
+            />
+            <ModalForm
+                open={modalOpen}
+                title={form.id ? 'Editar fornecedor' : 'Novo fornecedor'}
+                description="Dados comerciais"
+                icon="fa-truck-ramp-box"
+                size="lg"
+                onClose={handleCloseModal}
+                footer={(
+                    <>
+                        {form.id ? (
+                            <ActionButton tone="danger" onClick={handleDelete}>
+                                Excluir
                             </ActionButton>
-                            {form.id ? (
-                                <ActionButton tone="danger" onClick={handleDelete}>
-                                    Excluir
-                                </ActionButton>
-                            ) : null}
-                            <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar fornecedor'}
-                            </ActionButton>
-                        </div>
-                    </form>
+                        ) : <span />}
+                        <ActionButton form="supplier-modal-form" type="submit" disabled={saving}>
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar fornecedor'}
+                        </ActionButton>
+                    </>
                 )}
             >
-                <div className="ops-workspace-list-stack">
-                    {filteredRecords.map((record) => (
-                        <ListCard
-                            key={record.id}
-                            active={form.id === record.id}
-                            onClick={() => setForm({ ...emptyForm, ...record })}
-                            title={record.name}
-                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                            description={record.document || record.email || 'Sem documento fiscal'}
-                            meta={[record.phone || 'Sem telefone', `${record.products_count || 0} produto(s)`]}
-                        />
-                    ))}
-                </div>
-            </WorkspaceCollectionShell>
+                <form id="supplier-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                    <label>
+                        <FieldLabel icon="fa-building" text="Nome" />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />
+                        <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente numeros ou formatado" />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-store" text="Nome fantasia" />
+                        <input value={form.trade_name || ''} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
+                        <input value={form.state_registration || ''} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-city" text="Cidade" />
+                        <input value={form.city_name || ''} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-map-location-dot" text="UF" />
+                        <input maxLength="2" value={form.state || ''} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-phone" text="Telefone" />
+                        <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-toggle-on" text="Status" />
+                        <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
+                            <option value="active">Ativo</option>
+                            <option value="inactive">Inativo</option>
+                        </select>
+                    </label>
+                    <label className="span-2">
+                        <FieldLabel icon="fa-envelope" text="E-mail" />
+                        <input type="email" value={form.email || ''} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+                    </label>
+                </form>
+            </ModalForm>
         </>
     )
 }
