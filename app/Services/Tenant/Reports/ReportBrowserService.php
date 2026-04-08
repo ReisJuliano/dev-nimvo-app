@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ReportBrowserService
 {
@@ -608,44 +609,10 @@ class ReportBrowserService
                     'label' => PaymentMethod::label($method),
                 ])
                 ->all(),
-            'operators' => DB::table('users')
-                ->orderBy('name')
-                ->limit(80)
-                ->get(['id', 'name'])
-                ->map(fn ($user) => [
-                    'value' => (string) $user->id,
-                    'label' => (string) $user->name,
-                ])
-                ->all(),
-            'customers' => Customer::query()
-                ->where('active', true)
-                ->orderBy('name')
-                ->limit(120)
-                ->get(['id', 'name', 'phone'])
-                ->map(fn (Customer $customer) => [
-                    'value' => (string) $customer->getKey(),
-                    'label' => $customer->phone
-                        ? "{$customer->name} · {$customer->phone}"
-                        : $customer->name,
-                ])
-                ->all(),
-            'categories' => DB::table('categories')
-                ->orderBy('name')
-                ->get(['id', 'name'])
-                ->map(fn ($category) => [
-                    'value' => (string) $category->id,
-                    'label' => (string) $category->name,
-                ])
-                ->all(),
-            'suppliers' => DB::table('suppliers')
-                ->orderBy('name')
-                ->limit(120)
-                ->get(['id', 'name'])
-                ->map(fn ($supplier) => [
-                    'value' => (string) $supplier->id,
-                    'label' => (string) $supplier->name,
-                ])
-                ->all(),
+            'operators' => $this->operatorFilterOptions(),
+            'customers' => $this->customerFilterOptions(),
+            'categories' => $this->namedLookupFilterOptions('categories'),
+            'suppliers' => $this->namedLookupFilterOptions('suppliers', 120),
             'stock_statuses' => [
                 ['value' => 'healthy', 'label' => 'Saudavel'],
                 ['value' => 'low', 'label' => 'Baixo estoque'],
@@ -657,6 +624,100 @@ class ReportBrowserService
                 ['value' => 'without_limit', 'label' => 'Sem limite'],
             ],
         ];
+    }
+
+    protected function operatorFilterOptions(): array
+    {
+        if (! $this->hasTableColumns('users', ['id', 'name'])) {
+            return [];
+        }
+
+        return DB::table('users')
+            ->orderBy('name')
+            ->limit(80)
+            ->get(['id', 'name'])
+            ->map(fn ($user) => [
+                'value' => (string) $user->id,
+                'label' => (string) $user->name,
+            ])
+            ->all();
+    }
+
+    protected function customerFilterOptions(): array
+    {
+        if (! $this->hasTableColumns('customers', ['id', 'name'])) {
+            return [];
+        }
+
+        $columns = ['id', 'name'];
+
+        if ($this->hasTableColumn('customers', 'phone')) {
+            $columns[] = 'phone';
+        }
+
+        $query = Customer::query()
+            ->orderBy('name')
+            ->limit(120);
+
+        if ($this->hasTableColumn('customers', 'active')) {
+            $query->where('active', true);
+        }
+
+        return $query
+            ->get($columns)
+            ->map(fn (Customer $customer) => [
+                'value' => (string) $customer->getKey(),
+                'label' => $customer->phone
+                    ? "{$customer->name} - {$customer->phone}"
+                    : $customer->name,
+            ])
+            ->all();
+    }
+
+    protected function namedLookupFilterOptions(string $table, ?int $limit = null): array
+    {
+        if (! $this->hasTableColumns($table, ['id', 'name'])) {
+            return [];
+        }
+
+        $query = DB::table($table)->orderBy('name');
+
+        if ($limit !== null) {
+            $query->limit($limit);
+        }
+
+        return $query
+            ->get(['id', 'name'])
+            ->map(fn ($record) => [
+                'value' => (string) $record->id,
+                'label' => (string) $record->name,
+            ])
+            ->all();
+    }
+
+    protected function hasTableColumns(string $table, array $columns): bool
+    {
+        if (! $this->reportSchema()->hasTable($table)) {
+            return false;
+        }
+
+        foreach ($columns as $column) {
+            if (! $this->hasTableColumn($table, $column)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function hasTableColumn(string $table, string $column): bool
+    {
+        return $this->reportSchema()->hasColumn($table, $column);
+    }
+
+    protected function reportSchema(): \Illuminate\Database\Schema\Builder
+    {
+        return Schema::connection((new Product())->getConnectionName());
     }
 
     protected function salesDailyReport(array $filters): array
