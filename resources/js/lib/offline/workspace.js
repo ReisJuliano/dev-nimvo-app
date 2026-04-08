@@ -50,6 +50,7 @@ function createEmptyState(tenantId) {
             lastUpdatedAt: null,
         },
         cashRegister: null,
+        cashRegisterHistory: [],
         catalogs: {
             products: [],
             categories: [],
@@ -169,10 +170,144 @@ function normalizeCashRegisterRecord(cashRegister) {
         id: Number(cashRegister.id),
         status: cashRegister.status || 'open',
         opening_amount: normalizeNumber(cashRegister.opening_amount, 0),
+        closing_amount: normalizeNumber(cashRegister.closing_amount, 0),
         opening_notes: cashRegister.opening_notes || null,
+        closing_notes: cashRegister.closing_notes || null,
         opened_at: cashRegister.opened_at || nowIso(),
+        closed_at: cashRegister.closed_at || null,
         user_name: cashRegister.user_name || null,
     }
+}
+
+function normalizeCashMovementRecord(movement) {
+    return {
+        id: movement.id ?? null,
+        type: movement.type === 'supply' ? 'supply' : 'withdrawal',
+        amount: normalizeNumber(movement.amount, 0),
+        reason: movement.reason || null,
+        user_name: movement.user_name || null,
+        created_at: movement.created_at || nowIso(),
+    }
+}
+
+function normalizeCashRegisterClosingBreakdownRow(row) {
+    return {
+        payment_method: row.payment_method,
+        label: row.label || CASH_REGISTER_PAYMENT_LABELS[row.payment_method] || row.payment_method,
+        expected: normalizeNumber(row.expected, 0),
+        informed: row.informed == null ? null : normalizeNumber(row.informed, 0),
+        difference: row.difference == null ? null : normalizeNumber(row.difference, 0),
+        recorded_at: row.recorded_at || null,
+    }
+}
+
+function normalizeCashRegisterReport(report) {
+    if (!report?.cashRegister) {
+        return null
+    }
+
+    const payments = Array.isArray(report.payments)
+        ? report.payments.map((payment) => ({
+            payment_method: payment.payment_method,
+            label: payment.label || CASH_REGISTER_PAYMENT_LABELS[payment.payment_method] || payment.payment_method,
+            qtd: normalizeNumber(payment.qtd, 0),
+            total: normalizeNumber(payment.total, 0),
+        }))
+        : []
+    const paymentTotals = report.payment_totals && typeof report.payment_totals === 'object'
+        ? Object.fromEntries(
+            Object.entries(report.payment_totals).map(([paymentMethod, total]) => [
+                paymentMethod,
+                normalizeNumber(total, 0),
+            ]),
+        )
+        : Object.fromEntries(payments.map((payment) => [payment.payment_method, payment.total]))
+
+    return {
+        ...report,
+        cashRegister: normalizeCashRegisterRecord(report.cashRegister),
+        payments,
+        payment_totals: paymentTotals,
+        movements: Array.isArray(report.movements) ? report.movements.map(normalizeCashMovementRecord) : [],
+        total_sales: normalizeNumber(report.total_sales, 0),
+        sales_count: normalizeNumber(report.sales_count, 0),
+        total_withdrawals: normalizeNumber(report.total_withdrawals, 0),
+        total_supplies: normalizeNumber(report.total_supplies, 0),
+        cash_sales: normalizeNumber(report.cash_sales, 0),
+        expected_cash: normalizeNumber(report.expected_cash, 0),
+        difference: normalizeNumber(report.difference, 0),
+        closing_breakdown: Array.isArray(report.closing_breakdown)
+            ? report.closing_breakdown.map(normalizeCashRegisterClosingBreakdownRow)
+            : [],
+    }
+}
+
+function summarizeCashRegisterReport(report) {
+    const normalizedReport = normalizeCashRegisterReport(report)
+
+    if (!normalizedReport) {
+        return null
+    }
+
+    return {
+        id: normalizedReport.cashRegister.id,
+        user_name: normalizedReport.cashRegister.user_name || null,
+        opening_amount: normalizeNumber(normalizedReport.cashRegister.opening_amount, 0),
+        closing_amount: normalizeNumber(normalizedReport.cashRegister.closing_amount, 0),
+        opened_at: normalizedReport.cashRegister.opened_at || null,
+        closed_at: normalizedReport.cashRegister.closed_at || null,
+        difference: normalizeNumber(normalizedReport.difference, 0),
+        sales_count: normalizeNumber(normalizedReport.sales_count, 0),
+        total_sales: normalizeNumber(normalizedReport.total_sales, 0),
+        report: normalizedReport,
+    }
+}
+
+function sortCashRegisterHistory(records) {
+    return [...records].sort((left, right) => {
+        const rightDate = normalizeTimestamp(right.closed_at || right.opened_at || 0)
+        const leftDate = normalizeTimestamp(left.closed_at || left.opened_at || 0)
+        return rightDate - leftDate
+    })
+}
+
+function normalizeCashRegisterHistoryRecord(record) {
+    const summarizedFromReport = record?.report ? summarizeCashRegisterReport(record.report) : null
+
+    return {
+        id: Number(record?.id ?? summarizedFromReport?.id),
+        user_name: record?.user_name || summarizedFromReport?.user_name || null,
+        opening_amount: normalizeNumber(record?.opening_amount ?? summarizedFromReport?.opening_amount, 0),
+        closing_amount: normalizeNumber(record?.closing_amount ?? summarizedFromReport?.closing_amount, 0),
+        opened_at: record?.opened_at || summarizedFromReport?.opened_at || null,
+        closed_at: record?.closed_at || summarizedFromReport?.closed_at || null,
+        difference: normalizeNumber(record?.difference ?? summarizedFromReport?.difference, 0),
+        sales_count: normalizeNumber(record?.sales_count ?? summarizedFromReport?.sales_count, 0),
+        total_sales: normalizeNumber(record?.total_sales ?? summarizedFromReport?.total_sales, 0),
+        report: summarizedFromReport?.report || null,
+    }
+}
+
+function mergeCashRegisterHistory(existing = [], incoming = []) {
+    const registerMap = new Map(
+        existing.map((record) => {
+            const normalized = normalizeCashRegisterHistoryRecord(record)
+            return [String(normalized.id), normalized]
+        }),
+    )
+
+    incoming.forEach((record) => {
+        const normalized = normalizeCashRegisterHistoryRecord(record)
+        const current = registerMap.get(String(normalized.id))
+
+        registerMap.set(String(normalized.id), {
+            ...current,
+            ...normalized,
+            report: normalized.report || current?.report || null,
+        })
+    })
+
+    return sortCashRegisterHistory(Array.from(registerMap.values()))
 }
 
 function normalizeProductRecord(product) {
@@ -358,6 +493,9 @@ function ensureStateShape(rawState, tenantId) {
         pendingSalesByUser: Object.fromEntries(
             Object.entries(rawState.pendingSalesByUser || {}).map(([userId, pendingSale]) => [userId, normalizePendingSale(pendingSale)]),
         ),
+        cashRegisterHistory: Array.isArray(rawState.cashRegisterHistory)
+            ? rawState.cashRegisterHistory.map(normalizeCashRegisterHistoryRecord)
+            : [],
         mappings: {
             ...fallback.mappings,
             ...(rawState.mappings || {}),
@@ -555,6 +693,11 @@ function replaceQueueRecord(queueItems, nextRecord) {
 function removeQueueRecord(queueItems, entityId) {
     const queueKey = String(entityId)
     return queueItems.filter((item) => String(item.entityId) !== queueKey)
+}
+
+function removeQueuedCashRegisterAction(queueItems, queueId) {
+    const queueKey = String(queueId)
+    return queueItems.filter((item) => String(item.queueId) !== queueKey)
 }
 
 function allocateTempId(state) {
@@ -762,6 +905,55 @@ function replaceCashRegisterReferences(state, localId, remoteCashRegister) {
             }
             : entry,
     )
+
+    state.queue.cashRegisters = state.queue.cashRegisters.map((entry) => {
+        const resolvedEntityId = resolveMappedId(state, 'cashRegisters', entry.entityId)
+        const nextEntityId = String(resolvedEntityId) === String(localId)
+            ? normalizedRemote.id
+            : entry.entityId
+        const nextPayloadCashRegisterId = entry.payload?.cash_register_id == null
+            ? entry.payload?.cash_register_id
+            : (String(resolveMappedId(state, 'cashRegisters', entry.payload.cash_register_id)) === String(localId)
+                ? normalizedRemote.id
+                : entry.payload.cash_register_id)
+
+        return {
+            ...entry,
+            entityId: nextEntityId,
+            payload: entry.payload
+                ? {
+                    ...entry.payload,
+                    cash_register_id: nextPayloadCashRegisterId,
+                }
+                : entry.payload,
+        }
+    })
+
+    state.cashRegisterHistory = state.cashRegisterHistory.map((record) => {
+        if (String(record.id) !== String(localId)) {
+            return record
+        }
+
+        const nextReport = record.report
+            ? normalizeCashRegisterReport({
+                ...record.report,
+                cashRegister: {
+                    ...record.report.cashRegister,
+                    ...normalizedRemote,
+                    status: record.report.cashRegister?.status || normalizedRemote.status,
+                    closing_amount: record.report.cashRegister?.closing_amount ?? normalizedRemote.closing_amount,
+                    closing_notes: record.report.cashRegister?.closing_notes ?? normalizedRemote.closing_notes,
+                    closed_at: record.report.cashRegister?.closed_at ?? normalizedRemote.closed_at,
+                },
+            })
+            : null
+
+        return normalizeCashRegisterHistoryRecord({
+            ...record,
+            id: normalizedRemote.id,
+            report: nextReport,
+        })
+    })
 }
 
 export function isBrowserOffline() {
@@ -792,6 +984,7 @@ export function hasOfflineWorkspaceData(tenantId) {
         || state.catalogs.suppliers.length
         || state.orders.details.length
         || state.cashRegister
+        || state.cashRegisterHistory.length
         || Object.values(state.pendingSalesByUser || {}).some(Boolean)
         || countPending(state) > 0,
     )
@@ -948,9 +1141,17 @@ export function seedOfflineWorkspace(tenantId, snapshot = {}) {
         }
 
         if (Object.prototype.hasOwnProperty.call(snapshot, 'cashRegister')) {
-            if (!state.queue.cashRegisters.length) {
+            const hasPendingCashRegisterStateChange = state.queue.cashRegisters.some((entry) =>
+                entry.action === 'open' || entry.action === 'close',
+            )
+
+            if (!hasPendingCashRegisterStateChange) {
                 state.cashRegister = normalizeCashRegisterRecord(snapshot.cashRegister)
             }
+        }
+
+        if (Array.isArray(snapshot.cashRegisterHistory)) {
+            state.cashRegisterHistory = mergeCashRegisterHistory(state.cashRegisterHistory, snapshot.cashRegisterHistory)
         }
 
         if (snapshot.pendingSaleUserId != null && Object.prototype.hasOwnProperty.call(snapshot, 'pendingSale')) {
@@ -1080,7 +1281,9 @@ export function createOfflineCashRegister(tenantId, payload = {}, context = {}) 
         })
 
         state.cashRegister = created
-        state.queue.cashRegisters = replaceQueueRecord(state.queue.cashRegisters, {
+        state.queue.cashRegisters.push({
+            queueId: allocateTempId(state),
+            queuedAt: nowIso(),
             entityId: tempId,
             action: 'open',
             payload: created,
@@ -1090,6 +1293,124 @@ export function createOfflineCashRegister(tenantId, payload = {}, context = {}) 
     })
 
     return created
+}
+
+function resolveCashRegisterQueueTargetId(state, entry) {
+    const explicitId = entry.payload?.cash_register_id
+
+    if (explicitId != null && explicitId !== '') {
+        return resolveMappedId(state, 'cashRegisters', explicitId)
+    }
+
+    return resolveMappedId(state, 'cashRegisters', entry.entityId)
+}
+
+function queueEntryMatchesCashRegister(state, entry, cashRegisterId) {
+    return String(resolveCashRegisterQueueTargetId(state, entry)) === String(cashRegisterId)
+}
+
+function buildQueuedCashRegisterMovement(entry, fallbackUserName = null) {
+    return normalizeCashMovementRecord({
+        id: entry.queueId,
+        type: entry.payload?.type,
+        amount: entry.payload?.amount,
+        reason: entry.payload?.reason,
+        user_name: entry.payload?.user_name || fallbackUserName || null,
+        created_at: entry.payload?.created_at || entry.queuedAt || nowIso(),
+    })
+}
+
+function buildOfflineCashRegisterClosingBreakdown(report, closingTotals = {}, recordedAt = null) {
+    return Object.entries(CASH_REGISTER_PAYMENT_LABELS).map(([paymentMethod, label]) => {
+        const expected = paymentMethod === 'cash'
+            ? Number(report.expected_cash || 0)
+            : Number(report.payment_totals?.[paymentMethod] || 0)
+        const hasInformedValue = Object.prototype.hasOwnProperty.call(closingTotals, paymentMethod)
+        const informed = hasInformedValue ? Number(closingTotals[paymentMethod] || 0) : null
+
+        return {
+            payment_method: paymentMethod,
+            label,
+            expected,
+            informed,
+            difference: informed == null ? null : informed - expected,
+            recorded_at: recordedAt,
+        }
+    })
+}
+
+export function registerOfflineCashMovement(tenantId, cashRegisterId, payload = {}, context = {}) {
+    let movement = null
+
+    updateState(tenantId, (state) => {
+        if (!state.cashRegister || String(state.cashRegister.id) !== String(cashRegisterId)) {
+            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentacao.')
+        }
+
+        const queuedAction = {
+            queueId: allocateTempId(state),
+            queuedAt: nowIso(),
+            entityId: state.cashRegister.id,
+            action: 'movement',
+            payload: {
+                cash_register_id: state.cashRegister.id,
+                type: payload.type,
+                amount: normalizeNumber(payload.amount, 0),
+                reason: payload.reason || null,
+                user_name: context.userName || state.cashRegister.user_name || null,
+                created_at: context.createdAt || nowIso(),
+            },
+        }
+
+        state.queue.cashRegisters.push(queuedAction)
+        movement = buildQueuedCashRegisterMovement(queuedAction, context.userName || state.cashRegister.user_name)
+        return state
+    })
+
+    return movement
+}
+
+export function getOfflineCashRegisterHistory(tenantId) {
+    const state = readState(tenantId)
+    return sortCashRegisterHistory(state.cashRegisterHistory).map((record) => cloneValue(record))
+}
+
+export function cacheOfflineCashRegisterReport(tenantId, report) {
+    if (!tenantId) {
+        return null
+    }
+
+    let cached = null
+
+    updateState(tenantId, (state) => {
+        const summary = summarizeCashRegisterReport(report)
+
+        if (!summary) {
+            return state
+        }
+
+        state.cashRegisterHistory = mergeCashRegisterHistory(state.cashRegisterHistory, [summary])
+        cached = summary.report
+        return state
+    })
+
+    return cached
+}
+
+export function getOfflineCashRegisterReport(tenantId, cashRegisterId, options = {}) {
+    const state = readState(tenantId)
+    const normalizedId = String(cashRegisterId)
+
+    if (state.cashRegister && String(state.cashRegister.id) === normalizedId) {
+        return buildOfflineCashRegisterReport(tenantId, options)
+    }
+
+    const cached = state.cashRegisterHistory.find((record) => String(record.id) === normalizedId)
+        || state.cashRegisterHistory.find((record) =>
+            String(resolveMappedId(state, 'cashRegisters', record.id)) === normalizedId,
+        )
+
+    return cached?.report ? cloneValue(cached.report) : null
 }
 
 export function createOfflineCustomer(tenantId, payload) {
@@ -1473,23 +1794,6 @@ function buildProductPayloadForSync(product) {
     }
 }
 
-function buildOfflineCashRegisterClosingBreakdown(report) {
-    return Object.entries(CASH_REGISTER_PAYMENT_LABELS).map(([paymentMethod, label]) => {
-        const expected = paymentMethod === 'cash'
-            ? Number(report.expected_cash || 0)
-            : Number(report.payment_totals?.[paymentMethod] || 0)
-
-        return {
-            payment_method: paymentMethod,
-            label,
-            expected,
-            informed: null,
-            difference: null,
-            recorded_at: null,
-        }
-    })
-}
-
 export function buildOfflineCashRegisterReport(tenantId, options = {}) {
     const state = readState(tenantId)
     const cashRegister = normalizeCashRegisterRecord(state.cashRegister)
@@ -1540,12 +1844,26 @@ export function buildOfflineCashRegisterReport(tenantId, options = {}) {
     const baseSalesCount = useFallbackTotals ? Number(fallbackReport?.sales_count || 0) : 0
     const baseSupplies = useFallbackTotals ? Number(fallbackReport?.total_supplies || 0) : 0
     const baseWithdrawals = useFallbackTotals ? Number(fallbackReport?.total_withdrawals || 0) : 0
+    const baseMovements = useFallbackTotals
+        ? (fallbackReport?.movements || []).map(normalizeCashMovementRecord)
+        : []
+    const queuedMovements = state.queue.cashRegisters
+        .filter((entry) => entry.action === 'movement' && queueEntryMatchesCashRegister(state, entry, cashRegister.id))
+        .map((entry) => buildQueuedCashRegisterMovement(entry, cashRegister.user_name || options.userName || 'Operador'))
+    const totalQueuedSupplies = queuedMovements
+        .filter((movement) => movement.type === 'supply')
+        .reduce((sum, movement) => sum + Number(movement.amount || 0), 0)
+    const totalQueuedWithdrawals = queuedMovements
+        .filter((movement) => movement.type === 'withdrawal')
+        .reduce((sum, movement) => sum + Number(movement.amount || 0), 0)
+    const totalSupplies = baseSupplies + totalQueuedSupplies
+    const totalWithdrawals = baseWithdrawals + totalQueuedWithdrawals
     const totalSales = baseTotalSales + queuedSales.reduce((sum, entry) => sum + Number(entry.payload?.total || 0), 0)
     const salesCount = baseSalesCount + queuedSales.length
     const cashSales = Number(paymentTotals.cash || 0)
-    const expectedCash = Number(cashRegister.opening_amount || 0) + baseSupplies + cashSales - baseWithdrawals
+    const expectedCash = Number(cashRegister.opening_amount || 0) + totalSupplies + cashSales - totalWithdrawals
 
-    return {
+    return normalizeCashRegisterReport({
         cashRegister: {
             ...(useFallbackTotals ? fallbackReport.cashRegister : {}),
             ...cashRegister,
@@ -1556,11 +1874,11 @@ export function buildOfflineCashRegisterReport(tenantId, options = {}) {
         },
         payments,
         payment_totals: paymentTotals,
-        movements: useFallbackTotals ? (fallbackReport?.movements || []) : [],
+        movements: [...baseMovements, ...queuedMovements],
         total_sales: totalSales,
         sales_count: salesCount,
-        total_withdrawals: baseWithdrawals,
-        total_supplies: baseSupplies,
+        total_withdrawals: totalWithdrawals,
+        total_supplies: totalSupplies,
         cash_sales: cashSales,
         expected_cash: expectedCash,
         difference: 0,
@@ -1568,7 +1886,77 @@ export function buildOfflineCashRegisterReport(tenantId, options = {}) {
             expected_cash: expectedCash,
             payment_totals: paymentTotals,
         }),
-    }
+    })
+}
+
+export function closeOfflineCashRegister(tenantId, cashRegisterId, payload = {}, context = {}) {
+    let result = null
+
+    updateState(tenantId, (state) => {
+        if (!state.cashRegister || String(state.cashRegister.id) !== String(cashRegisterId)) {
+            throw new Error('Nenhum caixa aberto foi encontrado para concluir o fechamento.')
+        }
+
+        const currentReport = buildOfflineCashRegisterReport(tenantId, {
+            userName: context.userName || state.cashRegister.user_name || 'Operador',
+            fallbackReport: context.fallbackReport || null,
+        })
+
+        if (!currentReport) {
+            throw new Error('Nao foi possivel montar o resumo offline do caixa para o fechamento.')
+        }
+
+        const closedAt = context.closedAt || nowIso()
+        const closingTotals = payload.closing_totals && typeof payload.closing_totals === 'object'
+            ? Object.fromEntries(
+                Object.entries(payload.closing_totals).map(([paymentMethod, amount]) => [
+                    paymentMethod,
+                    normalizeNumber(amount, 0),
+                ]),
+            )
+            : {}
+        const closingBreakdown = buildOfflineCashRegisterClosingBreakdown(currentReport, closingTotals, closedAt)
+        const cashClosing = closingBreakdown.find((entry) => entry.payment_method === 'cash') || null
+        const closingAmount = Number(payload.closing_amount ?? cashClosing?.informed ?? 0)
+        const difference = Number(cashClosing?.difference ?? (closingAmount - Number(currentReport.expected_cash || 0)))
+        const closedReport = normalizeCashRegisterReport({
+            ...currentReport,
+            cashRegister: {
+                ...currentReport.cashRegister,
+                status: 'closed',
+                closing_amount: closingAmount,
+                closing_notes: payload.closing_notes || null,
+                closed_at: closedAt,
+            },
+            difference,
+            closing_breakdown: closingBreakdown,
+        })
+
+        state.cashRegisterHistory = mergeCashRegisterHistory(state.cashRegisterHistory, [summarizeCashRegisterReport(closedReport)])
+        state.queue.cashRegisters.push({
+            queueId: allocateTempId(state),
+            queuedAt: nowIso(),
+            entityId: state.cashRegister.id,
+            action: 'close',
+            payload: {
+                cash_register_id: state.cashRegister.id,
+                closing_amount: closingAmount,
+                closing_notes: payload.closing_notes || null,
+                closing_totals: closingTotals,
+                closed_at: closedAt,
+                report: closedReport,
+            },
+        })
+        state.cashRegister = null
+        result = {
+            message: 'Caixa fechado no modo offline e pronto para sincronizar quando a internet voltar.',
+            report: closedReport,
+        }
+
+        return state
+    })
+
+    return result
 }
 
 function buildOrderPayloadForSync(state, order) {
@@ -1620,35 +2008,77 @@ async function syncProductQueue(tenantId, state, request) {
     }
 }
 
-async function syncCashRegisterQueue(tenantId, state, request) {
+async function syncCashRegisterQueue(tenantId, state, request, allowedActions = ['open']) {
     for (const entry of [...state.queue.cashRegisters]) {
-        if (entry.action !== 'open') {
-            state.queue.cashRegisters = removeQueueRecord(state.queue.cashRegisters, entry.entityId)
+        if (!allowedActions.includes(entry.action)) {
+            continue
+        }
+
+        if (entry.action === 'open') {
+            const response = await request('/api/cash-registers', {
+                method: 'post',
+                data: {
+                    opening_amount: Number(entry.payload?.opening_amount || 0),
+                    opening_notes: entry.payload?.opening_notes || null,
+                },
+            })
+
+            const remoteCashRegister = normalizeCashRegisterRecord({
+                id: response.cash_register_id,
+                status: 'open',
+                opening_amount: entry.payload?.opening_amount || 0,
+                opening_notes: entry.payload?.opening_notes || null,
+                opened_at: entry.payload?.opened_at || nowIso(),
+                user_name: entry.payload?.user_name || state.cashRegister?.user_name || null,
+            })
+
+            registerMapping(state, 'cashRegisters', entry.entityId, remoteCashRegister.id)
+            replaceCashRegisterReferences(state, entry.entityId, remoteCashRegister)
+            state.queue.cashRegisters = removeQueuedCashRegisterAction(state.queue.cashRegisters, entry.queueId)
             writeState(tenantId, state)
             continue
         }
 
-        const response = await request('/api/cash-registers', {
-            method: 'post',
-            data: {
-                opening_amount: Number(entry.payload?.opening_amount || 0),
-                opening_notes: entry.payload?.opening_notes || null,
-            },
-        })
+        const remoteCashRegisterId = Number(resolveCashRegisterQueueTargetId(state, entry))
 
-        const remoteCashRegister = normalizeCashRegisterRecord({
-            id: response.cash_register_id,
-            status: 'open',
-            opening_amount: entry.payload?.opening_amount || 0,
-            opening_notes: entry.payload?.opening_notes || null,
-            opened_at: entry.payload?.opened_at || nowIso(),
-            user_name: entry.payload?.user_name || state.cashRegister?.user_name || null,
-        })
+        if (!remoteCashRegisterId) {
+            throw new Error('Nao foi possivel resolver o caixa remoto para sincronizar a fila offline.')
+        }
 
-        registerMapping(state, 'cashRegisters', entry.entityId, remoteCashRegister.id)
-        replaceCashRegisterReferences(state, entry.entityId, remoteCashRegister)
-        state.queue.cashRegisters = removeQueueRecord(state.queue.cashRegisters, entry.entityId)
-        writeState(tenantId, state)
+        if (entry.action === 'movement') {
+            await request(`/api/cash-registers/${remoteCashRegisterId}/movements`, {
+                method: 'post',
+                data: {
+                    type: entry.payload?.type,
+                    amount: Number(entry.payload?.amount || 0),
+                    reason: entry.payload?.reason || null,
+                },
+            })
+
+            state.queue.cashRegisters = removeQueuedCashRegisterAction(state.queue.cashRegisters, entry.queueId)
+            writeState(tenantId, state)
+            continue
+        }
+
+        if (entry.action === 'close') {
+            const response = await request(`/api/cash-registers/${remoteCashRegisterId}/close`, {
+                method: 'post',
+                data: {
+                    closing_amount: Number(entry.payload?.closing_amount || 0),
+                    closing_notes: entry.payload?.closing_notes || null,
+                    closing_totals: entry.payload?.closing_totals || {},
+                },
+            })
+
+            const remoteReport = normalizeCashRegisterReport(response.report)
+
+            if (remoteReport) {
+                state.cashRegisterHistory = mergeCashRegisterHistory(state.cashRegisterHistory, [summarizeCashRegisterReport(remoteReport)])
+            }
+
+            state.queue.cashRegisters = removeQueuedCashRegisterAction(state.queue.cashRegisters, entry.queueId)
+            writeState(tenantId, state)
+        }
     }
 }
 
@@ -1849,12 +2279,13 @@ export async function syncOfflineWorkspace(tenantId, request) {
         writeState(tenantId, state)
 
         try {
-            await syncCashRegisterQueue(tenantId, state, request)
+            await syncCashRegisterQueue(tenantId, state, request, ['open'])
             await syncCustomerQueue(tenantId, state, request)
             await syncCompanyQueue(tenantId, state, request)
             await syncProductQueue(tenantId, state, request)
             await syncOrderQueue(tenantId, state, request)
             await syncSaleQueue(tenantId, state, request)
+            await syncCashRegisterQueue(tenantId, state, request, ['movement', 'close'])
 
             state.meta.lastSyncAt = nowIso()
             state.meta.lastSyncError = null

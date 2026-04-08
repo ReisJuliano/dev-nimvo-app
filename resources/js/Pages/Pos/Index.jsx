@@ -11,11 +11,14 @@ import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCash
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import {
+    cacheOfflineCashRegisterReport,
+    closeOfflineCashRegister,
     configureOfflineWorkspaceBridge,
     createOfflineCashRegister,
     createOfflineCompany,
     createOfflineCustomer,
     discardOfflinePendingSale,
+    getOfflineCashRegisterReport,
     hasOfflineWorkspaceData,
     getOfflineOrderDetail,
     getOfflinePendingCheckoutSummaries,
@@ -1636,9 +1639,34 @@ export default function PosIndex({
         setLoadingClosePreview(true)
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineReport = getOfflineCashRegisterReport(tenantId, cashRegisterState.id, {
+                    userName: auth?.user?.name,
+                })
+
+                if (!offlineReport) {
+                    throw new Error('Nao foi possivel montar o resumo offline deste caixa.')
+                }
+
+                setCloseCashRegisterModal(buildCloseCashRegisterModal(offlineReport))
+                return
+            }
+
             const response = await apiRequest(`/api/cash-registers/${cashRegisterState.id}/report`)
+            cacheOfflineCashRegisterReport(tenantId, response.report)
             setCloseCashRegisterModal(buildCloseCashRegisterModal(response.report))
         } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineReport = getOfflineCashRegisterReport(tenantId, cashRegisterState.id, {
+                    userName: auth?.user?.name,
+                })
+
+                if (offlineReport) {
+                    setCloseCashRegisterModal(buildCloseCashRegisterModal(offlineReport))
+                    return
+                }
+            }
+
             showFeedback('error', error.message)
         } finally {
             setLoadingClosePreview(false)
@@ -1812,19 +1840,33 @@ export default function PosIndex({
         setClosingCashRegister(true)
 
         try {
+            const payload = {
+                closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
+                closing_notes: closeCashRegisterModal.form.notes || null,
+                closing_totals: Object.fromEntries(
+                    Object.entries(closeCashRegisterModal.form.amounts)
+                        .filter(([key]) => requireCashClosingConference || key === 'cash')
+                        .map(([key, value]) => [key, Number(value || 0)]),
+                ),
+            }
+
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const result = closeOfflineCashRegister(tenantId, cashRegisterState.id, payload, {
+                    userName: auth?.user?.name,
+                    fallbackReport: closeCashRegisterModal.report,
+                })
+                setCloseCashRegisterModal(null)
+                setCashReportModal(result.report)
+                showFeedback('warning', result.message)
+                return
+            }
+
             const response = await apiRequest(`/api/cash-registers/${cashRegisterState.id}/close`, {
                 method: 'post',
-                data: {
-                    closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
-                    closing_notes: closeCashRegisterModal.form.notes || null,
-                    closing_totals: Object.fromEntries(
-                        Object.entries(closeCashRegisterModal.form.amounts)
-                            .filter(([key]) => requireCashClosingConference || key === 'cash')
-                            .map(([key, value]) => [key, Number(value || 0)]),
-                    ),
-                },
+                data: payload,
             })
 
+            cacheOfflineCashRegisterReport(tenantId, response.report)
             setCloseCashRegisterModal(null)
             setCashRegisterState(null)
             seedOfflineWorkspace(tenantId, {
@@ -1833,7 +1875,26 @@ export default function PosIndex({
             setCashReportModal(response.report)
             showFeedback('success', response.message || 'Caixa fechado com sucesso.')
         } catch (error) {
-            showFeedback('error', error.message)
+            if (tenantId && isNetworkApiError(error)) {
+                const payload = {
+                    closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
+                    closing_notes: closeCashRegisterModal.form.notes || null,
+                    closing_totals: Object.fromEntries(
+                        Object.entries(closeCashRegisterModal.form.amounts)
+                            .filter(([key]) => requireCashClosingConference || key === 'cash')
+                            .map(([key, value]) => [key, Number(value || 0)]),
+                    ),
+                }
+                const result = closeOfflineCashRegister(tenantId, cashRegisterState.id, payload, {
+                    userName: auth?.user?.name,
+                    fallbackReport: closeCashRegisterModal.report,
+                })
+                setCloseCashRegisterModal(null)
+                setCashReportModal(result.report)
+                showFeedback('warning', result.message)
+            } else {
+                showFeedback('error', error.message)
+            }
         } finally {
             setClosingCashRegister(false)
         }
