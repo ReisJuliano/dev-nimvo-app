@@ -9,6 +9,8 @@ export default function AppSidebar({
     collapsed,
     sidebarOpen,
     allowCollapse = true,
+    onMouseEnter,
+    onMouseLeave,
     onToggleCollapsed,
     onCloseMobile,
     onLogout,
@@ -67,7 +69,12 @@ export default function AppSidebar({
             .toUpperCase() || 'U'
 
     return (
-        <CompactSidebar collapsed={collapsed} sidebarOpen={sidebarOpen}>
+        <CompactSidebar
+            collapsed={collapsed}
+            sidebarOpen={sidebarOpen}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+        >
             <div className="app-sidebar-header">
                 <div className="app-logo">
                     <div className="app-logo-icon">
