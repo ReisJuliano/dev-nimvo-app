@@ -318,18 +318,96 @@ class OperationsWorkspaceService
     {
         $validated = Validator::make($input, [
             'name' => ['required', 'string', 'max:255', Rule::unique('customers', 'name')->ignore($customer?->id)],
+            'document' => ['nullable', 'string', 'max:30'],
             'phone' => ['nullable', 'string', 'max:60'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'state_registration' => ['nullable', 'string', 'max:30'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'number' => ['nullable', 'string', 'max:30'],
+            'complement' => ['nullable', 'string', 'max:255'],
+            'district' => ['nullable', 'string', 'max:255'],
+            'city_name' => ['nullable', 'string', 'max:255'],
+            'city_code' => ['nullable', 'string', 'max:10'],
+            'state' => ['nullable', 'string', 'size:2'],
+            'zip_code' => ['nullable', 'string', 'max:12'],
+            'consumer_final' => ['nullable', 'boolean'],
             'credit_limit' => ['nullable', 'numeric', 'min:0'],
             'active' => ['required', 'boolean'],
         ])->validate();
 
+        $document = filled($validated['document'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['document'])
+            : null;
+        $cityCode = filled($validated['city_code'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['city_code'])
+            : null;
+        $zipCode = filled($validated['zip_code'] ?? null)
+            ? preg_replace('/\D+/', '', (string) $validated['zip_code'])
+            : null;
+
         $customer ??= new Customer;
-        $customer->fill([
+        $payload = [
             'name' => $validated['name'],
             'phone' => $validated['phone'] ?? null,
             'credit_limit' => round((float) ($validated['credit_limit'] ?? 0), 2),
             'active' => $validated['active'],
-        ])->save();
+        ];
+
+        if ($this->hasColumn('customers', 'document')) {
+            $payload['document'] = $document;
+        }
+
+        if ($this->hasColumn('customers', 'document_type')) {
+            $payload['document_type'] = $document
+                ? (strlen($document) === 14 ? 'cnpj' : 'cpf')
+                : null;
+        }
+
+        if ($this->hasColumn('customers', 'email')) {
+            $payload['email'] = $validated['email'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'state_registration')) {
+            $payload['state_registration'] = $validated['state_registration'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'street')) {
+            $payload['street'] = $validated['street'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'number')) {
+            $payload['number'] = $validated['number'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'complement')) {
+            $payload['complement'] = $validated['complement'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'district')) {
+            $payload['district'] = $validated['district'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'city_name')) {
+            $payload['city_name'] = $validated['city_name'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'city_code')) {
+            $payload['city_code'] = $cityCode;
+        }
+
+        if ($this->hasColumn('customers', 'state')) {
+            $payload['state'] = isset($validated['state']) ? strtoupper((string) $validated['state']) : null;
+        }
+
+        if ($this->hasColumn('customers', 'zip_code')) {
+            $payload['zip_code'] = $zipCode;
+        }
+
+        if ($this->hasColumn('customers', 'consumer_final')) {
+            $payload['consumer_final'] = (bool) ($validated['consumer_final'] ?? true);
+        }
+
+        $customer->fill($payload)->save();
 
         return $customer->fresh();
     }
@@ -992,7 +1070,46 @@ class OperationsWorkspaceService
         return [
             'id' => $customer->id,
             'name' => $customer->name,
+            'document' => $this->hasColumn('customers', 'document')
+                ? $customer->getAttribute('document')
+                : null,
+            'document_type' => $this->hasColumn('customers', 'document_type')
+                ? $customer->getAttribute('document_type')
+                : null,
             'phone' => $customer->phone,
+            'email' => $this->hasColumn('customers', 'email')
+                ? $customer->getAttribute('email')
+                : null,
+            'state_registration' => $this->hasColumn('customers', 'state_registration')
+                ? $customer->getAttribute('state_registration')
+                : null,
+            'street' => $this->hasColumn('customers', 'street')
+                ? $customer->getAttribute('street')
+                : null,
+            'number' => $this->hasColumn('customers', 'number')
+                ? $customer->getAttribute('number')
+                : null,
+            'complement' => $this->hasColumn('customers', 'complement')
+                ? $customer->getAttribute('complement')
+                : null,
+            'district' => $this->hasColumn('customers', 'district')
+                ? $customer->getAttribute('district')
+                : null,
+            'city_name' => $this->hasColumn('customers', 'city_name')
+                ? $customer->getAttribute('city_name')
+                : null,
+            'city_code' => $this->hasColumn('customers', 'city_code')
+                ? $customer->getAttribute('city_code')
+                : null,
+            'state' => $this->hasColumn('customers', 'state')
+                ? $customer->getAttribute('state')
+                : null,
+            'zip_code' => $this->hasColumn('customers', 'zip_code')
+                ? $customer->getAttribute('zip_code')
+                : null,
+            'consumer_final' => $this->hasColumn('customers', 'consumer_final')
+                ? (bool) $customer->getAttribute('consumer_final')
+                : true,
             'credit_limit' => (float) $customer->credit_limit,
             'sales_count' => (int) ($customer->sales_count ?? 0),
             'active' => (bool) $customer->active,

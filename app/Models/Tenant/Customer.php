@@ -25,12 +25,14 @@ class Customer extends Model
         'city_code',
         'state',
         'zip_code',
+        'consumer_final',
         'credit_limit',
         'active',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'consumer_final' => 'boolean',
         'credit_limit' => 'decimal:2',
     ];
 
