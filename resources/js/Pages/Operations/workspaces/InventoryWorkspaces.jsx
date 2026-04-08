@@ -55,16 +55,15 @@ function findProductByScan(products, value) {
 function filterProductsByQuery(products, value, limit = 8) {
     const normalizedValue = String(value || '').trim().toLowerCase()
 
-    if (!normalizedValue) {
-        return []
-    }
-
-    return products
-        .filter((product) => (
+    const filteredProducts = normalizedValue
+        ? products.filter((product) => (
             String(product.name || '').toLowerCase().includes(normalizedValue)
             || String(product.code || '').toLowerCase().includes(normalizedValue)
             || String(product.barcode || '').toLowerCase().includes(normalizedValue)
         ))
+        : products
+
+    return filteredProducts
         .slice(0, limit)
 }
 
@@ -514,7 +513,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         () => products.find((product) => String(product.id) === String(form.product_id)) || null,
         [products, form.product_id],
     )
-    const searchResults = useMemo(
+    const visibleProducts = useMemo(
         () => filterProductsByQuery(products, productSearch),
         [products, productSearch],
     )
@@ -552,12 +551,12 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
         event.preventDefault()
 
-        if (!searchResults.length) {
+        if (!visibleProducts.length) {
             setFeedback({ type: 'error', text: 'Nenhum produto encontrado para a busca informada.' })
             return
         }
 
-        selectProduct(searchResults[0])
+        selectProduct(visibleProducts[0])
     }
 
     async function handleSubmit(event) {
@@ -633,25 +632,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                     autoComplete="off"
                                 />
                             </label>
-
-                            {productSearch.trim() ? (
-                                <div className="ops-inline-search-results">
-                                    {searchResults.length ? searchResults.map((product) => (
-                                        <button
-                                            key={product.id}
-                                            type="button"
-                                            className={`ops-inline-search-result ${String(selectedProduct?.id || '') === String(product.id) ? 'active' : ''}`}
-                                            onClick={() => selectProduct(product)}
-                                        >
-                                            <div className="ops-inline-product-meta">
-                                                <strong>{product.name}</strong>
-                                                <small>{getProductOptionLabel(product)}</small>
-                                            </div>
-                                            <span>{product.barcode || product.code || '-'}</span>
-                                        </button>
-                                    )) : <div className="ops-inline-search-empty">Nenhum produto encontrado.</div>}
-                                </div>
-                            ) : null}
                         </div>
                     </div>
 
@@ -696,7 +676,24 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 </button>
                             </div>
                         </form>
-                    ) : <EmptyState title="Nenhum produto" text="Selecione um item para ajustar." />}
+                    ) : (
+                        <div className="ops-inline-search-results">
+                            {visibleProducts.length ? visibleProducts.map((product) => (
+                                <button
+                                    key={product.id}
+                                    type="button"
+                                    className={`ops-inline-search-result ${String(selectedProduct?.id || '') === String(product.id) ? 'active' : ''}`}
+                                    onClick={() => selectProduct(product)}
+                                >
+                                    <div className="ops-inline-product-meta">
+                                        <strong>{product.name}</strong>
+                                        <small>{getProductOptionLabel(product)}</small>
+                                    </div>
+                                    <span>{product.barcode || product.code || '-'}</span>
+                                </button>
+                            )) : <div className="ops-inline-search-empty">Nenhum produto encontrado.</div>}
+                        </div>
+                    )}
                 </section>
 
                 <section className="ops-workspace-panel ops-compact-panel">
