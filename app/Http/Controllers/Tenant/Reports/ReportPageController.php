@@ -9,6 +9,7 @@ use App\Services\Tenant\Reports\ReportBrowserService;
 use App\Services\Tenant\Reports\ReportExportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class ReportPageController extends Controller
@@ -18,7 +19,7 @@ class ReportPageController extends Controller
         ReportBrowserService $reportBrowser,
         ReportExportService $reportExport,
         string $report,
-    ): Response {
+    ): Response|InertiaResponse {
         $filters = $this->requestFilters($request);
 
         if (in_array($request->query('export'), ['pdf', 'excel'], true)) {
