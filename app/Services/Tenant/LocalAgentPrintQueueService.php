@@ -25,12 +25,21 @@ class LocalAgentPrintQueueService
             ];
         }
 
-        $agent = LocalAgent::query()->firstWhere('tenant_id', (string) $tenantId);
+        $agent = LocalAgent::query()
+            ->where('tenant_id', (string) $tenantId)
+            ->where('active', true)
+            ->orderByDesc('last_seen_at')
+            ->get()
+            ->first(function (LocalAgent $candidate) {
+                $supportedTypes = (array) data_get($candidate->metadata, 'device.supported_types', []);
 
-        if (!$agent || !$agent->active) {
+                return $supportedTypes === [] || in_array('print_payment_receipt', $supportedTypes, true);
+            });
+
+        if (!$agent) {
             return [
                 'status' => 'skipped',
-                'message' => 'Nenhum agente de impressao ativo foi encontrado para este tenant.',
+                'message' => 'Nenhum agente de impressao compativel foi encontrado para este tenant.',
             ];
         }
 

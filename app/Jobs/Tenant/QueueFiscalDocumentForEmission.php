@@ -50,7 +50,12 @@ class QueueFiscalDocumentForEmission implements ShouldQueue, ShouldBeUniqueUntil
                 ->where('tenant_id', $this->tenantId)
                 ->where('active', true)
                 ->orderByDesc('last_seen_at')
-                ->first();
+                ->get()
+                ->first(function (LocalAgent $candidate) {
+                    $supportedTypes = (array) data_get($candidate->metadata, 'device.supported_types', []);
+
+                    return in_array('emit_nfce', $supportedTypes, true);
+                });
 
             if (!$agent) {
                 $resultService->markAwaitingAgent($this->tenantId, $document->id);

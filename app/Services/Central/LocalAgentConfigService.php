@@ -58,6 +58,10 @@ class LocalAgentConfigService
                 'installed_at' => $payload['software']['installed_at'] ?? null,
                 'config_path' => $payload['software']['config_path'] ?? null,
             ], [$this, 'filledValue']),
+            'supported_types' => array_values(array_filter(
+                (array) ($payload['supported_types'] ?? []),
+                fn ($value) => $value !== null && $value !== '',
+            )),
             'last_sync_at' => now()->toIso8601String(),
         ]), fn ($value) => is_array($value) ? $value !== [] : $value !== null && $value !== '');
 

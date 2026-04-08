@@ -60,6 +60,8 @@ class LocalAgentApiController extends Controller
         /** @var LocalAgent $agent */
         $agent = $request->attributes->get('localAgent');
         $payload = $request->validate([
+            'supported_types' => ['nullable', 'array'],
+            'supported_types.*' => ['string', 'max:30'],
             'machine' => ['nullable', 'array'],
             'machine.name' => ['nullable', 'string', 'max:255'],
             'machine.user' => ['nullable', 'string', 'max:255'],
@@ -109,6 +111,14 @@ class LocalAgentApiController extends Controller
             'supported_types.*' => ['string', 'max:30'],
         ]);
         $supportedTypes = array_values(array_filter((array) ($validated['supported_types'] ?? [])));
+
+        if ($supportedTypes !== []) {
+            $metadata = is_array($agent->metadata) ? $agent->metadata : [];
+            data_set($metadata, 'device.supported_types', $supportedTypes);
+            $agent->forceFill(['metadata' => $metadata])->save();
+            $agent->refresh();
+        }
+
         $command = $commandService->claimNext($agent, $supportedTypes);
 
         if (!$command) {

@@ -268,6 +268,7 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 	userName := strings.TrimSpace(os.Getenv("USERNAME"))
 
 	return map[string]any{
+		"supported_types": supportedCommandTypes,
 		"machine": map[string]any{
 			"name": hostName,
 			"user": userName,
