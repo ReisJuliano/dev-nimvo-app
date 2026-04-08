@@ -103,12 +103,14 @@ export function WorkspaceCollectionShell({
     onCreate,
     emptyState,
     listChildren,
+    children,
     summaryItems = [],
     formTitle,
     formSubtitle = null,
     formChildren,
 }) {
     const hasTabs = Array.isArray(tabs) && tabs.length > 0
+    const content = listChildren ?? children
 
     return (
         <div className="ops-workspace-stack">
@@ -150,7 +152,7 @@ export function WorkspaceCollectionShell({
                     )}
                     empty={emptyState}
                 >
-                    {listChildren}
+                    {content}
                 </DataList>
             </PageContainer>
         </div>

@@ -73,6 +73,21 @@ function CategoryListCard({ record, active, onClick }) {
     )
 }
 
+function CategoryEditorPlaceholder({ onCreate }) {
+    return (
+        <div className="ops-category-editor-placeholder">
+            <span className="ops-category-editor-placeholder-icon">
+                <i className="fa-solid fa-layer-group" />
+            </span>
+            <strong>Selecione ou crie</strong>
+            <small className="ops-category-editor-placeholder-copy">Abra uma categoria para editar ou inicie um novo cadastro.</small>
+            <ActionButton icon="fa-plus" onClick={onCreate}>
+                Nova categoria
+            </ActionButton>
+        </div>
+    )
+}
+
 export function CategoriesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', description: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
@@ -80,6 +95,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     const [statusFilter, setStatusFilter] = useState('all')
     const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
+    const [editorVisible, setEditorVisible] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeCategorySearch(search), [search])
@@ -117,6 +133,17 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 
     function handleCreate() {
         setForm(emptyForm)
+        setEditorVisible(true)
+    }
+
+    function handleSelectRecord(record) {
+        setForm({ ...emptyForm, ...record })
+        setEditorVisible(true)
+    }
+
+    function handleCloseEditor() {
+        setForm(emptyForm)
+        setEditorVisible(false)
     }
 
     function handleClearFilters() {
@@ -135,6 +162,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record })
+            setEditorVisible(true)
             setSearch(response.record.name || '')
             setStatusFilter(response.record.active ? 'active' : 'inactive')
             setProductFilter('all')
@@ -166,7 +194,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
+            handleCloseEditor()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -187,9 +215,9 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 onCreate={handleCreate}
                 summaryItems={[]}
                 emptyState={null}
-                formTitle={form.id ? 'Editar categoria' : 'Nova categoria'}
-                formSubtitle="Cadastro compacto"
-                formChildren={(
+                formTitle={editorVisible ? (form.id ? 'Editar categoria' : 'Nova categoria') : 'Categoria'}
+                formSubtitle={editorVisible ? 'Cadastro compacto' : 'Edicao sob demanda'}
+                formChildren={editorVisible ? (
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-layer-group" text="Nome" />
@@ -207,7 +235,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" icon="fa-eraser" iconOnly onClick={() => setForm(emptyForm)} title="Limpar formulario" aria-label="Limpar formulario" />
+                            <ActionButton tone="ghost" icon="fa-xmark" iconOnly onClick={handleCloseEditor} title="Fechar editor" aria-label="Fechar editor" />
                             {form.id ? (
                                 <ActionButton tone="danger" icon="fa-trash" iconOnly onClick={handleDelete} title="Excluir categoria" aria-label="Excluir categoria" />
                             ) : null}
@@ -216,9 +244,11 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             </ActionButton>
                         </div>
                     </form>
+                ) : (
+                    <CategoryEditorPlaceholder onCreate={handleCreate} />
                 )}
-            >
-                <div className="ops-category-shell">
+                listChildren={(
+                    <div className="ops-category-shell">
                     <section className="ops-category-summary-strip">
                         {metrics.map((item) => (
                             <CategoryMetric key={item.label} label={item.label} value={item.value} format={item.format} />
@@ -271,8 +301,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                                     <CategoryListCard
                                         key={record.id}
                                         record={record}
-                                        active={form.id === record.id}
-                                        onClick={() => setForm({ ...emptyForm, ...record })}
+                                        active={editorVisible && form.id === record.id}
+                                        onClick={() => handleSelectRecord(record)}
                                     />
                                 ))}
                             </div>
@@ -283,7 +313,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                         <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Ative um recorte para listar." />
                     )}
                 </div>
-            </WorkspaceCollectionShell>
+                )}
+            />
         </>
     )
 }
