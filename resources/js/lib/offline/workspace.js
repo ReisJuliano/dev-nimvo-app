@@ -2224,6 +2224,8 @@ async function syncSaleQueue(tenantId, state, request) {
                     discount_percent: Number(item.discount_percent || 0),
                     discount_scope: item.discount_scope || null,
                     discount_authorized_by: item.discount_authorized_by || null,
+                    discount_authorized_at: item.discount_authorized_at || null,
+                    discount_authorized_offline: Boolean(item.discount_authorized_offline),
                 })),
                 payments: payload.payments.map((payment) => ({
                     method: payment.method,

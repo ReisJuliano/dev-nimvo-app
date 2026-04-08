@@ -243,6 +243,8 @@ export default function PosIndex({
             ].filter((option) => supportsDeferredPayment || option.value !== 'credit'),
         [supportsDeferredPayment],
     )
+    const currentUserCanAuthorizeDiscountOffline = ['admin', 'manager'].includes(auth?.user?.role || '')
+    const currentUserCanAuthorizeCloseCashOffline = supervisors.some((supervisor) => String(supervisor.id) === String(auth?.user?.id))
 
     useEffect(() => {
         if (!tenantId) {
@@ -859,6 +861,79 @@ export default function PosIndex({
         setFeedback({ type, text })
     }
 
+    function buildOfflineDiscountAuthorizer() {
+        if (!auth?.user?.id || !currentUserCanAuthorizeDiscountOffline) {
+            throw new Error('No modo offline, apenas o gerente logado nesta maquina pode autorizar descontos.')
+        }
+
+        const selectedAuthorizerId = discountAuthorizationForm.authorizer_user_id || String(auth.user.id)
+
+        if (String(selectedAuthorizerId) !== String(auth.user.id)) {
+            throw new Error('No modo offline, selecione o proprio gerente logado para autorizar o desconto.')
+        }
+
+        return {
+            id: Number(auth.user.id),
+            name: auth.user.name || 'Gerente',
+            role: auth.user.role || 'manager',
+            authorized_at: new Date().toISOString(),
+            offline: true,
+        }
+    }
+
+    function applyOfflineDiscountAuthorization(previewConfig) {
+        const offlineAuthorizer = buildOfflineDiscountAuthorizer()
+
+        setDiscountConfig(previewConfig)
+        setDiscountAuthorizer(offlineAuthorizer)
+        setDiscountModalOpen(false)
+        setDiscountAuthorizationForm(initialAuthorizationForm)
+        showFeedback('warning', 'Desconto autorizado no modo offline pelo gerente logado nesta maquina.')
+    }
+
+    function authorizeCloseCashSupervisorOffline() {
+        if (!closeCashRegisterModal) {
+            return false
+        }
+
+        if (!auth?.user?.id || !currentUserCanAuthorizeCloseCashOffline) {
+            setCloseCashRegisterModal((current) => (
+                current
+                    ? { ...current, supervisorError: 'No modo offline, a liberacao depende do supervisor logado nesta maquina.' }
+                    : current
+            ))
+            return false
+        }
+
+        const selectedSupervisorId = closeCashRegisterModal.supervisorUserId || String(auth.user.id)
+
+        if (String(selectedSupervisorId) !== String(auth.user.id)) {
+            setCloseCashRegisterModal((current) => (
+                current
+                    ? { ...current, supervisorError: 'No modo offline, selecione o proprio supervisor logado para liberar a edicao.' }
+                    : current
+            ))
+            return false
+        }
+
+        setCloseCashRegisterModal((current) => (
+            current
+                ? {
+                    ...current,
+                    step: 'informing',
+                    supervisorPromptOpen: false,
+                    supervisorUserId: String(auth.user.id),
+                    supervisorPassword: '',
+                    supervisorError: '',
+                    supervisorAuthorizing: false,
+                    supervisorName: auth.user.name || '',
+                }
+                : current
+        ))
+        showFeedback('warning', 'Edicao liberada no modo offline pelo supervisor logado nesta maquina.')
+        return true
+    }
+
     function persistCustomersInWorkspace(nextCustomers) {
         if (!tenantId) {
             return
@@ -1263,14 +1338,19 @@ export default function PosIndex({
             return
         }
 
-        if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
-            showFeedback('error', 'Selecione um gerente e informe a senha de autorizacao.')
-            return
-        }
-
         setAuthorizingDiscount(true)
 
         try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                applyOfflineDiscountAuthorization(previewConfig)
+                return
+            }
+
+            if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
+                showFeedback('error', 'Selecione um gerente e informe a senha de autorizacao.')
+                return
+            }
+
             const response = await apiRequest('/api/pdv/discounts/authorize', {
                 method: 'post',
                 data: {
@@ -1285,6 +1365,16 @@ export default function PosIndex({
             setDiscountAuthorizationForm(initialAuthorizationForm)
             showFeedback('success', 'Desconto autorizado e aplicado com sucesso.')
         } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                try {
+                    applyOfflineDiscountAuthorization(previewConfig)
+                    return
+                } catch (offlineError) {
+                    showFeedback('error', offlineError.message)
+                    return
+                }
+            }
+
             showFeedback('error', error.message)
         } finally {
             setAuthorizingDiscount(false)
@@ -1776,6 +1866,11 @@ export default function PosIndex({
             return
         }
 
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            authorizeCloseCashSupervisorOffline()
+            return
+        }
+
         if (!closeCashRegisterModal.supervisorUserId || !closeCashRegisterModal.supervisorPassword) {
             setCloseCashRegisterModal((current) => (
                 current
@@ -1815,6 +1910,10 @@ export default function PosIndex({
             ))
             showFeedback('success', response.message || 'Edicao liberada pelo supervisor.')
         } catch (error) {
+            if (tenantId && isNetworkApiError(error) && authorizeCloseCashSupervisorOffline()) {
+                return
+            }
+
             setCloseCashRegisterModal((current) => (
                 current
                     ? {
@@ -2132,6 +2231,8 @@ export default function PosIndex({
                 : 0,
             discount_scope: discountConfig.type === 'item' ? 'item' : (discountConfig.type === 'none' ? null : 'sale'),
             discount_authorized_by: Number(item.lineDiscount || 0) > 0 ? discountAuthorizer?.id || null : null,
+            discount_authorized_at: Number(item.lineDiscount || 0) > 0 ? discountAuthorizer?.authorized_at || null : null,
+            discount_authorized_offline: Number(item.lineDiscount || 0) > 0 ? Boolean(discountAuthorizer?.offline) : false,
         }))
     }
 

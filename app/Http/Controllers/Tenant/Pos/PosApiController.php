@@ -349,6 +349,8 @@ class PosApiController extends Controller
         $items = (array) $request->input('items', []);
         $authorizations = (array) $request->session()->get('pos.discount_authorizations', []);
         $minimumAuthorizedAt = now()->subMinutes(30);
+        $authenticatedUser = $request->user();
+        $authenticatedUserCanAuthorizeOffline = in_array($authenticatedUser?->role, ['admin', 'manager'], true);
 
         foreach ($items as $item) {
             $discount = round((float) ($item['discount'] ?? 0), 2);
@@ -359,8 +361,25 @@ class PosApiController extends Controller
 
             $authorizerId = (int) ($item['discount_authorized_by'] ?? 0);
             $authorizedAt = $authorizations[$authorizerId] ?? null;
+            $authorizedOffline = filter_var($item['discount_authorized_offline'] ?? false, FILTER_VALIDATE_BOOL);
 
-            if (! $authorizerId || ! $authorizedAt) {
+            if ($authorizedOffline) {
+                $authorizedAt = $item['discount_authorized_at'] ?? $authorizedAt;
+            }
+
+            if (! $authorizerId) {
+                throw ValidationException::withMessages([
+                    'items' => 'Todo desconto aplicado no PDV precisa de autorizacao gerencial valida.',
+                ]);
+            }
+
+            if ($authorizedOffline) {
+                if (! $authenticatedUserCanAuthorizeOffline || (int) $authenticatedUser?->getKey() !== $authorizerId) {
+                    throw ValidationException::withMessages([
+                        'items' => 'No modo offline, o desconto precisa ser autorizado pelo gerente logado nesta maquina.',
+                    ]);
+                }
+            } elseif (! $authorizedAt) {
                 throw ValidationException::withMessages([
                     'items' => 'Todo desconto aplicado no PDV precisa de autorizacao gerencial valida.',
                 ]);

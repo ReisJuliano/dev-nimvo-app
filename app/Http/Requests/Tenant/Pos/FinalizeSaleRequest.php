@@ -46,6 +46,8 @@ class FinalizeSaleRequest extends FormRequest
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.discount_scope' => ['nullable', 'string', 'max:20'],
             'items.*.discount_authorized_by' => ['nullable', 'integer', 'exists:users,id'],
+            'items.*.discount_authorized_at' => ['nullable', 'date'],
+            'items.*.discount_authorized_offline' => ['nullable', 'boolean'],
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::all())],
             'payments.*.amount' => ['nullable', 'numeric', 'gt:0'],
