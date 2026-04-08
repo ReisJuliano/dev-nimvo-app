@@ -333,12 +333,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    min-width: 0;
 }
 
 .credit-panel-header h2,
 .credit-modal-heading h2 {
     margin: 0;
     color: var(--app-text-primary);
+    overflow-wrap: anywhere;
 }
 
 .credit-results-grid,
@@ -387,10 +389,24 @@
     display: flex;
     flex-direction: column;
     gap: 0.16rem;
+    min-width: 0;
 }
 
 .credit-customer-copy {
     flex: 1;
+}
+
+.credit-modal-heading {
+    flex: 1;
+    min-width: 0;
+}
+
+.credit-modal-heading > div,
+.credit-activity-copy,
+.credit-activity-value,
+.credit-focus-card,
+.credit-highlight-card {
+    overflow-wrap: anywhere;
 }
 
 .credit-customer-copy strong,
@@ -569,10 +585,12 @@
     justify-content: space-between;
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(226, 232, 240, 0.84);
+    align-items: flex-start;
 }
 
 .credit-modal-header-actions {
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .credit-modal-body {
@@ -603,6 +621,7 @@
     align-items: flex-end;
     gap: 0.16rem;
     margin-left: auto;
+    min-width: 0;
 }
 
 .credit-modal-history {
@@ -620,6 +639,7 @@
 .credit-activity-item {
     padding: 0.9rem 0;
     border-top: 1px solid rgba(226, 232, 240, 0.84);
+    align-items: flex-start;
 }
 
 .credit-activity-item:first-child {
@@ -630,6 +650,13 @@
 .credit-activity-copy.compact {
     margin-left: auto;
     align-items: flex-end;
+    min-width: 0;
+}
+
+.credit-modal .credit-status-chip {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
 }
 
 @media (max-width: 1200px) {
@@ -665,6 +692,13 @@
         align-items: flex-start;
         justify-content: flex-start;
         margin-left: 0;
+    }
+
+    .credit-modal-heading,
+    .credit-modal-header-actions,
+    .credit-activity-copy,
+    .credit-activity-value {
+        width: 100%;
     }
 
     .credit-result-metrics,
