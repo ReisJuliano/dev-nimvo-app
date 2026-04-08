@@ -5,11 +5,16 @@ import DataList from '@/Components/UI/DataList'
 import PageContainer from '@/Components/UI/PageContainer'
 import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 
-export function EmptyState({ title, text }) {
+export function EmptyState({ title, text = null, icon = null }) {
     return (
         <section className="ops-workspace-empty-state">
+            {icon ? (
+                <span className="ops-workspace-empty-state-icon" aria-hidden="true">
+                    <i className={`fa-solid ${icon}`} />
+                </span>
+            ) : null}
             <strong>{title}</strong>
-            <p>{text}</p>
+            {text ? <p>{text}</p> : null}
         </section>
     )
 }
@@ -103,9 +108,11 @@ export function WorkspaceCollectionShell({
     formSubtitle = null,
     formChildren,
 }) {
+    const hasTabs = Array.isArray(tabs) && tabs.length > 0
+
     return (
         <div className="ops-workspace-stack">
-            <SectionTabs tabs={tabs} activeTab={activeTab} onChange={onTabChange} />
+            {hasTabs ? <SectionTabs tabs={tabs} activeTab={activeTab} onChange={onTabChange} /> : null}
 
             <PageContainer
                 sidebar={(

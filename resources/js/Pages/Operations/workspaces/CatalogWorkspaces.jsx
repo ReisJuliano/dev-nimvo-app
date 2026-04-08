@@ -13,6 +13,18 @@ import {
     upsertRecord,
 } from './shared'
 
+const CATEGORY_STATUS_FILTERS = [
+    { value: 'all', label: 'Status: todos' },
+    { value: 'active', label: 'Status: ativas' },
+    { value: 'inactive', label: 'Status: inativas' },
+]
+
+const CATEGORY_PRODUCT_FILTERS = [
+    { value: 'all', label: 'Produtos: todos' },
+    { value: 'with-products', label: 'Com produtos' },
+    { value: 'without-products', label: 'Sem produtos' },
+]
+
 function FieldLabel({ icon, text }) {
     return (
         <span className="ops-workspace-label-with-icon">
@@ -22,29 +34,95 @@ function FieldLabel({ icon, text }) {
     )
 }
 
+function normalizeCategorySearch(value) {
+    return String(value || '').trim().toLowerCase()
+}
+
+function CategoryMetric({ label, value, format = 'number' }) {
+    return (
+        <article className="ops-category-metric-card">
+            <span>{label}</span>
+            <strong>{format === 'money' ? formatMoney(value) : value}</strong>
+        </article>
+    )
+}
+
+function CategoryListCard({ record, active, onClick }) {
+    const initial = String(record.name || 'C').trim().charAt(0).toUpperCase() || 'C'
+
+    return (
+        <button type="button" className={`ops-category-card ${active ? 'active' : ''}`} onClick={onClick}>
+            <span className="ops-category-card-icon">{initial}</span>
+            <div className="ops-category-card-content">
+                <div className="ops-category-card-head">
+                    <strong>{record.name}</strong>
+                    <Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativa' : 'Inativa'}</Badge>
+                </div>
+                <div className="ops-category-card-meta">
+                    <span>
+                        <i className="fa-solid fa-boxes-stacked" />
+                        {record.products_count || 0} produto(s)
+                    </span>
+                    <span>
+                        <i className="fa-solid fa-wallet" />
+                        {formatMoney(record.stock_value || 0)}
+                    </span>
+                </div>
+            </div>
+        </button>
+    )
+}
+
 export function CategoriesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', description: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
-    const [activeTab, setActiveTab] = useState('active')
+    const [search, setSearch] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const normalizedSearch = useMemo(() => normalizeCategorySearch(search), [search])
+    const hasFilters = normalizedSearch !== '' || statusFilter !== 'all' || productFilter !== 'all'
 
     const filteredRecords = useMemo(
-        () => records.filter((record) => (activeTab === 'active' ? record.active : !record.active)),
-        [records, activeTab],
+        () => {
+            if (!hasFilters) {
+                return []
+            }
+
+            return records.filter((record) => {
+                const matchesSearch = normalizedSearch === ''
+                    || normalizeCategorySearch(record.name).includes(normalizedSearch)
+                    || normalizeCategorySearch(record.description).includes(normalizedSearch)
+                const matchesStatus = statusFilter === 'all'
+                    || (statusFilter === 'active' ? record.active : !record.active)
+                const hasProducts = Number(record.products_count || 0) > 0
+                const matchesProducts = productFilter === 'all'
+                    || (productFilter === 'with-products' ? hasProducts : !hasProducts)
+
+                return matchesSearch && matchesStatus && matchesProducts
+            })
+        },
+        [hasFilters, normalizedSearch, productFilter, records, statusFilter],
     )
     const metrics = useMemo(
         () => [
-            { label: 'Categorias', value: records.length, caption: 'Base cadastrada' },
-            { label: 'Ativas', value: records.filter((record) => record.active).length, caption: 'Disponiveis no catalogo' },
-            { label: 'Valor em estoque', value: records.reduce((total, record) => total + Number(record.stock_value || 0), 0), caption: 'Soma por categoria', format: 'money' },
+            { label: 'Total', value: records.length },
+            { label: 'Ativas', value: records.filter((record) => record.active).length },
+            { label: 'Estoque', value: records.reduce((total, record) => total + Number(record.stock_value || 0), 0), format: 'money' },
         ],
         [records],
     )
 
     function handleCreate() {
         setForm(emptyForm)
+    }
+
+    function handleClearFilters() {
+        setSearch('')
+        setStatusFilter('all')
+        setProductFilter('all')
     }
 
     async function handleSubmit(event) {
@@ -57,6 +135,9 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record })
+            setSearch(response.record.name || '')
+            setStatusFilter(response.record.active ? 'active' : 'inactive')
+            setProductFilter('all')
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -96,39 +177,39 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         <>
             <Feedback feedback={feedback} />
             <WorkspaceCollectionShell
-                tabs={[
-                    { key: 'active', label: 'Ativas', icon: 'fa-layer-group' },
-                    { key: 'inactive', label: 'Inativas', icon: 'fa-ban' },
-                ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
+                tabs={[]}
+                activeTab={null}
+                onTabChange={() => {}}
                 listTitle="Categorias"
                 listIcon="fa-layer-group"
-                listCount={`${filteredRecords.length} registro(s)`}
+                listCount={hasFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
                 createLabel="Nova categoria"
                 onCreate={handleCreate}
-                summaryItems={metrics}
-                emptyState={<EmptyState title="Sem categorias nesse filtro" text="Ajuste o recorte ou crie um novo cadastro." />}
+                summaryItems={[]}
+                emptyState={null}
                 formTitle={form.id ? 'Editar categoria' : 'Nova categoria'}
-                formSubtitle="Nome, status e descricao"
+                formSubtitle="Cadastro compacto"
                 formChildren={(
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label>
                             <FieldLabel icon="fa-layer-group" text="Nome" />
                             <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
                         </label>
+                        <label>
+                            <FieldLabel icon="fa-toggle-on" text="Status" />
+                            <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
+                                <option value="active">Ativa</option>
+                                <option value="inactive">Inativa</option>
+                            </select>
+                        </label>
                         <label className="span-2">
                             <FieldLabel icon="fa-align-left" text="Descricao" />
                             <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
                         </label>
                         <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
-                                Limpar
-                            </ActionButton>
+                            <ActionButton tone="ghost" icon="fa-eraser" iconOnly onClick={() => setForm(emptyForm)} title="Limpar formulario" aria-label="Limpar formulario" />
                             {form.id ? (
-                                <ActionButton tone="danger" onClick={handleDelete}>
-                                    Excluir
-                                </ActionButton>
+                                <ActionButton tone="danger" icon="fa-trash" iconOnly onClick={handleDelete} title="Excluir categoria" aria-label="Excluir categoria" />
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
                                 {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar categoria'}
@@ -137,18 +218,70 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                     </form>
                 )}
             >
-                <div className="ops-workspace-list-stack">
-                    {filteredRecords.map((record) => (
-                        <ListCard
-                            key={record.id}
-                            active={form.id === record.id}
-                            onClick={() => setForm({ ...emptyForm, ...record })}
-                            title={record.name}
-                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativa' : 'Inativa'}</Badge>}
-                            description={record.description || 'Sem descricao'}
-                            meta={[`${record.products_count || 0} produto(s)`, formatMoney(record.stock_value || 0)]}
+                <div className="ops-category-shell">
+                    <section className="ops-category-summary-strip">
+                        {metrics.map((item) => (
+                            <CategoryMetric key={item.label} label={item.label} value={item.value} format={item.format} />
+                        ))}
+                    </section>
+
+                    <section className="ops-category-toolbar">
+                        <label className="ops-category-search-field">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Buscar categoria"
+                            />
+                        </label>
+                        <label className="ops-category-filter-field">
+                            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                {CATEGORY_STATUS_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="ops-category-filter-field">
+                            <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+                                {CATEGORY_PRODUCT_FILTERS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <ActionButton
+                            tone="ghost"
+                            icon="fa-rotate-left"
+                            iconOnly
+                            onClick={handleClearFilters}
+                            title="Limpar filtros"
+                            aria-label="Limpar filtros"
+                            disabled={!hasFilters}
                         />
-                    ))}
+                    </section>
+
+                    {hasFilters ? (
+                        filteredRecords.length ? (
+                            <div className="ops-category-results">
+                                {filteredRecords.map((record) => (
+                                    <CategoryListCard
+                                        key={record.id}
+                                        record={record}
+                                        active={form.id === record.id}
+                                        onClick={() => setForm({ ...emptyForm, ...record })}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState icon="fa-folder-open" title="Nenhum resultado" text="Refine a busca." />
+                        )
+                    ) : (
+                        <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Ative um recorte para listar." />
+                    )}
                 </div>
             </WorkspaceCollectionShell>
         </>
