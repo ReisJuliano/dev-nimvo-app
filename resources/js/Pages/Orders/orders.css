@@ -24,9 +24,6 @@
 .orders-stage-actions,
 .orders-stage-toolbar,
 .orders-stage-meta,
-.orders-current-strip-copy,
-.orders-current-strip-metrics,
-.orders-current-strip-actions,
 .orders-form-field,
 .orders-modal-stack,
 .orders-type-option,
@@ -44,7 +41,6 @@
 }
 
 .orders-stage-header,
-.orders-current-strip,
 .orders-modal-summary-strip,
 .orders-inline-empty,
 .orders-credit-grid,
@@ -69,8 +65,7 @@
 
 .orders-stage-copy,
 .orders-stage-actions,
-.orders-current-strip-copy,
-.orders-current-strip-metrics {
+.orders-stage-meta {
     gap: 0.9rem;
 }
 
@@ -115,9 +110,6 @@
 
 .orders-stage-stat span,
 .orders-stage-meta span,
-.orders-current-strip-copy small,
-.orders-current-strip-metrics span,
-.orders-current-strip-metrics small,
 .orders-form-field span,
 .orders-search-result small,
 .orders-note-box span,
@@ -129,8 +121,6 @@
 
 .orders-stage-stat strong,
 .orders-stage-meta strong,
-.orders-current-strip-copy strong,
-.orders-current-strip-metrics strong,
 .orders-modal-summary-strip strong,
 .orders-checkout-summary strong,
 .orders-credit-grid strong,
@@ -228,26 +218,6 @@
 .orders-stage-meta {
     gap: 0.2rem;
     text-align: right;
-}
-
-.orders-current-strip {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 1rem;
-    align-items: center;
-    padding: 1rem 1.15rem;
-    border-radius: 24px;
-}
-
-.orders-current-strip-copy small,
-.orders-current-strip-metrics small {
-    line-height: 1.45;
-}
-
-.orders-current-strip-actions {
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    align-items: center;
 }
 
 .orders-empty-state {
@@ -394,8 +364,7 @@
 }
 
 @media (max-width: 1100px) {
-    .orders-stage-header,
-    .orders-current-strip {
+    .orders-stage-header {
         grid-template-columns: 1fr;
     }
 
@@ -420,8 +389,7 @@
         grid-template-columns: 1fr;
     }
 
-    .orders-stage-header,
-    .orders-current-strip {
+    .orders-stage-header {
         padding: 1.1rem;
     }
 }
@@ -441,10 +409,5 @@
     .orders-icon-action {
         width: 100%;
         justify-content: center;
-    }
-
-    .orders-current-strip-actions {
-        grid-auto-flow: row;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
