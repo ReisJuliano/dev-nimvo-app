@@ -72,6 +72,7 @@ const initialQuickCustomerForm = { name: '', phone: '', document: '', email: '' 
 const initialQuickCompanyForm = { name: '', trade_name: '', document: '', email: '', state_registration: '' }
 const initialManualRecipient = { name: '', document: '', email: '' }
 const initialCustomerLinkForm = { name: '', document: '', email: '' }
+const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
 
 function createEmptyRecommendations() {
     return {
@@ -143,6 +144,76 @@ function normalizeCartItem(item) {
     }
 }
 
+function buildPendingSaleDismissStorageKey(tenantId, userId) {
+    if (!tenantId || userId == null) {
+        return null
+    }
+
+    return `${pendingSaleDismissStoragePrefix}:${tenantId}:${userId}`
+}
+
+function getPendingSaleSignature(pendingSale) {
+    if (!pendingSale?.id) {
+        return null
+    }
+
+    return `${pendingSale.id}:${pendingSale.updated_at || pendingSale.restored_at || 'na'}`
+}
+
+function readDismissedPendingSaleSignature(tenantId, userId) {
+    const storageKey = buildPendingSaleDismissStorageKey(tenantId, userId)
+
+    if (!storageKey || typeof window === 'undefined') {
+        return null
+    }
+
+    try {
+        return window.localStorage.getItem(storageKey)
+    } catch {
+        return null
+    }
+}
+
+function writeDismissedPendingSaleSignature(tenantId, userId, pendingSale) {
+    const storageKey = buildPendingSaleDismissStorageKey(tenantId, userId)
+    const signature = getPendingSaleSignature(pendingSale)
+
+    if (!storageKey || !signature || typeof window === 'undefined') {
+        return
+    }
+
+    try {
+        window.localStorage.setItem(storageKey, signature)
+    } catch {
+        return
+    }
+}
+
+function clearDismissedPendingSaleSignature(tenantId, userId) {
+    const storageKey = buildPendingSaleDismissStorageKey(tenantId, userId)
+
+    if (!storageKey || typeof window === 'undefined') {
+        return
+    }
+
+    try {
+        window.localStorage.removeItem(storageKey)
+    } catch {
+        return
+    }
+}
+
+function resolveVisiblePendingSale(tenantId, userId, pendingSale) {
+    const signature = getPendingSaleSignature(pendingSale)
+    const dismissedSignature = readDismissedPendingSaleSignature(tenantId, userId)
+
+    if (signature && dismissedSignature === signature) {
+        return null
+    }
+
+    return pendingSale || null
+}
+
 export default function PosIndex({
     categories,
     productCatalog = [],
@@ -166,6 +237,9 @@ export default function PosIndex({
     const supportsPendingSales = posCapabilities.pending_sales !== false
     const supportsCompanies = posCapabilities.companies !== false
     const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
+    const visibleInitialPendingSale = supportsPendingSales
+        ? resolveVisiblePendingSale(tenantId, auth?.user?.id, initialPendingSale)
+        : null
 
     const [feedback, setFeedback] = useState(null)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
@@ -174,7 +248,7 @@ export default function PosIndex({
     const [companies, setCompanies] = useState(initialCompanies || [])
     const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
     const [pendingOrderDrafts, setPendingOrderDrafts] = useState(initialPendingOrderDrafts || [])
-    const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? initialPendingSale?.order_draft_id ?? null)
+    const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? visibleInitialPendingSale?.order_draft_id ?? null)
     const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
     const [refreshingPendingOrders, setRefreshingPendingOrders] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState('')
@@ -220,9 +294,9 @@ export default function PosIndex({
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [closeCashRegisterModal, setCloseCashRegisterModal] = useState(null)
     const [cashReportModal, setCashReportModal] = useState(null)
-    const [pendingSaleServerState, setPendingSaleServerState] = useState(supportsPendingSales ? (initialPendingSale || null) : null)
-    const [pendingSalePromptOpen, setPendingSalePromptOpen] = useState(supportsPendingSales ? Boolean(initialPendingSale && !preloadedOrderDraft) : false)
-    const [pendingSaleResolved, setPendingSaleResolved] = useState(supportsPendingSales ? (!initialPendingSale || Boolean(preloadedOrderDraft)) : true)
+    const [pendingSaleServerState, setPendingSaleServerState] = useState(visibleInitialPendingSale)
+    const [pendingSalePromptOpen, setPendingSalePromptOpen] = useState(supportsPendingSales ? Boolean(visibleInitialPendingSale && !preloadedOrderDraft) : false)
+    const [pendingSaleResolved, setPendingSaleResolved] = useState(supportsPendingSales ? (!visibleInitialPendingSale || Boolean(preloadedOrderDraft)) : true)
     const [pendingSaleActionBusy, setPendingSaleActionBusy] = useState(false)
     const [customerModalOpen, setCustomerModalOpen] = useState(false)
     const [cashierDraftsModalOpen, setCashierDraftsModalOpen] = useState(false)
@@ -255,6 +329,25 @@ export default function PosIndex({
     const currentUserCanAuthorizeDiscountOffline = ['admin', 'manager'].includes(auth?.user?.role || '')
     const currentUserCanAuthorizeCloseCashOffline = supervisors.some((supervisor) => String(supervisor.id) === String(auth?.user?.id))
 
+    function rememberDismissedPendingSale(pendingSale) {
+        writeDismissedPendingSaleSignature(tenantId, auth?.user?.id, pendingSale)
+    }
+
+    function clearPendingSaleDismissal() {
+        clearDismissedPendingSaleSignature(tenantId, auth?.user?.id)
+    }
+
+    function syncPendingSaleVisibility(nextPendingSale) {
+        const nextSignature = getPendingSaleSignature(nextPendingSale)
+        const dismissedSignature = readDismissedPendingSaleSignature(tenantId, auth?.user?.id)
+
+        if (nextSignature && dismissedSignature && nextSignature !== dismissedSignature) {
+            clearPendingSaleDismissal()
+        }
+
+        return resolveVisiblePendingSale(tenantId, auth?.user?.id, nextPendingSale)
+    }
+
     useEffect(() => {
         if (!tenantId) {
             return undefined
@@ -275,9 +368,10 @@ export default function PosIndex({
             }
 
             const offlinePendingSale = getOfflinePendingSale(tenantId, auth?.user?.id)
+            const visibleOfflinePendingSale = syncPendingSaleVisibility(offlinePendingSale)
 
-            if (offlinePendingSale) {
-                setPendingSaleServerState(offlinePendingSale)
+            if (visibleOfflinePendingSale) {
+                setPendingSaleServerState(visibleOfflinePendingSale)
                 setPendingSalePromptOpen(!preloadedOrderDraft)
                 setPendingSaleResolved(false)
             }
@@ -309,7 +403,7 @@ export default function PosIndex({
                     orders: pendingOrderDraftDetails,
                     cashRegister,
                     pendingSaleUserId: auth?.user?.id,
-                    pendingSale: initialPendingSale,
+                    pendingSale: visibleInitialPendingSale,
                 })
             }
 
@@ -338,7 +432,7 @@ export default function PosIndex({
         categories,
         initialCompanies,
         initialCustomers,
-        initialPendingSale,
+        visibleInitialPendingSale,
         localAgentBridge,
         pendingOrderDraftDetails,
         preloadedOrderDraft,
@@ -807,7 +901,7 @@ export default function PosIndex({
             try {
                 if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                     const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
-                    setPendingSaleServerState(offlinePendingSale || null)
+                    setPendingSaleServerState(syncPendingSaleVisibility(offlinePendingSale))
                     return
                 }
 
@@ -826,10 +920,10 @@ export default function PosIndex({
                     },
                 })
 
-                setPendingSaleServerState(response.pending_sale || null)
+                setPendingSaleServerState(syncPendingSaleVisibility(response.pending_sale))
             } catch {
                 const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
-                setPendingSaleServerState(offlinePendingSale || null)
+                setPendingSaleServerState(syncPendingSaleVisibility(offlinePendingSale))
             }
         }, 700)
 
@@ -1049,6 +1143,7 @@ export default function PosIndex({
     function applyPendingSale(pendingSale) {
         const pendingItems = (pendingSale?.cart || []).map((item) => normalizeCartItem(item))
 
+        clearPendingSaleDismissal()
         setCart(pendingItems)
         setSelectedCartItemId(pendingItems[0]?.id ?? null)
         setSelectedCustomer(pendingSale?.customer_id ? String(pendingSale.customer_id) : '')
@@ -1062,7 +1157,7 @@ export default function PosIndex({
         setMixedDraft(pendingSale?.payment?.mixed_draft || { method: 'cash', amount: '' })
         setNotes(pendingSale?.notes || '')
         setActiveOrderDraftId(pendingSale?.order_draft_id || null)
-        setPendingSaleServerState(pendingSale || null)
+        setPendingSaleServerState(syncPendingSaleVisibility(pendingSale))
         setPendingSaleResolved(true)
         setPendingSalePromptOpen(false)
         showFeedback('success', 'Venda pendente restaurada com sucesso.')
@@ -2056,6 +2151,7 @@ export default function PosIndex({
 
         try {
             const discardMode = await discardPersistedPendingSale()
+            rememberDismissedPendingSale(pendingSaleServerState)
             setPendingSaleServerState(null)
             setPendingSaleResolved(true)
             setPendingSalePromptOpen(false)
@@ -2077,6 +2173,7 @@ export default function PosIndex({
 
         try {
             const discardMode = await discardPersistedPendingSale()
+            rememberDismissedPendingSale(pendingSaleServerState)
             resetSale()
 
             if (discardMode === 'offline') {
