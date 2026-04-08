@@ -26,7 +26,6 @@ import {
     subscribeOfflineWorkspace,
     syncOfflineWorkspace,
 } from '@/lib/offline/workspace'
-import SidebarToolButton from './SidebarToolButton'
 import OrderDetailModal from './OrderDetailModal'
 import OrderProductModal from './OrderProductModal'
 import OrderDraftFormModal from './OrderDraftFormModal'
@@ -93,8 +92,6 @@ export default function OrdersIndex({
     const [printingDraft, setPrintingDraft] = useState(false)
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
     const [submittingDelivery, setSubmittingDelivery] = useState(false)
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-    const [sidebarHovered, setSidebarHovered] = useState(false)
     const [listFilter, setListFilter] = useState(initialDraft?.status === 'sent_to_cashier' ? 'sent_to_cashier' : 'draft')
     const [draftModalOpen, setDraftModalOpen] = useState(false)
     const [productsModalOpen, setProductsModalOpen] = useState(false)
@@ -406,6 +403,14 @@ export default function OrdersIndex({
     const cashierCount = drafts.length - draftOnlyCount
     const activeFilterMeta = filterMetaByStatus[listFilter] || filterMetaByStatus.draft
     const filteredDrafts = useMemo(() => drafts.filter((draft) => draft.status === listFilter), [drafts, listFilter])
+    const filteredDraftsValue = useMemo(
+        () => roundCurrency(filteredDrafts.reduce((total, draft) => total + Number(draft.total || draft.subtotal || 0), 0)),
+        [filteredDrafts],
+    )
+    const filteredDraftsItems = useMemo(
+        () => filteredDrafts.reduce((total, draft) => total + Number(draft.items_count || 0), 0),
+        [filteredDrafts],
+    )
     const searchResults = useMemo(() => {
         const normalizedTerm = searchDraftTerm.trim().toLowerCase()
         if (!normalizedTerm) return drafts.slice(0, 8)
@@ -437,7 +442,6 @@ export default function OrdersIndex({
         moduleState.isCapabilityEnabled('relatorios')
         || moduleState.isCapabilityEnabled('vendas')
         || moduleState.isCapabilityEnabled('demanda')
-    const isSidebarVisuallyCollapsed = sidebarCollapsed && !sidebarHovered
 
     function showFeedback(type, text) {
         setFeedback({ type, text })
@@ -1289,102 +1293,149 @@ export default function OrdersIndex({
                     </div>
                 ) : null}
 
-                <div className={`orders-shell ${isSidebarVisuallyCollapsed ? 'sidebar-collapsed' : ''}`}>
-                    <aside
-                        className={`orders-tools ${isSidebarVisuallyCollapsed ? 'collapsed' : ''}`}
-                        onMouseEnter={() => setSidebarHovered(true)}
-                        onMouseLeave={() => setSidebarHovered(false)}
-                    >
-                        <div className="orders-tools-head">
-                            {!isSidebarVisuallyCollapsed ? (
-                                <div>
-                                    <strong>Atendimentos</strong>
-                                </div>
-                            ) : null}
-                            <button
-                                type="button"
-                                className="orders-tools-toggle ui-tooltip"
-                                data-tooltip={
-                                    sidebarCollapsed
-                                        ? (sidebarHovered ? 'Fixar aberta' : 'Expandir sidebar')
-                                        : 'Recolher sidebar'
-                                }
-                                onClick={() => setSidebarCollapsed((current) => !current)}
-                            >
-                                <i className={`fa-solid ${sidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'}`} />
-                            </button>
-                        </div>
-
-                        <div className="orders-tools-nav">
-                            <SidebarToolButton
-                                icon="fa-plus"
-                                label="Novo atendimento"
-                                hint="Abrir cadastro rapido"
-                                active={newDraftModalOpen}
-                                collapsed={isSidebarVisuallyCollapsed}
-                                tone="primary"
-                                onClick={() => {
-                                    setNewDraftForm(getInitialNewDraftForm())
-                                    setNewDraftModalOpen(true)
-                                }}
-                            />
-                            <SidebarToolButton
-                                icon="fa-magnifying-glass"
-                                label="Pesquisar atendimento"
-                                hint="Buscar entre as ativas"
-                                active={searchModalOpen}
-                                collapsed={isSidebarVisuallyCollapsed}
-                                tone="neutral"
-                                onClick={() => setSearchModalOpen(true)}
-                            />
-                            <SidebarToolButton
-                                icon="fa-list-check"
-                                label="Abertos"
-                                hint={`${draftOnlyCount} em atendimento`}
-                                active={listFilter === 'draft'}
-                                collapsed={isSidebarVisuallyCollapsed}
-                                tone="success"
-                                onClick={() => setListFilter('draft')}
-                            />
-                            <SidebarToolButton
-                                icon="fa-receipt"
-                                label="Prontos"
-                                hint={`${cashierCount} no caixa`}
-                                active={listFilter === 'sent_to_cashier'}
-                                collapsed={isSidebarVisuallyCollapsed}
-                                tone="warning"
-                                onClick={() => setListFilter('sent_to_cashier')}
-                            />
-                            {canOpenReports ? (
-                                <SidebarToolButton
-                                    icon="fa-chart-line"
-                                    label="Relatorios"
-                                    hint="Abrir painel analitico"
-                                    collapsed={isSidebarVisuallyCollapsed}
-                                    tone="info"
-                                    onClick={() => handleSidebarNavigate('/relatorios')}
-                                />
-                            ) : null}
-                        </div>
-
-                        {!isSidebarVisuallyCollapsed ? (
-                            <div className="orders-tools-foot">
-                                <div className="orders-tools-foot-card">
-                                    <span>Salvamento</span>
-                                    <strong>{savingDraft ? 'Sincronizando...' : 'Automatico'}</strong>
-                                    <small>{currentDraft ? currentDraftSaveText : 'Abra um atendimento para editar.'}</small>
-                                </div>
-                            </div>
-                        ) : null}
-                    </aside>
-
+                <div className="orders-shell">
                     <section className="orders-stage">
                         <header className="orders-stage-header">
-                            <div>
+                            <div className="orders-stage-copy">
+                                <span className="orders-page-kicker">Pedidos</span>
                                 <h1>{activeFilterMeta.title}</h1>
+                                <div className="orders-stage-stats">
+                                    <div className="orders-stage-stat">
+                                        <span>Em aberto</span>
+                                        <strong>{draftOnlyCount}</strong>
+                                    </div>
+                                    <div className="orders-stage-stat">
+                                        <span>No caixa</span>
+                                        <strong>{cashierCount}</strong>
+                                    </div>
+                                    <div className="orders-stage-stat">
+                                        <span>Volume</span>
+                                        <strong>{formatMoney(filteredDraftsValue)}</strong>
+                                    </div>
+                                </div>
                             </div>
-                            <span className="ui-badge info">{filteredDrafts.length} registro(s)</span>
+                            <div className="orders-stage-actions">
+                                <div className="orders-stage-filters" role="tablist" aria-label="Filtrar pedidos">
+                                    <button
+                                        type="button"
+                                        className={`orders-filter-pill ${listFilter === 'draft' ? 'active' : ''}`}
+                                        onClick={() => setListFilter('draft')}
+                                    >
+                                        <span>Abertos</span>
+                                        <strong>{draftOnlyCount}</strong>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`orders-filter-pill ${listFilter === 'sent_to_cashier' ? 'active' : ''}`}
+                                        onClick={() => setListFilter('sent_to_cashier')}
+                                    >
+                                        <span>No caixa</span>
+                                        <strong>{cashierCount}</strong>
+                                    </button>
+                                </div>
+                                <div className="orders-stage-toolbar">
+                                    <button
+                                        type="button"
+                                        className={`orders-icon-action ${newDraftModalOpen ? 'active' : ''} ui-tooltip`}
+                                        data-tooltip="Novo atendimento"
+                                        onClick={() => {
+                                            setNewDraftForm(getInitialNewDraftForm())
+                                            setNewDraftModalOpen(true)
+                                        }}
+                                    >
+                                        <i className="fa-solid fa-plus" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`orders-icon-action ${searchModalOpen ? 'active' : ''} ui-tooltip`}
+                                        data-tooltip="Pesquisar atendimento"
+                                        onClick={() => setSearchModalOpen(true)}
+                                    >
+                                        <i className="fa-solid fa-magnifying-glass" />
+                                    </button>
+                                    {canOpenReports ? (
+                                        <button
+                                            type="button"
+                                            className="orders-icon-action ui-tooltip"
+                                            data-tooltip="Relatorios"
+                                            onClick={() => handleSidebarNavigate('/relatorios')}
+                                        >
+                                            <i className="fa-solid fa-chart-line" />
+                                        </button>
+                                    ) : null}
+                                </div>
+                                <div className="orders-stage-meta">
+                                    <span>{filteredDrafts.length} ativos</span>
+                                    <strong>{filteredDraftsItems} itens</strong>
+                                </div>
+                            </div>
                         </header>
+
+                        {currentDraft ? (
+                            <section className="orders-current-strip">
+                                <div className="orders-current-strip-copy">
+                                    <span className={`ui-badge ${currentDraftStatus?.badge || 'info'}`}>{currentDraftStatus?.label || 'Em aberto'}</span>
+                                    <strong>{getDraftNumberLabel(currentDraft)}</strong>
+                                    <small>{selectedCustomer?.name || currentDraft.label}</small>
+                                </div>
+                                <div className="orders-current-strip-metrics">
+                                    <span>{currentDraft.items.length} itens</span>
+                                    <strong>{formatMoney(pricing.total)}</strong>
+                                    <small>{savingDraft ? 'Sincronizando...' : currentDraftSaveText}</small>
+                                </div>
+                                <div className="orders-current-strip-actions">
+                                    <button
+                                        type="button"
+                                        className="orders-icon-action ui-tooltip"
+                                        data-tooltip="Detalhes"
+                                        onClick={() => setDraftModalOpen(true)}
+                                    >
+                                        <i className="fa-solid fa-up-right-from-square" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="orders-icon-action ui-tooltip"
+                                        data-tooltip="Adicionar item"
+                                        onClick={() => setProductsModalOpen(true)}
+                                    >
+                                        <i className="fa-solid fa-bag-shopping" />
+                                    </button>
+                                    {currentDraft.items.length ? (
+                                        <button
+                                            type="button"
+                                            className="orders-icon-action ui-tooltip"
+                                            data-tooltip="Desconto"
+                                            onClick={() => {
+                                                setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft.items[0]?.id ?? '')))
+                                                setDiscountModalOpen(true)
+                                            }}
+                                        >
+                                            <i className="fa-solid fa-percent" />
+                                        </button>
+                                    ) : null}
+                                    {currentDraft.status !== 'sent_to_cashier' ? (
+                                        <button
+                                            type="button"
+                                            className="orders-icon-action ui-tooltip"
+                                            data-tooltip="Enviar ao caixa"
+                                            onClick={handleSendToCashier}
+                                            disabled={!currentDraft.items.length || sendingDraft}
+                                        >
+                                            <i className="fa-solid fa-paper-plane" />
+                                        </button>
+                                    ) : null}
+                                    <button
+                                        type="button"
+                                        className="orders-icon-action ui-tooltip"
+                                        data-tooltip="Checkout"
+                                        onClick={() => currentDraft.items.length ? setCheckoutModalOpen(true) : showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')}
+                                        disabled={!currentDraft.items.length}
+                                    >
+                                        <i className="fa-solid fa-cash-register" />
+                                    </button>
+                                </div>
+                            </section>
+                        ) : null}
 
                         {filteredDrafts.length ? (
                             <div className="orders-stage-grid">
@@ -1401,23 +1452,20 @@ export default function OrdersIndex({
                                             disabled={loadingDraft}
                                         >
                                             <div className="orders-order-card-top">
-                                                <div>
-                                                    <span className="orders-order-card-type">{getOrderTypeLabel(draft.type)}</span>
-                                                    <strong className="orders-order-card-number">{getDraftNumberLabel(draft)}</strong>
-                                                </div>
+                                                <span className="orders-order-card-type">{getOrderTypeLabel(draft.type)}</span>
                                                 <span className={`ui-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
                                             </div>
 
                                             <div className="orders-order-card-body">
                                                 <div className="orders-order-card-main">
-                                                    <span className="orders-order-card-label">{draft.label}</span>
-                                                    <strong>{draft.customer?.name || 'Cliente nao identificado'}</strong>
-                                                    <small>{draft.created_by ? `Lancado por ${draft.created_by}` : 'Sem operador informado'}</small>
+                                                    <strong className="orders-order-card-number">{getDraftNumberLabel(draft)}</strong>
+                                                    <strong>{draft.customer?.name || 'Cliente avulso'}</strong>
+                                                    <small>{draft.created_by || 'Sem operador'}</small>
                                                 </div>
 
                                                 <div className="orders-order-card-metrics">
                                                     <div>
-                                                        <span>Valor parcial</span>
+                                                        <span>Total</span>
                                                         <strong>{formatMoney(draft.total)}</strong>
                                                     </div>
                                                     <div>
@@ -1432,10 +1480,7 @@ export default function OrdersIndex({
                                                     <i className="fa-regular fa-clock" />
                                                     {formatElapsedTime(draft.updated_at, clock)}
                                                 </span>
-                                                <span>
-                                                    <i className="fa-solid fa-arrow-up-right-from-square" />
-                                                    Abrir popup
-                                                </span>
+                                                <i className="fa-solid fa-arrow-up-right-from-square" />
                                             </div>
                                         </button>
                                     )
@@ -1444,15 +1489,16 @@ export default function OrdersIndex({
                         ) : (
                             <section className="orders-empty-state ui-card">
                                 <div className="ui-card-body">
-                                    <h2>Nenhum atendimento neste recorte</h2>
+                                    <i className="fa-solid fa-receipt" />
+                                    <h2>Sem pedidos</h2>
                                     <div className="orders-empty-state-actions">
                                         <button type="button" className="ui-button" onClick={() => setNewDraftModalOpen(true)}>
                                             <i className="fa-solid fa-plus" />
-                                            Novo atendimento
+                                            Novo
                                         </button>
                                         <button type="button" className="ui-button-ghost" onClick={() => setSearchModalOpen(true)}>
                                             <i className="fa-solid fa-magnifying-glass" />
-                                            Pesquisar
+                                            Buscar
                                         </button>
                                     </div>
                                 </div>

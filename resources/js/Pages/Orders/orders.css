@@ -1,4 +1,3 @@
-@import './orders-sidebar.css';
 @import './orders-cards.css';
 @import './orders-modal.css';
 
@@ -7,68 +6,92 @@
     gap: 1rem;
 }
 
+.orders-screen .ui-alert {
+    border-radius: 22px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+}
+
 .orders-screen .ui-alert p {
     margin: 0.3rem 0 0;
     color: inherit;
 }
 
-.orders-shell {
+.orders-shell,
+.orders-stage,
+.orders-stage-copy,
+.orders-stage-actions,
+.orders-stage-toolbar,
+.orders-stage-meta,
+.orders-current-strip-copy,
+.orders-current-strip-metrics,
+.orders-current-strip-actions,
+.orders-form-field,
+.orders-modal-stack,
+.orders-type-option,
+.orders-customer-suggestions {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 1.25rem;
-    align-items: start;
+}
+
+.orders-shell,
+.orders-stage {
+    gap: 1rem;
 }
 
 .orders-stage {
-    display: grid;
-    gap: 1.25rem;
     min-width: 0;
 }
 
-.orders-stage-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
-    padding: 1.4rem 1.5rem;
-    border: 1px solid var(--app-border);
-    border-radius: 30px;
-    background:
-        radial-gradient(circle at top right, rgba(26, 168, 111, 0.08), transparent 24%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(244, 247, 252, 0.92));
-    box-shadow: var(--app-shadow-sm);
+.orders-stage-header,
+.orders-current-strip,
+.orders-modal-summary-strip,
+.orders-inline-empty,
+.orders-credit-grid,
+.orders-checkout-summary {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(18px);
 }
 
-.orders-stage-header h1,
-.orders-stage-header p,
-.orders-empty-state h2,
-.orders-empty-state p {
-    margin: 0;
+.orders-stage-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1.35rem;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.1), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.94));
+}
+
+.orders-stage-copy,
+.orders-stage-actions,
+.orders-current-strip-copy,
+.orders-current-strip-metrics {
+    gap: 0.9rem;
 }
 
 .orders-stage-header h1,
 .orders-empty-state h2 {
-    margin-top: 0.35rem;
+    margin: 0;
     color: var(--app-text-primary);
-    font-size: clamp(1.75rem, 2.8vw, 2.25rem);
+    font-size: clamp(1.8rem, 2.8vw, 2.5rem);
     line-height: 0.95;
     letter-spacing: -0.05em;
-}
-
-.orders-stage-header p,
-.orders-empty-state p {
-    margin-top: 0.55rem;
-    max-width: 60ch;
-    color: var(--app-text-secondary);
-    line-height: 1.6;
 }
 
 .orders-page-kicker {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    width: fit-content;
+    padding: 0.42rem 0.72rem;
+    border-radius: 999px;
     color: var(--app-primary-dark);
-    font-size: 0.76rem;
+    background: rgba(47, 124, 246, 0.1);
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -77,23 +100,24 @@
 .orders-stage-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.85rem;
-    min-width: min(100%, 460px);
+    gap: 0.75rem;
 }
 
 .orders-stage-stat {
     display: grid;
-    gap: 0.3rem;
-    padding: 1rem;
-    border-radius: 22px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(255, 255, 255, 0.86);
+    gap: 0.25rem;
+    min-width: 0;
+    padding: 0.9rem 1rem;
+    border-radius: 20px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: rgba(248, 250, 252, 0.88);
 }
 
-.orders-stage-stat small,
 .orders-stage-stat span,
-.orders-tools-foot-card span,
-.orders-tools-foot-card small,
+.orders-stage-meta span,
+.orders-current-strip-copy small,
+.orders-current-strip-metrics span,
+.orders-current-strip-metrics small,
 .orders-form-field span,
 .orders-search-result small,
 .orders-note-box span,
@@ -104,26 +128,156 @@
 }
 
 .orders-stage-stat strong,
-.orders-tools-foot-card strong {
+.orders-stage-meta strong,
+.orders-current-strip-copy strong,
+.orders-current-strip-metrics strong,
+.orders-modal-summary-strip strong,
+.orders-checkout-summary strong,
+.orders-credit-grid strong,
+.orders-summary-box strong,
+.orders-note-box p,
+.orders-search-result span {
     color: var(--app-text-primary);
-    font-size: 1.45rem;
+}
+
+.orders-stage-stat strong {
+    font-size: 1.3rem;
     line-height: 1;
+}
+
+.orders-stage-actions {
+    justify-items: end;
+}
+
+.orders-stage-filters,
+.orders-stage-toolbar,
+.orders-empty-state-actions,
+.orders-modal-actions,
+.orders-card-toggle,
+.orders-type-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.orders-stage-filters {
+    justify-content: flex-end;
+}
+
+.orders-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.orders-filter-pill span {
+    color: currentColor;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.orders-filter-pill strong {
+    min-width: 1.5rem;
+    color: var(--app-text-primary);
+    font-size: 0.95rem;
+}
+
+.orders-filter-pill.active {
+    border-color: rgba(47, 124, 246, 0.2);
+    background: rgba(47, 124, 246, 0.1);
+    color: var(--app-primary-dark);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.orders-icon-action {
+    width: 46px;
+    height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.orders-icon-action:hover,
+.orders-icon-action.active {
+    transform: translateY(-1px);
+    color: var(--app-primary-dark);
+    border-color: rgba(47, 124, 246, 0.18);
+    box-shadow: 0 12px 28px rgba(47, 124, 246, 0.12);
+}
+
+.orders-icon-action:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.orders-stage-meta {
+    gap: 0.2rem;
+    text-align: right;
+}
+
+.orders-current-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.15rem;
+    border-radius: 24px;
+}
+
+.orders-current-strip-copy small,
+.orders-current-strip-metrics small {
+    line-height: 1.45;
+}
+
+.orders-current-strip-actions {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    align-items: center;
 }
 
 .orders-empty-state {
     overflow: hidden;
+    border-radius: 28px;
 }
 
 .orders-empty-state .ui-card-body {
-    padding: 2rem;
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+}
+
+.orders-empty-state i {
+    width: 64px;
+    height: 64px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 22px;
+    color: var(--app-primary-dark);
+    background: rgba(47, 124, 246, 0.1);
+    font-size: 1.2rem;
 }
 
 .orders-empty-state-actions,
 .orders-modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 .orders-form-grid {
@@ -137,7 +291,6 @@
 }
 
 .orders-form-field {
-    display: grid;
     gap: 0.5rem;
     color: var(--app-text-primary);
 }
@@ -149,7 +302,6 @@
 }
 
 .orders-modal-stack {
-    display: grid;
     gap: 1rem;
 }
 
@@ -157,9 +309,7 @@
 .orders-inline-empty,
 .orders-credit-grid,
 .orders-checkout-summary {
-    border: 1px solid var(--app-border);
     border-radius: 24px;
-    background: rgba(255, 255, 255, 0.84);
 }
 
 .orders-modal-summary-strip {
@@ -174,15 +324,6 @@
 .orders-credit-grid div {
     display: grid;
     gap: 0.25rem;
-}
-
-.orders-modal-summary-strip strong,
-.orders-checkout-summary strong,
-.orders-credit-grid strong,
-.orders-summary-box strong,
-.orders-note-box p,
-.orders-search-result span {
-    color: var(--app-text-primary);
 }
 
 .orders-inline-empty {
@@ -210,13 +351,6 @@
     background: rgba(47, 124, 246, 0.1);
 }
 
-.orders-card-toggle,
-.orders-type-switch {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-
 .orders-card-toggle button,
 .orders-type-option {
     flex: 1 1 180px;
@@ -230,20 +364,19 @@
 }
 
 .orders-card-toggle button.active,
-.orders-type-option.active {
+.orders-type-option.active,
+.orders-customer-suggestion.active {
     border-color: rgba(47, 124, 246, 0.18);
     color: var(--app-primary-dark);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68), 0 12px 26px rgba(47, 124, 246, 0.08);
 }
 
 .orders-type-option {
-    display: grid;
     gap: 0.3rem;
     text-align: left;
 }
 
 .orders-customer-suggestions {
-    display: grid;
     gap: 0.75rem;
 }
 
@@ -260,14 +393,22 @@
     cursor: pointer;
 }
 
-.orders-customer-suggestion.active {
-    border-color: rgba(47, 124, 246, 0.16);
-    color: var(--app-primary-dark);
-}
-
-@media (max-width: 1180px) {
-    .orders-shell {
+@media (max-width: 1100px) {
+    .orders-stage-header,
+    .orders-current-strip {
         grid-template-columns: 1fr;
+    }
+
+    .orders-stage-actions {
+        justify-items: start;
+    }
+
+    .orders-stage-filters {
+        justify-content: flex-start;
+    }
+
+    .orders-stage-meta {
+        text-align: left;
     }
 }
 
@@ -279,16 +420,31 @@
         grid-template-columns: 1fr;
     }
 
-    .orders-stage-header {
-        padding: 1.2rem;
+    .orders-stage-header,
+    .orders-current-strip {
+        padding: 1.1rem;
     }
 }
 
 @media (max-width: 640px) {
+    .orders-stage-filters,
+    .orders-stage-toolbar,
     .orders-empty-state-actions,
     .orders-modal-actions,
     .orders-card-toggle,
     .orders-type-switch {
         flex-direction: column;
+        width: 100%;
+    }
+
+    .orders-filter-pill,
+    .orders-icon-action {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .orders-current-strip-actions {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
