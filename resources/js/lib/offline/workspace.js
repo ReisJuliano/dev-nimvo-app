@@ -1477,9 +1477,14 @@ export function upsertOfflineProduct(tenantId, payload) {
 
     updateState(tenantId, (state) => {
         const productId = payload.id != null ? Number(payload.id) : allocateTempId(state)
+        const currentProduct = state.catalogs.products.find((product) => String(product.id) === String(productId)) || null
         const productRecord = normalizeProductRecord({
+            ...currentProduct,
             ...payload,
             id: productId,
+            stock_quantity: Object.prototype.hasOwnProperty.call(payload, 'stock_quantity')
+                ? payload.stock_quantity
+                : currentProduct?.stock_quantity,
         })
         const exists = state.catalogs.products.some((product) => String(product.id) === String(productId))
 
@@ -1770,7 +1775,6 @@ function buildProductPayloadForSync(product) {
         taxable_unit: product.taxable_unit || product.commercial_unit || product.unit || 'UN',
         cost_price: product.cost_price === '' ? null : Number(product.cost_price || 0),
         sale_price: product.sale_price === '' ? null : Number(product.sale_price || 0),
-        stock_quantity: Number(product.stock_quantity || 0),
         min_stock: Number(product.min_stock || 0),
         ncm: product.ncm || null,
         cfop: product.cfop || null,

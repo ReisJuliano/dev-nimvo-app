@@ -49,7 +49,7 @@ class ProductService
             'unit' => $baseUnit,
             'cost_price' => $data['cost_price'] ?? 0,
             'sale_price' => $data['sale_price'] ?? 0,
-            'stock_quantity' => $data['stock_quantity'] ?? ($product->exists ? $product->stock_quantity : 0),
+            'stock_quantity' => $product->exists ? $product->stock_quantity : 0,
             'min_stock' => $data['min_stock'] ?? 0,
             'active' => array_key_exists('active', $data)
                 ? (bool) $data['active']

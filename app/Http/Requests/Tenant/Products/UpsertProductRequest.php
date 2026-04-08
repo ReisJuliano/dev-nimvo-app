@@ -41,7 +41,6 @@ class UpsertProductRequest extends FormRequest
             'taxable_unit' => ['nullable', 'string', 'max:10'],
             'cost_price' => ['required', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
-            'stock_quantity' => ['nullable', 'numeric', 'min:0'],
             'min_stock' => ['nullable', 'numeric', 'min:0'],
             'icms_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'pis_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
