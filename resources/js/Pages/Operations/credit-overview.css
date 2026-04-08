@@ -7,11 +7,11 @@
 .credit-header-card,
 .credit-metric-card,
 .credit-panel,
-.credit-summary-pill,
 .credit-focus-card,
-.credit-highlight-card {
+.credit-highlight-card,
+.credit-modal {
     border: 1px solid rgba(148, 163, 184, 0.16);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.92);
     border-radius: 24px;
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
 }
@@ -61,7 +61,16 @@
     color: var(--app-text-primary);
 }
 
-.credit-header-title span {
+.credit-header-title span,
+.credit-panel-header > div > span,
+.credit-metric-card small,
+.credit-customer-copy span,
+.credit-result-metrics span,
+.credit-focus-card span,
+.credit-highlight-card span,
+.credit-activity-item span,
+.credit-results-meta,
+.credit-modal-heading span {
     color: var(--app-text-secondary);
 }
 
@@ -95,32 +104,79 @@
     border-color: rgba(47, 124, 246, 0.16);
 }
 
-.credit-toolbar {
+.credit-toolbar.compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.credit-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    min-height: 56px;
+    padding: 0 0.8rem 0 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.credit-search-bar i {
+    color: var(--app-text-muted);
+}
+
+.credit-search-bar input {
+    flex: 1;
+    min-height: auto;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: var(--app-text-primary);
+}
+
+.credit-search-bar input:focus {
+    outline: none;
+}
+
+.credit-filter-row {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 0.85rem;
     align-items: end;
 }
 
+.credit-filter-chips {
+    grid-column: span 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.credit-date-row {
+    grid-column: span 4;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
 .credit-field {
     display: flex;
     flex-direction: column;
     gap: 0.45rem;
-    grid-column: span 2;
 }
 
 .credit-field span,
-.credit-summary-pill span,
+.credit-metric-top span,
+.credit-result-metrics span,
 .credit-focus-card span,
 .credit-highlight-card span,
-.credit-activity-item span,
-.credit-customer-copy span,
-.credit-focus-copy span,
-.credit-metric-top span {
+.credit-focus-progress-copy span {
     color: var(--app-text-muted);
 }
 
-.credit-field span {
+.credit-field span,
+.credit-metric-top span {
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.1em;
@@ -128,7 +184,6 @@
 }
 
 .credit-field input,
-.credit-search-field input,
 .credit-submit-button,
 .credit-icon-button {
     min-height: 46px;
@@ -137,15 +192,14 @@
     font: inherit;
 }
 
-.credit-field input,
-.credit-search-field input {
+.credit-field input {
     padding: 0.75rem 0.9rem;
     background: #fff;
     color: var(--app-text-primary);
 }
 
 .credit-quick-actions {
-    grid-column: span 5;
+    grid-column: span 2;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -164,7 +218,7 @@
 }
 
 .credit-toolbar-actions {
-    grid-column: span 3;
+    grid-column: span 1;
     display: flex;
     justify-content: flex-end;
     gap: 0.6rem;
@@ -202,18 +256,15 @@
 }
 
 .credit-submit-button:hover,
-.credit-icon-button:hover {
+.credit-icon-button:hover,
+.credit-result-card:hover {
     transform: translateY(-1px);
 }
 
-.credit-metric-grid,
-.credit-main-grid {
-    display: grid;
-    gap: 1rem;
-}
-
 .credit-metric-grid {
+    display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 1rem;
 }
 
 .credit-metric-card {
@@ -249,13 +300,6 @@
     gap: 1rem;
 }
 
-.credit-metric-top span {
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
 .credit-metric-top i {
     width: 40px;
     height: 40px;
@@ -274,30 +318,11 @@
     letter-spacing: -0.04em;
 }
 
-.credit-metric-card small {
-    display: block;
-    margin-top: 0.15rem;
-    color: var(--app-text-secondary);
-}
-
-.credit-main-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    align-items: start;
-}
-
 .credit-panel {
     padding: 1rem;
 }
 
-.credit-portfolio-panel {
-    grid-column: span 7;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.credit-focus-panel {
-    grid-column: span 5;
+.credit-results-panel {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -310,93 +335,28 @@
     gap: 1rem;
 }
 
-.credit-panel-header h2 {
+.credit-panel-header h2,
+.credit-modal-heading h2 {
     margin: 0;
     color: var(--app-text-primary);
-    font-size: 1.02rem;
 }
 
-.credit-panel-header > div {
+.credit-results-grid,
+.credit-modal-grid {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.credit-results-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.credit-result-card {
     display: flex;
     flex-direction: column;
-    gap: 0.18rem;
-}
-
-.credit-panel-header > div > span {
-    color: var(--app-text-secondary);
-}
-
-.credit-search-field {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    width: min(100%, 280px);
-    padding: 0 0.6rem 0 0.8rem;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: 18px;
-    background: rgba(248, 250, 252, 0.9);
-}
-
-.credit-search-field i {
-    color: var(--app-text-muted);
-}
-
-.credit-search-field input {
-    flex: 1;
-    min-height: auto;
-    border: 0;
-    padding: 0;
-    background: transparent;
-}
-
-.credit-search-field input:focus {
-    outline: none;
-}
-
-.credit-summary-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-
-.credit-summary-pill {
-    display: flex;
-    flex-direction: column;
-    gap: 0.22rem;
-    min-width: 132px;
-    padding: 0.85rem 0.9rem;
-}
-
-.credit-summary-pill strong,
-.credit-focus-card strong,
-.credit-highlight-card strong,
-.credit-activity-value strong,
-.credit-customer-balance strong,
-.credit-focus-copy strong {
-    color: var(--app-text-primary);
-}
-
-.credit-summary-pill.warning {
-    background: rgba(255, 251, 235, 0.92);
-}
-
-.credit-summary-pill.muted {
-    background: rgba(248, 250, 252, 0.92);
-}
-
-.credit-customer-list,
-.credit-activity-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.credit-customer-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
+    gap: 1rem;
     width: 100%;
-    padding: 0.9rem;
+    padding: 1rem;
     border: 1px solid rgba(148, 163, 184, 0.16);
     border-radius: 22px;
     background: rgba(248, 250, 252, 0.72);
@@ -405,16 +365,16 @@
     transition: var(--app-transition);
 }
 
-.credit-customer-card:hover,
-.credit-customer-card.active {
+.credit-result-card:hover {
     border-color: rgba(47, 124, 246, 0.24);
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
 .credit-customer-top,
-.credit-customer-meta,
-.credit-focus-hero,
+.credit-modal-heading,
+.credit-modal-header,
+.credit-modal-header-actions,
 .credit-activity-item {
     display: flex;
     align-items: center;
@@ -422,12 +382,11 @@
 }
 
 .credit-customer-copy,
-.credit-focus-copy,
-.credit-activity-copy {
+.credit-activity-copy,
+.credit-modal-heading > div {
     display: flex;
     flex-direction: column;
     gap: 0.16rem;
-    min-width: 0;
 }
 
 .credit-customer-copy {
@@ -435,21 +394,27 @@
 }
 
 .credit-customer-copy strong,
-.credit-activity-copy strong {
+.credit-result-metrics strong,
+.credit-focus-card strong,
+.credit-highlight-card strong,
+.credit-activity-copy strong,
+.credit-activity-value strong,
+.credit-focus-progress-copy strong {
     color: var(--app-text-primary);
 }
 
-.credit-customer-balance,
-.credit-activity-value {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.16rem;
-    margin-left: auto;
+.credit-result-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
 }
 
-.credit-customer-meta {
-    flex-wrap: wrap;
+.credit-result-metrics > div,
+.credit-focus-card,
+.credit-highlight-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
 }
 
 .credit-avatar {
@@ -558,54 +523,102 @@
     width: 100%;
 }
 
-.credit-focus-hero {
-    padding: 1rem;
-    border-radius: 22px;
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 30%),
-        rgba(248, 250, 252, 0.82);
-}
-
-.credit-focus-grid {
+.credit-empty-state {
+    min-height: 220px;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    place-items: center;
+    gap: 0.5rem;
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    color: var(--app-text-muted);
+    text-align: center;
 }
 
-.credit-focus-card,
-.credit-highlight-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.22rem;
-    padding: 0.85rem 0.9rem;
+.credit-empty-state.small {
+    min-height: 140px;
 }
 
-.credit-focus-progress {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+.credit-empty-state.search {
+    min-height: 280px;
 }
 
-.credit-focus-progress-copy {
+.credit-empty-state i {
+    font-size: 1.4rem;
+}
+
+.credit-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(6px);
+}
+
+.credit-modal {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 2.5rem);
+    overflow: auto;
+    padding: 1.1rem;
+}
+
+.credit-modal-header {
     justify-content: space-between;
-    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.84);
 }
 
-.credit-focus-progress-copy strong,
-.credit-activity-meta strong {
-    color: var(--app-text-primary);
+.credit-modal-header-actions {
+    margin-left: auto;
 }
 
-.credit-activity-panel {
+.credit-modal-body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding-top: 1rem;
+}
+
+.credit-modal-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.credit-modal-grid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.credit-modal-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.credit-focus-progress-copy,
+.credit-activity-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.16rem;
+    margin-left: auto;
+}
+
+.credit-modal-history {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.credit-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .credit-activity-item {
-    padding: 0.95rem 0;
+    padding: 0.9rem 0;
     border-top: 1px solid rgba(226, 232, 240, 0.84);
 }
 
@@ -619,39 +632,12 @@
     align-items: flex-end;
 }
 
-.credit-activity-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--app-text-secondary);
-}
-
-.credit-empty-state {
-    min-height: 200px;
-    display: grid;
-    place-items: center;
-    gap: 0.5rem;
-    border: 1px dashed rgba(148, 163, 184, 0.28);
-    border-radius: 22px;
-    color: var(--app-text-muted);
-    text-align: center;
-}
-
-.credit-empty-state.tall {
-    min-height: 340px;
-}
-
-.credit-empty-state i {
-    font-size: 1.4rem;
-}
-
 @media (max-width: 1200px) {
-    .credit-field,
+    .credit-filter-chips,
+    .credit-date-row,
     .credit-quick-actions,
     .credit-toolbar-actions,
-    .credit-metric-card,
-    .credit-portfolio-panel,
-    .credit-focus-panel {
+    .credit-metric-card {
         grid-column: span 12;
     }
 
@@ -664,32 +650,31 @@
     .credit-header-row,
     .credit-panel-header,
     .credit-customer-top,
-    .credit-focus-hero,
+    .credit-modal-header,
+    .credit-modal-heading,
     .credit-activity-item {
         flex-direction: column;
         align-items: flex-start;
     }
 
     .credit-header-pills,
-    .credit-customer-balance,
     .credit-activity-copy.compact,
-    .credit-activity-value {
+    .credit-activity-value,
+    .credit-focus-progress-copy,
+    .credit-modal-header-actions {
         align-items: flex-start;
         justify-content: flex-start;
         margin-left: 0;
     }
 
-    .credit-search-field {
-        width: 100%;
-    }
-
-    .credit-focus-grid {
+    .credit-result-metrics,
+    .credit-modal-grid,
+    .credit-modal-grid.compact,
+    .credit-date-row {
         grid-template-columns: 1fr;
     }
 
-    .credit-summary-row,
-    .credit-quick-actions,
-    .credit-toolbar-actions {
-        width: 100%;
+    .credit-modal {
+        padding: 0.9rem;
     }
 }
