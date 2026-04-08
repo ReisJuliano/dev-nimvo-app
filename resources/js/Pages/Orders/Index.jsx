@@ -131,6 +131,7 @@ export default function OrdersIndex({
     const newDraftCustomerInputRef = useRef(null)
     const quantityInputRef = useRef(null)
     const lastSavedSignatureRef = useRef(initialDraftState ? JSON.stringify(buildDraftPayload(initialDraftState)) : null)
+    const deletedDraftIdsRef = useRef(new Set())
 
     useEffect(() => {
         if (!tenantId) {
@@ -447,6 +448,20 @@ export default function OrdersIndex({
         setFeedback({ type, text })
     }
 
+    function isDraftMarkedDeleted(draftId) {
+        return draftId != null && deletedDraftIdsRef.current.has(String(draftId))
+    }
+
+    function markDraftDeleted(draftId) {
+        if (draftId == null) return
+        deletedDraftIdsRef.current.add(String(draftId))
+    }
+
+    function clearDraftDeletedMark(draftId) {
+        if (draftId == null) return
+        deletedDraftIdsRef.current.delete(String(draftId))
+    }
+
     function updateDraftUrl(draftId) {
         window.history.replaceState({}, '', draftId ? `/pedidos?draft=${draftId}` : '/pedidos')
     }
@@ -562,7 +577,7 @@ export default function OrdersIndex({
     }
 
     async function saveDraftNow(nextDraft) {
-        if (!nextDraft?.id) return
+        if (!nextDraft?.id || isDraftMarkedDeleted(nextDraft.id)) return
         const payload = buildDraftPayload(nextDraft)
         const payloadSignature = JSON.stringify(payload)
         if (payloadSignature === lastSavedSignatureRef.current) return
@@ -572,7 +587,9 @@ export default function OrdersIndex({
 
         try {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                if (isDraftMarkedDeleted(nextDraft.id)) return
                 const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                if (isDraftMarkedDeleted(nextDraft.id)) return
                 lastSavedSignatureRef.current = payloadSignature
                 setCurrentDraft((current) => (
                     current && Number(current.id) === Number(nextDraft.id)
@@ -587,6 +604,9 @@ export default function OrdersIndex({
                 method: 'put',
                 data: buildResolvedDraftPayload(nextDraft),
             })
+            if (isDraftMarkedDeleted(nextDraft.id) || isDraftMarkedDeleted(response.order.id)) {
+                return
+            }
             lastSavedSignatureRef.current = payloadSignature
             setCurrentDraft((current) => (
                 current && Number(current.id) === Number(response.order.id)
@@ -597,7 +617,9 @@ export default function OrdersIndex({
             upsertOrderInWorkspace(response.order)
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
+                if (isDraftMarkedDeleted(nextDraft.id)) return
                 const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                if (isDraftMarkedDeleted(nextDraft.id)) return
                 lastSavedSignatureRef.current = payloadSignature
                 setCurrentDraft((current) => (
                     current && Number(current.id) === Number(nextDraft.id)
@@ -616,7 +638,7 @@ export default function OrdersIndex({
     }
 
     function scheduleDraftSave(nextDraft) {
-        if (!nextDraft?.id) return
+        if (!nextDraft?.id || isDraftMarkedDeleted(nextDraft.id)) return
         const payload = buildDraftPayload(nextDraft)
         const payloadSignature = JSON.stringify(payload)
         if (payloadSignature === lastSavedSignatureRef.current) return
@@ -625,8 +647,10 @@ export default function OrdersIndex({
         setSavingDraft(true)
         saveTimeoutRef.current = setTimeout(async () => {
             try {
+                if (isDraftMarkedDeleted(nextDraft.id)) return
                 if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                     const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                    if (isDraftMarkedDeleted(nextDraft.id)) return
                     lastSavedSignatureRef.current = payloadSignature
                     setCurrentDraft((current) => (
                         current && Number(current.id) === Number(nextDraft.id)
@@ -641,6 +665,9 @@ export default function OrdersIndex({
                     method: 'put',
                     data: buildResolvedDraftPayload(nextDraft),
                 })
+                if (isDraftMarkedDeleted(nextDraft.id) || isDraftMarkedDeleted(response.order.id)) {
+                    return
+                }
                 lastSavedSignatureRef.current = payloadSignature
                 setCurrentDraft((current) => (
                     current && Number(current.id) === Number(response.order.id)
@@ -651,7 +678,9 @@ export default function OrdersIndex({
                 upsertOrderInWorkspace(response.order)
             } catch (error) {
                 if (tenantId && isNetworkApiError(error)) {
+                    if (isDraftMarkedDeleted(nextDraft.id)) return
                     const offlineOrder = saveOfflineOrderDraft(tenantId, nextDraft, { userName: auth?.user?.name })
+                    if (isDraftMarkedDeleted(nextDraft.id)) return
                     lastSavedSignatureRef.current = payloadSignature
                     setCurrentDraft((current) => (
                         current && Number(current.id) === Number(nextDraft.id)
@@ -964,6 +993,7 @@ export default function OrdersIndex({
         const draftId = Number(currentDraft.id)
         setDeletingDraft(true)
         setFeedback(null)
+        markDraftDeleted(draftId)
 
         try {
             clearTimeout(saveTimeoutRef.current)
@@ -1008,6 +1038,7 @@ export default function OrdersIndex({
                 resetCheckoutState('')
                 showFeedback('warning', 'Atendimento removido no modo offline.')
             } else {
+                clearDraftDeletedMark(draftId)
                 showFeedback('error', error.message)
             }
         } finally {
