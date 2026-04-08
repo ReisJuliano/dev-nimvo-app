@@ -481,7 +481,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     const emptyForm = {
         product_id: '',
         counted_quantity: '',
-        reason: 'Ajuste manual de saldo',
+        reason: 'Ajuste manual de estoque',
         notes: '',
     }
 
@@ -620,11 +620,11 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                             <div className="ops-stock-focus-card span-2">
                                 <div><small>Produto</small><strong>{selectedProduct.name}</strong></div>
                                 <div><small>Codigo</small><strong>{formatProductScanCode(selectedProduct)}</strong></div>
-                                <div><small>Saldo atual</small><strong>{formatNumber(selectedProduct.stock_quantity || 0)}</strong></div>
+                                <div><small>Estoque atual</small><strong>{formatNumber(selectedProduct.stock_quantity || 0)}</strong></div>
                             </div>
 
                             <label>
-                                <FieldLabel icon="fa-scale-balanced" text="Novo saldo" />
+                                <FieldLabel icon="fa-scale-balanced" text="Novo estoque" />
                                 <input type="number" min="0" step="0.001" value={form.counted_quantity} onChange={(event) => setForm((current) => ({ ...current, counted_quantity: event.target.value }))} />
                             </label>
                             <label>

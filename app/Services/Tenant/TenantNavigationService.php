@@ -103,7 +103,7 @@ class TenantNavigationService
                     ],
                     [
                         'href' => '/movimentacao-estoque',
-                        'label' => 'Ajuste saldo',
+                        'label' => 'Ajuste estoque',
                         'icon' => 'fa-arrows-rotate',
                         'access_key' => 'movimentacao_estoque',
                         'request_patterns' => ['movimentacao-estoque', 'ajuste-estoque'],

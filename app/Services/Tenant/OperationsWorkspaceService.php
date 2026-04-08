@@ -96,7 +96,7 @@ class OperationsWorkspaceService
             'movimentacao-estoque' => [
                 'moduleKey' => 'movimentacao-estoque',
                 'moduleTitle' => 'Movimentacao de estoque',
-                'moduleDescription' => 'Bipe o produto, confira o saldo atual e ajuste a quantidade final com confirmacao.',
+                'moduleDescription' => 'Bipe o produto, confira o estoque atual e ajuste a quantidade final com confirmacao.',
                 'payload' => $this->stockMovementsPayload(),
             ],
             'usuarios' => [
@@ -118,7 +118,7 @@ class OperationsWorkspaceService
             'delivery' => ['message' => 'Entrega salva com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder(null, $input))],
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
-            'movimentacao-estoque' => ['message' => 'Saldo atualizado com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockLevelUpdate($input, $userId))],
+            'movimentacao-estoque' => ['message' => 'Estoque atualizado com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockLevelUpdate($input, $userId))],
             'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
             default => abort(404),
         };
@@ -529,7 +529,7 @@ class OperationsWorkspaceService
 
         if (abs($delta) <= 0.0001) {
             throw ValidationException::withMessages([
-                'counted_quantity' => 'Informe um saldo diferente do estoque atual para registrar a movimentacao.',
+                'counted_quantity' => 'Informe uma quantidade de estoque diferente do estoque atual para registrar a movimentacao.',
             ]);
         }
 
@@ -541,7 +541,7 @@ class OperationsWorkspaceService
                 'user_id' => $userId,
                 'unit_cost' => round((float) $product->cost_price, 2),
                 'notes' => $this->encodeMovementNotes('stock_adjustment', [
-                    'reason' => $validated['reason'] ?? 'Ajuste manual de saldo',
+                    'reason' => $validated['reason'] ?? 'Ajuste manual de estoque',
                     'expected_quantity' => $expected,
                     'counted_quantity' => $counted,
                     'adjustment_delta' => $delta,
@@ -1001,7 +1001,7 @@ class OperationsWorkspaceService
     {
         return match ($type) {
             'manual_inbound' => 'Entrada manual',
-            'manual_adjustment' => 'Ajuste de saldo',
+            'manual_adjustment' => 'Ajuste de estoque',
             'stock_conference' => 'Conferencia de estoque',
             'stock_transfer' => 'Movimentacao entre locais',
             default => $type,
