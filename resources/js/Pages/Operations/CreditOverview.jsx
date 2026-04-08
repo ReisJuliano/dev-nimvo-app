@@ -4,13 +4,6 @@ import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import './credit-overview.css'
 
-const metricIcons = {
-    'Clientes ativos': 'fa-users',
-    'Em aberto': 'fa-wallet',
-    Disponivel: 'fa-circle-dollar-to-slot',
-    'Uso da carteira': 'fa-chart-pie',
-}
-
 const quickRanges = [
     { key: 'today', label: 'Hoje', days: 0 },
     { key: 'week', label: '7d', days: 6 },
@@ -34,22 +27,6 @@ function buildFilterPayload(filters, overrides = {}) {
             ...overrides,
         }).filter(([, value]) => value != null && value !== ''),
     )
-}
-
-function formatMetricValue(metric) {
-    if (metric?.format === 'money') {
-        return formatMoney(metric.value)
-    }
-
-    if (metric?.format === 'percent') {
-        return formatPercent(metric.value)
-    }
-
-    if (metric?.format === 'text') {
-        return metric?.value || '-'
-    }
-
-    return formatNumber(metric?.value || 0)
 }
 
 function formatInputDate(value) {
@@ -123,19 +100,6 @@ function matchesCustomerFilter(customer, activeFilter) {
     }
 
     return true
-}
-
-function CreditMetricCard({ metric, index }) {
-    return (
-        <article className={`credit-metric-card tone-${(index % 4) + 1}`}>
-            <div className="credit-metric-top">
-                <span>{metric.label}</span>
-                <i className={`fa-solid ${metricIcons[metric.label] || 'fa-chart-line'}`} />
-            </div>
-            <strong>{formatMetricValue(metric)}</strong>
-            {metric.caption ? <small>{metric.caption}</small> : null}
-        </article>
-    )
 }
 
 function CreditCustomerModal({ customer, sales, onClose }) {
@@ -264,7 +228,6 @@ export default function CreditOverview({ module }) {
         })
     }, [module.portfolio])
     const recentSales = Array.isArray(module.recent_sales) ? module.recent_sales : []
-    const summary = module.portfolio_summary || {}
     const [search, setSearch] = useState('')
     const [activeFilter, setActiveFilter] = useState('all')
     const [activeCustomerId, setActiveCustomerId] = useState(null)
@@ -355,16 +318,11 @@ export default function CreditOverview({ module }) {
                 <section className="credit-header-card">
                     <div className="credit-header-copy">
                         <span className="credit-kicker">Carteira</span>
-                        <div className="credit-header-row">
-                            <div className="credit-header-title">
-                                <h1>{module.title}</h1>
+                        <div className="credit-header-title">
+                            <h1>{module.title}</h1>
+                            {typeof module.description === 'string' && module.description.trim() ? (
                                 <span>{module.description}</span>
-                            </div>
-
-                            <div className="credit-header-pills">
-                                <span className="credit-pill">{formatNumber(customers.length)} clientes</span>
-                                <span className="credit-pill accent">{formatMoney(summary.total_limit || 0)} limite</span>
-                            </div>
+                            ) : null}
                         </div>
                     </div>
 
@@ -439,17 +397,11 @@ export default function CreditOverview({ module }) {
                                 </button>
                                 <button type="submit" className="credit-submit-button">
                                     <i className="fa-solid fa-arrow-up-right-from-square" />
-                                    <span>Aplicar</span>
+                                    <span>Filtrar</span>
                                 </button>
                             </div>
                         </div>
                     </form>
-                </section>
-
-                <section className="credit-metric-grid">
-                    {(module.metrics || []).map((metric, index) => (
-                        <CreditMetricCard key={metric.label} metric={metric} index={index} />
-                    ))}
                 </section>
 
                 <section className="credit-panel credit-results-panel">

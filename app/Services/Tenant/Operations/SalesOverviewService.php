@@ -293,10 +293,8 @@ class SalesOverviewService
             ->values();
 
         $totalLimit = (float) $customers->sum('credit_limit');
-        $totalOpen = (float) $customers->sum('open_credit');
         $customersWithBalance = $customers->filter(fn (array $customer) => $customer['open_credit'] > 0.009);
         $largestExposure = $customers->sortByDesc('open_credit')->first();
-        $portfolioUsage = $totalLimit > 0 ? round(($totalOpen / $totalLimit) * 100, 1) : 0;
         $recentSales = $creditSales
             ->map(fn (Sale $sale) => [
                 'id' => $sale->id,
@@ -314,13 +312,8 @@ class SalesOverviewService
 
         $page = $this->page(
             'A Prazo',
-            'Carteira a prazo com foco em saldo, limite e ultimos lancamentos.',
-            [
-                $this->metric('Clientes ativos', $customers->count(), 'number', 'Com limite ou saldo'),
-                $this->metric('Em aberto', $totalOpen, 'money', 'Saldo atual da carteira'),
-                $this->metric('Disponivel', $customers->sum('available_credit'), 'money', 'Espaco livre para novas vendas'),
-                $this->metric('Uso da carteira', $portfolioUsage, 'percent', 'Relacao entre saldo e limite total'),
-            ],
+            '',
+            [],
             [],
             [
                 $this->table('Clientes', [
