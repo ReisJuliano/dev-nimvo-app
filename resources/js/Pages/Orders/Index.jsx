@@ -94,6 +94,7 @@ export default function OrdersIndex({
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
     const [submittingDelivery, setSubmittingDelivery] = useState(false)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [sidebarHovered, setSidebarHovered] = useState(false)
     const [listFilter, setListFilter] = useState(initialDraft?.status === 'sent_to_cashier' ? 'sent_to_cashier' : 'draft')
     const [draftModalOpen, setDraftModalOpen] = useState(false)
     const [productsModalOpen, setProductsModalOpen] = useState(false)
@@ -436,6 +437,7 @@ export default function OrdersIndex({
         moduleState.isCapabilityEnabled('relatorios')
         || moduleState.isCapabilityEnabled('vendas')
         || moduleState.isCapabilityEnabled('demanda')
+    const isSidebarVisuallyCollapsed = sidebarCollapsed && !sidebarHovered
 
     function showFeedback(type, text) {
         setFeedback({ type, text })
@@ -1287,10 +1289,14 @@ export default function OrdersIndex({
                     </div>
                 ) : null}
 
-                <div className={`orders-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-                    <aside className={`orders-tools ${sidebarCollapsed ? 'collapsed' : ''}`}>
+                <div className={`orders-shell ${isSidebarVisuallyCollapsed ? 'sidebar-collapsed' : ''}`}>
+                    <aside
+                        className={`orders-tools ${isSidebarVisuallyCollapsed ? 'collapsed' : ''}`}
+                        onMouseEnter={() => setSidebarHovered(true)}
+                        onMouseLeave={() => setSidebarHovered(false)}
+                    >
                         <div className="orders-tools-head">
-                            {!sidebarCollapsed ? (
+                            {!isSidebarVisuallyCollapsed ? (
                                 <div>
                                     <strong>Atendimentos</strong>
                                 </div>
@@ -1298,7 +1304,11 @@ export default function OrdersIndex({
                             <button
                                 type="button"
                                 className="orders-tools-toggle ui-tooltip"
-                                data-tooltip={sidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+                                data-tooltip={
+                                    sidebarCollapsed
+                                        ? (sidebarHovered ? 'Fixar aberta' : 'Expandir sidebar')
+                                        : 'Recolher sidebar'
+                                }
                                 onClick={() => setSidebarCollapsed((current) => !current)}
                             >
                                 <i className={`fa-solid ${sidebarCollapsed ? 'fa-angles-right' : 'fa-angles-left'}`} />
@@ -1311,7 +1321,7 @@ export default function OrdersIndex({
                                 label="Novo atendimento"
                                 hint="Abrir cadastro rapido"
                                 active={newDraftModalOpen}
-                                collapsed={sidebarCollapsed}
+                                collapsed={isSidebarVisuallyCollapsed}
                                 tone="primary"
                                 onClick={() => {
                                     setNewDraftForm(getInitialNewDraftForm())
@@ -1323,7 +1333,7 @@ export default function OrdersIndex({
                                 label="Pesquisar atendimento"
                                 hint="Buscar entre as ativas"
                                 active={searchModalOpen}
-                                collapsed={sidebarCollapsed}
+                                collapsed={isSidebarVisuallyCollapsed}
                                 tone="neutral"
                                 onClick={() => setSearchModalOpen(true)}
                             />
@@ -1332,7 +1342,7 @@ export default function OrdersIndex({
                                 label="Abertos"
                                 hint={`${draftOnlyCount} em atendimento`}
                                 active={listFilter === 'draft'}
-                                collapsed={sidebarCollapsed}
+                                collapsed={isSidebarVisuallyCollapsed}
                                 tone="success"
                                 onClick={() => setListFilter('draft')}
                             />
@@ -1341,7 +1351,7 @@ export default function OrdersIndex({
                                 label="Prontos"
                                 hint={`${cashierCount} no caixa`}
                                 active={listFilter === 'sent_to_cashier'}
-                                collapsed={sidebarCollapsed}
+                                collapsed={isSidebarVisuallyCollapsed}
                                 tone="warning"
                                 onClick={() => setListFilter('sent_to_cashier')}
                             />
@@ -1350,14 +1360,14 @@ export default function OrdersIndex({
                                     icon="fa-chart-line"
                                     label="Relatorios"
                                     hint="Abrir painel analitico"
-                                    collapsed={sidebarCollapsed}
+                                    collapsed={isSidebarVisuallyCollapsed}
                                     tone="info"
                                     onClick={() => handleSidebarNavigate('/relatorios')}
                                 />
                             ) : null}
                         </div>
 
-                        {!sidebarCollapsed ? (
+                        {!isSidebarVisuallyCollapsed ? (
                             <div className="orders-tools-foot">
                                 <div className="orders-tools-foot-card">
                                     <span>Salvamento</span>

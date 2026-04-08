@@ -12,6 +12,7 @@
         linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 245, 252, 0.92));
     box-shadow: 0 22px 52px rgba(15, 23, 42, 0.08);
     backdrop-filter: blur(18px);
+    transition: var(--app-transition);
 }
 
 .orders-tools.collapsed {
