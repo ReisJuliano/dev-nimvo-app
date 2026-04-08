@@ -1426,11 +1426,11 @@ export default function OrdersIndex({
                                     <i className="fa-solid fa-receipt" />
                                     <h2>Sem pedidos</h2>
                                     <div className="orders-empty-state-actions">
-                                        <button type="button" className="ui-button" onClick={() => setNewDraftModalOpen(true)}>
+                                        <button type="button" className="ui-button orders-empty-action orders-empty-action-primary" onClick={() => setNewDraftModalOpen(true)}>
                                             <i className="fa-solid fa-plus" />
                                             Novo
                                         </button>
-                                        <button type="button" className="ui-button-ghost" onClick={() => setSearchModalOpen(true)}>
+                                        <button type="button" className="ui-button-ghost orders-empty-action" onClick={() => setSearchModalOpen(true)}>
                                             <i className="fa-solid fa-magnifying-glass" />
                                             Buscar
                                         </button>

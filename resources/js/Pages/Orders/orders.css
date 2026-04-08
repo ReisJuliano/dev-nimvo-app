@@ -250,6 +250,30 @@
     justify-content: center;
 }
 
+.orders-empty-action {
+    min-height: 40px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 14px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+.orders-empty-action i {
+    font-size: 0.85rem;
+}
+
+.orders-empty-action-primary {
+    border-color: rgba(74, 222, 128, 0.28);
+    background: linear-gradient(180deg, #ecfdf3, #dcfce7);
+    color: #166534;
+    box-shadow: 0 10px 22px rgba(74, 222, 128, 0.14);
+}
+
+.orders-empty-action-primary:hover {
+    box-shadow: 0 12px 24px rgba(74, 222, 128, 0.18);
+}
+
 .orders-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
