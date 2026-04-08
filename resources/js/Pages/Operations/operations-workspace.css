@@ -1243,6 +1243,48 @@
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.ops-product-search {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.ops-product-search label {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.ops-inline-search-results {
+    display: grid;
+    gap: 0.5rem;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.ops-inline-search-result,
+.ops-inline-search-empty {
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(27, 71, 96, 0.14);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.ops-inline-search-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: left;
+}
+
+.ops-inline-search-result.active {
+    border-color: rgba(20, 77, 101, 0.35);
+    background: rgba(20, 77, 101, 0.08);
+}
+
+.ops-inline-search-result span,
+.ops-inline-search-empty {
+    color: #64748b;
+}
+
 .ops-inline-product-meta {
     display: grid;
     gap: 0.15rem;

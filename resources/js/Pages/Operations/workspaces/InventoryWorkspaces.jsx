@@ -52,6 +52,22 @@ function findProductByScan(products, value) {
     )) || null
 }
 
+function filterProductsByQuery(products, value, limit = 8) {
+    const normalizedValue = String(value || '').trim().toLowerCase()
+
+    if (!normalizedValue) {
+        return []
+    }
+
+    return products
+        .filter((product) => (
+            String(product.name || '').toLowerCase().includes(normalizedValue)
+            || String(product.code || '').toLowerCase().includes(normalizedValue)
+            || String(product.barcode || '').toLowerCase().includes(normalizedValue)
+        ))
+        .slice(0, limit)
+}
+
 function sumItems(items) {
     return items.reduce((total, item) => total + (parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0)), 0)
 }
@@ -489,7 +505,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     const [products, setProducts] = useState(payload.products || [])
     const [form, setForm] = useState(emptyForm)
     const [scanCode, setScanCode] = useState('')
-    const [manualProductId, setManualProductId] = useState('')
+    const [productSearch, setProductSearch] = useState('')
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const scanInputRef = useRef(null)
@@ -497,6 +513,10 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     const selectedProduct = useMemo(
         () => products.find((product) => String(product.id) === String(form.product_id)) || null,
         [products, form.product_id],
+    )
+    const searchResults = useMemo(
+        () => filterProductsByQuery(products, productSearch),
+        [products, productSearch],
     )
 
     const targetStock = parseNumber(form.counted_quantity, Number(selectedProduct?.stock_quantity || 0))
@@ -509,7 +529,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
             counted_quantity: String(product.stock_quantity || 0),
         }))
         setScanCode('')
-        setManualProductId('')
+        setProductSearch('')
     }
 
     function handleScanSubmit(event) {
@@ -525,15 +545,19 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         selectProduct(product)
     }
 
-    function handleManualSelect() {
-        const product = products.find((entry) => String(entry.id) === String(manualProductId))
-
-        if (!product) {
-            setFeedback({ type: 'error', text: 'Selecione um produto para continuar.' })
+    function handleProductSearchKeyDown(event) {
+        if (event.key !== 'Enter') {
             return
         }
 
-        selectProduct(product)
+        event.preventDefault()
+
+        if (!searchResults.length) {
+            setFeedback({ type: 'error', text: 'Nenhum produto encontrado para a busca informada.' })
+            return
+        }
+
+        selectProduct(searchResults[0])
     }
 
     async function handleSubmit(event) {
@@ -572,7 +596,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
             setProducts((current) => updateStockInProducts(current, response.record.product_id, response.record.stock_after))
             setForm(emptyForm)
             setScanCode('')
-            setManualProductId('')
+            setProductSearch('')
             scanInputRef.current?.focus()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
@@ -597,18 +621,37 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                             </label>
                         </form>
 
-                        <div className="ops-workspace-inline-adder compact">
-                            <select value={manualProductId} onChange={(event) => setManualProductId(event.target.value)}>
-                                <option value="">Selecionar produto</option>
-                                {products.map((product) => (
-                                    <option key={product.id} value={product.id}>
-                                        {getProductOptionLabel(product)}
-                                    </option>
-                                ))}
-                            </select>
-                            <button type="button" className="ui-button-ghost" onClick={handleManualSelect}>
-                                <i className="fa-solid fa-arrow-right" />
-                            </button>
+                        <div className="ops-workspace-inline-adder compact ops-product-search">
+                            <label>
+                                <FieldLabel icon="fa-magnifying-glass" text="Buscar produto" />
+                                <input
+                                    type="search"
+                                    value={productSearch}
+                                    onChange={(event) => setProductSearch(event.target.value)}
+                                    onKeyDown={handleProductSearchKeyDown}
+                                    placeholder="Digite nome, codigo ou EAN"
+                                    autoComplete="off"
+                                />
+                            </label>
+
+                            {productSearch.trim() ? (
+                                <div className="ops-inline-search-results">
+                                    {searchResults.length ? searchResults.map((product) => (
+                                        <button
+                                            key={product.id}
+                                            type="button"
+                                            className={`ops-inline-search-result ${String(selectedProduct?.id || '') === String(product.id) ? 'active' : ''}`}
+                                            onClick={() => selectProduct(product)}
+                                        >
+                                            <div className="ops-inline-product-meta">
+                                                <strong>{product.name}</strong>
+                                                <small>{getProductOptionLabel(product)}</small>
+                                            </div>
+                                            <span>{product.barcode || product.code || '-'}</span>
+                                        </button>
+                                    )) : <div className="ops-inline-search-empty">Nenhum produto encontrado.</div>}
+                                </div>
+                            ) : null}
                         </div>
                     </div>
 
@@ -640,7 +683,11 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                             </label>
 
                             <div className="ops-workspace-actions span-2">
-                                <button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>
+                                <button type="button" className="ui-button-ghost" onClick={() => {
+                                    setForm(emptyForm)
+                                    setProductSearch('')
+                                    setScanCode('')
+                                }}>
                                     <i className="fa-solid fa-rotate-left" />
                                 </button>
                                 <button type="submit" className="ui-button" disabled={saving}>
