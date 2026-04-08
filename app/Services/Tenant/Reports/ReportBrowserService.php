@@ -296,8 +296,9 @@ class ReportBrowserService
     protected function resolveFilters(array $filters): array
     {
         $today = now();
-        $scope = in_array(($filters['scope'] ?? 'month'), ['date', 'month', 'months', 'range', 'year'], true)
-            ? (string) $filters['scope']
+        $requestedScope = trim((string) ($filters['scope'] ?? ''));
+        $scope = in_array($requestedScope, ['date', 'month', 'months', 'range', 'year'], true)
+            ? $requestedScope
             : 'month';
         $applied = $this->hasAppliedFilters($filters);
 
@@ -660,14 +661,15 @@ class ReportBrowserService
 
     protected function salesDailyReport(array $filters): array
     {
+        $referenceDateExpression = 'DATE(sales.created_at)';
         $summary = $this->baseSalesQuery($filters)
             ->selectRaw('COUNT(*) as sales_count, COALESCE(SUM(total), 0) as total, COALESCE(SUM(profit), 0) as profit')
             ->first();
 
         $trendRows = $this->baseSalesQuery($filters)
-            ->selectRaw('DATE(created_at) as reference_date, COUNT(*) as sales_count, COALESCE(SUM(total), 0) as total, COALESCE(AVG(total), 0) as avg_ticket, COALESCE(SUM(profit), 0) as profit')
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->orderBy('reference_date')
+            ->selectRaw("{$referenceDateExpression} as reference_date, COUNT(*) as sales_count, COALESCE(SUM(total), 0) as total, COALESCE(AVG(total), 0) as avg_ticket, COALESCE(SUM(profit), 0) as profit")
+            ->groupBy(DB::raw($referenceDateExpression))
+            ->orderByRaw("{$referenceDateExpression} asc")
             ->get()
             ->map(fn ($row) => [
                 'reference_date' => $row->reference_date,
@@ -678,26 +680,15 @@ class ReportBrowserService
             ])
             ->values();
 
-        $query = $this->baseSalesQuery($filters)
-            ->selectRaw('DATE(created_at) as reference_date, COUNT(*) as sales_count, COALESCE(SUM(total), 0) as total, COALESCE(AVG(total), 0) as avg_ticket, COALESCE(SUM(profit), 0) as profit')
-            ->groupBy(DB::raw('DATE(created_at)'));
-
-        $this->applyOrderBy($query, [
+        $sortedRows = $this->sortCollection($trendRows, $filters, [
             'reference_date' => 'reference_date',
             'sales_count' => 'sales_count',
             'total' => 'total',
             'avg_ticket' => 'avg_ticket',
             'profit' => 'profit',
-        ], $filters, 'reference_date', 'desc');
-
-        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
-        $rows = collect($paginator->items())->map(fn ($row) => [
-            'reference_date' => $row->reference_date,
-            'sales_count' => (int) $row->sales_count,
-            'total' => (float) $row->total,
-            'avg_ticket' => (float) $row->avg_ticket,
-            'profit' => (float) $row->profit,
-        ])->all();
+        ], 'reference_date', 'desc');
+        $paginator = $this->paginateCollection($sortedRows, $filters['per_page'], $filters['page']);
+        $rows = $paginator->items();
         $bestDay = $trendRows->sortByDesc('total')->first();
         $highestTicketDay = $trendRows->sortByDesc('avg_ticket')->first();
         $margin = (float) ($summary->total ?? 0) > 0

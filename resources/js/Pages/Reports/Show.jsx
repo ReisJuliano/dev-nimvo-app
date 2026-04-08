@@ -148,18 +148,32 @@ function buildPayload(data, overrides = {}) {
         ...data,
         ...overrides,
     }
+    const scope = payload.scope || 'month'
+    const periodPayload = {
+        date: {
+            date: payload.date,
+        },
+        month: {
+            month: payload.month,
+        },
+        months: {
+            month_from: payload.month_from,
+            month_to: payload.month_to,
+        },
+        range: {
+            from: payload.from,
+            to: payload.to,
+        },
+        year: {
+            year: payload.year,
+        },
+    }
 
     return Object.fromEntries(
         Object.entries({
             applied: payload.applied ? 1 : undefined,
-            scope: payload.scope,
-            date: payload.date,
-            month: payload.month,
-            month_from: payload.month_from,
-            month_to: payload.month_to,
-            year: payload.year,
-            from: payload.from,
-            to: payload.to,
+            scope,
+            ...(periodPayload[scope] || periodPayload.month),
             query: payload.query,
             payment_method: payload.payment_method,
             operator_id: payload.operator_id,
