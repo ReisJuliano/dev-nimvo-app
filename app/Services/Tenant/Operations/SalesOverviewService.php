@@ -242,44 +242,84 @@ class SalesOverviewService
         [$from, $to] = $this->resolvePeriod($filters);
 
         $creditSales = Sale::query()
-            ->with(['customer:id,name', 'user:id,name'])
+            ->with(['customer:id,name', 'user:id,name', 'payments:id,sale_id,payment_method,amount'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->where('status', 'finalized')
             ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
             ->latest()
+            ->limit(40)
             ->get();
+
+        $creditByCustomer = DB::table('sales')
+            ->join('sale_payments', 'sale_payments.sale_id', '=', 'sales.id')
+            ->where('sales.status', 'finalized')
+            ->where('sale_payments.payment_method', PaymentMethod::CREDIT)
+            ->whereNotNull('sales.customer_id')
+            ->selectRaw('sales.customer_id, COALESCE(SUM(sale_payments.amount), 0) as open_credit, COUNT(DISTINCT sales.id) as credit_sales_count, MAX(sales.created_at) as last_credit_at')
+            ->groupBy('sales.customer_id')
+            ->get()
+            ->keyBy('customer_id');
 
         $customers = Customer::query()
             ->where('active', true)
             ->orderBy('name')
             ->get()
-            ->map(function (Customer $customer) {
-                $openCredit = (float) $customer->sales()
-                    ->where('status', 'finalized')
-                    ->whereHas('payments', fn ($query) => $query->where('payment_method', PaymentMethod::CREDIT))
-                    ->join('sale_payments', 'sale_payments.sale_id', '=', 'sales.id')
-                    ->where('sale_payments.payment_method', PaymentMethod::CREDIT)
-                    ->sum('sale_payments.amount');
+            ->map(function (Customer $customer) use ($creditByCustomer) {
+                $summary = $creditByCustomer->get($customer->id);
+                $creditLimit = round((float) $customer->credit_limit, 2);
+                $openCredit = round((float) ($summary->open_credit ?? 0), 2);
+                $utilization = $creditLimit > 0
+                    ? round(($openCredit / $creditLimit) * 100, 1)
+                    : ($openCredit > 0 ? 100 : 0);
+                $availableCredit = max(0, $creditLimit - $openCredit);
+                $status = $openCredit <= 0.009
+                    ? 'available'
+                    : ($creditLimit > 0 && $openCredit > $creditLimit ? 'overflow' : ($utilization >= 80 ? 'attention' : 'active'));
 
                 return [
+                    'id' => $customer->id,
                     'name' => $customer->name,
-                    'phone' => $customer->phone ?: '-',
-                    'credit_limit' => (float) $customer->credit_limit,
+                    'phone' => $customer->phone,
+                    'credit_limit' => $creditLimit,
                     'open_credit' => $openCredit,
-                    'available_credit' => max(0, (float) $customer->credit_limit - $openCredit),
+                    'available_credit' => round((float) $availableCredit, 2),
+                    'credit_sales_count' => (int) ($summary->credit_sales_count ?? 0),
+                    'last_credit_at' => $summary->last_credit_at ?? null,
+                    'utilization_percent' => $utilization,
+                    'status' => $status,
                 ];
             })
             ->filter(fn (array $customer) => $customer['credit_limit'] > 0 || $customer['open_credit'] > 0)
             ->values();
 
-        return $this->page(
+        $totalLimit = (float) $customers->sum('credit_limit');
+        $totalOpen = (float) $customers->sum('open_credit');
+        $customersWithBalance = $customers->filter(fn (array $customer) => $customer['open_credit'] > 0.009);
+        $largestExposure = $customers->sortByDesc('open_credit')->first();
+        $portfolioUsage = $totalLimit > 0 ? round(($totalOpen / $totalLimit) * 100, 1) : 0;
+        $recentSales = $creditSales
+            ->map(fn (Sale $sale) => [
+                'id' => $sale->id,
+                'sale_number' => $sale->sale_number,
+                'created_at' => $sale->created_at?->toIso8601String(),
+                'customer_id' => $sale->customer_id,
+                'customer_name' => $sale->customer?->name ?? 'Nao identificado',
+                'user_name' => $sale->user?->name ?? '-',
+                'total' => (float) $sale->total,
+                'credit_amount' => (float) $sale->payments
+                    ->where('payment_method', PaymentMethod::CREDIT)
+                    ->sum('amount'),
+            ])
+            ->values();
+
+        $page = $this->page(
             'A Prazo',
-            'Limites, saldo em aberto e lancamentos pendentes.',
+            'Carteira a prazo com foco em saldo, limite e ultimos lancamentos.',
             [
-                $this->metric('Clientes com limite', $customers->count()),
-                $this->metric('Em aberto', $customers->sum('open_credit'), 'money'),
-                $this->metric('Limite total', $customers->sum('credit_limit'), 'money'),
-                $this->metric('Disponivel', $customers->sum('available_credit'), 'money'),
+                $this->metric('Clientes ativos', $customers->count(), 'number', 'Com limite ou saldo'),
+                $this->metric('Em aberto', $totalOpen, 'money', 'Saldo atual da carteira'),
+                $this->metric('Disponivel', $customers->sum('available_credit'), 'money', 'Espaco livre para novas vendas'),
+                $this->metric('Uso da carteira', $portfolioUsage, 'percent', 'Relacao entre saldo e limite total'),
             ],
             [],
             [
@@ -289,24 +329,36 @@ class SalesOverviewService
                     ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
                     ['key' => 'open_credit', 'label' => 'Em aberto', 'format' => 'money'],
                     ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
+                    ['key' => 'utilization_percent', 'label' => 'Uso', 'format' => 'percent'],
                 ], $customers, 'Nenhum cliente com limite configurado.'),
                 $this->table('Lancamentos recentes', [
                     ['key' => 'sale_number', 'label' => 'Venda'],
                     ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
                     ['key' => 'customer_name', 'label' => 'Cliente'],
                     ['key' => 'user_name', 'label' => 'Operador'],
-                    ['key' => 'total', 'label' => 'Total', 'format' => 'money'],
-                ], $creditSales->map(fn (Sale $sale) => [
-                    'sale_number' => $sale->sale_number,
-                    'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
-                    'user_name' => $sale->user?->name ?? '-',
-                    'total' => (float) $sale->total,
-                ]), 'Nenhum lancamento a prazo no periodo.'),
+                    ['key' => 'credit_amount', 'label' => 'A prazo', 'format' => 'money'],
+                ], $recentSales, 'Nenhum lancamento a prazo no periodo.'),
             ],
             $from,
             $to,
         );
+
+        $page['view'] = 'credit_overview';
+        $page['portfolio'] = $customers->all();
+        $page['recent_sales'] = $recentSales->all();
+        $page['portfolio_summary'] = [
+            'with_balance' => $customersWithBalance->count(),
+            'near_limit' => $customers->filter(fn (array $customer) => $customer['utilization_percent'] >= 80)->count(),
+            'without_limit' => $customers->filter(fn (array $customer) => $customer['credit_limit'] <= 0 && $customer['open_credit'] > 0)->count(),
+            'total_limit' => $totalLimit,
+            'largest_exposure' => $largestExposure ? [
+                'name' => $largestExposure['name'],
+                'amount' => $largestExposure['open_credit'],
+                'utilization_percent' => $largestExposure['utilization_percent'],
+            ] : null,
+        ];
+
+        return $page;
     }
 
     public function customers(array $filters): array

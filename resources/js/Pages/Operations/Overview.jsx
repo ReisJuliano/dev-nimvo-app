@@ -9,6 +9,7 @@ import FilterBar from '@/Components/Operations/FilterBar'
 import InfoPanels from '@/Components/Operations/InfoPanels'
 import ReportsShowcase from '@/Components/Operations/ReportsShowcase'
 import AppLayout from '@/Layouts/AppLayout'
+import CreditOverview from './CreditOverview'
 import './operations.css'
 
 function buildFilterPayload(filters, overrides = {}) {
@@ -42,7 +43,13 @@ function formatMetricValue(metric) {
 
 export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
+    const isCreditOverview = module.view === 'credit_overview'
     const isReportsCatalog = module.view === 'reports_catalog'
+
+    if (isCreditOverview) {
+        return <CreditOverview module={module} />
+    }
+
     const hasSections = Array.isArray(module.sections) && module.sections.length > 0
     const currentSection = hasSections
         ? module.sections.find((section) => section.key === module.activeSection) || module.sections[0]

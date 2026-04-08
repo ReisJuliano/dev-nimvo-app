@@ -1,0 +1,695 @@
+.credit-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.credit-header-card,
+.credit-metric-card,
+.credit-panel,
+.credit-summary-pill,
+.credit-focus-card,
+.credit-highlight-card {
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 24px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
+}
+
+.credit-header-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 26%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.94));
+}
+
+.credit-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.credit-kicker {
+    color: var(--app-text-muted);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.credit-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.credit-header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.credit-header-title h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3vw, 2.3rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--app-text-primary);
+}
+
+.credit-header-title span {
+    color: var(--app-text-secondary);
+}
+
+.credit-header-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.65rem;
+}
+
+.credit-pill,
+.credit-status-chip,
+.credit-quick-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(248, 250, 252, 0.92);
+    color: var(--app-text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.credit-pill.accent {
+    background: rgba(47, 124, 246, 0.1);
+    color: var(--app-primary-dark);
+    border-color: rgba(47, 124, 246, 0.16);
+}
+
+.credit-toolbar {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.85rem;
+    align-items: end;
+}
+
+.credit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    grid-column: span 2;
+}
+
+.credit-field span,
+.credit-summary-pill span,
+.credit-focus-card span,
+.credit-highlight-card span,
+.credit-activity-item span,
+.credit-customer-copy span,
+.credit-focus-copy span,
+.credit-metric-top span {
+    color: var(--app-text-muted);
+}
+
+.credit-field span {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.credit-field input,
+.credit-search-field input,
+.credit-submit-button,
+.credit-icon-button {
+    min-height: 46px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 16px;
+    font: inherit;
+}
+
+.credit-field input,
+.credit-search-field input {
+    padding: 0.75rem 0.9rem;
+    background: #fff;
+    color: var(--app-text-primary);
+}
+
+.credit-quick-actions {
+    grid-column: span 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.credit-quick-chip {
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.credit-quick-chip.active,
+.credit-quick-chip:hover {
+    color: var(--app-primary-dark);
+    border-color: rgba(47, 124, 246, 0.2);
+    background: rgba(47, 124, 246, 0.08);
+}
+
+.credit-toolbar-actions {
+    grid-column: span 3;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+.credit-icon-button,
+.credit-submit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    background: rgba(248, 250, 252, 0.94);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.credit-submit-button {
+    padding: 0.75rem 0.95rem;
+    background: linear-gradient(135deg, rgba(47, 124, 246, 0.94), rgba(79, 144, 253, 0.96));
+    color: #fff;
+    border-color: rgba(47, 124, 246, 0.28);
+    font-weight: 700;
+}
+
+.credit-icon-button {
+    width: 46px;
+    padding: 0;
+}
+
+.credit-icon-button.subtle {
+    width: 34px;
+    min-height: 34px;
+    border-radius: 12px;
+}
+
+.credit-submit-button:hover,
+.credit-icon-button:hover {
+    transform: translateY(-1px);
+}
+
+.credit-metric-grid,
+.credit-main-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.credit-metric-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.credit-metric-card {
+    grid-column: span 3;
+    padding: 1rem 1.05rem;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.92));
+}
+
+.credit-metric-card.tone-2 {
+    background:
+        radial-gradient(circle at top right, rgba(26, 168, 111, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(241, 253, 246, 0.96), rgba(247, 249, 252, 0.92));
+}
+
+.credit-metric-card.tone-3 {
+    background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(247, 249, 252, 0.92));
+}
+
+.credit-metric-card.tone-4 {
+    background:
+        radial-gradient(circle at top right, rgba(125, 84, 220, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(248, 245, 255, 0.96), rgba(247, 249, 252, 0.92));
+}
+
+.credit-metric-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.credit-metric-top span {
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.credit-metric-top i {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--app-primary-dark);
+}
+
+.credit-metric-card strong {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: clamp(1.45rem, 2.5vw, 1.9rem);
+    color: var(--app-text-primary);
+    letter-spacing: -0.04em;
+}
+
+.credit-metric-card small {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--app-text-secondary);
+}
+
+.credit-main-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    align-items: start;
+}
+
+.credit-panel {
+    padding: 1rem;
+}
+
+.credit-portfolio-panel {
+    grid-column: span 7;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.credit-focus-panel {
+    grid-column: span 5;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.credit-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.credit-panel-header h2 {
+    margin: 0;
+    color: var(--app-text-primary);
+    font-size: 1.02rem;
+}
+
+.credit-panel-header > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+}
+
+.credit-panel-header > div > span {
+    color: var(--app-text-secondary);
+}
+
+.credit-search-field {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: min(100%, 280px);
+    padding: 0 0.6rem 0 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 18px;
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.credit-search-field i {
+    color: var(--app-text-muted);
+}
+
+.credit-search-field input {
+    flex: 1;
+    min-height: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.credit-search-field input:focus {
+    outline: none;
+}
+
+.credit-summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.credit-summary-pill {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    min-width: 132px;
+    padding: 0.85rem 0.9rem;
+}
+
+.credit-summary-pill strong,
+.credit-focus-card strong,
+.credit-highlight-card strong,
+.credit-activity-value strong,
+.credit-customer-balance strong,
+.credit-focus-copy strong {
+    color: var(--app-text-primary);
+}
+
+.credit-summary-pill.warning {
+    background: rgba(255, 251, 235, 0.92);
+}
+
+.credit-summary-pill.muted {
+    background: rgba(248, 250, 252, 0.92);
+}
+
+.credit-customer-list,
+.credit-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.credit-customer-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    width: 100%;
+    padding: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 22px;
+    background: rgba(248, 250, 252, 0.72);
+    text-align: left;
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.credit-customer-card:hover,
+.credit-customer-card.active {
+    border-color: rgba(47, 124, 246, 0.24);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.credit-customer-top,
+.credit-customer-meta,
+.credit-focus-hero,
+.credit-activity-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.credit-customer-copy,
+.credit-focus-copy,
+.credit-activity-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    min-width: 0;
+}
+
+.credit-customer-copy {
+    flex: 1;
+}
+
+.credit-customer-copy strong,
+.credit-activity-copy strong {
+    color: var(--app-text-primary);
+}
+
+.credit-customer-balance,
+.credit-activity-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.16rem;
+    margin-left: auto;
+}
+
+.credit-customer-meta {
+    flex-wrap: wrap;
+}
+
+.credit-avatar {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(47, 124, 246, 0.92), rgba(86, 148, 255, 0.92));
+    color: #fff;
+    font-size: 0.84rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.credit-avatar.large {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    font-size: 1rem;
+}
+
+.credit-status-chip.primary,
+.credit-progress-fill.primary {
+    color: #0f4fb4;
+    background: rgba(47, 124, 246, 0.12);
+}
+
+.credit-status-chip.warning,
+.credit-progress-fill.warning {
+    color: #b76a08;
+    background: rgba(245, 158, 11, 0.16);
+}
+
+.credit-status-chip.danger,
+.credit-progress-fill.danger {
+    color: #b42339;
+    background: rgba(244, 63, 94, 0.16);
+}
+
+.credit-status-chip.muted,
+.credit-progress-fill.muted {
+    color: #475569;
+    background: rgba(148, 163, 184, 0.14);
+}
+
+.credit-progress-track {
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(226, 232, 240, 0.8);
+}
+
+.credit-progress-track.large {
+    height: 12px;
+}
+
+.credit-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.credit-progress-fill.usage-0 {
+    width: 0;
+}
+
+.credit-progress-fill.usage-1 {
+    width: 10%;
+}
+
+.credit-progress-fill.usage-2 {
+    width: 20%;
+}
+
+.credit-progress-fill.usage-3 {
+    width: 30%;
+}
+
+.credit-progress-fill.usage-4 {
+    width: 40%;
+}
+
+.credit-progress-fill.usage-5 {
+    width: 50%;
+}
+
+.credit-progress-fill.usage-6 {
+    width: 60%;
+}
+
+.credit-progress-fill.usage-7 {
+    width: 70%;
+}
+
+.credit-progress-fill.usage-8 {
+    width: 80%;
+}
+
+.credit-progress-fill.usage-9 {
+    width: 90%;
+}
+
+.credit-progress-fill.usage-10 {
+    width: 100%;
+}
+
+.credit-focus-hero {
+    padding: 1rem;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 30%),
+        rgba(248, 250, 252, 0.82);
+}
+
+.credit-focus-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.credit-focus-card,
+.credit-highlight-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    padding: 0.85rem 0.9rem;
+}
+
+.credit-focus-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.credit-focus-progress-copy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.credit-focus-progress-copy strong,
+.credit-activity-meta strong {
+    color: var(--app-text-primary);
+}
+
+.credit-activity-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.credit-activity-item {
+    padding: 0.95rem 0;
+    border-top: 1px solid rgba(226, 232, 240, 0.84);
+}
+
+.credit-activity-item:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.credit-activity-copy.compact {
+    margin-left: auto;
+    align-items: flex-end;
+}
+
+.credit-activity-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--app-text-secondary);
+}
+
+.credit-empty-state {
+    min-height: 200px;
+    display: grid;
+    place-items: center;
+    gap: 0.5rem;
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    color: var(--app-text-muted);
+    text-align: center;
+}
+
+.credit-empty-state.tall {
+    min-height: 340px;
+}
+
+.credit-empty-state i {
+    font-size: 1.4rem;
+}
+
+@media (max-width: 1200px) {
+    .credit-field,
+    .credit-quick-actions,
+    .credit-toolbar-actions,
+    .credit-metric-card,
+    .credit-portfolio-panel,
+    .credit-focus-panel {
+        grid-column: span 12;
+    }
+
+    .credit-toolbar-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .credit-header-row,
+    .credit-panel-header,
+    .credit-customer-top,
+    .credit-focus-hero,
+    .credit-activity-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .credit-header-pills,
+    .credit-customer-balance,
+    .credit-activity-copy.compact,
+    .credit-activity-value {
+        align-items: flex-start;
+        justify-content: flex-start;
+        margin-left: 0;
+    }
+
+    .credit-search-field {
+        width: 100%;
+    }
+
+    .credit-focus-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .credit-summary-row,
+    .credit-quick-actions,
+    .credit-toolbar-actions {
+        width: 100%;
+    }
+}
