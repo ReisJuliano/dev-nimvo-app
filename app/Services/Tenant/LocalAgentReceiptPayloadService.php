@@ -29,7 +29,7 @@ class LocalAgentReceiptPayloadService
             'sale_number' => (string) $sale->sale_number,
             'issued_at' => optional($sale->created_at)?->toIso8601String(),
             'total' => (float) $sale->total,
-            'change_amount' => 0,
+            'change_amount' => (float) ($sale->change_amount ?? 0),
             'notes' => filled($sale->notes) ? (string) $sale->notes : null,
             'customer' => filled($customerName) ? ['name' => (string) $customerName] : null,
             'items' => $sale->items

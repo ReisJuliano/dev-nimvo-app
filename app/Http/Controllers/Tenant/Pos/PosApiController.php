@@ -316,36 +316,34 @@ class PosApiController extends Controller
     ): JsonResponse {
         $validated = $request->validated();
         $recipient = $validated['recipient'] ?? null;
+        $saleUpdates = [];
 
-        if ($recipient) {
-            $saleUpdates = [];
-
-            if ($this->hasColumn('sales', 'requested_document_model')) {
-                $saleUpdates['requested_document_model'] = $validated['document_model'];
-            }
-
-            if ($this->hasColumn('sales', 'recipient_payload')) {
-                $saleUpdates['recipient_payload'] = $recipient;
-            }
-
-            if ($this->hasColumn('sales', 'fiscal_decision')) {
-                $saleUpdates['fiscal_decision'] = 'emit';
-            }
-
-            if ($saleUpdates !== []) {
-                $sale->forceFill($saleUpdates)->save();
-                $sale->refresh();
-            }
+        if ($this->hasColumn('sales', 'requested_document_model')) {
+            $saleUpdates['requested_document_model'] = $validated['document_model'];
         }
 
-        $document = $validated['document_model'] === '55'
-            ? $fiscalDocumentService->prepareNfeFromSale($sale->id, $recipient)
-            : $fiscalDocumentService->issueFromSale($sale->id, null, $validated['mode'] ?? null);
+        if ($recipient && $this->hasColumn('sales', 'recipient_payload')) {
+            $saleUpdates['recipient_payload'] = $recipient;
+        }
+
+        if ($this->hasColumn('sales', 'fiscal_decision')) {
+            $saleUpdates['fiscal_decision'] = 'emit';
+        }
+
+        if ($saleUpdates !== []) {
+            $sale->forceFill($saleUpdates)->save();
+            $sale->refresh();
+        }
+
+        $document = $fiscalDocumentService->issueFromSale(
+            $sale->id,
+            null,
+            $validated['mode'] ?? null,
+            $recipient,
+        );
 
         return response()->json([
-            'message' => $validated['document_model'] === '55'
-                ? 'Venda preparada para emissao de NF-e / DANFE.'
-                : 'Documento fiscal enfileirado com sucesso.',
+            'message' => 'Documento fiscal enfileirado com sucesso.',
             'document' => $this->serializeFiscalDocument($document),
         ]);
     }

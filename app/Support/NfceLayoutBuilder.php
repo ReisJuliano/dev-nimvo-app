@@ -14,13 +14,15 @@ class NfceLayoutBuilder
         $sale = $payload['sale'] ?? [];
         $items = $payload['items'] ?? [];
         $payments = $payload['payments'] ?? [];
+        $consumer = $payload['consumer'] ?? [];
+        $documentModel = (string) ($payload['flags']['document_model'] ?? ($sale['requested_document_model'] ?? '65'));
 
         if ($items === []) {
-            throw new RuntimeException('Nao existem itens fiscais para a NFC-e.');
+            throw new RuntimeException('Nao existem itens fiscais para montar o documento.');
         }
 
         if ($payments === []) {
-            throw new RuntimeException('Nao existem pagamentos para a NFC-e.');
+            throw new RuntimeException('Nao existem pagamentos fiscais para montar o documento.');
         }
 
         $make = new Make();
@@ -33,20 +35,20 @@ class NfceLayoutBuilder
             'cUF' => $this->ufCode((string) $profile['state']),
             'cNF' => $sale['random_code'],
             'natOp' => $profile['operation_nature'],
-            'mod' => '65',
+            'mod' => $documentModel,
             'serie' => (string) $sale['series'],
             'nNF' => (string) $sale['number'],
             'dhEmi' => $sale['issued_at'],
             'tpNF' => 1,
-            'idDest' => 1,
+            'idDest' => (int) ($sale['id_destination'] ?? 1),
             'cMunFG' => $profile['city_code'],
-            'tpImp' => 4,
-            'tpEmis' => 1,
+            'tpImp' => (int) ($sale['print_type'] ?? ($documentModel === '65' ? 4 : 1)),
+            'tpEmis' => (int) ($sale['emission_type'] ?? 1),
             'cDV' => 0,
             'tpAmb' => (int) $profile['environment'],
             'finNFe' => 1,
-            'indFinal' => 1,
-            'indPres' => 1,
+            'indFinal' => (int) ($sale['consumer_final'] ?? 1),
+            'indPres' => (int) ($sale['presence_indicator'] ?? 1),
             'procEmi' => 0,
             'verProc' => config('app.name', 'nimvo').'-fiscal',
         ]));
@@ -75,18 +77,59 @@ class NfceLayoutBuilder
             'fone' => $profile['phone'] ?: null,
         ]));
 
-        if (($payload['consumer']['document'] ?? null) && ($payload['consumer']['name'] ?? null)) {
-            $consumer = $payload['consumer'];
-
+        if (($consumer['document'] ?? null) && ($consumer['name'] ?? null)) {
             $make->tagdest($this->std([
                 'xNome' => $consumer['name'],
-                'indIEDest' => 9,
+                'indIEDest' => (int) ($consumer['ie_indicator'] ?? 9),
+                'IE' => $consumer['state_registration'] ?? null,
+                'email' => $consumer['email'] ?? null,
                 strlen((string) $consumer['document']) > 11 ? 'CNPJ' : 'CPF' => $consumer['document'],
             ]));
+
+            if ($documentModel === '55') {
+                $make->tagenderDest($this->std([
+                    'xLgr' => $consumer['street'],
+                    'nro' => $consumer['number'],
+                    'xCpl' => $consumer['complement'] ?? null,
+                    'xBairro' => $consumer['district'],
+                    'cMun' => $consumer['city_code'],
+                    'xMun' => $consumer['city_name'],
+                    'UF' => $consumer['state'],
+                    'CEP' => $consumer['zip_code'],
+                    'cPais' => '1058',
+                    'xPais' => 'BRASIL',
+                    'fone' => $consumer['phone'] ?? null,
+                ]));
+            }
+        } elseif ($documentModel === '55') {
+            throw new RuntimeException('A NF-e precisa de destinatario identificado para gerar o XML.');
         }
+
+        $totals = [
+            'vProd' => 0.0,
+            'vDesc' => 0.0,
+            'vPIS' => 0.0,
+            'vCOFINS' => 0.0,
+            'vIPI' => 0.0,
+            'vTotTrib' => 0.0,
+        ];
 
         foreach ($items as $index => $item) {
             $line = $index + 1;
+            $lineSubtotal = (float) ($item['line_subtotal'] ?? $item['total'] ?? 0);
+            $lineDiscount = (float) ($item['discount_amount'] ?? 0);
+            $lineTotal = (float) ($item['total'] ?? 0);
+            $pisBase = (float) ($item['pis_base'] ?? $lineTotal);
+            $pisAmount = (float) ($item['pis_amount'] ?? 0);
+            $cofinsBase = (float) ($item['cofins_base'] ?? $lineTotal);
+            $cofinsAmount = (float) ($item['cofins_amount'] ?? 0);
+
+            $totals['vProd'] += $lineSubtotal;
+            $totals['vDesc'] += $lineDiscount;
+            $totals['vPIS'] += $pisAmount;
+            $totals['vCOFINS'] += $cofinsAmount;
+            $totals['vIPI'] += (float) ($item['ipi_amount'] ?? 0);
+            $totals['vTotTrib'] += (float) ($item['tax_total'] ?? 0);
 
             $make->tagprod($this->std([
                 'item' => $line,
@@ -98,12 +141,13 @@ class NfceLayoutBuilder
                 'CFOP' => $item['cfop'],
                 'uCom' => $item['commercial_unit'] ?: $item['unit'],
                 'qCom' => $this->decimal($item['quantity'], 3),
-                'vUnCom' => $this->decimal($item['unit_price']),
-                'vProd' => $this->decimal($item['total']),
+                'vUnCom' => $this->decimal($item['unit_price'], 10),
+                'vProd' => $this->decimal($lineSubtotal),
+                'vDesc' => $lineDiscount > 0 ? $this->decimal($lineDiscount) : null,
                 'cEANTrib' => $item['barcode'] ?: 'SEM GTIN',
                 'uTrib' => $item['taxable_unit'] ?: $item['unit'],
                 'qTrib' => $this->decimal($item['quantity'], 3),
-                'vUnTrib' => $this->decimal($item['unit_price']),
+                'vUnTrib' => $this->decimal($item['unit_price'], 10),
                 'indTot' => 1,
             ]));
 
@@ -121,17 +165,17 @@ class NfceLayoutBuilder
             $make->tagPIS($this->std([
                 'item' => $line,
                 'CST' => (string) $item['pis_cst'],
-                'vBC' => $this->decimal($item['total']),
-                'pPIS' => $this->decimal(0, 4),
-                'vPIS' => $this->decimal(0),
+                'vBC' => $this->decimal($pisBase),
+                'pPIS' => $this->decimal($item['pis_rate'] ?? 0, 4),
+                'vPIS' => $this->decimal($pisAmount),
             ]));
 
             $make->tagCOFINS($this->std([
                 'item' => $line,
                 'CST' => (string) $item['cofins_cst'],
-                'vBC' => $this->decimal($item['total']),
-                'pCOFINS' => $this->decimal(0, 4),
-                'vCOFINS' => $this->decimal(0),
+                'vBC' => $this->decimal($cofinsBase),
+                'pCOFINS' => $this->decimal($item['cofins_rate'] ?? 0, 4),
+                'vCOFINS' => $this->decimal($cofinsAmount),
             ]));
         }
 
@@ -144,18 +188,18 @@ class NfceLayoutBuilder
             'vST' => $this->decimal(0),
             'vFCPST' => $this->decimal(0),
             'vFCPSTRet' => $this->decimal(0),
-            'vProd' => $this->decimal($sale['total']),
+            'vProd' => $this->decimal($totals['vProd']),
             'vFrete' => $this->decimal(0),
             'vSeg' => $this->decimal(0),
-            'vDesc' => $this->decimal(0),
+            'vDesc' => $this->decimal($totals['vDesc']),
             'vII' => $this->decimal(0),
-            'vIPI' => $this->decimal(0),
+            'vIPI' => $this->decimal($totals['vIPI']),
             'vIPIDevol' => $this->decimal(0),
-            'vPIS' => $this->decimal(0),
-            'vCOFINS' => $this->decimal(0),
+            'vPIS' => $this->decimal($totals['vPIS']),
+            'vCOFINS' => $this->decimal($totals['vCOFINS']),
             'vOutro' => $this->decimal(0),
             'vNF' => $this->decimal($sale['total']),
-            'vTotTrib' => $this->decimal(0),
+            'vTotTrib' => $this->decimal($totals['vTotTrib']),
             'vFCPUFDest' => $this->decimal(0),
             'vICMSUFDest' => $this->decimal(0),
             'vICMSUFRemet' => $this->decimal(0),
@@ -171,8 +215,9 @@ class NfceLayoutBuilder
 
         foreach ($payments as $payment) {
             $make->tagdetPag($this->std([
+                'indPag' => (int) ($payment['indPag'] ?? 0),
                 'tPag' => $payment['tPag'],
-                'vPag' => $this->decimal($payment['amount']),
+                'vPag' => $this->decimal($payment['xml_amount'] ?? $payment['amount']),
                 'xPag' => $payment['xPag'] ?: null,
             ]));
         }

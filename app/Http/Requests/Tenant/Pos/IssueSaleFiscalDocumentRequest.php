@@ -32,6 +32,18 @@ class IssueSaleFiscalDocumentRequest extends FormRequest
             'recipient.customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'recipient.company_id' => $companyRules,
             'recipient.email' => ['nullable', 'email', 'max:255'],
+            'recipient.phone' => ['nullable', 'string', 'max:30'],
+            'recipient.state_registration' => ['nullable', 'string', 'max:30'],
+            'recipient.ie_indicator' => ['nullable', 'string', Rule::in(['1', '2', '9'])],
+            'recipient.street' => ['nullable', 'string', 'max:255'],
+            'recipient.number' => ['nullable', 'string', 'max:60'],
+            'recipient.complement' => ['nullable', 'string', 'max:255'],
+            'recipient.district' => ['nullable', 'string', 'max:255'],
+            'recipient.city_name' => ['nullable', 'string', 'max:255'],
+            'recipient.city_code' => ['nullable', 'string', 'max:10'],
+            'recipient.state' => ['nullable', 'string', 'size:2'],
+            'recipient.zip_code' => ['nullable', 'string', 'max:12'],
+            'recipient.consumer_final' => ['nullable', 'boolean'],
         ];
     }
 

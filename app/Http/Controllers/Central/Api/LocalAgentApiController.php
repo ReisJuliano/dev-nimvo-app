@@ -152,9 +152,11 @@ class LocalAgentApiController extends Controller
 
         $validated = $request->validate([
             'successful' => ['required', 'boolean'],
+            'status' => ['nullable', 'string', 'max:30'],
             'message' => ['nullable', 'string'],
             'request_xml' => ['nullable', 'string'],
             'signed_xml' => ['nullable', 'string'],
+            'response_xml' => ['nullable', 'string'],
             'authorized_xml' => ['nullable', 'string'],
             'access_key' => ['nullable', 'string'],
             'receipt' => ['nullable', 'string'],

@@ -30,7 +30,13 @@ class LocalFiscalAgentRunner
                 $heartbeat = $this->post($config, '/api/local-agents/heartbeat', $this->heartbeatPayload($config, $configPath));
                 $runtimeConfig = $this->mergeRuntimeConfig($config, (array) ($heartbeat['config'] ?? []));
                 $interval = (int) ($runtimeConfig['agent']['poll_interval_seconds'] ?? config('fiscal.agents.poll_interval_seconds', 3));
-                $polled = $this->post($runtimeConfig, '/api/local-agents/commands/poll');
+                $polled = $this->post($runtimeConfig, '/api/local-agents/commands/poll', [
+                    'supported_types' => [
+                        'emit_nfce',
+                        'print_payment_receipt',
+                        'print_test',
+                    ],
+                ]);
                 $command = $polled['command'] ?? null;
             } catch (Throwable $exception) {
                 Log::error('Falha de comunicacao com o backend fiscal.', [
@@ -73,7 +79,7 @@ class LocalFiscalAgentRunner
                 $this->post(
                     $runtimeConfig,
                     sprintf('/api/local-agents/commands/%s/complete', $command['id']),
-                    array_merge(['successful' => true], $result),
+                    array_merge(['successful' => ($result['status'] ?? 'authorized') !== 'rejected'], $result),
                 );
 
                 $output('info', sprintf('Comando %s concluido com sucesso.', $command['id']));
@@ -161,6 +167,11 @@ class LocalFiscalAgentRunner
     protected function heartbeatPayload(array $config, string $configPath): array
     {
         return [
+            'supported_types' => [
+                'emit_nfce',
+                'print_payment_receipt',
+                'print_test',
+            ],
             'machine' => [
                 'name' => php_uname('n'),
                 'user' => get_current_user() ?: null,

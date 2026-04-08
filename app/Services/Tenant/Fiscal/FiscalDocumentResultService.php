@@ -85,6 +85,7 @@ class FiscalDocumentResultService
                 'status' => $status,
                 'request_xml' => $payload['request_xml'] ?? null,
                 'signed_xml' => $payload['signed_xml'] ?? null,
+                'response_xml' => $payload['response_xml'] ?? null,
                 'authorized_xml' => $payload['authorized_xml'] ?? null,
                 'access_key' => $payload['access_key'] ?? null,
                 'sefaz_receipt' => $payload['receipt'] ?? null,
@@ -120,21 +121,38 @@ class FiscalDocumentResultService
 
     public function markFailed(string $tenantId, int $documentId, array $payload): void
     {
-        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+        $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
             $document = FiscalDocument::query()->findOrFail($documentId);
             $message = $payload['message'] ?? $payload['error'] ?? 'Falha no processamento fiscal.';
+            $rejected = ($payload['status'] ?? null) === 'rejected'
+                || filled($payload['sefaz_status_code'] ?? null);
+            $status = $rejected ? 'rejected' : 'failed';
 
             $document->forceFill([
-                'status' => 'failed',
+                'status' => $status,
+                'request_xml' => $payload['request_xml'] ?? $document->request_xml,
+                'signed_xml' => $payload['signed_xml'] ?? $document->signed_xml,
+                'response_xml' => $payload['response_xml'] ?? $document->response_xml,
+                'authorized_xml' => $payload['authorized_xml'] ?? $document->authorized_xml,
+                'access_key' => $payload['access_key'] ?? $document->access_key,
+                'sefaz_receipt' => $payload['receipt'] ?? $document->sefaz_receipt,
+                'sefaz_protocol' => $payload['protocol'] ?? $document->sefaz_protocol,
+                'sefaz_status_code' => $payload['sefaz_status_code'] ?? $document->sefaz_status_code,
+                'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? $document->sefaz_status_reason,
                 'last_error' => $message,
                 'failed_at' => now(),
             ])->save();
 
+            $xmlFiles = $this->xmlStorage->persist($tenantId, $document, $payload);
+
             $document->events()->create([
-                'status' => 'failed',
+                'status' => $status,
                 'source' => 'agent',
                 'message' => $message,
-                'payload' => $payload,
+                'payload' => [
+                    ...$payload,
+                    'xml_files' => $xmlFiles,
+                ],
             ]);
         });
     }

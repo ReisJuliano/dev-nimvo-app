@@ -139,6 +139,9 @@ class PosService
             }
 
             $total = round(max(0, $subtotal - $discount), 2);
+            $cashReceived = array_key_exists('cash_received', $payload) && $payload['cash_received'] !== null
+                ? round((float) $payload['cash_received'], 2)
+                : null;
 
             $payments = collect($payload['payments'])->map(function (array $payment) {
                 return [
@@ -187,6 +190,27 @@ class PosService
                 throw ValidationException::withMessages([
                     'payments' => 'A soma dos pagamentos precisa ser igual ao total da venda.',
                 ]);
+            }
+
+            $cashAmount = round((float) $resolvedPayments
+                ->where('method', PaymentMethod::CASH)
+                ->sum('amount'), 2);
+            $changeAmount = 0.0;
+
+            if ($cashReceived !== null) {
+                if ($cashAmount <= 0) {
+                    throw ValidationException::withMessages([
+                        'cash_received' => 'O valor entregue em dinheiro so pode ser informado quando houver pagamento em dinheiro.',
+                    ]);
+                }
+
+                if ($cashReceived < $cashAmount) {
+                    throw ValidationException::withMessages([
+                        'cash_received' => 'O valor entregue em dinheiro precisa cobrir a parcela em dinheiro da venda.',
+                    ]);
+                }
+
+                $changeAmount = round($cashReceived - $cashAmount, 2);
             }
 
             $paymentMethods = $resolvedPayments->pluck('method')->unique()->values();
@@ -250,6 +274,14 @@ class PosService
 
             if ($this->hasColumn('sales', 'requested_document_model')) {
                 $saleAttributes['requested_document_model'] = $requestedDocumentModel;
+            }
+
+            if ($this->hasColumn('sales', 'cash_received')) {
+                $saleAttributes['cash_received'] = $cashReceived;
+            }
+
+            if ($this->hasColumn('sales', 'change_amount')) {
+                $saleAttributes['change_amount'] = $changeAmount;
             }
 
             if ($this->hasColumn('sales', 'fiscal_decision')) {
@@ -327,6 +359,8 @@ class PosService
                 'subtotal' => (float) $sale->subtotal,
                 'discount' => (float) $sale->discount,
                 'payment_method' => $sale->payment_method,
+                'cash_received' => (float) ($sale->cash_received ?? $cashReceived ?? 0),
+                'change_amount' => (float) ($sale->change_amount ?? $changeAmount),
                 'requested_document_model' => $this->hasColumn('sales', 'requested_document_model')
                     ? $sale->requested_document_model
                     : $requestedDocumentModel,
@@ -353,6 +387,28 @@ class PosService
             'customer_id' => filled($payload['customer_id'] ?? null) ? (int) $payload['customer_id'] : null,
             'company_id' => filled($payload['company_id'] ?? null) ? (int) $payload['company_id'] : null,
             'email' => filled($payload['email'] ?? null) ? trim((string) $payload['email']) : null,
+            'phone' => filled($payload['phone'] ?? null)
+                ? preg_replace('/\D+/', '', (string) $payload['phone'])
+                : null,
+            'state_registration' => filled($payload['state_registration'] ?? null)
+                ? strtoupper(trim((string) $payload['state_registration']))
+                : null,
+            'ie_indicator' => filled($payload['ie_indicator'] ?? null) ? (string) $payload['ie_indicator'] : null,
+            'street' => filled($payload['street'] ?? null) ? trim((string) $payload['street']) : null,
+            'number' => filled($payload['number'] ?? null) ? trim((string) $payload['number']) : null,
+            'complement' => filled($payload['complement'] ?? null) ? trim((string) $payload['complement']) : null,
+            'district' => filled($payload['district'] ?? null) ? trim((string) $payload['district']) : null,
+            'city_name' => filled($payload['city_name'] ?? null) ? trim((string) $payload['city_name']) : null,
+            'city_code' => filled($payload['city_code'] ?? null)
+                ? preg_replace('/\D+/', '', (string) $payload['city_code'])
+                : null,
+            'state' => filled($payload['state'] ?? null) ? strtoupper(trim((string) $payload['state'])) : null,
+            'zip_code' => filled($payload['zip_code'] ?? null)
+                ? preg_replace('/\D+/', '', (string) $payload['zip_code'])
+                : null,
+            'consumer_final' => array_key_exists('consumer_final', $payload)
+                ? filter_var($payload['consumer_final'], FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
+                : null,
         ];
 
         $normalized = array_filter($normalized, fn ($value) => $value !== null && $value !== '');

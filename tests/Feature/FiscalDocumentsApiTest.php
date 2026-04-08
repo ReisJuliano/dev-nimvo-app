@@ -397,7 +397,7 @@ class FiscalDocumentsApiTest extends TestCase
             ->assertJsonValidationErrors(['fiscal_profile']);
     }
 
-    public function test_it_falls_back_to_local_signature_when_csc_is_missing(): void
+    public function test_it_allows_explicit_local_test_when_csc_is_missing(): void
     {
         $user = $this->actingOperator();
         $sale = $this->makeSale($user);
@@ -410,6 +410,7 @@ class FiscalDocumentsApiTest extends TestCase
 
         $response = $this->postJson('/api/fiscal/documents', [
             'sale_id' => $sale->id,
+            'mode' => 'local_test',
         ]);
 
         $response->assertStatus(202)
@@ -544,6 +545,11 @@ class FiscalDocumentsApiTest extends TestCase
             'name' => 'PDV Fiscal',
             'agent_key' => 'agentefiscal',
             'secret_hash' => Hash::make($secret),
+            'metadata' => [
+                'device' => [
+                    'supported_types' => ['emit_nfce', 'print_payment_receipt', 'print_test'],
+                ],
+            ],
             'active' => true,
         ]);
 

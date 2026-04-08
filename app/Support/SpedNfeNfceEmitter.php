@@ -22,8 +22,9 @@ class SpedNfeNfceEmitter
 
     public function emit(array $payload, array $agentConfig): array
     {
-        $tools = $this->makeTools($payload, $agentConfig, true);
-        $tools->model('65');
+        $documentModel = $this->documentModel($payload);
+        $tools = $this->makeTools($payload, $agentConfig, $documentModel === '65');
+        $tools->model($documentModel);
 
         $requestXml = $this->layoutBuilder->build($payload);
         $signedXml = $tools->signNFe($requestXml);
@@ -38,34 +39,65 @@ class SpedNfeNfceEmitter
         $statusReason = (string) ($response->xMotivo ?? '');
 
         if ($statusCode !== '104') {
-            throw new RuntimeException("Retorno da SEFAZ inesperado [{$statusCode}] {$statusReason}");
+            return $this->failedResult(
+                $requestXml,
+                $signedXml,
+                $responseXml,
+                $this->extractAccessKey($signedXml),
+                $statusCode,
+                $statusReason,
+                "Retorno da SEFAZ inesperado [{$statusCode}] {$statusReason}",
+            );
         }
 
         $protocolInfo = $response->protNFe->infProt ?? null;
 
-        if (!$protocolInfo) {
-            throw new RuntimeException('A SEFAZ nao retornou o protocolo da NFC-e.');
+        if (! $protocolInfo) {
+            return $this->failedResult(
+                $requestXml,
+                $signedXml,
+                $responseXml,
+                $this->extractAccessKey($signedXml),
+                $statusCode,
+                $statusReason,
+                'A SEFAZ nao retornou o protocolo do documento fiscal.',
+            );
         }
 
         $protocolStatus = (string) ($protocolInfo->cStat ?? '');
         $protocolReason = (string) ($protocolInfo->xMotivo ?? '');
+        $accessKey = $this->extractAccessKey($signedXml);
 
-        if (!in_array($protocolStatus, ['100', '150'], true)) {
-            throw new RuntimeException("NFC-e rejeitada [{$protocolStatus}] {$protocolReason}");
+        if (! in_array($protocolStatus, ['100', '150'], true)) {
+            return [
+                'status' => 'rejected',
+                'request_xml' => $requestXml,
+                'signed_xml' => $signedXml,
+                'response_xml' => $responseXml,
+                'authorized_xml' => null,
+                'access_key' => $accessKey,
+                'receipt' => (string) ($response->infRec->nRec ?? ''),
+                'protocol' => (string) ($protocolInfo->nProt ?? ''),
+                'sefaz_status_code' => $protocolStatus,
+                'sefaz_status_reason' => $protocolReason,
+                'message' => "Documento fiscal rejeitado [{$protocolStatus}] {$protocolReason}",
+                'printed_at' => null,
+            ];
         }
 
         $authorizedXml = Complements::toAuthorize($signedXml, $responseXml);
         $printedAt = null;
 
-        if (($agentConfig['printer']['enabled'] ?? true) === true) {
+        if ($documentModel === '65' && ($agentConfig['printer']['enabled'] ?? true) === true) {
             $this->print($authorizedXml, $agentConfig['printer'] ?? []);
             $printedAt = Carbon::now()->toIso8601String();
         }
 
-        $accessKey = $this->extractAccessKey($authorizedXml);
+        $accessKey = $this->extractAccessKey($authorizedXml) ?: $accessKey;
 
         return [
             'status' => 'authorized',
+            'document_model' => $documentModel,
             'request_xml' => $requestXml,
             'signed_xml' => $signedXml,
             'response_xml' => $responseXml,
@@ -81,8 +113,14 @@ class SpedNfeNfceEmitter
 
     public function emitLocalTest(array $payload, array $agentConfig): array
     {
+        $documentModel = $this->documentModel($payload);
+
+        if ($documentModel !== '65') {
+            throw new RuntimeException('O ensaio local sem SEFAZ esta disponivel apenas para NFC-e modelo 65.');
+        }
+
         $tools = $this->makeTools($payload, $agentConfig, false);
-        $tools->model('65');
+        $tools->model($documentModel);
 
         $requestXml = $this->layoutBuilder->build($payload);
         $signedXml = $tools->signNFe($requestXml);
@@ -153,7 +191,41 @@ class SpedNfeNfceEmitter
         $configJson = json_encode($config, JSON_THROW_ON_ERROR);
         $certificate = $this->certificateReader->readCertificate($certificatePath, $certificatePassword);
 
+        if ($certificate->getCnpj() !== ($payload['profile']['cnpj'] ?? null)) {
+            throw new RuntimeException('O certificado configurado no agente nao pertence ao mesmo CNPJ do emitente fiscal.');
+        }
+
         return new Tools($configJson, $certificate);
+    }
+
+    protected function documentModel(array $payload): string
+    {
+        return (string) ($payload['flags']['document_model'] ?? ($payload['sale']['requested_document_model'] ?? '65'));
+    }
+
+    protected function failedResult(
+        string $requestXml,
+        string $signedXml,
+        ?string $responseXml,
+        ?string $accessKey,
+        ?string $statusCode,
+        ?string $statusReason,
+        string $message,
+    ): array {
+        return [
+            'status' => 'failed',
+            'request_xml' => $requestXml,
+            'signed_xml' => $signedXml,
+            'response_xml' => $responseXml,
+            'authorized_xml' => null,
+            'access_key' => $accessKey,
+            'receipt' => null,
+            'protocol' => null,
+            'sefaz_status_code' => $statusCode,
+            'sefaz_status_reason' => $statusReason,
+            'message' => $message,
+            'printed_at' => null,
+        ];
     }
 
     protected function extractAccessKey(string $xml): ?string

@@ -96,6 +96,7 @@ class FiscalDocumentXmlStorage
         return [
             'request_xml' => 'request.xml',
             'signed_xml' => 'signed.xml',
+            'response_xml' => 'response.xml',
             'authorized_xml' => 'authorized.xml',
         ];
     }

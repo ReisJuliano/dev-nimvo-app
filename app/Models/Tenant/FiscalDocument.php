@@ -26,6 +26,7 @@ class FiscalDocument extends Model
         'payload',
         'request_xml',
         'signed_xml',
+        'response_xml',
         'authorized_xml',
         'sefaz_receipt',
         'sefaz_protocol',
