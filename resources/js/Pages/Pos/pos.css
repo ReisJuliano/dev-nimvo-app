@@ -76,6 +76,10 @@
     cursor: pointer;
 }
 
+.pos-customer-chip.summary {
+    cursor: default;
+}
+
 .pos-customer-chip.identified {
     background: rgba(24, 95, 165, 0.1);
 }

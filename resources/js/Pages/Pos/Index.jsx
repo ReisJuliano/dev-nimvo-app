@@ -40,7 +40,7 @@ import './pos.css'
 
 const shortcutHints = [
     { key: 'products', keys: ['Shift', 'P'], label: 'Focar busca de produtos' },
-    { key: 'customer', keys: ['Shift', 'C'], label: 'Abrir cliente' },
+    { key: 'customer', keys: ['Shift', 'C'], label: 'Selecionar cliente' },
     { key: 'discount', keys: ['Shift', 'D'], label: 'Abrir desconto' },
     { key: 'payment', keys: ['Shift', 'F'], label: 'Abrir pagamento' },
     { key: 'cash', keys: ['Shift', 'X'], label: 'Abrir ou fechar caixa' },
@@ -227,7 +227,6 @@ export default function PosIndex({
     const [customerModalOpen, setCustomerModalOpen] = useState(false)
     const [cashierDraftsModalOpen, setCashierDraftsModalOpen] = useState(false)
     const [customerLinkForm, setCustomerLinkForm] = useState(initialCustomerLinkForm)
-    const [linkingCustomer, setLinkingCustomer] = useState(false)
     const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
     const [invoiceChoice, setInvoiceChoice] = useState('65')
     const [cancelModalOpen, setCancelModalOpen] = useState(false)
@@ -681,21 +680,21 @@ export default function PosIndex({
     }, [recommendationAnchorProductId, recommendationSignature])
 
     const linkedCustomerSummary = useMemo(() => {
-        if (selectedCustomerData) {
-            return {
-                name: selectedCustomerData.name,
-                document: selectedCustomerData.document || '',
-                email: selectedCustomerData.email || '',
-                source: 'customer',
-            }
-        }
-
         if (manualRecipient.name || manualRecipient.document) {
             return {
                 name: manualRecipient.name || 'Consumidor final',
                 document: manualRecipient.document || '',
                 email: manualRecipient.email || '',
                 source: 'manual',
+            }
+        }
+
+        if (selectedCustomerData) {
+            return {
+                name: selectedCustomerData.name,
+                document: selectedCustomerData.document || '',
+                email: selectedCustomerData.email || '',
+                source: 'customer',
             }
         }
 
@@ -983,6 +982,12 @@ export default function PosIndex({
     function closeCustomerPicker() {
         setCustomerPickerOpen(false)
         clearCustomerSearch()
+    }
+
+    function openCustomerPicker() {
+        clearCustomerSearch()
+        setFeedback(null)
+        setCustomerPickerOpen(true)
     }
 
     function resetSale() {
@@ -1542,11 +1547,11 @@ export default function PosIndex({
         })
     }
 
-    function openCustomerModal() {
+    function openConsumerModal() {
         setCustomerLinkForm({
-            name: selectedCustomerData?.name || manualRecipient.name || '',
-            document: selectedCustomerData?.document || manualRecipient.document || '',
-            email: selectedCustomerData?.email || manualRecipient.email || '',
+            name: manualRecipient.name || selectedCustomerData?.name || '',
+            document: manualRecipient.document || selectedCustomerData?.document || '',
+            email: manualRecipient.email || selectedCustomerData?.email || '',
         })
         setCustomerModalOpen(true)
     }
@@ -1555,7 +1560,7 @@ export default function PosIndex({
         setCustomerLinkForm((current) => ({ ...current, [field]: value }))
     }
 
-    async function handleLinkCustomer(event) {
+    function handleSaveConsumer(event) {
         event.preventDefault()
 
         const name = customerLinkForm.name.trim()
@@ -1564,80 +1569,26 @@ export default function PosIndex({
         const normalizedDocument = normalizeDocument(document)
 
         if (!name && !normalizedDocument && !email) {
-            setSelectedCustomer('')
             setManualRecipient(initialManualRecipient)
             setCustomerLinkForm(initialCustomerLinkForm)
             setCustomerModalOpen(false)
-            showFeedback('success', 'Cliente removido da venda atual.')
+            showFeedback('success', 'Consumidor fiscal removido desta venda.')
             return
         }
 
-        if (!name) {
-            showFeedback('error', 'Informe o nome do cliente antes de vincular.')
+        if (!name || !normalizedDocument) {
+            showFeedback('error', 'Informe nome e CPF/CNPJ do consumidor antes de salvar.')
             return
         }
-
-        const existingCustomer = customers.find((customer) => {
-            if (normalizedDocument && normalizeDocument(customer.document) === normalizedDocument) {
-                return true
-            }
-
-            return String(customer.name || '').trim().toLowerCase() === name.toLowerCase()
-        })
 
         setManualRecipient({
             name,
             document: normalizedDocument,
             email,
         })
-
-        if (existingCustomer) {
-            setSelectedCustomer(String(existingCustomer.id))
-            setCustomerLinkForm(initialCustomerLinkForm)
-            setCustomerModalOpen(false)
-            showFeedback('success', 'Cliente vinculado a esta venda.')
-            return
-        }
-
-        setLinkingCustomer(true)
-
-        try {
-            const response = await apiRequest('/api/pdv/customers/quick', {
-                method: 'post',
-                data: {
-                    name,
-                    phone: null,
-                    document: normalizedDocument || null,
-                    email: email || null,
-                },
-            })
-
-            persistCustomersInWorkspace([
-                ...getOfflineWorkspaceSnapshot(tenantId).catalogs.customers,
-                response.customer,
-            ])
-            setSelectedCustomer(String(response.customer.id))
-            setCustomerLinkForm(initialCustomerLinkForm)
-            setCustomerModalOpen(false)
-            showFeedback('success', 'Cliente cadastrado e vinculado com sucesso.')
-        } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
-                const offlineCustomer = createOfflineCustomer(tenantId, {
-                    name,
-                    phone: null,
-                    document: normalizedDocument || null,
-                    email: email || null,
-                })
-                setSelectedCustomer(String(offlineCustomer.id))
-                setCustomerLinkForm(initialCustomerLinkForm)
-                setCustomerModalOpen(false)
-                showFeedback('warning', 'Cliente salvo no modo offline e vinculado a esta venda.')
-            } else {
-                showFeedback('error', error.message)
-            }
-        } finally {
-            setLinkingCustomer(false)
-        }
+        setCustomerLinkForm(initialCustomerLinkForm)
+        setCustomerModalOpen(false)
+        showFeedback('success', 'Consumidor definido para a emissao fiscal.')
     }
 
     function closeCashReportModal() {
@@ -2238,8 +2189,25 @@ export default function PosIndex({
     }
 
     function buildInlineRecipientPayload(requireEmail = false) {
+        const manualName = manualRecipient.name.trim()
+        const manualDocument = normalizeDocument(manualRecipient.document)
+        const manualEmail = manualRecipient.email.trim()
+
+        if (manualName && manualDocument) {
+            if (requireEmail && !manualEmail) {
+                throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
+            }
+
+            return {
+                type: 'document',
+                name: manualName,
+                document: manualDocument,
+                email: manualEmail || null,
+            }
+        }
+
         if (selectedCustomerData?.document) {
-            const fallbackEmail = (manualRecipient.email || customerLinkForm.email || '').trim()
+            const fallbackEmail = customerLinkForm.email.trim()
 
             if (requireEmail && !selectedCustomerData.email && !fallbackEmail) {
                 throw new Error('Informe um e-mail do cliente antes de enviar o comprovante por e-mail.')
@@ -2257,16 +2225,16 @@ export default function PosIndex({
             return { type: 'customer', customer_id: selectedCustomerData.id }
         }
 
-        const name = (manualRecipient.name || customerLinkForm.name || '').trim()
-        const document = normalizeDocument(manualRecipient.document || customerLinkForm.document || '')
-        const email = (manualRecipient.email || customerLinkForm.email || '').trim()
+        const name = customerLinkForm.name.trim()
+        const document = normalizeDocument(customerLinkForm.document)
+        const email = customerLinkForm.email.trim()
 
         if (!name || !document) {
-            throw new Error('Identifique o cliente com nome e CPF/CNPJ antes de emitir o documento fiscal.')
+            throw new Error('Identifique o consumidor com nome e CPF/CNPJ antes de emitir o documento fiscal.')
         }
 
         if (requireEmail && !email) {
-            throw new Error('Informe um e-mail do cliente antes de usar essa opcao.')
+            throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
         }
 
         return {
@@ -2444,17 +2412,22 @@ export default function PosIndex({
         setFiscalDecisionOpen(false)
         setRecipientModalOpen(true)
 
+        if (manualRecipient.name || manualRecipient.document) {
+            setRecipientSelectionMode('document')
+            return
+        }
+
         if (selectedCustomerData?.document) {
             setRecipientSelectionMode('customer')
         } else if (selectedCompanyData?.document) {
             setRecipientSelectionMode('company')
         } else {
             setRecipientSelectionMode('document')
-            setManualRecipient({
-                name: selectedCustomerData?.name || '',
-                document: selectedCustomerData?.document || '',
-                email: selectedCustomerData?.email || '',
-            })
+            setManualRecipient((current) => ({
+                name: current.name || selectedCustomerData?.name || '',
+                document: current.document || selectedCustomerData?.document || '',
+                email: current.email || selectedCustomerData?.email || '',
+            }))
         }
     }
 
@@ -2658,7 +2631,7 @@ export default function PosIndex({
 
     function openCustomerShortcut() {
         closeShortcutDrivenPanels()
-        openCustomerModal()
+        openCustomerPicker()
     }
 
     function openFinalizeShortcut() {
@@ -2814,7 +2787,8 @@ export default function PosIndex({
         submitting,
         openPaymentStep,
         openDiscountModal,
-        openCustomerModal,
+        openCustomerPicker,
+        openConsumerModal,
         openCashierDraftsModal,
         openInvoiceStep,
         openFinalizeStep,
@@ -2868,8 +2842,7 @@ export default function PosIndex({
         onCloseCustomerModal: () => setCustomerModalOpen(false),
         customerLinkForm,
         onCustomerLinkFieldChange: handleCustomerLinkFieldChange,
-        onLinkCustomer: handleLinkCustomer,
-        linkingCustomer,
+        onSaveConsumer: handleSaveConsumer,
         invoiceModalOpen,
         onCloseInvoiceModal: () => setInvoiceModalOpen(false),
         invoiceGridOptions,
@@ -3444,7 +3417,8 @@ function PosWorkspace({
     submitting,
     openPaymentStep,
     openDiscountModal,
-    openCustomerModal,
+    openCustomerPicker,
+    openConsumerModal,
     openCashierDraftsModal,
     openInvoiceStep,
     openFinalizeStep,
@@ -3498,8 +3472,7 @@ function PosWorkspace({
     onCloseCustomerModal,
     customerLinkForm,
     onCustomerLinkFieldChange,
-    onLinkCustomer,
-    linkingCustomer,
+    onSaveConsumer,
     invoiceModalOpen,
     onCloseInvoiceModal,
     invoiceGridOptions,
@@ -3519,14 +3492,13 @@ function PosWorkspace({
                             <strong>{tenantName || 'Loja principal'} | {cashRegisterState ? 'Caixa principal' : 'Caixa fechado'}</strong>
                         </div>
 
-                        <button
-                            type="button"
-                            className={`pos-customer-chip ${linkedCustomerSummary.source !== 'none' ? 'identified' : ''}`}
-                            onClick={openCustomerModal}
+                        <div
+                            className={`pos-customer-chip summary ${linkedCustomerSummary.source !== 'none' ? 'identified' : ''}`}
+                            role="status"
                         >
                             <PosIcon name="user" />
                             <span>{linkedCustomerSummary.name}</span>
-                        </button>
+                        </div>
                     </header>
 
                     <div className="pos-barcode-row">
@@ -3714,9 +3686,10 @@ function PosWorkspace({
                 <aside className="pos-sidebar">
                     <PosSidebarAction label="Pagamento" icon="card" onClick={openPaymentStep} />
                     <PosSidebarAction label="Desconto" icon="discount" onClick={() => openDiscountModal()} />
-                    <PosSidebarAction label="Cliente" icon="user" onClick={openCustomerModal} />
+                    <PosSidebarAction label="Cliente" icon="user" onClick={openCustomerPicker} />
                     {supportsOrders ? <PosSidebarAction label="Comandas" icon="cart" onClick={openCashierDraftsModal} /> : null}
                     <div className="pos-sidebar-separator" />
+                    <PosSidebarAction label="Consumidor" icon="receipt" onClick={openConsumerModal} />
                     <PosSidebarAction label="NF-e" icon="document" onClick={openInvoiceStep} />
                     <PosSidebarAction label="Cancelar" icon="cancel" tone="danger" onClick={onOpenCancel} />
                     <div className="pos-sidebar-spacer" />
@@ -3942,8 +3915,8 @@ function PosWorkspace({
                 </form>
             </PosModal>
 
-            <PosModal open={customerModalOpen} title="Cliente" onClose={onCloseCustomerModal}>
-                <form className="pos-modal-form" onSubmit={onLinkCustomer}>
+            <PosModal open={customerModalOpen} title="Consumidor" onClose={onCloseCustomerModal}>
+                <form className="pos-modal-form" onSubmit={onSaveConsumer}>
                     <label className="pos-field">
                         <span>CPF / CNPJ</span>
                         <input
@@ -3962,7 +3935,7 @@ function PosWorkspace({
                             type="text"
                             value={customerLinkForm.name}
                             onChange={(event) => onCustomerLinkFieldChange('name', event.target.value)}
-                            placeholder="Nome do cliente"
+                            placeholder="Nome do consumidor"
                         />
                     </label>
 
@@ -3981,8 +3954,8 @@ function PosWorkspace({
                         <button type="button" className="pos-button ghost" onClick={onCloseCustomerModal}>
                             Fechar
                         </button>
-                        <button type="submit" className="pos-button info" disabled={linkingCustomer}>
-                            {linkingCustomer ? 'Vinculando...' : 'Vincular'}
+                        <button type="submit" className="pos-button info">
+                            Salvar consumidor
                         </button>
                     </div>
                 </form>
@@ -4005,7 +3978,7 @@ function PosWorkspace({
                     </div>
 
                     <div className="pos-inline-summary">
-                        <span>Cliente</span>
+                        <span>Consumidor</span>
                         <strong>{linkedCustomerSummary.name}</strong>
                     </div>
 
