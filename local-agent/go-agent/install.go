@@ -646,7 +646,7 @@ func validateInstallationCertificate(certificate Certificate) error {
 }
 
 func promptInstallationCertificate(certificate Certificate) (Certificate, error) {
-	configureNow, err := promptBool("Informar certificado digital agora", strings.TrimSpace(certificate.Path) != "")
+	configureNow, err := promptBool("Configurar certificado digital agora", true)
 	if err != nil {
 		return Certificate{}, err
 	}
@@ -655,27 +655,45 @@ func promptInstallationCertificate(certificate Certificate) (Certificate, error)
 		return Certificate{}, nil
 	}
 
-	certificate.Path, err = promptFilePath(
-		"Arquivo do certificado digital (.pfx/.p12)",
-		certificate.Path,
-		"Selecione o certificado digital",
-		"Certificados digitais (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
-	)
-	if err != nil {
-		return Certificate{}, err
-	}
+	for {
+		fmt.Println("Informe o caminho do certificado digital ou pressione Enter para procurar o arquivo no Windows.")
 
-	certificate.Password, err = promptText("Senha do certificado digital (opcional)", certificate.Password)
-	if err != nil {
-		return Certificate{}, err
-	}
+		certificate.Path, err = promptFilePath(
+			"Arquivo do certificado digital (.pfx/.p12)",
+			certificate.Path,
+			"Selecione o certificado digital",
+			"Certificados digitais (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
+		)
+		if err != nil {
+			return Certificate{}, err
+		}
 
-	certificate = normalizeInstallationCertificate(certificate)
-	if err := validateInstallationCertificate(certificate); err != nil {
-		return Certificate{}, err
-	}
+		certificate = normalizeInstallationCertificate(certificate)
+		if err := validateInstallationCertificate(certificate); err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
 
-	return certificate, nil
+		fmt.Printf("Caminho do certificado selecionado: %s\n", certificate.Path)
+
+		certificate.Password, err = promptText("Senha do certificado digital", certificate.Password)
+		if err != nil {
+			return Certificate{}, err
+		}
+
+		if strings.TrimSpace(certificate.Password) == "" {
+			continueWithoutPassword, err := promptBool("Continuar sem senha do certificado", false)
+			if err != nil {
+				return Certificate{}, err
+			}
+
+			if !continueWithoutPassword {
+				continue
+			}
+		}
+
+		return normalizeInstallationCertificate(certificate), nil
+	}
 }
 
 func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, error) {
