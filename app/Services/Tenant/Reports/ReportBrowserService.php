@@ -334,13 +334,15 @@ class ReportBrowserService
         }
 
         $page = max(1, (int) ($filters['page'] ?? 1));
+        $exportFormat = $this->normalizeSelection($filters['export'] ?? null, ['pdf', 'excel']);
         $perPage = (int) ($filters['per_page'] ?? 20);
-        $perPage = min(max($perPage, 10), 100);
+        $perPage = min(max($perPage, 10), $exportFormat ? 5000 : 100);
         $query = trim((string) ($filters['query'] ?? ''));
         $sortBy = trim((string) ($filters['sort_by'] ?? ''));
 
         return [
             'applied' => $applied,
+            'export' => $exportFormat,
             'scope' => $scope,
             'date' => $selectedDate,
             'month' => $selectedMonth,
@@ -368,6 +370,7 @@ class ReportBrowserService
     {
         return [
             'applied' => $filters['applied'],
+            'export' => $filters['export'] ?? '',
             'scope' => $filters['scope'],
             'date' => $filters['date']->format('Y-m-d'),
             'month' => $filters['month']->format('Y-m'),
