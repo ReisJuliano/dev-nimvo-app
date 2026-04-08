@@ -3,6 +3,7 @@ import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import ActionButton from '@/Components/UI/ActionButton'
+import ModalForm from '@/Components/UI/ModalForm'
 import {
     Badge,
     buildRecordsUrl,
@@ -38,15 +39,6 @@ function normalizeCategorySearch(value) {
     return String(value || '').trim().toLowerCase()
 }
 
-function CategoryMetric({ label, value, format = 'number' }) {
-    return (
-        <article className="ops-category-metric-card">
-            <span>{label}</span>
-            <strong>{format === 'money' ? formatMoney(value) : value}</strong>
-        </article>
-    )
-}
-
 function CategoryListCard({ record, active, onClick }) {
     const initial = String(record.name || 'C').trim().charAt(0).toUpperCase() || 'C'
 
@@ -73,21 +65,6 @@ function CategoryListCard({ record, active, onClick }) {
     )
 }
 
-function CategoryEditorPlaceholder({ onCreate }) {
-    return (
-        <div className="ops-category-editor-placeholder">
-            <span className="ops-category-editor-placeholder-icon">
-                <i className="fa-solid fa-layer-group" />
-            </span>
-            <strong>Selecione ou crie</strong>
-            <small className="ops-category-editor-placeholder-copy">Abra uma categoria para editar ou inicie um novo cadastro.</small>
-            <ActionButton icon="fa-plus" onClick={onCreate}>
-                Nova categoria
-            </ActionButton>
-        </div>
-    )
-}
-
 export function CategoriesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', description: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
@@ -95,7 +72,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     const [statusFilter, setStatusFilter] = useState('all')
     const [productFilter, setProductFilter] = useState('all')
     const [form, setForm] = useState(emptyForm)
-    const [editorVisible, setEditorVisible] = useState(false)
+    const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeCategorySearch(search), [search])
@@ -122,28 +99,19 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         },
         [hasFilters, normalizedSearch, productFilter, records, statusFilter],
     )
-    const metrics = useMemo(
-        () => [
-            { label: 'Total', value: records.length },
-            { label: 'Ativas', value: records.filter((record) => record.active).length },
-            { label: 'Estoque', value: records.reduce((total, record) => total + Number(record.stock_value || 0), 0), format: 'money' },
-        ],
-        [records],
-    )
-
     function handleCreate() {
         setForm(emptyForm)
-        setEditorVisible(true)
+        setModalOpen(true)
     }
 
     function handleSelectRecord(record) {
         setForm({ ...emptyForm, ...record })
-        setEditorVisible(true)
+        setModalOpen(true)
     }
 
-    function handleCloseEditor() {
+    function handleCloseModal() {
         setForm(emptyForm)
-        setEditorVisible(false)
+        setModalOpen(false)
     }
 
     function handleClearFilters() {
@@ -162,7 +130,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record })
-            setEditorVisible(true)
+            setModalOpen(false)
             setSearch(response.record.name || '')
             setStatusFilter(response.record.active ? 'active' : 'inactive')
             setProductFilter('all')
@@ -194,7 +162,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
-            handleCloseEditor()
+            handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -215,106 +183,106 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 onCreate={handleCreate}
                 summaryItems={[]}
                 emptyState={null}
-                formTitle={editorVisible ? (form.id ? 'Editar categoria' : 'Nova categoria') : 'Categoria'}
-                formSubtitle={editorVisible ? 'Cadastro compacto' : 'Edicao sob demanda'}
-                formChildren={editorVisible ? (
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                        <label>
-                            <FieldLabel icon="fa-layer-group" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-toggle-on" text="Status" />
-                            <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
-                                <option value="active">Ativa</option>
-                                <option value="inactive">Inativa</option>
-                            </select>
-                        </label>
-                        <label className="span-2">
-                            <FieldLabel icon="fa-align-left" text="Descricao" />
-                            <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-                        </label>
-                        <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" icon="fa-xmark" iconOnly onClick={handleCloseEditor} title="Fechar editor" aria-label="Fechar editor" />
-                            {form.id ? (
-                                <ActionButton tone="danger" icon="fa-trash" iconOnly onClick={handleDelete} title="Excluir categoria" aria-label="Excluir categoria" />
-                            ) : null}
-                            <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar categoria'}
-                            </ActionButton>
-                        </div>
-                    </form>
-                ) : (
-                    <CategoryEditorPlaceholder onCreate={handleCreate} />
-                )}
                 listChildren={(
                     <div className="ops-category-shell">
-                    <section className="ops-category-summary-strip">
-                        {metrics.map((item) => (
-                            <CategoryMetric key={item.label} label={item.label} value={item.value} format={item.format} />
-                        ))}
-                    </section>
-
-                    <section className="ops-category-toolbar">
-                        <label className="ops-category-search-field">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <input
-                                type="search"
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Buscar categoria"
+                        <section className="ops-category-toolbar">
+                            <label className="ops-category-search-field">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    type="search"
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    placeholder="Buscar categoria"
+                                />
+                            </label>
+                            <label className="ops-category-filter-field">
+                                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                    {CATEGORY_STATUS_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="ops-category-filter-field">
+                                <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+                                    {CATEGORY_PRODUCT_FILTERS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <ActionButton
+                                tone="ghost"
+                                icon="fa-rotate-left"
+                                iconOnly
+                                onClick={handleClearFilters}
+                                title="Limpar filtros"
+                                aria-label="Limpar filtros"
+                                disabled={!hasFilters}
                             />
-                        </label>
-                        <label className="ops-category-filter-field">
-                            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                                {CATEGORY_STATUS_FILTERS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <label className="ops-category-filter-field">
-                            <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
-                                {CATEGORY_PRODUCT_FILTERS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <ActionButton
-                            tone="ghost"
-                            icon="fa-rotate-left"
-                            iconOnly
-                            onClick={handleClearFilters}
-                            title="Limpar filtros"
-                            aria-label="Limpar filtros"
-                            disabled={!hasFilters}
-                        />
-                    </section>
+                        </section>
 
-                    {hasFilters ? (
-                        filteredRecords.length ? (
-                            <div className="ops-category-results">
-                                {filteredRecords.map((record) => (
-                                    <CategoryListCard
-                                        key={record.id}
-                                        record={record}
-                                        active={editorVisible && form.id === record.id}
-                                        onClick={() => handleSelectRecord(record)}
-                                    />
-                                ))}
-                            </div>
+                        {hasFilters ? (
+                            filteredRecords.length ? (
+                                <div className="ops-category-results">
+                                    {filteredRecords.map((record) => (
+                                        <CategoryListCard
+                                            key={record.id}
+                                            record={record}
+                                            active={modalOpen && form.id === record.id}
+                                            onClick={() => handleSelectRecord(record)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState icon="fa-folder-open" title="Nenhum resultado" text="Refine a busca." />
+                            )
                         ) : (
-                            <EmptyState icon="fa-folder-open" title="Nenhum resultado" text="Refine a busca." />
-                        )
-                    ) : (
-                        <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Ative um recorte para listar." />
-                    )}
-                </div>
+                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Ative um recorte para listar." />
+                        )}
+                    </div>
                 )}
             />
+            <ModalForm
+                open={modalOpen}
+                title={form.id ? 'Editar categoria' : 'Nova categoria'}
+                description="Cadastro compacto"
+                icon="fa-layer-group"
+                size="sm"
+                onClose={handleCloseModal}
+                footer={(
+                    <>
+                        {form.id ? (
+                            <ActionButton tone="danger" onClick={handleDelete}>
+                                Excluir
+                            </ActionButton>
+                        ) : <span />}
+                        <ActionButton form="category-modal-form" type="submit" disabled={saving}>
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar categoria'}
+                        </ActionButton>
+                    </>
+                )}
+            >
+                <form id="category-modal-form" className="ops-workspace-form-grid one-column" onSubmit={handleSubmit}>
+                    <label>
+                        <FieldLabel icon="fa-layer-group" text="Nome" />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-toggle-on" text="Status" />
+                        <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
+                            <option value="active">Ativa</option>
+                            <option value="inactive">Inativa</option>
+                        </select>
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-align-left" text="Descricao" />
+                        <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
+                    </label>
+                </form>
+            </ModalForm>
         </>
     )
 }

@@ -111,13 +111,14 @@ export function WorkspaceCollectionShell({
 }) {
     const hasTabs = Array.isArray(tabs) && tabs.length > 0
     const content = listChildren ?? children
+    const hasSidebar = summaryItems.length > 0 || Boolean(formChildren)
 
     return (
         <div className="ops-workspace-stack">
             {hasTabs ? <SectionTabs tabs={tabs} activeTab={activeTab} onChange={onTabChange} /> : null}
 
             <PageContainer
-                sidebar={(
+                sidebar={hasSidebar ? (
                     <RightSidebarPanel>
                         {summaryItems.length ? (
                             <RightSidebarSection title="Contexto" subtitle="Resumo do modulo">
@@ -139,7 +140,7 @@ export function WorkspaceCollectionShell({
                             {formChildren}
                         </RightSidebarSection>
                     </RightSidebarPanel>
-                )}
+                ) : null}
             >
                 <DataList
                     title={listTitle}
