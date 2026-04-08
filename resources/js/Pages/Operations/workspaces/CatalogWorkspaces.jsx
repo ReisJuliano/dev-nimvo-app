@@ -10,6 +10,7 @@ import {
     EmptyState,
     Feedback,
     ListCard,
+    SectionTabs,
     WorkspaceCollectionShell,
     upsertRecord,
 } from './shared'
@@ -24,6 +25,13 @@ const CATEGORY_PRODUCT_FILTERS = [
     { value: 'all', label: 'Produtos: todos' },
     { value: 'with-products', label: 'Com produtos' },
     { value: 'without-products', label: 'Sem produtos' },
+]
+
+const CUSTOMER_MODAL_TABS = [
+    { key: 'registration', label: 'Cadastro', icon: 'fa-address-card' },
+    { key: 'fiscal', label: 'Fiscal', icon: 'fa-file-invoice' },
+    { key: 'address', label: 'Endereco', icon: 'fa-map-location-dot' },
+    { key: 'limits', label: 'Limites', icon: 'fa-wallet' },
 ]
 
 function FieldLabel({ icon, text }) {
@@ -492,6 +500,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     const [search, setSearch] = useState('')
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
+    const [activeModalTab, setActiveModalTab] = useState('registration')
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
@@ -575,16 +584,19 @@ export function CustomersWorkspace({ moduleKey, payload }) {
 
     function handleSelectRecord(record) {
         setForm(buildCustomerForm(record))
+        setActiveModalTab('registration')
         setModalOpen(true)
     }
 
     function handleCreate() {
         setForm(buildCustomerForm())
+        setActiveModalTab('registration')
         setModalOpen(true)
     }
 
     function handleCloseModal() {
         setForm(buildCustomerForm())
+        setActiveModalTab('registration')
         setModalOpen(false)
     }
 
@@ -739,77 +751,98 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                     </>
                 )}
             >
-                <form id="customer-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                    <label>
-                        <FieldLabel icon="fa-user" text="Nome" />
-                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-id-card" text="CPF ou CNPJ" />
-                        <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-phone" text="Telefone" />
-                        <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-envelope" text="E-mail" />
-                        <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-user-check" text="Consumidor final" />
-                        <select value={form.consumer_final ? 'yes' : 'no'} onChange={(event) => setForm((current) => ({ ...current, consumer_final: event.target.value === 'yes' }))}>
-                            <option value="yes">Sim</option>
-                            <option value="no">Nao</option>
-                        </select>
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-toggle-on" text="Status" />
-                        <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
-                            <option value="active">Ativo</option>
-                            <option value="inactive">Inativo</option>
-                        </select>
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
-                        <input value={form.state_registration} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-credit-card" text="Limite de credito" />
-                        <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
-                    </label>
-                    <label className="span-2">
-                        <FieldLabel icon="fa-map-location-dot" text="Logradouro" />
-                        <input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-hashtag" text="Numero" />
-                        <input value={form.number} onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-plus" text="Complemento" />
-                        <input value={form.complement} onChange={(event) => setForm((current) => ({ ...current, complement: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-map" text="Bairro" />
-                        <input value={form.district} onChange={(event) => setForm((current) => ({ ...current, district: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-city" text="Cidade" />
-                        <input value={form.city_name} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-hashtag" text="Codigo IBGE" />
-                        <input value={form.city_code} onChange={(event) => setForm((current) => ({ ...current, city_code: event.target.value }))} />
-                    </label>
-                    <label>
-                        <FieldLabel icon="fa-flag" text="UF" />
-                        <input maxLength="2" value={form.state} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
-                    </label>
-                    <label className="span-2">
-                        <FieldLabel icon="fa-location-dot" text="CEP" />
-                        <input value={form.zip_code} onChange={(event) => setForm((current) => ({ ...current, zip_code: event.target.value }))} />
-                    </label>
+                <form id="customer-modal-form" className="ops-customer-modal-shell" onSubmit={handleSubmit}>
+                    <SectionTabs tabs={CUSTOMER_MODAL_TABS} activeTab={activeModalTab} onChange={setActiveModalTab} />
+
+                    {activeModalTab === 'registration' ? (
+                        <div className="ops-workspace-form-grid">
+                            <label>
+                                <FieldLabel icon="fa-user" text="Nome" />
+                                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-id-card" text="CPF ou CNPJ" />
+                                <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-phone" text="Telefone" />
+                                <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-envelope" text="E-mail" />
+                                <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-circle-check" text="Status" />
+                                <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
+                                    <option value="active">Ativo</option>
+                                    <option value="inactive">Inativo</option>
+                                </select>
+                            </label>
+                        </div>
+                    ) : null}
+
+                    {activeModalTab === 'fiscal' ? (
+                        <div className="ops-workspace-form-grid">
+                            <label>
+                                <FieldLabel icon="fa-user-check" text="Consumidor final" />
+                                <select value={form.consumer_final ? 'yes' : 'no'} onChange={(event) => setForm((current) => ({ ...current, consumer_final: event.target.value === 'yes' }))}>
+                                    <option value="yes">Sim</option>
+                                    <option value="no">Nao</option>
+                                </select>
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-file-lines" text="Inscricao estadual" />
+                                <input value={form.state_registration} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
+                            </label>
+                        </div>
+                    ) : null}
+
+                    {activeModalTab === 'address' ? (
+                        <div className="ops-workspace-form-grid">
+                            <label className="span-2">
+                                <FieldLabel icon="fa-road" text="Logradouro" />
+                                <input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-house" text="Numero" />
+                                <input value={form.number} onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-plus" text="Complemento" />
+                                <input value={form.complement} onChange={(event) => setForm((current) => ({ ...current, complement: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-map" text="Bairro" />
+                                <input value={form.district} onChange={(event) => setForm((current) => ({ ...current, district: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-city" text="Cidade" />
+                                <input value={form.city_name} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-map-pin" text="Codigo IBGE" />
+                                <input value={form.city_code} onChange={(event) => setForm((current) => ({ ...current, city_code: event.target.value }))} />
+                            </label>
+                            <label>
+                                <FieldLabel icon="fa-flag" text="UF" />
+                                <input maxLength="2" value={form.state} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value.toUpperCase() }))} />
+                            </label>
+                            <label className="span-2">
+                                <FieldLabel icon="fa-location-dot" text="CEP" />
+                                <input value={form.zip_code} onChange={(event) => setForm((current) => ({ ...current, zip_code: event.target.value }))} />
+                            </label>
+                        </div>
+                    ) : null}
+
+                    {activeModalTab === 'limits' ? (
+                        <div className="ops-workspace-form-grid">
+                            <label>
+                                <FieldLabel icon="fa-wallet" text="Limite de credito" />
+                                <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
+                            </label>
+                        </div>
+                    ) : null}
                 </form>
             </ModalForm>
         </>
