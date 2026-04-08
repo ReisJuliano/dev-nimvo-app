@@ -595,9 +595,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 <FieldLabel icon="fa-barcode" text="Bipar produto" />
                                 <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou codigo" autoComplete="off" />
                             </label>
-                            <button type="submit" className="ui-button">
-                                <i className="fa-solid fa-arrow-right" />
-                            </button>
                         </form>
 
                         <div className="ops-workspace-inline-adder compact">
