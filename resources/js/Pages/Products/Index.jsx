@@ -7,7 +7,7 @@ import ProductFormModal from '@/Components/Products/ProductFormModal'
 import ProductsTable from '@/Components/Products/ProductsTable'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
-import { formatMoney, formatNumber } from '@/lib/format'
+import { formatNumber } from '@/lib/format'
 import {
     configureOfflineWorkspaceBridge,
     getOfflineWorkspaceSnapshot,
@@ -171,20 +171,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 return String(left.name || '').localeCompare(String(right.name || ''))
             })
     }, [categoryId, collectionItems, hasSearch, normalizedSearch])
-
-    const summary = useMemo(() => {
-        const stockValue = collectionItems.reduce(
-            (total, product) => total + Number(product.stock_quantity) * Number(product.cost_price),
-            0,
-        )
-
-        return {
-            total: collectionItems.length,
-            lowStock: collectionItems.filter((product) => product.stock_quantity <= product.min_stock).length,
-            stockValue,
-            categories: new Set(collectionItems.map((product) => product.category_id).filter(Boolean)).size,
-        }
-    }, [collectionItems])
 
     function handleCreate() {
         setSelectedProduct(null)
@@ -457,25 +443,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                                 />
                             ) : null}
                         </div>
-                    </section>
-
-                    <section className="products-summary-strip" aria-label="Resumo do catalogo">
-                        <article className="products-summary-tile">
-                            <span>Catalogo</span>
-                            <strong>{formatNumber(summary.total)}</strong>
-                        </article>
-                        <article className="products-summary-tile tone-warning">
-                            <span>Baixo estoque</span>
-                            <strong>{formatNumber(summary.lowStock)}</strong>
-                        </article>
-                        <article className="products-summary-tile">
-                            <span>Categorias</span>
-                            <strong>{formatNumber(summary.categories)}</strong>
-                        </article>
-                        <article className="products-summary-tile tone-accent">
-                            <span>Valor estoque</span>
-                            <strong>{formatMoney(summary.stockValue)}</strong>
-                        </article>
                     </section>
 
                     <DataList
