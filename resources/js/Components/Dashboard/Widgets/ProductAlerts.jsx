@@ -1,87 +1,59 @@
-import { formatMoney, formatNumber } from '@/lib/format'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { formatNumber, formatPercent } from '@/lib/format'
 
-export default function ProductAlerts({ topProducts = [], lowStockItems = [], mode = 'default' }) {
-    const chartData = topProducts.slice(0, 6).map((product) => ({
-        name: product.name,
-        qty: Number(product.qty_sold || 0),
-    }))
+function resolveSeverity(product) {
+    if (Number(product.stock_quantity || 0) <= 0) {
+        return 'danger'
+    }
+
+    if (Number(product.stock_quantity || 0) <= Number(product.min_stock || 0) * 0.5) {
+        return 'warning'
+    }
+
+    return 'neutral'
+}
+
+export default function ProductAlerts({ lowStockItems = [], summary }) {
+    const hasAlerts = lowStockItems.length > 0
 
     return (
-        <section className={`dashboard-side-grid ${mode === 'expanded' ? 'expanded' : ''}`}>
-            <article className="dashboard-panel">
-                <div className="dashboard-panel-header">
-                    <div>
-                        <h2>Mais vendidos hoje</h2>
-                        <p>Quantidade vendida no dia</p>
-                    </div>
-                    <span className="dashboard-panel-tag">Vendas</span>
+        <section className="dashboard-surface dashboard-surface-list">
+            <header className="dashboard-surface-header">
+                <div className="dashboard-surface-title">
+                    <strong>Estoque</strong>
+                    <span>{formatPercent(summary.inventory_health)}</span>
                 </div>
 
-                <div className="dashboard-chart-shell compact">
-                    {chartData.length ? (
-                        <ResponsiveContainer width="100%" height={220}>
-                            <BarChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(81, 96, 118, 0.14)" />
-                                <XAxis dataKey="name" hide={mode !== 'expanded'} axisLine={false} tickLine={false} />
-                                <YAxis axisLine={false} tickLine={false} stroke="#7e8ba0" />
-                                <Tooltip
-                                    contentStyle={{
-                                        borderRadius: 16,
-                                        border: '1px solid rgba(15, 23, 42, 0.08)',
-                                        boxShadow: '0 18px 32px rgba(15, 23, 42, 0.12)',
-                                    }}
-                                />
-                                <Bar dataKey="qty" radius={[12, 12, 4, 4]} fill="#07a5c9" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="dashboard-empty-state">Sem produtos vendidos hoje.</div>
-                    )}
+                <div className="dashboard-chip-group">
+                    <span className="dashboard-soft-chip">{formatNumber(summary.total_products)} ativos</span>
+                    <span className="dashboard-soft-chip warning">{formatNumber(summary.low_stock_count)} baixo</span>
                 </div>
+            </header>
 
-                <div className="dashboard-ranking-list">
-                    {topProducts.length ? (
-                        topProducts.map((product, index) => (
-                            <div key={`${product.name}-${index}`} className="dashboard-ranking-row">
-                                <span>{product.name}</span>
-                                <div>
-                                    <strong>{formatNumber(product.qty_sold)}</strong>
-                                    <small>{formatMoney(product.total_sold)}</small>
-                                </div>
+            <div className="dashboard-alert-list">
+                {hasAlerts ? (
+                    lowStockItems.map((product) => (
+                        <article key={product.id} className="dashboard-alert-item">
+                            <div className="dashboard-alert-copy">
+                                <strong>{product.name}</strong>
+                                <small>
+                                    {formatNumber(product.stock_quantity)} {product.unit}
+                                </small>
                             </div>
-                        ))
-                    ) : null}
-                </div>
-            </article>
 
-            <article className="dashboard-panel">
-                <div className="dashboard-panel-header">
-                    <div>
-                        <h2>Estoque baixo</h2>
-                        <p>Itens abaixo do minimo</p>
-                    </div>
-                    <span className="dashboard-panel-tag warning">Alerta</span>
-                </div>
-
-                <div className="dashboard-ranking-list">
-                    {lowStockItems.length ? (
-                        lowStockItems.map((product) => (
-                            <div key={product.id} className="dashboard-ranking-row warning">
-                                <span>{product.name}</span>
-                                <div>
-                                    <strong>
-                                        {formatNumber(product.stock_quantity)} {product.unit}
-                                    </strong>
-                                    <small>Min. {formatNumber(product.min_stock)}</small>
-                                </div>
+                            <div className="dashboard-alert-meta">
+                                <span className={`dashboard-alert-badge ${resolveSeverity(product)}`}>
+                                    Min. {formatNumber(product.min_stock)}
+                                </span>
                             </div>
-                        ))
-                    ) : (
-                        <div className="dashboard-empty-state">Sem alertas de estoque no momento.</div>
-                    )}
-                </div>
-            </article>
+                        </article>
+                    ))
+                ) : (
+                    <div className="dashboard-empty-state">
+                        <i className="fa-solid fa-box-open" />
+                        <span>Sem alertas</span>
+                    </div>
+                )}
+            </div>
         </section>
     )
 }

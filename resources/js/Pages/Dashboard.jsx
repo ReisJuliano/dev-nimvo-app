@@ -1,180 +1,136 @@
 import { useMemo, useState } from 'react'
-import PageContainer from '@/Components/UI/PageContainer'
-import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
-import AppLayout from '@/Layouts/AppLayout'
 import DashboardMetricCard from '@/Components/Dashboard/Widgets/DashboardMetricCard'
+import PaymentOverview from '@/Components/Dashboard/Widgets/PaymentOverview'
 import ProductAlerts from '@/Components/Dashboard/Widgets/ProductAlerts'
+import RevenueOverview from '@/Components/Dashboard/Widgets/RevenueOverview'
 import SalesSnapshot from '@/Components/Dashboard/Widgets/SalesSnapshot'
-import { formatMoney, formatNumber } from '@/lib/format'
+import AppLayout from '@/Layouts/AppLayout'
+import { formatPercent } from '@/lib/format'
 import './dashboard.css'
 
-export default function Dashboard({ summary, recentSales, topProducts, lowStockItems }) {
-    const [activeTab, setActiveTab] = useState('overview')
+const focusModes = [
+    { key: 'trend', icon: 'fa-chart-column', label: 'Tendencia' },
+    { key: 'today', icon: 'fa-clock', label: 'Hoje' },
+    { key: 'inventory', icon: 'fa-box-open', label: 'Produtos' },
+]
 
-    const summaryCards = useMemo(
+function formatDelta(value) {
+    return `${value >= 0 ? '+' : ''}${formatPercent(value)}`
+}
+
+export default function Dashboard({
+    summary,
+    recentSales,
+    topProducts,
+    lowStockItems,
+    salesTrend,
+    hourlySales,
+    paymentBreakdown,
+}) {
+    const [focusMode, setFocusMode] = useState('trend')
+
+    const cards = useMemo(
         () => [
             {
-                title: 'Ticket medio',
-                value:
-                    Number(summary.today_sales_qty) > 0
-                        ? Number(summary.today_sales_total) / Number(summary.today_sales_qty)
-                        : 0,
-                caption: 'Media por venda hoje',
-                tone: 'info',
+                title: 'Hoje',
+                value: summary.today_sales_total,
+                caption: `${summary.today_sales_qty} vendas`,
+                badge: formatDelta(summary.today_growth),
+                badgeTone: summary.today_growth >= 0 ? 'positive' : 'negative',
+                icon: 'fa-arrow-trend-up',
+                tone: 'primary',
             },
             {
-                title: 'Itens criticos',
+                title: 'Mes',
+                value: summary.month_sales_total,
+                caption: 'faturamento',
+                badge: formatDelta(summary.month_growth),
+                badgeTone: summary.month_growth >= 0 ? 'positive' : 'negative',
+                icon: 'fa-chart-line',
+                tone: 'sky',
+            },
+            {
+                title: 'Ticket',
+                value: summary.average_ticket,
+                caption: 'medio',
+                badge: `${formatPercent(summary.profit_margin)} margem`,
+                badgeTone: 'neutral',
+                icon: 'fa-wallet',
+                tone: 'teal',
+            },
+            {
+                title: 'Estoque',
                 value: summary.low_stock_count,
-                caption: 'Produtos com estoque baixo',
-                tone: 'warning',
-                type: 'number',
-            },
-            {
-                title: 'Produtos ativos',
-                value: summary.total_products,
-                caption: 'Produtos ativos no cadastro',
-                tone: 'success',
-                type: 'number',
+                format: 'number',
+                caption: `${summary.total_products} ativos`,
+                badge: `${formatPercent(summary.inventory_health)} ok`,
+                badgeTone: summary.low_stock_count > 0 ? 'warning' : 'positive',
+                icon: 'fa-boxes-stacked',
+                tone: 'violet',
             },
         ],
         [summary],
     )
 
+    const activeMode = focusModes.find((mode) => mode.key === focusMode) ?? focusModes[0]
+
     return (
-        <AppLayout title="Inicio">
+        <AppLayout title="Dashboard">
             <div className="dashboard-page">
-                <PageContainer
-                    toolbar={(
-                        <section className="ui-tabs dashboard-tabs">
+                <section className="dashboard-toolbar">
+                    <div className="dashboard-toolbar-badge">
+                        <span className="dashboard-toolbar-dot" />
+                        <strong>{activeMode.label}</strong>
+                    </div>
+
+                    <div className="dashboard-icon-tabs" role="tablist" aria-label="Dashboard views">
+                        {focusModes.map((mode) => (
                             <button
+                                key={mode.key}
                                 type="button"
-                                className={`ui-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('overview')}
+                                className={`dashboard-icon-tab ${focusMode === mode.key ? 'active' : ''}`}
+                                onClick={() => setFocusMode(mode.key)}
+                                aria-label={mode.label}
+                                title={mode.label}
                             >
-                                <i className="fa-solid fa-grid-2" />
-                                <span>Visao geral</span>
+                                <i className={`fa-solid ${mode.icon}`} />
                             </button>
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'sales' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('sales')}
-                            >
-                                <i className="fa-solid fa-chart-line" />
-                                <span>Vendas</span>
-                            </button>
-                            <button
-                                type="button"
-                                className={`ui-tab ${activeTab === 'inventory' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('inventory')}
-                            >
-                                <i className="fa-solid fa-boxes-stacked" />
-                                <span>Produtos</span>
-                            </button>
-                        </section>
-                    )}
-                    sidebar={(
-                        <RightSidebarPanel>
-                            <RightSidebarSection title="Hoje" subtitle="Resumo rapido">
-                                <div className="right-sidebar-meta">
-                                    <div className="right-sidebar-meta-item">
-                                        <span>Receita</span>
-                                        <strong>{formatMoney(summary.today_sales_total)}</strong>
-                                    </div>
-                                    <div className="right-sidebar-meta-item">
-                                        <span>Vendas</span>
-                                        <strong>{formatNumber(summary.today_sales_qty)}</strong>
-                                    </div>
-                                    <div className="right-sidebar-meta-item">
-                                        <span>Estoque baixo</span>
-                                        <strong>{formatNumber(summary.low_stock_count)}</strong>
-                                    </div>
-                                </div>
-                            </RightSidebarSection>
+                        ))}
+                    </div>
+                </section>
 
-                            <RightSidebarSection title="Leituras" subtitle="Indicadores chave">
-                                <div className="dashboard-sidebar-summary">
-                                    {summaryCards.map((card) => (
-                                        <article key={card.title} className="dashboard-sidebar-card">
-                                            <span>{card.title}</span>
-                                            <strong>{card.type === 'number' ? formatNumber(card.value) : formatMoney(card.value)}</strong>
-                                            <small>{card.caption}</small>
-                                        </article>
-                                    ))}
-                                </div>
-                            </RightSidebarSection>
-                        </RightSidebarPanel>
-                    )}
-                >
-                    <section className="dashboard-metrics-grid">
-                        <DashboardMetricCard
-                            title="Vendas hoje"
-                            value={summary.today_sales_total}
-                            subtitle={`${summary.today_sales_qty} venda(s) finalizadas`}
-                            icon="fa-receipt"
-                            tone="success"
-                            footer="Total do dia"
-                        />
-                        <DashboardMetricCard
-                            title="Lucro hoje"
-                            value={summary.today_profit}
-                            subtitle="Lucro calculado sobre as vendas do dia"
-                            icon="fa-sack-dollar"
-                            tone="info"
-                            footer="Resultado do dia"
-                        />
-                        <DashboardMetricCard
-                            title="Vendas no mes"
-                            value={summary.month_sales_total}
-                            subtitle={`${summary.month_sales_qty} venda(s) neste mes`}
-                            icon="fa-calendar-check"
-                            footer="Total acumulado no mes"
-                        />
-                        <DashboardMetricCard
-                            title="Produtos ativos"
-                            value={summary.total_products}
-                            subtitle={`${summary.low_stock_count} com estoque baixo`}
-                            icon="fa-boxes-stacked"
-                            type="number"
-                            tone="warning"
-                            footer="Cadastro atual"
-                        />
-                    </section>
+                <section className="dashboard-stats-grid">
+                    {cards.map((card) => (
+                        <DashboardMetricCard key={card.title} {...card} />
+                    ))}
+                </section>
 
-                    {activeTab !== 'inventory' ? (
-                        <section className="dashboard-content-grid">
-                            <SalesSnapshot sales={recentSales} />
-                            <ProductAlerts topProducts={topProducts} lowStockItems={lowStockItems} />
-                        </section>
-                    ) : null}
+                <section className="dashboard-main-grid">
+                    <div className="dashboard-grid-span-8">
+                        <RevenueOverview
+                            view={focusMode}
+                            salesTrend={salesTrend}
+                            hourlySales={hourlySales}
+                            topProducts={topProducts}
+                            summary={summary}
+                        />
+                    </div>
 
-                    {activeTab === 'sales' ? (
-                        <section className="dashboard-focus-panel ui-card">
-                            <div className="ui-card-header">
-                                <div>
-                                    <h2>Vendas</h2>
-                                </div>
-                                <span className="ui-badge primary">Hoje</span>
-                            </div>
-                            <div className="ui-card-body">
-                                <SalesSnapshot sales={recentSales} mode="expanded" />
-                            </div>
-                        </section>
-                    ) : null}
+                    <div className="dashboard-grid-span-4">
+                        <PaymentOverview
+                            paymentBreakdown={paymentBreakdown}
+                            total={summary.month_sales_total}
+                        />
+                    </div>
 
-                    {activeTab === 'inventory' ? (
-                        <section className="dashboard-focus-panel ui-card">
-                            <div className="ui-card-header">
-                                <div>
-                                    <h2>Produtos</h2>
-                                </div>
-                                <span className="ui-badge warning">Estoque</span>
-                            </div>
-                            <div className="ui-card-body">
-                                <ProductAlerts topProducts={topProducts} lowStockItems={lowStockItems} mode="expanded" />
-                            </div>
-                        </section>
-                    ) : null}
-                </PageContainer>
+                    <div className="dashboard-grid-span-6">
+                        <SalesSnapshot sales={recentSales} summary={summary} />
+                    </div>
+
+                    <div className="dashboard-grid-span-6">
+                        <ProductAlerts lowStockItems={lowStockItems} summary={summary} />
+                    </div>
+                </section>
             </div>
         </AppLayout>
     )

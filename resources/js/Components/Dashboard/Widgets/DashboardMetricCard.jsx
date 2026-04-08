@@ -3,25 +3,30 @@ import { formatMoney, formatNumber } from '@/lib/format'
 export default function DashboardMetricCard({
     title,
     value,
-    subtitle,
+    caption,
+    badge,
+    badgeTone = 'neutral',
     icon = 'fa-chart-line',
-    type = 'money',
+    format = 'money',
     tone = 'default',
-    footer,
 }) {
-    const formattedValue = type === 'money' ? formatMoney(value) : formatNumber(value)
+    const formattedValue = format === 'number' ? formatNumber(value) : formatMoney(value)
 
     return (
-        <article className={`dashboard-metric-card tone-${tone}`}>
-            <div className="dashboard-metric-header">
-                <span className="dashboard-metric-title">{title}</span>
-                <div className={`dashboard-metric-icon tone-${tone}`}>
+        <article className={`dashboard-stat-card tone-${tone}`}>
+            <div className="dashboard-stat-head">
+                <span className={`dashboard-stat-icon tone-${tone}`}>
                     <i className={`fa-solid ${icon}`} />
-                </div>
+                </span>
+                {badge ? <span className={`dashboard-stat-badge tone-${badgeTone}`}>{badge}</span> : null}
             </div>
-            <strong className="dashboard-metric-value">{formattedValue}</strong>
-            <span className="dashboard-metric-subtitle">{subtitle}</span>
-            {footer ? <div className="dashboard-metric-footer">{footer}</div> : null}
+
+            <strong className="dashboard-stat-value">{formattedValue}</strong>
+
+            <div className="dashboard-stat-copy">
+                <span>{title}</span>
+                {caption ? <small>{caption}</small> : null}
+            </div>
         </article>
     )
 }
