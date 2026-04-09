@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Tests\TestCase;
@@ -597,6 +598,37 @@ class FiscalDocumentsApiTest extends TestCase
         $this->assertSame('issue', data_get($document->payload, 'flags.offline_contingency_stage'));
         $this->assertSame(9, data_get($document->payload, 'sale.emission_type'));
         $this->assertSame('Internet instavel no caixa principal durante a venda.', $document->contingency_reason);
+    }
+
+    public function test_it_can_queue_a_fiscal_document_even_when_legacy_tenant_columns_are_missing(): void
+    {
+        Schema::table('fiscal_documents', function (Blueprint $table) {
+            $table->dropColumn([
+                'contingency_reason',
+                'contingency_requested_at',
+                'contingency_released_at',
+                'contingency_attempts',
+            ]);
+        });
+
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        $agent = $this->makeAgent();
+
+        $response = $this->postJson('/api/fiscal/documents', [
+            'sale_id' => $sale->id,
+            'idempotency_key' => 'legacy-sale-'.$sale->id,
+        ]);
+
+        $response->assertStatus(202)
+            ->assertJsonPath('document.status', 'queued_to_agent')
+            ->assertJsonPath('document.agent_key', $agent->agent_key);
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame($sale->id, $document->sale_id);
+        $this->assertSame('queued_to_agent', $document->status);
     }
 
     public function test_local_agent_can_complete_and_later_transmit_a_legal_offline_contingency_document(): void

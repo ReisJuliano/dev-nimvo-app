@@ -60,7 +60,7 @@ class FiscalContingencyService
             $agent = $this->resolveEmissionAgent($tenantId);
 
             if ($agent && $this->canIssueOfflineLegally($document)) {
-                $document->forceFill([
+                $document->forceFillCompatible([
                     'status' => 'queued',
                     'payload' => $this->offlinePayload($document, $normalizedReason),
                     'request_xml' => null,
@@ -82,7 +82,7 @@ class FiscalContingencyService
 
                 $command = $this->commandService->queueEmission($agent, $document, $tenantId);
 
-                $document->forceFill([
+                $document->forceFillCompatible([
                     'status' => 'queued_to_agent',
                     'agent_key' => $agent->agent_key,
                     'agent_command_id' => $command->id,
@@ -106,7 +106,7 @@ class FiscalContingencyService
                 ];
             }
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'contingency_pending',
                 'contingency_reason' => $normalizedReason,
                 'contingency_requested_at' => now(),
@@ -167,7 +167,7 @@ class FiscalContingencyService
                     data_set($payload, 'flags.offline_contingency_stage', $offlineStage);
                 }
 
-                $document->forceFill([
+                $document->forceFillCompatible([
                     'status' => 'queued',
                     'payload' => $payload,
                     'queued_at' => now(),

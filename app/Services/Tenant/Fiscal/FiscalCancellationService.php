@@ -63,7 +63,7 @@ class FiscalCancellationService
             if (in_array($decision['mode'], ['commercial_cancelled', 'local_cancelled'], true)) {
                 $sale->forceFill(['status' => 'cancelled'])->save();
 
-                $document->forceFill([
+                $document->forceFillCompatible([
                     'status' => $decision['mode'] === 'local_cancelled' ? 'cancelled_local' : 'cancelled',
                     'cancellation_reason' => $reason,
                     'cancellation_requested_at' => now(),
@@ -110,7 +110,7 @@ class FiscalCancellationService
 
             $command = $this->commandService->queueCancellation($agent, $document, $tenantId, $payload);
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'cancellation_queued',
                 'agent_key' => $agent->agent_key,
                 'agent_command_id' => $command->id,

@@ -80,7 +80,7 @@ class FiscalDocumentService
                 $profile->forceFill(['next_number' => $number + 1])->save();
             }
 
-            $document = FiscalDocument::query()->create([
+            $document = FiscalDocument::createCompatible([
                 'sale_id' => $sale->id,
                 'profile_id' => $profile->id,
                 'type' => $type,
@@ -149,7 +149,7 @@ class FiscalDocumentService
             ]);
         }
 
-        $document->forceFill([
+        $document->forceFillCompatible([
             'status' => 'queued',
             'last_error' => null,
             'failed_at' => null,

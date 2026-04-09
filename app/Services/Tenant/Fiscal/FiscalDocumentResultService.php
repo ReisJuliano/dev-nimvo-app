@@ -18,7 +18,7 @@ class FiscalDocumentResultService
         $this->tenantContext->run($tenantId, function () use ($documentId, $agentKey) {
             $document = FiscalDocument::query()->findOrFail($documentId);
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'processing',
                 'agent_key' => $agentKey,
                 'processing_started_at' => now(),
@@ -37,7 +37,7 @@ class FiscalDocumentResultService
         $this->tenantContext->run($tenantId, function () use ($documentId, $agentKey) {
             $document = FiscalDocument::query()->findOrFail($documentId);
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'cancellation_processing',
                 'agent_key' => $agentKey,
                 'processing_started_at' => now(),
@@ -56,7 +56,7 @@ class FiscalDocumentResultService
         $this->tenantContext->run($tenantId, function () use ($documentId) {
             $document = FiscalDocument::query()->findOrFail($documentId);
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'awaiting_agent',
             ])->save();
 
@@ -73,7 +73,7 @@ class FiscalDocumentResultService
         $this->tenantContext->run($tenantId, function () use ($documentId, $agentKey, $commandId) {
             $document = FiscalDocument::query()->findOrFail($documentId);
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'queued_to_agent',
                 'agent_key' => $agentKey,
                 'agent_command_id' => $commandId,
@@ -131,7 +131,7 @@ class FiscalDocumentResultService
                 }
             }
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => $status,
                 'payload' => $documentPayload,
                 'request_xml' => $payload['request_xml'] ?? null,
@@ -194,7 +194,7 @@ class FiscalDocumentResultService
                 );
             }
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => $status,
                 'payload' => $documentPayload,
                 'request_xml' => $payload['request_xml'] ?? $document->request_xml,
@@ -231,7 +231,7 @@ class FiscalDocumentResultService
             $document = FiscalDocument::query()->with('sale')->findOrFail($documentId);
             $cancelledAt = $payload['cancelled_at'] ?? now();
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'cancelled',
                 'cancellation_request_xml' => $payload['cancellation_request_xml'] ?? null,
                 'cancellation_response_xml' => $payload['cancellation_response_xml'] ?? null,
@@ -270,7 +270,7 @@ class FiscalDocumentResultService
             $document = FiscalDocument::query()->findOrFail($documentId);
             $message = $payload['message'] ?? $payload['error'] ?? 'Falha no cancelamento fiscal.';
 
-            $document->forceFill([
+            $document->forceFillCompatible([
                 'status' => 'cancellation_failed',
                 'cancellation_request_xml' => $payload['cancellation_request_xml'] ?? $document->cancellation_request_xml,
                 'cancellation_response_xml' => $payload['cancellation_response_xml'] ?? $document->cancellation_response_xml,

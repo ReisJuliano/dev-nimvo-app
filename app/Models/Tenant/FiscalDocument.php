@@ -6,6 +6,7 @@ use App\Models\Tenant\Concerns\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class FiscalDocument extends Model
 {
@@ -77,5 +78,29 @@ class FiscalDocument extends Model
     public function events(): HasMany
     {
         return $this->hasMany(FiscalDocumentEvent::class);
+    }
+
+    public static function createCompatible(array $attributes): self
+    {
+        $document = new static;
+
+        return static::query()->create($document->compatibleAttributes($attributes));
+    }
+
+    public function forceFillCompatible(array $attributes): self
+    {
+        return $this->forceFill($this->compatibleAttributes($attributes));
+    }
+
+    protected function compatibleAttributes(array $attributes): array
+    {
+        return array_intersect_key($attributes, array_flip($this->databaseColumns()));
+    }
+
+    protected function databaseColumns(): array
+    {
+        $connection = $this->getConnectionName() ?: config('database.default');
+
+        return Schema::connection($connection)->getColumnListing($this->getTable());
     }
 }
