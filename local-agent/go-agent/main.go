@@ -330,6 +330,7 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 		},
 		"software": map[string]any{
 			"version":      localAgentVersion,
+			"bridge_root":  strings.TrimSpace(resolveBundledFiscalBridgeRoot(config)),
 			"project_root": strings.TrimSpace(resolveLaravelProjectRoot(config)),
 			"php_path":     strings.TrimSpace(resolvePHPBinary(config)),
 			"installed_at": time.Now().Format(time.RFC3339),

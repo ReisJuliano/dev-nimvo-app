@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+const bundledFiscalBridgeArchiveName = "nimvo-fiscal-bridge.zip"
+const bundledFiscalBridgeEntryPoint = "bridge.php"
+
 var printerCommandTypes = []string{
 	"print_payment_receipt",
 	"print_test",
@@ -31,7 +34,54 @@ func supportedCommandTypesForConfig(config AgentConfig) []string {
 }
 
 func fiscalBridgeAvailable(config AgentConfig) bool {
-	return resolveLaravelProjectRoot(config) != "" && resolvePHPBinary(config) != ""
+	return resolvePHPBinary(config) != "" && resolveFiscalBridgeRoot(config) != ""
+}
+
+func resolveFiscalBridgeRoot(config AgentConfig) string {
+	if bundled := resolveBundledFiscalBridgeRoot(config); bundled != "" {
+		return bundled
+	}
+
+	return resolveLaravelProjectRoot(config)
+}
+
+func resolveBundledFiscalBridgeRoot(config AgentConfig) string {
+	candidates := []string{strings.TrimSpace(config.Software.BridgeRoot)}
+
+	if currentExe, err := os.Executable(); err == nil {
+		executableDir := filepath.Dir(currentExe)
+		candidates = append(candidates,
+			filepath.Join(executableDir, "bridge"),
+			filepath.Join(filepath.Dir(executableDir), "bridge"),
+		)
+	}
+
+	if currentDir, err := os.Getwd(); err == nil {
+		candidates = append(candidates,
+			filepath.Join(currentDir, "bridge"),
+			filepath.Join(currentDir, "..", "bridge"),
+			filepath.Join(currentDir, "..", "php-bridge"),
+		)
+	}
+
+	for _, candidate := range candidates {
+		if hasBundledFiscalBridge(candidate) {
+			return filepath.Clean(candidate)
+		}
+	}
+
+	return ""
+}
+
+func hasBundledFiscalBridge(root string) bool {
+	if strings.TrimSpace(root) == "" {
+		return false
+	}
+
+	normalizedRoot := strings.TrimSpace(root)
+
+	return fileExists(filepath.Join(normalizedRoot, bundledFiscalBridgeEntryPoint)) &&
+		fileExists(filepath.Join(normalizedRoot, "vendor", "autoload.php"))
 }
 
 func resolveLaravelProjectRoot(config AgentConfig) string {
@@ -79,11 +129,6 @@ func resolvePHPBinary(config AgentConfig) string {
 }
 
 func executeFiscalBridgeCommand(config AgentConfig, command polledAgentCommand) (map[string]any, error) {
-	projectRoot := resolveLaravelProjectRoot(config)
-	if projectRoot == "" {
-		return nil, errors.New("ponte fiscal indisponivel: projeto Laravel nao configurado no agente")
-	}
-
 	phpBinary := resolvePHPBinary(config)
 	if phpBinary == "" {
 		return nil, errors.New("ponte fiscal indisponivel: executavel do PHP nao configurado no agente")
@@ -111,15 +156,16 @@ func executeFiscalBridgeCommand(config AgentConfig, command polledAgentCommand) 
 		return nil, err
 	}
 
-	process := exec.Command(
+	process, err := buildFiscalBridgeProcess(
+		config,
 		phpBinary,
-		"artisan",
-		"fiscal:agent:execute-command",
 		configPath,
 		command.Type,
 		payloadPath,
 	)
-	process.Dir = projectRoot
+	if err != nil {
+		return nil, err
+	}
 
 	output, execErr := process.CombinedOutput()
 	result, parseErr := decodeFiscalBridgeResult(output)
@@ -141,6 +187,45 @@ func executeFiscalBridgeCommand(config AgentConfig, command polledAgentCommand) 
 	}
 
 	return result, nil
+}
+
+func buildFiscalBridgeProcess(
+	config AgentConfig,
+	phpBinary string,
+	configPath string,
+	commandType string,
+	payloadPath string,
+) (*exec.Cmd, error) {
+	if bridgeRoot := resolveBundledFiscalBridgeRoot(config); bridgeRoot != "" {
+		process := exec.Command(
+			phpBinary,
+			filepath.Join(bridgeRoot, bundledFiscalBridgeEntryPoint),
+			"command",
+			configPath,
+			commandType,
+			payloadPath,
+		)
+		process.Dir = bridgeRoot
+
+		return process, nil
+	}
+
+	projectRoot := resolveLaravelProjectRoot(config)
+	if projectRoot == "" {
+		return nil, errors.New("ponte fiscal indisponivel: bridge empacotado ou projeto Laravel nao configurados no agente")
+	}
+
+	process := exec.Command(
+		phpBinary,
+		"artisan",
+		"fiscal:agent:execute-command",
+		configPath,
+		commandType,
+		payloadPath,
+	)
+	process.Dir = projectRoot
+
+	return process, nil
 }
 
 func decodeFiscalBridgeResult(output []byte) (map[string]any, error) {

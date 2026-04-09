@@ -57,6 +57,7 @@ type LocalAPIConfig struct {
 }
 
 type SoftwareConfig struct {
+	BridgeRoot  string `json:"bridge_root"`
 	ProjectRoot string `json:"project_root"`
 	PHPPath     string `json:"php_path"`
 }
@@ -94,6 +95,7 @@ func defaultAgentConfig() AgentConfig {
 			Port:    18123,
 		},
 		Software: SoftwareConfig{
+			BridgeRoot:  "",
 			ProjectRoot: "",
 			PHPPath:     "",
 		},
@@ -168,6 +170,7 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 		config.LocalAPI.Port = 18123
 	}
 
+	config.Software.BridgeRoot = strings.TrimSpace(config.Software.BridgeRoot)
 	config.Software.ProjectRoot = strings.TrimSpace(config.Software.ProjectRoot)
 	config.Software.PHPPath = strings.TrimSpace(config.Software.PHPPath)
 	config.TenantApp.BaseURL = strings.TrimRight(strings.TrimSpace(config.TenantApp.BaseURL), "/")
@@ -203,6 +206,7 @@ func loadInstalledAgentConfig() (AgentConfig, error) {
 	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
 	config.LocalAPI.Host = values.stringValue("LocalAPIHost")
 	config.LocalAPI.Port = values.intValue("LocalAPIPort", config.LocalAPI.Port)
+	config.Software.BridgeRoot = values.stringValue("SoftwareBridgeRoot")
 	config.Software.ProjectRoot = values.stringValue("SoftwareProjectRoot")
 	config.Software.PHPPath = values.stringValue("SoftwarePHPPath")
 	config.TenantApp.BaseURL = values.stringValue("TenantAppBaseURL")
@@ -239,6 +243,7 @@ func saveInstalledAgentConfig(config AgentConfig) error {
 		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},
 		{name: "LocalAPIHost", kind: "REG_SZ", value: config.LocalAPI.Host},
 		{name: "LocalAPIPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.LocalAPI.Port)},
+		{name: "SoftwareBridgeRoot", kind: "REG_SZ", value: config.Software.BridgeRoot},
 		{name: "SoftwareProjectRoot", kind: "REG_SZ", value: config.Software.ProjectRoot},
 		{name: "SoftwarePHPPath", kind: "REG_SZ", value: config.Software.PHPPath},
 		{name: "TenantAppBaseURL", kind: "REG_SZ", value: strings.TrimSpace(config.TenantApp.BaseURL)},

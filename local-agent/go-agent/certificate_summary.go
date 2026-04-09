@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -37,22 +38,15 @@ func certificateSummaryForConfig(config AgentConfig) map[string]any {
 		return cloneSummaryMap(certificateSummaryCache.payload)
 	}
 
-	projectRoot := resolveLaravelProjectRoot(config)
 	phpBinary := resolvePHPBinary(config)
-
-	if projectRoot == "" || phpBinary == "" {
+	if phpBinary == "" {
 		return map[string]any{}
 	}
 
-	process := exec.Command(
-		phpBinary,
-		"artisan",
-		"fiscal:cert:inspect",
-		path,
-		"--password="+password,
-		"--json",
-	)
-	process.Dir = projectRoot
+	process, err := buildCertificateSummaryProcess(config, phpBinary, path, password)
+	if err != nil {
+		return map[string]any{}
+	}
 
 	output, execErr := process.CombinedOutput()
 	if execErr != nil {
@@ -81,6 +75,38 @@ func certificateSummaryForConfig(config AgentConfig) map[string]any {
 	}
 
 	return summary
+}
+
+func buildCertificateSummaryProcess(config AgentConfig, phpBinary string, path string, password string) (*exec.Cmd, error) {
+	if bridgeRoot := resolveBundledFiscalBridgeRoot(config); bridgeRoot != "" {
+		process := exec.Command(
+			phpBinary,
+			filepath.Join(bridgeRoot, bundledFiscalBridgeEntryPoint),
+			"inspect-certificate",
+			path,
+			password,
+		)
+		process.Dir = bridgeRoot
+
+		return process, nil
+	}
+
+	projectRoot := resolveLaravelProjectRoot(config)
+	if projectRoot == "" {
+		return nil, os.ErrNotExist
+	}
+
+	process := exec.Command(
+		phpBinary,
+		"artisan",
+		"fiscal:cert:inspect",
+		path,
+		"--password="+password,
+		"--json",
+	)
+	process.Dir = projectRoot
+
+	return process, nil
 }
 
 func cloneSummaryMap(input map[string]any) map[string]any {

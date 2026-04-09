@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -46,6 +47,7 @@ func runInstall(args []string) error {
 
 	sourceDir := filepath.Dir(currentExe)
 	targetExe := filepath.Join(installRoot, "bin", "nimvo-fiscal-agent.exe")
+	targetBridgeRoot := filepath.Join(installRoot, "bridge")
 	targetLog := filepath.Join(installRoot, "logs", "agent.log")
 	targetIcon := filepath.Join(installRoot, "assets", "nimvo.ico")
 	targetLogo := filepath.Join(installRoot, "assets", "nimvo-logo.png")
@@ -58,6 +60,7 @@ func runInstall(args []string) error {
 
 	for _, directory := range []string{
 		filepath.Join(installRoot, "bin"),
+		filepath.Join(installRoot, "bridge"),
 		filepath.Join(installRoot, "logs"),
 		filepath.Join(installRoot, "assets"),
 	} {
@@ -96,6 +99,12 @@ func runInstall(args []string) error {
 
 	if strings.TrimSpace(*phpPath) != "" {
 		config.Software.PHPPath = strings.TrimSpace(*phpPath)
+	}
+
+	if bridgeRoot, err := installBundledFiscalBridge(sourceDir, targetBridgeRoot); err != nil {
+		return err
+	} else if strings.TrimSpace(bridgeRoot) != "" {
+		config.Software.BridgeRoot = bridgeRoot
 	}
 
 	config, err = completeInstallationConfig(
@@ -168,6 +177,7 @@ func runInstall(args []string) error {
 		"tenant_app_baseurl":              strings.TrimSpace(config.TenantApp.BaseURL),
 		"certificate_path":                strings.TrimSpace(config.Certificate.Path),
 		"certificate_password_configured": fmt.Sprintf("%t", strings.TrimSpace(config.Certificate.Password) != ""),
+		"software_bridge_root":            strings.TrimSpace(resolveBundledFiscalBridgeRoot(config)),
 		"software_project_root":           strings.TrimSpace(config.Software.ProjectRoot),
 		"software_php_path":               strings.TrimSpace(config.Software.PHPPath),
 		"fiscal_bridge_enabled":           fmt.Sprintf("%t", fiscalBridgeAvailable(config)),
@@ -214,6 +224,7 @@ func runStatus(args []string) error {
 		status["local_api_url"] = localAPIBaseURL(config)
 		status["local_api_enabled"] = config.LocalAPI.Enabled
 		status["tenant_app_baseurl"] = strings.TrimSpace(config.TenantApp.BaseURL)
+		status["software_bridge_root"] = strings.TrimSpace(resolveBundledFiscalBridgeRoot(config))
 		status["software_project_root"] = strings.TrimSpace(config.Software.ProjectRoot)
 		status["software_php_path"] = strings.TrimSpace(config.Software.PHPPath)
 		status["fiscal_bridge_enabled"] = fiscalBridgeAvailable(config)
@@ -543,7 +554,7 @@ func buildReadme(installDir string) string {
 		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, o certificado digital e a configuracao de impressao local.",
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
-		"4. Se project_root e php_path estiverem configurados, o agente tambem executa emissao e cancelamento fiscal via ponte PHP local.",
+		"4. O setup instala um bridge fiscal PHP empacotado junto com o agente para emissao, cancelamento e inutilizacao local.",
 		"5. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
 		"6. Use open-nimvo-app.vbs para abrir a loja em modo app neste PC.",
 		"7. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
@@ -981,4 +992,115 @@ func activateInstalledAgentConfig(baseURL, activationCode string) (AgentConfig, 
 	}
 
 	return normalizeAgentConfig(config), nil
+}
+
+func installBundledFiscalBridge(sourceDir string, targetBridgeRoot string) (string, error) {
+	archivePath := filepath.Join(strings.TrimSpace(sourceDir), bundledFiscalBridgeArchiveName)
+	if fileExists(archivePath) {
+		if dirExists(targetBridgeRoot) {
+			if err := os.RemoveAll(targetBridgeRoot); err != nil {
+				return "", fmt.Errorf("nao foi possivel atualizar o bridge fiscal local: %w", err)
+			}
+		}
+
+		if err := ensureDir(targetBridgeRoot); err != nil {
+			return "", err
+		}
+
+		if err := extractZipArchive(archivePath, targetBridgeRoot); err != nil {
+			return "", err
+		}
+
+		return filepath.Clean(targetBridgeRoot), nil
+	}
+
+	sourceBridgeRoot := filepath.Join(strings.TrimSpace(sourceDir), "bridge")
+	if hasBundledFiscalBridge(sourceBridgeRoot) {
+		if dirExists(targetBridgeRoot) {
+			if err := os.RemoveAll(targetBridgeRoot); err != nil {
+				return "", fmt.Errorf("nao foi possivel substituir o bridge fiscal local: %w", err)
+			}
+		}
+
+		if err := copyDir(sourceBridgeRoot, targetBridgeRoot); err != nil {
+			return "", err
+		}
+
+		return filepath.Clean(targetBridgeRoot), nil
+	}
+
+	return "", nil
+}
+
+func extractZipArchive(archivePath string, destinationRoot string) error {
+	reader, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return fmt.Errorf("nao foi possivel abrir o pacote do bridge fiscal: %w", err)
+	}
+	defer reader.Close()
+
+	root := filepath.Clean(destinationRoot)
+
+	for _, file := range reader.File {
+		targetPath := filepath.Clean(filepath.Join(root, file.Name))
+		if !strings.HasPrefix(targetPath, root+string(os.PathSeparator)) && targetPath != root {
+			return fmt.Errorf("entrada invalida no pacote do bridge fiscal: %s", file.Name)
+		}
+
+		if file.FileInfo().IsDir() {
+			if err := ensureDir(targetPath); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := ensureDir(filepath.Dir(targetPath)); err != nil {
+			return err
+		}
+
+		source, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		target, err := os.OpenFile(targetPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, file.Mode())
+		if err != nil {
+			source.Close()
+			return err
+		}
+
+		_, copyErr := io.Copy(target, source)
+		closeErr := target.Close()
+		source.Close()
+
+		if copyErr != nil {
+			return copyErr
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+	}
+
+	return nil
+}
+
+func copyDir(sourceRoot string, targetRoot string) error {
+	return filepath.Walk(sourceRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relativePath, err := filepath.Rel(sourceRoot, path)
+		if err != nil {
+			return err
+		}
+
+		targetPath := filepath.Join(targetRoot, relativePath)
+
+		if info.IsDir() {
+			return ensureDir(targetPath)
+		}
+
+		return copyFile(path, targetPath)
+	})
 }

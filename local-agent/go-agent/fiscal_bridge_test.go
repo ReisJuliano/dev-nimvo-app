@@ -21,15 +21,23 @@ func TestSupportedCommandTypesForConfigWithoutBridge(t *testing.T) {
 
 func TestSupportedCommandTypesForConfigWithBridge(t *testing.T) {
 	tempDir := t.TempDir()
-	projectRoot := filepath.Join(tempDir, "nimvo")
+	bridgeRoot := filepath.Join(tempDir, "bridge")
 	phpBinary := filepath.Join(tempDir, "php.exe")
 
-	if err := os.MkdirAll(projectRoot, 0o755); err != nil {
-		t.Fatalf("failed to create project root: %v", err)
+	if err := os.MkdirAll(bridgeRoot, 0o755); err != nil {
+		t.Fatalf("failed to create bridge root: %v", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(projectRoot, "artisan"), []byte("artisan"), 0o644); err != nil {
-		t.Fatalf("failed to create artisan file: %v", err)
+	if err := os.WriteFile(filepath.Join(bridgeRoot, bundledFiscalBridgeEntryPoint), []byte("bridge"), 0o644); err != nil {
+		t.Fatalf("failed to create bridge file: %v", err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(bridgeRoot, "vendor"), 0o755); err != nil {
+		t.Fatalf("failed to create vendor directory: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(bridgeRoot, "vendor", "autoload.php"), []byte("autoload"), 0o644); err != nil {
+		t.Fatalf("failed to create vendor autoload file: %v", err)
 	}
 
 	if err := os.WriteFile(phpBinary, []byte("php"), 0o644); err != nil {
@@ -37,7 +45,7 @@ func TestSupportedCommandTypesForConfigWithBridge(t *testing.T) {
 	}
 
 	config := defaultAgentConfig()
-	config.Software.ProjectRoot = projectRoot
+	config.Software.BridgeRoot = bridgeRoot
 	config.Software.PHPPath = phpBinary
 
 	supported := supportedCommandTypesForConfig(config)
