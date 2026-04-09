@@ -158,6 +158,45 @@ Artisan::command('fiscal:agent:process-payload {config} {payloadFile} {--local-t
     $this->line(json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 })->purpose('Processa um payload fiscal usando a configuracao do agente local');
 
+Artisan::command('fiscal:agent:execute-command {config} {type} {payloadFile}', function (string $config, string $type, string $payloadFile) use ($resolveOutputPath, $loadJsonFile) {
+    $configPath = $resolveOutputPath($config);
+    $payloadPath = $resolveOutputPath($payloadFile);
+    $agentConfig = $loadJsonFile($configPath);
+    $payload = $loadJsonFile($payloadPath);
+
+    try {
+        $result = match ($type) {
+            'emit_nfce' => (bool) data_get($payload, 'flags.local_test', false)
+                ? app(SpedNfeNfceEmitter::class)->emitLocalTest($payload, $agentConfig)
+                : app(SpedNfeNfceEmitter::class)->emit($payload, $agentConfig),
+            'cancel_fiscal_document' => app(SpedNfeNfceEmitter::class)->cancel($payload, $agentConfig),
+            'print_payment_receipt' => tap([
+                'status' => 'printed',
+                'message' => 'Comprovante de pagamento impresso localmente.',
+                'printed_at' => now()->toIso8601String(),
+            ], fn () => app(LocalAgentReceiptPrinter::class)->printPaymentReceipt($payload, (array) ($agentConfig['printer'] ?? []))),
+            'print_test' => tap([
+                'status' => 'printed',
+                'message' => 'Teste de impressao concluido.',
+                'printed_at' => now()->toIso8601String(),
+            ], fn () => app(LocalAgentReceiptPrinter::class)->printTest((array) ($agentConfig['printer'] ?? []), $payload)),
+            default => throw new RuntimeException("Tipo de comando nao suportado pelo bridge local: {$type}"),
+        };
+
+        $this->line(json_encode($result, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        return 0;
+    } catch (Throwable $exception) {
+        $this->line(json_encode([
+            'status' => 'failed',
+            'message' => $exception->getMessage(),
+            'error' => $exception->getMessage(),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        return 1;
+    }
+})->purpose('Executa um comando do agente fiscal local e retorna JSON para a ponte Go');
+
 Artisan::command('fiscal:agent:print-test {config} {--store-name=Nimvo} {--message=}', function (string $config) use ($resolveOutputPath, $loadJsonFile) {
     $configPath = $resolveOutputPath($config);
     $agentConfig = $loadJsonFile($configPath);

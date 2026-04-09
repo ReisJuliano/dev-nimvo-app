@@ -18,6 +18,7 @@ type AgentConfig struct {
 	Certificate Certificate     `json:"certificate"`
 	Printer     PrinterConfig   `json:"printer"`
 	LocalAPI    LocalAPIConfig  `json:"local_api"`
+	Software    SoftwareConfig  `json:"software"`
 	TenantApp   TenantAppConfig `json:"tenant_app"`
 }
 
@@ -55,6 +56,11 @@ type LocalAPIConfig struct {
 	Port    int    `json:"port"`
 }
 
+type SoftwareConfig struct {
+	ProjectRoot string `json:"project_root"`
+	PHPPath     string `json:"php_path"`
+}
+
 type TenantAppConfig struct {
 	BaseURL string `json:"base_url"`
 }
@@ -86,6 +92,10 @@ func defaultAgentConfig() AgentConfig {
 			Enabled: true,
 			Host:    "127.0.0.1",
 			Port:    18123,
+		},
+		Software: SoftwareConfig{
+			ProjectRoot: "",
+			PHPPath:     "",
 		},
 		TenantApp: TenantAppConfig{
 			BaseURL: "",
@@ -158,6 +168,8 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 		config.LocalAPI.Port = 18123
 	}
 
+	config.Software.ProjectRoot = strings.TrimSpace(config.Software.ProjectRoot)
+	config.Software.PHPPath = strings.TrimSpace(config.Software.PHPPath)
 	config.TenantApp.BaseURL = strings.TrimRight(strings.TrimSpace(config.TenantApp.BaseURL), "/")
 
 	return config
@@ -191,6 +203,8 @@ func loadInstalledAgentConfig() (AgentConfig, error) {
 	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
 	config.LocalAPI.Host = values.stringValue("LocalAPIHost")
 	config.LocalAPI.Port = values.intValue("LocalAPIPort", config.LocalAPI.Port)
+	config.Software.ProjectRoot = values.stringValue("SoftwareProjectRoot")
+	config.Software.PHPPath = values.stringValue("SoftwarePHPPath")
 	config.TenantApp.BaseURL = values.stringValue("TenantAppBaseURL")
 
 	return normalizeAgentConfig(config), nil
@@ -225,6 +239,8 @@ func saveInstalledAgentConfig(config AgentConfig) error {
 		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},
 		{name: "LocalAPIHost", kind: "REG_SZ", value: config.LocalAPI.Host},
 		{name: "LocalAPIPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.LocalAPI.Port)},
+		{name: "SoftwareProjectRoot", kind: "REG_SZ", value: config.Software.ProjectRoot},
+		{name: "SoftwarePHPPath", kind: "REG_SZ", value: config.Software.PHPPath},
 		{name: "TenantAppBaseURL", kind: "REG_SZ", value: strings.TrimSpace(config.TenantApp.BaseURL)},
 	}
 

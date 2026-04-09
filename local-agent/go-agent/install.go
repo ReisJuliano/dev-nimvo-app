@@ -26,6 +26,8 @@ func runInstall(args []string) error {
 	startNow := fs.Bool("start", true, "Iniciar o agente apos instalar")
 	seedConfigPath := fs.String("seed-config", "", "Arquivo JSON com a configuracao inicial do instalador")
 	activationCode := fs.String("activation-code", "", "Codigo de ativacao do tenant")
+	projectRoot := fs.String("project-root", "", "Raiz local do projeto Laravel para emissao fiscal via ponte PHP")
+	phpPath := fs.String("php-path", "", "Executavel do PHP usado pela ponte fiscal local")
 	nonInteractive := fs.Bool("non-interactive", false, "Executa a instalacao sem perguntas na tela")
 
 	if err := fs.Parse(args); err != nil {
@@ -86,6 +88,14 @@ func runInstall(args []string) error {
 		if err != nil {
 			return fmt.Errorf("nao foi possivel carregar a configuracao inicial do instalador: %w", err)
 		}
+	}
+
+	if strings.TrimSpace(*projectRoot) != "" {
+		config.Software.ProjectRoot = strings.TrimSpace(*projectRoot)
+	}
+
+	if strings.TrimSpace(*phpPath) != "" {
+		config.Software.PHPPath = strings.TrimSpace(*phpPath)
 	}
 
 	config, err = completeInstallationConfig(
@@ -158,6 +168,9 @@ func runInstall(args []string) error {
 		"tenant_app_baseurl":              strings.TrimSpace(config.TenantApp.BaseURL),
 		"certificate_path":                strings.TrimSpace(config.Certificate.Path),
 		"certificate_password_configured": fmt.Sprintf("%t", strings.TrimSpace(config.Certificate.Password) != ""),
+		"software_project_root":           strings.TrimSpace(config.Software.ProjectRoot),
+		"software_php_path":               strings.TrimSpace(config.Software.PHPPath),
+		"fiscal_bridge_enabled":           fmt.Sprintf("%t", fiscalBridgeAvailable(config)),
 	}
 
 	payload, _ := json.MarshalIndent(summary, "", "  ")
@@ -201,6 +214,10 @@ func runStatus(args []string) error {
 		status["local_api_url"] = localAPIBaseURL(config)
 		status["local_api_enabled"] = config.LocalAPI.Enabled
 		status["tenant_app_baseurl"] = strings.TrimSpace(config.TenantApp.BaseURL)
+		status["software_project_root"] = strings.TrimSpace(config.Software.ProjectRoot)
+		status["software_php_path"] = strings.TrimSpace(config.Software.PHPPath)
+		status["fiscal_bridge_enabled"] = fiscalBridgeAvailable(config)
+		status["supported_types"] = supportedCommandTypesForConfig(config)
 		status["app_launcher_installed"] = installedAppLaunchersExist()
 	}
 
@@ -451,10 +468,11 @@ func buildReadme(installDir string) string {
 		"1. O instalador coleta a URL do Nimvo, o codigo de ativacao do tenant, o certificado digital e a configuracao de impressao local.",
 		"2. O agente troca o codigo por credenciais internas e passa a operar em segundo plano na bandeja do Windows.",
 		"3. O agente envia heartbeat para o Nimvo e consome a fila central de impressoes do tenant.",
-		"4. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
-		"5. Use open-nimvo-app.vbs para abrir a loja em modo app neste PC.",
-		"6. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
-		"7. O agente grava a execucao em logs\\agent.log.",
+		"4. Se project_root e php_path estiverem configurados, o agente tambem executa emissao e cancelamento fiscal via ponte PHP local.",
+		"5. Se o conector PDF estiver ativo, os cupons de exemplo sao salvos na pasta de previews configurada.",
+		"6. Use open-nimvo-app.vbs para abrir a loja em modo app neste PC.",
+		"7. Use run-agent.vbs para iniciar o agente manualmente sem abrir console.",
+		"8. O agente grava a execucao em logs\\agent.log.",
 		"",
 		"Para remover o agente local, execute uninstall-agent.cmd ou use a opcao Desinstalar no icone da bandeja.",
 		"",

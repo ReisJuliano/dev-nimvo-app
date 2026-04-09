@@ -268,7 +268,7 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 	userName := strings.TrimSpace(os.Getenv("USERNAME"))
 
 	return map[string]any{
-		"supported_types": supportedCommandTypes,
+		"supported_types": supportedCommandTypesForConfig(config),
 		"machine": map[string]any{
 			"name": hostName,
 			"user": userName,
@@ -293,8 +293,8 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 		},
 		"software": map[string]any{
 			"version":      localAgentVersion,
-			"project_root": "",
-			"php_path":     "",
+			"project_root": strings.TrimSpace(resolveLaravelProjectRoot(config)),
+			"php_path":     strings.TrimSpace(resolvePHPBinary(config)),
 			"installed_at": time.Now().Format(time.RFC3339),
 			"config_path":  "registry://HKCU/Software/NimvoFiscalAgent",
 		},

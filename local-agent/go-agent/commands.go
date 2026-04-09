@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-var supportedCommandTypes = []string{
-	"print_payment_receipt",
-	"print_test",
-}
-
 type polledAgentCommand struct {
 	ID       string
 	Type     string
@@ -45,7 +40,7 @@ func pollAndProcessCommands(config AgentConfig) error {
 
 func pollNextCommand(config AgentConfig) (*polledAgentCommand, error) {
 	response, err := postBackendJSON(config, "/api/local-agents/commands/poll", map[string]any{
-		"supported_types": supportedCommandTypes,
+		"supported_types": supportedCommandTypesForConfig(config),
 	})
 	if err != nil {
 		return nil, err
@@ -74,6 +69,8 @@ func pollNextCommand(config AgentConfig) (*polledAgentCommand, error) {
 
 func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[string]any, error) {
 	switch command.Type {
+	case "emit_nfce", "cancel_fiscal_document":
+		return executeFiscalBridgeCommand(config, command)
 	case "print_test":
 		payload := printTestRequest{}
 		if err := decodeCommandPayload(command.Payload, &payload); err != nil {
