@@ -164,6 +164,8 @@ class AdminPageController extends Controller
                     $settingsService,
                     $domainManager,
                     $licenseService,
+                    $includeFiscal,
+                    $fiscalProfileService,
                     $agentLookup,
                     $localAgentConfigService,
                     $localAgentBootstrapService,
