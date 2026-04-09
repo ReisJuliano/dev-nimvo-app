@@ -74,6 +74,39 @@ class ExampleTest extends TestCase
         }
     }
 
+    protected function fiscalProfilePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'active' => true,
+            'environment' => 2,
+            'operation_nature' => 'VENDA NFC-E',
+            'series' => 1,
+            'next_number' => 1,
+            'company_name' => 'Tenant Fiscal Central LTDA',
+            'trade_name' => 'Tenant Fiscal Central',
+            'cnpj' => '12345678000123',
+            'ie' => '123456789',
+            'im' => '998877',
+            'cnae' => '4781400',
+            'crt' => '1',
+            'phone' => '11999999999',
+            'street' => 'Rua Fiscal',
+            'number' => '100',
+            'complement' => 'Loja 1',
+            'district' => 'Centro',
+            'city_code' => '3550308',
+            'city_name' => 'Sao Paulo',
+            'state' => 'SP',
+            'zip_code' => '01001000',
+            'csc_id' => '000001',
+            'csc_token' => 'TOKENCENTRAL1234567890',
+            'technical_contact_name' => 'Software House Fiscal',
+            'technical_contact_email' => 'fiscal@nimvo.com.br',
+            'technical_contact_phone' => '11988887777',
+            'technical_contact_cnpj' => '98765432000199',
+        ], $overrides);
+    }
+
     public function test_the_application_returns_a_successful_response(): void
     {
         $response = $this->get('http://admin.nimvo.com.br/admin');
@@ -312,7 +345,7 @@ class ExampleTest extends TestCase
         ], 'central');
     }
 
-    public function test_central_admin_can_save_nfce_csc_credentials_in_tenant_database(): void
+    public function test_central_admin_can_create_nfce_fiscal_profile_in_tenant_database(): void
     {
         $this->authenticateCentralAdmin();
 
@@ -337,44 +370,15 @@ class ExampleTest extends TestCase
 
         $this->ensureTenantFiscalTables($tenant);
 
-        tenancy()->initialize($tenant);
-
-        FiscalProfile::query()->create([
-            'active' => true,
-            'environment' => 2,
-            'invoice_model' => '65',
-            'operation_nature' => 'VENDA NFC-E',
-            'series' => 1,
-            'next_number' => 1,
-            'company_name' => 'Tenant Fiscal Central LTDA',
-            'trade_name' => 'Tenant Fiscal Central',
-            'cnpj' => '12345678000123',
-            'ie' => '123456789',
-            'im' => null,
-            'cnae' => '4781400',
-            'crt' => '1',
-            'phone' => '11999999999',
-            'street' => 'Rua Fiscal',
-            'number' => '100',
-            'complement' => null,
-            'district' => 'Centro',
-            'city_code' => '3550308',
-            'city_name' => 'Sao Paulo',
-            'state' => 'SP',
-            'zip_code' => '01001000',
-        ]);
-
-        tenancy()->end();
-
-        $response = $this->putJson("http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal", [
-            'csc_id' => '000001',
-            'csc_token' => 'TOKENCENTRAL1234567890',
-        ]);
+        $response = $this->putJson(
+            "http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal",
+            $this->fiscalProfilePayload(),
+        );
 
         $response
             ->assertOk()
             ->assertJson([
-                'message' => 'CSC do tenant salvo com sucesso.',
+                'message' => 'Perfil fiscal do tenant salvo com sucesso.',
             ])
             ->assertJsonPath('fiscal.csc_id', '000001')
             ->assertJsonPath('fiscal.csc_token_configured', true)
@@ -386,44 +390,80 @@ class ExampleTest extends TestCase
             ->where('invoice_model', '65')
             ->firstOrFail();
 
+        $this->assertSame('Tenant Fiscal Central LTDA', $profile->company_name);
         $this->assertSame('000001', $profile->csc_id);
         $this->assertSame('TOKENCENTRAL1234567890', $profile->csc_token);
+        $this->assertSame('Software House Fiscal', $profile->technical_contact_name);
 
         tenancy()->end();
     }
 
-    public function test_central_admin_cannot_save_csc_when_tenant_has_no_nfce_profile(): void
+    public function test_central_admin_can_update_nfce_profile_without_overwriting_existing_token(): void
     {
         $this->authenticateCentralAdmin();
 
         $tenant = Tenant::create([
-            'id' => 'tenant-sem-perfil-fiscal',
-            'name' => 'Tenant Sem Perfil',
-            'email' => 'semperfil@tenant.com',
+            'id' => 'tenant-fiscal-update',
+            'name' => 'Tenant Fiscal Update',
+            'email' => 'update@tenant.com',
         ]);
 
         $tenant->domains()->create([
-            'domain' => 'semperfil.nimvo.com.br',
+            'domain' => 'update-fiscal.nimvo.com.br',
         ]);
 
         Client::create([
             'tenant_id' => $tenant->id,
-            'name' => 'Cliente Sem Perfil',
-            'email' => 'semperfil@tenant.com',
+            'name' => 'Cliente Fiscal Update',
+            'email' => 'update@tenant.com',
             'document' => '888',
-            'domain' => 'semperfil.nimvo.com.br',
+            'domain' => 'update-fiscal.nimvo.com.br',
             'active' => true,
         ]);
 
         $this->ensureTenantFiscalTables($tenant);
 
-        $response = $this->putJson("http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal", [
-            'csc_id' => '000001',
-            'csc_token' => 'TOKENCENTRAL1234567890',
-        ]);
+        tenancy()->initialize($tenant);
+
+        FiscalProfile::query()->create(array_merge(
+            $this->fiscalProfilePayload([
+                'csc_id' => '000009',
+                'csc_token' => 'TOKENANTIGO123',
+            ]),
+            ['invoice_model' => '65']
+        ));
+
+        tenancy()->end();
+
+        $response = $this->putJson(
+            "http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal",
+            $this->fiscalProfilePayload([
+                'company_name' => 'Emitente Atualizado LTDA',
+                'csc_id' => '000009',
+                'csc_token' => '',
+                'technical_contact_name' => 'Suporte Fiscal Atualizado',
+            ]),
+        );
 
         $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['fiscal']);
+            ->assertOk()
+            ->assertJson([
+                'message' => 'Perfil fiscal do tenant salvo com sucesso.',
+            ])
+            ->assertJsonPath('fiscal.company_name', 'Emitente Atualizado LTDA')
+            ->assertJsonPath('fiscal.csc_token_configured', true)
+            ->assertJsonPath('fiscal.status', 'configured');
+
+        tenancy()->initialize($tenant);
+
+        $profile = FiscalProfile::query()
+            ->where('invoice_model', '65')
+            ->firstOrFail();
+
+        $this->assertSame('Emitente Atualizado LTDA', $profile->company_name);
+        $this->assertSame('TOKENANTIGO123', $profile->csc_token);
+        $this->assertSame('Suporte Fiscal Atualizado', $profile->technical_contact_name);
+
+        tenancy()->end();
     }
 }

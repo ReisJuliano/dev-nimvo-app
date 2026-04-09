@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react'
 import { useEffect, useState } from 'react'
+import TenantFiscalModal from '@/Components/CentralAdmin/TenantFiscalModal'
 import PageContainer from '@/Components/UI/PageContainer'
 import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
 import AdminLayout from '@/Layouts/AdminLayout'
@@ -17,6 +18,36 @@ const INITIAL_TENANT_FORM = {
     client_email: '',
     client_document: '',
     active: true,
+}
+
+const INITIAL_FISCAL_FORM = {
+    active: true,
+    environment: '2',
+    operation_nature: 'VENDA NFC-E',
+    series: '1',
+    next_number: '1',
+    company_name: '',
+    trade_name: '',
+    cnpj: '',
+    ie: '',
+    im: '',
+    cnae: '',
+    crt: '1',
+    phone: '',
+    street: '',
+    number: '',
+    complement: '',
+    district: '',
+    city_code: '',
+    city_name: '',
+    state: '',
+    zip_code: '',
+    csc_id: '',
+    csc_token: '',
+    technical_contact_name: '',
+    technical_contact_email: '',
+    technical_contact_phone: '',
+    technical_contact_cnpj: '',
 }
 
 function countEnabledModules(settings) {
@@ -91,8 +122,33 @@ function buildFiscalForm(tenant = null) {
     const fiscal = tenant?.fiscal
 
     return {
-        csc_id: fiscal?.csc_id || '',
+        active: fiscal?.active ?? INITIAL_FISCAL_FORM.active,
+        environment: String(fiscal?.environment ?? INITIAL_FISCAL_FORM.environment),
+        operation_nature: fiscal?.operation_nature || INITIAL_FISCAL_FORM.operation_nature,
+        series: String(fiscal?.series ?? INITIAL_FISCAL_FORM.series),
+        next_number: String(fiscal?.next_number ?? INITIAL_FISCAL_FORM.next_number),
+        company_name: fiscal?.company_name || INITIAL_FISCAL_FORM.company_name,
+        trade_name: fiscal?.trade_name || INITIAL_FISCAL_FORM.trade_name,
+        cnpj: fiscal?.cnpj || INITIAL_FISCAL_FORM.cnpj,
+        ie: fiscal?.ie || INITIAL_FISCAL_FORM.ie,
+        im: fiscal?.im || INITIAL_FISCAL_FORM.im,
+        cnae: fiscal?.cnae || INITIAL_FISCAL_FORM.cnae,
+        crt: fiscal?.crt || INITIAL_FISCAL_FORM.crt,
+        phone: fiscal?.phone || INITIAL_FISCAL_FORM.phone,
+        street: fiscal?.street || INITIAL_FISCAL_FORM.street,
+        number: fiscal?.number || INITIAL_FISCAL_FORM.number,
+        complement: fiscal?.complement || INITIAL_FISCAL_FORM.complement,
+        district: fiscal?.district || INITIAL_FISCAL_FORM.district,
+        city_code: fiscal?.city_code || INITIAL_FISCAL_FORM.city_code,
+        city_name: fiscal?.city_name || INITIAL_FISCAL_FORM.city_name,
+        state: fiscal?.state || INITIAL_FISCAL_FORM.state,
+        zip_code: fiscal?.zip_code || INITIAL_FISCAL_FORM.zip_code,
+        csc_id: fiscal?.csc_id || INITIAL_FISCAL_FORM.csc_id,
         csc_token: '',
+        technical_contact_name: fiscal?.technical_contact_name || INITIAL_FISCAL_FORM.technical_contact_name,
+        technical_contact_email: fiscal?.technical_contact_email || INITIAL_FISCAL_FORM.technical_contact_email,
+        technical_contact_phone: fiscal?.technical_contact_phone || INITIAL_FISCAL_FORM.technical_contact_phone,
+        technical_contact_cnpj: fiscal?.technical_contact_cnpj || INITIAL_FISCAL_FORM.technical_contact_cnpj,
     }
 }
 
@@ -1415,8 +1471,33 @@ export default function CentralAdminClients({
             const response = await apiRequest(`/admin/tenants/${fiscalTenant.id}/fiscal`, {
                 method: 'put',
                 data: {
+                    active: Boolean(fiscalForm.active),
+                    environment: fiscalForm.environment,
+                    operation_nature: fiscalForm.operation_nature,
+                    series: fiscalForm.series,
+                    next_number: fiscalForm.next_number,
+                    company_name: fiscalForm.company_name,
+                    trade_name: fiscalForm.trade_name,
+                    cnpj: fiscalForm.cnpj,
+                    ie: fiscalForm.ie,
+                    im: fiscalForm.im,
+                    cnae: fiscalForm.cnae,
+                    crt: fiscalForm.crt,
+                    phone: fiscalForm.phone,
+                    street: fiscalForm.street,
+                    number: fiscalForm.number,
+                    complement: fiscalForm.complement,
+                    district: fiscalForm.district,
+                    city_code: fiscalForm.city_code,
+                    city_name: fiscalForm.city_name,
+                    state: fiscalForm.state,
+                    zip_code: fiscalForm.zip_code,
                     csc_id: fiscalForm.csc_id,
                     csc_token: fiscalForm.csc_token,
+                    technical_contact_name: fiscalForm.technical_contact_name,
+                    technical_contact_email: fiscalForm.technical_contact_email,
+                    technical_contact_phone: fiscalForm.technical_contact_phone,
+                    technical_contact_cnpj: fiscalForm.technical_contact_cnpj,
                 },
             })
 
@@ -1429,9 +1510,8 @@ export default function CentralAdminClients({
                     }
                     : current
             ))
-            setFiscalForm((current) => ({
-                ...current,
-                csc_token: '',
+            setFiscalForm(buildFiscalForm({
+                fiscal: response.fiscal,
             }))
             refresh(['tenants'])
         } catch (error) {
@@ -1657,7 +1737,7 @@ export default function CentralAdminClients({
                 onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
             />
 
-            <FiscalModal
+            <TenantFiscalModal
                 open={Boolean(fiscalTenant)}
                 tenant={fiscalTenant}
                 form={fiscalForm}

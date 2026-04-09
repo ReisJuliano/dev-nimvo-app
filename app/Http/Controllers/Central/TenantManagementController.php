@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Central\StoreTenantRequest;
+use App\Http\Requests\Central\UpdateTenantFiscalProfileRequest;
 use App\Http\Requests\Central\UpdateTenantSettingsRequest;
 use App\Http\Requests\Central\UpdateTenantStatusRequest;
 use App\Models\Central\Client;
@@ -198,19 +199,14 @@ class TenantManagementController extends Controller
     }
 
     public function updateFiscalSettings(
-        Request $request,
+        UpdateTenantFiscalProfileRequest $request,
         Tenant $tenant,
         TenantFiscalProfileService $fiscalProfileService,
     ): JsonResponse {
-        $data = $request->validate([
-            'csc_id' => ['required', 'string', 'max:30'],
-            'csc_token' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $fiscal = $fiscalProfileService->updateNfceCredentials((string) $tenant->id, $data);
+        $fiscal = $fiscalProfileService->saveNfceProfile((string) $tenant->id, $request->validated());
 
         return response()->json([
-            'message' => 'CSC do tenant salvo com sucesso.',
+            'message' => 'Perfil fiscal do tenant salvo com sucesso.',
             'fiscal' => $fiscal,
         ]);
     }
