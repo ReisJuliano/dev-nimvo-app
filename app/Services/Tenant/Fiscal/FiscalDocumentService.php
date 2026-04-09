@@ -2,7 +2,6 @@
 
 namespace App\Services\Tenant\Fiscal;
 
-use App\Jobs\Tenant\QueueFiscalDocumentForEmission;
 use App\Models\Tenant\Company;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\FiscalDocument;
@@ -23,6 +22,7 @@ class FiscalDocumentService
 
     public function __construct(
         protected NfcePaymentMapper $paymentMapper,
+        protected FiscalDocumentDispatchService $dispatchService,
     ) {
     }
 
@@ -33,7 +33,7 @@ class FiscalDocumentService
         ?array $recipient = null,
         ?string $contingencyReason = null,
     ): FiscalDocument {
-        return DB::transaction(function () use ($saleId, $idempotencyKey, $mode, $recipient, $contingencyReason) {
+        $document = DB::transaction(function () use ($saleId, $idempotencyKey, $mode, $recipient, $contingencyReason) {
             $sale = Sale::query()
                 ->with($this->saleRelations())
                 ->lockForUpdate()
@@ -113,11 +113,12 @@ class FiscalDocumentService
                         : 'Documento fiscal reservado e enviado para a fila de emissao.'),
             ]);
 
-            QueueFiscalDocumentForEmission::dispatch((string) tenant()->getTenantKey(), $document->id)
-                ->onQueue(config('fiscal.queues.documents'));
-
             return $document->fresh(['events']);
         });
+
+        $this->dispatchService->dispatch((string) tenant()->getTenantKey(), $document->id);
+
+        return $document->fresh(['events']);
     }
 
     public function prepareNfeFromSale(int $saleId, ?array $recipient = null): FiscalDocument
@@ -162,8 +163,7 @@ class FiscalDocumentService
             'message' => 'Documento reenfileirado para novo processamento.',
         ]);
 
-        QueueFiscalDocumentForEmission::dispatch((string) tenant()->getTenantKey(), $document->id)
-            ->onQueue(config('fiscal.queues.documents'));
+        $this->dispatchService->dispatch((string) tenant()->getTenantKey(), $document->id);
 
         return $document->fresh(['events']);
     }

@@ -2,7 +2,6 @@
 
 namespace App\Services\Tenant\Fiscal;
 
-use App\Jobs\Tenant\QueueFiscalDocumentForEmission;
 use App\Models\Central\LocalAgent;
 use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\Sale;
@@ -14,6 +13,7 @@ class FiscalContingencyService
 {
     public function __construct(
         protected LocalAgentCommandService $commandService,
+        protected FiscalDocumentDispatchService $dispatchService,
     ) {
     }
 
@@ -144,7 +144,9 @@ class FiscalContingencyService
         $retried = 0;
 
         foreach ($ids as $documentId) {
-            DB::transaction(function () use ($documentId, &$retried) {
+            $shouldDispatch = false;
+
+            DB::transaction(function () use ($documentId, &$retried, &$shouldDispatch) {
                 $document = FiscalDocument::query()
                     ->lockForUpdate()
                     ->find($documentId);
@@ -185,11 +187,13 @@ class FiscalContingencyService
                         : 'Documento retirado da contingencia e reenfileirado para emissao.',
                 ]);
 
-                QueueFiscalDocumentForEmission::dispatch((string) tenant()->getTenantKey(), $document->id)
-                    ->onQueue(config('fiscal.queues.documents'));
-
+                $shouldDispatch = true;
                 $retried++;
             });
+
+            if ($shouldDispatch) {
+                $this->dispatchService->dispatch((string) tenant()->getTenantKey(), (int) $documentId);
+            }
         }
 
         return $retried;

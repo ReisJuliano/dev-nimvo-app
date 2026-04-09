@@ -631,6 +631,35 @@ class FiscalDocumentsApiTest extends TestCase
         $this->assertSame('queued_to_agent', $document->status);
     }
 
+    public function test_it_falls_back_to_sync_when_database_queue_table_is_unavailable(): void
+    {
+        config(['queue.default' => 'database']);
+        Schema::drop('jobs');
+
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        $agent = $this->makeAgent();
+
+        $response = $this->postJson('/api/fiscal/documents', [
+            'sale_id' => $sale->id,
+            'idempotency_key' => 'database-queue-fallback-'.$sale->id,
+        ]);
+
+        $response->assertStatus(202)
+            ->assertJsonPath('document.status', 'queued_to_agent')
+            ->assertJsonPath('document.agent_key', $agent->agent_key);
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame('queued_to_agent', $document->status);
+        $this->assertDatabaseHas('local_agent_commands', [
+            'tenant_id' => $this->tenant->id,
+            'fiscal_document_id' => $document->id,
+            'status' => 'pending',
+        ], 'central');
+    }
+
     public function test_local_agent_can_complete_and_later_transmit_a_legal_offline_contingency_document(): void
     {
         Storage::fake('local');
