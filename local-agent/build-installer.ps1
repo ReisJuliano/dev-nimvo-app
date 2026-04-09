@@ -121,6 +121,31 @@ function Copy-BridgePayloadFile {
     Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
 }
 
+function Remove-AgentOutputArtifacts {
+    param(
+        [string]$OutputDirPath,
+        [string]$InstallerFileName
+    )
+
+    $knownArtifacts = @(
+        'nimvo-fiscal-agent.exe',
+        'nimvo-fiscal-bridge.zip',
+        'nimvo-fiscal-agent-setup-update.exe',
+        $InstallerFileName
+    ) | Select-Object -Unique
+
+    foreach ($artifact in $knownArtifacts) {
+        if ([string]::IsNullOrWhiteSpace($artifact)) {
+            continue
+        }
+
+        $artifactPath = Join-Path $OutputDirPath $artifact
+        if (Test-Path -LiteralPath $artifactPath) {
+            Remove-Item -LiteralPath $artifactPath -Force
+        }
+    }
+}
+
 $goProjectDir = Join-Path $scriptRoot 'go-agent'
 $installerScriptPath = Join-Path $scriptRoot 'installer.iss'
 $agentIconPath = Join-Path $goProjectDir 'nimvo.ico'
@@ -152,10 +177,11 @@ $bridgeBuildRoot = Join-Path $resolvedBuildRoot 'nimvo-fiscal-bridge'
 $bridgeArchivePath = Join-Path $resolvedBuildRoot 'nimvo-fiscal-bridge.zip'
 $installerBaseName = [System.IO.Path]::GetFileNameWithoutExtension($InstallerName)
 $installerPath = Join-Path $resolvedOutputDir $InstallerName
-$outputBridgeArchivePath = Join-Path $resolvedOutputDir 'nimvo-fiscal-bridge.zip'
 $binaryBridgeArchivePath = Join-Path $resolvedAgentBinaryDir 'nimvo-fiscal-bridge.zip'
 $compileLogPath = Join-Path $resolvedBuildRoot 'iscc-build.log'
 $appVersion = Get-InstallerVersion
+
+Remove-AgentOutputArtifacts -OutputDirPath $resolvedOutputDir -InstallerFileName $InstallerName
 
 Write-Step 'Compilando nimvo-fiscal-agent.exe'
 Push-Location $goProjectDir
@@ -212,7 +238,6 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
     $false
 )
 
-Copy-Item -LiteralPath $bridgeArchivePath -Destination $outputBridgeArchivePath -Force
 Copy-Item -LiteralPath $bridgeArchivePath -Destination $binaryBridgeArchivePath -Force
 
 $isccArguments = @(
