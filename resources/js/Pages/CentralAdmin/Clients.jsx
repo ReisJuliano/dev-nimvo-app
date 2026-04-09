@@ -87,6 +87,15 @@ function buildLocalAgentForm(tenant = null) {
     }
 }
 
+function buildFiscalForm(tenant = null) {
+    const fiscal = tenant?.fiscal
+
+    return {
+        csc_id: fiscal?.csc_id || '',
+        csc_token: '',
+    }
+}
+
 function getLicenseTone(status) {
     if (!status) return 'is-muted'
     if (status === 'blocked') return 'is-inactive'
@@ -706,8 +715,8 @@ function LocalAgentModal({
                                 </div>
                             </div>
                             <p className="central-admin-field-note">
-                                Esses dados sao sincronizados pelo agente instalado. Para trocar impressora, certificado ou logo do cupom, rode o setup
-                                novamente na maquina do cliente.
+                                Esses dados sao sincronizados pelo agente instalado. O setup do terminal ja solicita o caminho do certificado A1 e a
+                                senha local. Para trocar impressora, certificado ou logo do cupom, rode o setup novamente na maquina do cliente.
                             </p>
                             <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
                                 <button
@@ -799,7 +808,114 @@ function LocalAgentModal({
     )
 }
 
-function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onManageAgent, onDelete }) {
+function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) {
+    const fiscal = tenant?.fiscal
+    const hasProfile = Boolean(fiscal?.has_nfce_profile)
+    const environmentLabel = fiscal?.environment === 1 ? 'Producao' : fiscal?.environment === 2 ? 'Homologacao' : 'Nao informado'
+
+    return (
+        <ModalFrame
+            open={open}
+            icon="fa-key"
+            title={tenant ? `Fiscal de ${tenant.name}` : 'Fiscal'}
+            onClose={onClose}
+        >
+            <form onSubmit={onSubmit}>
+                <div className="central-admin-modal-body">
+                    <div className="central-admin-agent-grid">
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Perfil NFC-e</h3>
+                                <span className={`central-admin-status-pill ${fiscal?.tone || 'is-muted'}`}>
+                                    {fiscal?.label || 'Sem fiscal'}
+                                </span>
+                            </div>
+
+                            <div className="central-admin-agent-list">
+                                <div className="central-admin-agent-item">
+                                    <strong>Empresa</strong>
+                                    <span>{fiscal?.company_name || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Ambiente</strong>
+                                    <span>{environmentLabel}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>CSC atual</strong>
+                                    <span>{fiscal?.csc_id || 'Nao informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Token</strong>
+                                    <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Nao configurado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Atualizado</strong>
+                                    <span>{fiscal?.updated_label || 'Nao informado'}</span>
+                                </div>
+                            </div>
+
+                            <p className="central-admin-field-note">
+                                {hasProfile
+                                    ? 'Esses dados sao gravados no banco do proprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                    : 'Esse tenant ainda nao possui um perfil fiscal NFC-e 65 para receber CSC. Cadastre o perfil fiscal primeiro.'}
+                            </p>
+                        </article>
+                    </div>
+
+                    <div className="central-admin-form-grid">
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">CSC ID</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-hashtag" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    value={form.csc_id}
+                                    onChange={(event) => onChange('csc_id', event.target.value)}
+                                    placeholder="000001"
+                                    disabled={!hasProfile}
+                                    required
+                                />
+                            </span>
+                        </label>
+
+                        <label className="central-admin-field">
+                            <span className="central-admin-field-label">CSC Token</span>
+                            <span className="central-admin-field-shell">
+                                <span className="central-admin-field-icon">
+                                    <i className="fa-solid fa-key" />
+                                </span>
+                                <input
+                                    className="central-admin-field-input"
+                                    value={form.csc_token}
+                                    onChange={(event) => onChange('csc_token', event.target.value)}
+                                    placeholder={fiscal?.csc_token_configured ? 'Manter token atual' : 'Cole o token da SEFAZ'}
+                                    disabled={!hasProfile}
+                                />
+                            </span>
+                            <span className="central-admin-field-note">
+                                Deixe em branco para manter o token atual.
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="central-admin-modal-footer">
+                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
+                        Fechar
+                    </button>
+                    <button type="submit" className="central-admin-primary-button" disabled={busy || !hasProfile}>
+                        <i className="fa-solid fa-floppy-disk" />
+                        <span>{busy ? 'Salvando...' : 'Salvar CSC'}</span>
+                    </button>
+                </div>
+            </form>
+        </ModalFrame>
+    )
+}
+
+function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicense, onManageAgent, onDelete }) {
     return (
         <section className="central-admin-card">
             <div className="central-admin-section-head">
@@ -827,6 +943,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onManageAgen
                                 <th>Nome do tenant</th>
                                 <th>ID</th>
                                 <th>Status</th>
+                                <th>NFC-e</th>
                                 <th>Licenca</th>
                                 <th>Agente fiscal</th>
                                 <th>Acoes</th>
@@ -848,6 +965,11 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onManageAgen
                                         </span>
                                     </td>
                                     <td>
+                                        <span className={`central-admin-status-pill ${tenant.fiscal?.tone || 'is-muted'}`}>
+                                            {tenant.fiscal?.label || 'Sem fiscal'}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <span className={`central-admin-status-pill ${getLicenseTone(tenant.license?.status)}`}>
                                             {getLicenseLabel(tenant.license?.status)}
                                         </span>
@@ -859,6 +981,10 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageLicense, onManageAgen
                                     </td>
                                     <td>
                                         <div className="central-admin-table-actions">
+                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageFiscal(tenant)}>
+                                                <i className="fa-solid fa-key" />
+                                                <span>Fiscal</span>
+                                            </button>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onManageAgent(tenant)}>
                                                 <i className="fa-solid fa-desktop" />
                                                 <span>Agente</span>
@@ -999,6 +1125,9 @@ export default function CentralAdminClients({
     const [licenseForm, setLicenseForm] = useState(buildLicenseForm())
     const [licenseBusy, setLicenseBusy] = useState(false)
     const [invoiceBusyId, setInvoiceBusyId] = useState(null)
+    const [fiscalTenant, setFiscalTenant] = useState(null)
+    const [fiscalForm, setFiscalForm] = useState(buildFiscalForm())
+    const [fiscalBusy, setFiscalBusy] = useState(false)
     const [localAgentTenant, setLocalAgentTenant] = useState(null)
     const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
     const [localAgentBusy, setLocalAgentBusy] = useState(false)
@@ -1012,6 +1141,22 @@ export default function CentralAdminClients({
     useEffect(() => {
         setTenantSettingsState(buildTenantSettingsState(safeTenants))
     }, [safeTenants])
+
+    useEffect(() => {
+        if (!fiscalTenant) {
+            return
+        }
+
+        const updatedTenant = safeTenants.find((tenant) => tenant.id === fiscalTenant.id)
+        if (!updatedTenant) {
+            setFiscalTenant(null)
+            setFiscalForm(buildFiscalForm())
+            return
+        }
+
+        setFiscalTenant(updatedTenant)
+        setFiscalForm(buildFiscalForm(updatedTenant))
+    }, [safeTenants, fiscalTenant])
 
     useEffect(() => {
         if (!localAgentTenant) {
@@ -1064,6 +1209,11 @@ export default function CentralAdminClients({
     function openLicenseModal(tenant) {
         setLicenseTenant(tenant)
         setLicenseForm(buildLicenseForm(tenant))
+    }
+
+    function openFiscalModal(tenant) {
+        setFiscalTenant(tenant)
+        setFiscalForm(buildFiscalForm(tenant))
     }
 
     function openLocalAgentModal(tenant) {
@@ -1183,6 +1333,13 @@ export default function CentralAdminClients({
         }))
     }
 
+    function handleFiscalFieldChange(field, value) {
+        setFiscalForm((current) => ({
+            ...current,
+            [field]: value,
+        }))
+    }
+
     function handleLocalAgentFieldChange(field, value) {
         setLocalAgentForm((current) => ({
             ...current,
@@ -1241,6 +1398,46 @@ export default function CentralAdminClients({
             setFeedback({ type: 'error', text: error.message })
         } finally {
             setInvoiceBusyId(null)
+        }
+    }
+
+    async function handleSubmitFiscal(event) {
+        event.preventDefault()
+
+        if (!fiscalTenant) {
+            return
+        }
+
+        setFiscalBusy(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${fiscalTenant.id}/fiscal`, {
+                method: 'put',
+                data: {
+                    csc_id: fiscalForm.csc_id,
+                    csc_token: fiscalForm.csc_token,
+                },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            setFiscalTenant((current) => (
+                current
+                    ? {
+                        ...current,
+                        fiscal: response.fiscal,
+                    }
+                    : current
+            ))
+            setFiscalForm((current) => ({
+                ...current,
+                csc_token: '',
+            }))
+            refresh(['tenants'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setFiscalBusy(false)
         }
     }
 
@@ -1420,6 +1617,7 @@ export default function CentralAdminClients({
                             tenants={tenantSummaries}
                             onCreate={openCreateModal}
                             onEdit={openEditModal}
+                            onManageFiscal={openFiscalModal}
                             onManageLicense={openLicenseModal}
                             onManageAgent={openLocalAgentModal}
                             onDelete={setTenantToDelete}
@@ -1457,6 +1655,19 @@ export default function CentralAdminClients({
                 onChange={handleLicenseFieldChange}
                 onSubmit={handleSubmitLicense}
                 onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
+            />
+
+            <FiscalModal
+                open={Boolean(fiscalTenant)}
+                tenant={fiscalTenant}
+                form={fiscalForm}
+                busy={fiscalBusy}
+                onClose={() => {
+                    setFiscalTenant(null)
+                    setFiscalForm(buildFiscalForm())
+                }}
+                onChange={handleFiscalFieldChange}
+                onSubmit={handleSubmitFiscal}
             />
 
             <LocalAgentModal

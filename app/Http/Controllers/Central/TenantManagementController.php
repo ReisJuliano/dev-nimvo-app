@@ -15,6 +15,7 @@ use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\ProvisionTenantService;
+use App\Services\Central\TenantFiscalProfileService;
 use App\Services\Central\TenantLicenseService;
 use App\Support\Tenancy\TenantDomainManager;
 use App\Services\Tenant\LocalAgentReceiptPayloadService;
@@ -193,6 +194,24 @@ class TenantManagementController extends Controller
         return response()->json([
             'message' => 'Configuracoes salvas.',
             'settings' => $settings,
+        ]);
+    }
+
+    public function updateFiscalSettings(
+        Request $request,
+        Tenant $tenant,
+        TenantFiscalProfileService $fiscalProfileService,
+    ): JsonResponse {
+        $data = $request->validate([
+            'csc_id' => ['required', 'string', 'max:30'],
+            'csc_token' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $fiscal = $fiscalProfileService->updateNfceCredentials((string) $tenant->id, $data);
+
+        return response()->json([
+            'message' => 'CSC do tenant salvo com sucesso.',
+            'fiscal' => $fiscal,
         ]);
     }
 

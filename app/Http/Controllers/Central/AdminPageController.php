@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentConfigService;
+use App\Services\Central\TenantFiscalProfileService;
 use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\Tenancy\TenantDomainManager;
@@ -38,7 +39,7 @@ class AdminPageController extends Controller
     public function clients(TenantSettingsService $settingsService): Response
     {
         return Inertia::render('CentralAdmin/Clients', [
-            ...$this->buildProps($settingsService),
+            ...$this->buildProps($settingsService, includeFiscal: true),
             'pageMode' => 'tenants',
         ]);
     }
@@ -46,7 +47,7 @@ class AdminPageController extends Controller
     public function featureFlags(TenantSettingsService $settingsService): Response
     {
         return Inertia::render('CentralAdmin/Clients', [
-            ...$this->buildProps($settingsService),
+            ...$this->buildProps($settingsService, includeFiscal: true),
             'pageMode' => 'feature-flags',
         ]);
     }
@@ -121,13 +122,14 @@ class AdminPageController extends Controller
         ]);
     }
 
-    protected function buildProps(TenantSettingsService $settingsService): array
+    protected function buildProps(TenantSettingsService $settingsService, bool $includeFiscal = false): array
     {
         $tenants = [];
         $domainManager = app(TenantDomainManager::class);
         $licenseService = app(TenantLicenseService::class);
         $localAgentConfigService = app(LocalAgentConfigService::class);
         $localAgentBootstrapService = app(LocalAgentBootstrapService::class);
+        $fiscalProfileService = app(TenantFiscalProfileService::class);
         $agentStats = [
             'total' => 0,
             'online' => 0,
@@ -183,6 +185,9 @@ class AdminPageController extends Controller
                         'created_at' => optional($tenant->created_at)?->format('d/m/Y H:i'),
                         'settings' => $settingsService->get((string) $tenant->id),
                         'license' => $licenseState,
+                        'fiscal' => $includeFiscal
+                            ? $fiscalProfileService->snapshot((string) $tenant->id)
+                            : null,
                         'local_agent' => $this->serializeLocalAgent(
                             $agent,
                             $localAgentConfigService,
