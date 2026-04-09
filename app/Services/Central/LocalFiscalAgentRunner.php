@@ -36,6 +36,7 @@ class LocalFiscalAgentRunner
                     'supported_types' => [
                         'emit_nfce',
                         'cancel_fiscal_document',
+                        'invalidate_fiscal_range',
                         'print_payment_receipt',
                         'print_test',
                     ],
@@ -79,6 +80,7 @@ class LocalFiscalAgentRunner
                         ? $this->emitter->emitLocalTest($command['payload'], $runtimeConfig)
                         : $this->emitter->emit($command['payload'], $runtimeConfig),
                     'cancel_fiscal_document' => $this->emitter->cancel($command['payload'], $runtimeConfig),
+                    'invalidate_fiscal_range' => $this->emitter->invalidateRange($command['payload'], $runtimeConfig),
                     'print_payment_receipt' => $this->printPaymentReceipt($command['payload'], $runtimeConfig),
                     'print_test' => $this->printTest($command['payload'], $runtimeConfig),
                     default => throw new RuntimeException(sprintf('Tipo de comando nao suportado pelo runner PHP: %s.', $command['type'])),
@@ -180,6 +182,7 @@ class LocalFiscalAgentRunner
             'supported_types' => [
                 'emit_nfce',
                 'cancel_fiscal_document',
+                'invalidate_fiscal_range',
                 'print_payment_receipt',
                 'print_test',
             ],

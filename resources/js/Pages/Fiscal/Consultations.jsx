@@ -72,9 +72,17 @@ function eventSourceLabel(source) {
     return source === 'agent' ? 'Agente' : source === 'backend' ? 'Backend' : 'Sistema'
 }
 
-export default function FiscalConsultationsPage({ filters, periods, summary, range, sales }) {
+export default function FiscalConsultationsPage({ filters, periods, summary, range, sales, inutilizations }) {
     const [selectedSaleId, setSelectedSaleId] = useState(null)
+    const [showInutilizationModal, setShowInutilizationModal] = useState(false)
     const cancelForm = useForm({ reason: '' })
+    const inutilizationForm = useForm({
+        document_model: '65',
+        series: 1,
+        number_start: '',
+        number_end: '',
+        justification: '',
+    })
 
     const selectedSale = useMemo(
         () => sales.data.find((sale) => sale.id === selectedSaleId) || null,
@@ -114,6 +122,17 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         cancelForm.clearErrors()
     }
 
+    function openInutilizationModal() {
+        setShowInutilizationModal(true)
+        inutilizationForm.clearErrors()
+    }
+
+    function closeInutilizationModal() {
+        setShowInutilizationModal(false)
+        inutilizationForm.reset()
+        inutilizationForm.clearErrors()
+    }
+
     function submitCancel(event) {
         event.preventDefault()
 
@@ -124,6 +143,15 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         cancelForm.post(`/consultas-cancelamentos/vendas/${selectedSale.id}/cancelar`, {
             preserveScroll: true,
             onSuccess: () => closeModal(),
+        })
+    }
+
+    function submitInutilization(event) {
+        event.preventDefault()
+
+        inutilizationForm.post('/consultas-cancelamentos/inutilizacoes', {
+            preserveScroll: true,
+            onSuccess: () => closeInutilizationModal(),
         })
     }
 
@@ -144,6 +172,11 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                     </div>
 
                     <div className="fiscal-consultations-periods">
+                        <button className="fiscal-period-pill active" onClick={openInutilizationModal} type="button">
+                            <i className="fa-solid fa-hashtag" />
+                            <span>Inutilizar</span>
+                        </button>
+
                         {periods.map((period) => (
                             <button
                                 key={period.key}
@@ -171,6 +204,58 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             </div>
                         </article>
                     ))}
+                </section>
+
+                <section className="fiscal-consultations-list">
+                    <header className="fiscal-consultations-list-header">
+                        <div>
+                            <strong>Inutilizacoes</strong>
+                            <span>{inutilizations.length} recentes</span>
+                        </div>
+
+                        <div className="fiscal-list-chip">
+                            <i className="fa-solid fa-hashtag" />
+                            <span>Faixas</span>
+                        </div>
+                    </header>
+
+                    {inutilizations.length === 0 ? (
+                        <div className="fiscal-consultations-empty fiscal-consultations-empty-sm">
+                            <i className="fa-solid fa-hashtag" />
+                            <span>Sem inutilizacao</span>
+                        </div>
+                    ) : (
+                        <div className="fiscal-inutilization-grid">
+                            {inutilizations.map((inutilization) => (
+                                <article key={inutilization.id} className="fiscal-inutilization-card">
+                                    <div className="fiscal-sale-card-top">
+                                        <div className="fiscal-sale-card-title">
+                                            <strong>{inutilization.document_model} / {inutilization.series}</strong>
+                                            <span>{formatDateTime(inutilization.created_at)}</span>
+                                        </div>
+
+                                        <StatusChip label={inutilization.status_label} tone={inutilization.status_tone} />
+                                    </div>
+
+                                    <div className="fiscal-sale-card-metrics">
+                                        <div>
+                                            <span>Faixa</span>
+                                            <strong>{inutilization.number_start} - {inutilization.number_end}</strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Protocolo</span>
+                                            <strong>{inutilization.protocol || '--'}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div className="fiscal-sale-card-products">
+                                        <span>{inutilization.justification}</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 <section className="fiscal-consultations-list">
@@ -265,6 +350,12 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                 onCancelSubmit={submitCancel}
                 onClose={closeModal}
                 sale={selectedSale}
+            />
+            <InutilizationModal
+                form={inutilizationForm}
+                onClose={closeInutilizationModal}
+                onSubmit={submitInutilization}
+                visible={showInutilizationModal}
             />
         </AppLayout>
     )
@@ -515,6 +606,93 @@ function InfoGrid({ items }) {
                     <strong>{value}</strong>
                 </div>
             ))}
+        </div>
+    )
+}
+
+function InutilizationModal({ visible, onClose, onSubmit, form }) {
+    if (!visible) {
+        return null
+    }
+
+    return (
+        <div className="fiscal-sale-modal-backdrop" onClick={onClose}>
+            <section className="fiscal-sale-modal fiscal-sale-modal-sm" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+                <header className="fiscal-sale-modal-header">
+                    <div className="fiscal-sale-modal-title">
+                        <span className="fiscal-sale-modal-badge">
+                            <i className="fa-solid fa-hashtag" />
+                            Inutilizacao
+                        </span>
+
+                        <div>
+                            <h2>Nova faixa</h2>
+                            <span>Serie e numeracao</span>
+                        </div>
+                    </div>
+
+                    <button className="fiscal-modal-close" onClick={onClose} type="button">
+                        <i className="fa-solid fa-xmark" />
+                    </button>
+                </header>
+
+                <form className="fiscal-inutilization-form" onSubmit={onSubmit}>
+                    <div className="fiscal-form-grid">
+                        <label>
+                            <span>Modelo</span>
+                            <select name="document_model" value={form.data.document_model} onChange={(event) => form.setData('document_model', event.target.value)}>
+                                <option value="65">NFC-e 65</option>
+                                <option value="55">NF-e 55</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            <span>Serie</span>
+                            <input name="series" type="number" value={form.data.series} onChange={(event) => form.setData('series', event.target.value)} />
+                        </label>
+
+                        <label>
+                            <span>Inicio</span>
+                            <input name="number_start" type="number" value={form.data.number_start} onChange={(event) => form.setData('number_start', event.target.value)} />
+                        </label>
+
+                        <label>
+                            <span>Fim</span>
+                            <input name="number_end" type="number" value={form.data.number_end} onChange={(event) => form.setData('number_end', event.target.value)} />
+                        </label>
+                    </div>
+
+                    <label>
+                        <span>Justificativa</span>
+                        <textarea
+                            name="justification"
+                            onChange={(event) => form.setData('justification', event.target.value)}
+                            placeholder="Motivo operacional da inutilizacao"
+                            value={form.data.justification}
+                        />
+                    </label>
+
+                    {Object.values(form.errors).length > 0 ? (
+                        <div className="fiscal-form-errors">
+                            {Object.entries(form.errors).map(([field, message]) => (
+                                <span key={field} className="fiscal-form-error">{message}</span>
+                            ))}
+                        </div>
+                    ) : null}
+
+                    <div className="fiscal-cancel-actions">
+                        <button className="fiscal-secondary-button" onClick={onClose} type="button">
+                            <i className="fa-solid fa-arrow-left" />
+                            <span>Fechar</span>
+                        </button>
+
+                        <button className="fiscal-danger-button" disabled={form.processing} type="submit">
+                            <i className={`fa-solid ${form.processing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} />
+                            <span>Enviar</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
         </div>
     )
 }

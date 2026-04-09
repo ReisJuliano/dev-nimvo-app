@@ -19,6 +19,7 @@ class LocalAgentCommand extends Model
         'local_agent_id',
         'tenant_id',
         'fiscal_document_id',
+        'fiscal_number_inutilization_id',
         'type',
         'status',
         'payload',

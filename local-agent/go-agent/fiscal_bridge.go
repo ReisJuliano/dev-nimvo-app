@@ -18,6 +18,7 @@ var printerCommandTypes = []string{
 var fiscalBridgeCommandTypes = []string{
 	"emit_nfce",
 	"cancel_fiscal_document",
+	"invalidate_fiscal_range",
 }
 
 func supportedCommandTypesForConfig(config AgentConfig) []string {

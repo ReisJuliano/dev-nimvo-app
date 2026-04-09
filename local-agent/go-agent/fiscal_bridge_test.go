@@ -41,7 +41,7 @@ func TestSupportedCommandTypesForConfigWithBridge(t *testing.T) {
 	config.Software.PHPPath = phpBinary
 
 	supported := supportedCommandTypesForConfig(config)
-	expected := []string{"emit_nfce", "cancel_fiscal_document", "print_payment_receipt", "print_test"}
+	expected := []string{"emit_nfce", "cancel_fiscal_document", "invalidate_fiscal_range", "print_payment_receipt", "print_test"}
 
 	if len(supported) != len(expected) {
 		t.Fatalf("expected %v, got %v", expected, supported)

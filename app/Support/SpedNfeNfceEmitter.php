@@ -218,6 +218,51 @@ class SpedNfeNfceEmitter
         ];
     }
 
+    public function invalidateRange(array $payload, array $agentConfig): array
+    {
+        $documentModel = (string) data_get($payload, 'inutilization.document_model', '65');
+        $tools = $this->makeTools($payload, $agentConfig, false);
+        $tools->model($documentModel);
+
+        $series = (int) data_get($payload, 'inutilization.series');
+        $numberStart = (int) data_get($payload, 'inutilization.number_start');
+        $numberEnd = (int) data_get($payload, 'inutilization.number_end');
+        $justification = trim((string) data_get($payload, 'inutilization.justification', ''));
+        $year = (string) data_get($payload, 'inutilization.year', now()->format('y'));
+
+        if ($series < 1 || $numberStart < 1 || $numberEnd < $numberStart || $justification === '') {
+            throw new RuntimeException('Os dados da inutilizacao fiscal estao incompletos no comando enviado ao agente.');
+        }
+
+        $responseXml = $tools->sefazInutiliza($series, $numberStart, $numberEnd, $justification, null, $year);
+        $requestXml = $tools->lastRequest;
+        $response = (new Standardize($responseXml))->toStd();
+        $statusCode = (string) ($response->infInut->cStat ?? $response->cStat ?? '');
+        $statusReason = (string) ($response->infInut->xMotivo ?? $response->xMotivo ?? '');
+        $protocol = (string) ($response->infInut->nProt ?? '');
+
+        if ($statusCode !== '102') {
+            return [
+                'status' => in_array($statusCode, ['204', '241', '563'], true) ? 'rejected' : 'failed',
+                'request_xml' => $requestXml,
+                'response_xml' => $responseXml,
+                'protocol' => $protocol,
+                'sefaz_status_code' => $statusCode,
+                'sefaz_status_reason' => $statusReason,
+                'message' => "Inutilizacao nao concluida [{$statusCode}] {$statusReason}",
+            ];
+        }
+
+        return [
+            'status' => 'processed',
+            'request_xml' => $requestXml,
+            'response_xml' => $responseXml,
+            'protocol' => $protocol,
+            'sefaz_status_code' => $statusCode,
+            'sefaz_status_reason' => $statusReason,
+        ];
+    }
+
     protected function print(string $authorizedXml, array $printer): void
     {
         $logoPath = (string) ($printer['logo_path'] ?? '');

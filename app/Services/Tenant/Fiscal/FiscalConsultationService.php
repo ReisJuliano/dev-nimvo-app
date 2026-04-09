@@ -5,6 +5,7 @@ namespace App\Services\Tenant\Fiscal;
 use App\Models\Tenant\Company;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\FiscalDocument;
+use App\Models\Tenant\FiscalNumberInutilization;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\SaleItem;
 use App\Models\Tenant\SalePayment;
@@ -45,6 +46,13 @@ class FiscalConsultationService
         $grossTotal = (float) (clone $baseQuery)->sum('total');
         $cancelledCount = (clone $baseQuery)->where('status', 'cancelled')->count();
         $fiscalCount = (clone $baseQuery)->whereHas('fiscalDocuments')->count();
+        $recentInutilizations = FiscalNumberInutilization::query()
+            ->latest('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (FiscalNumberInutilization $inutilization) => $this->serializeInutilization($inutilization))
+            ->values()
+            ->all();
 
         return [
             'filters' => [
@@ -91,6 +99,7 @@ class FiscalConsultationService
                 'to' => $to->toDateString(),
                 'label' => $this->rangeLabel($period, $from, $to),
             ],
+            'inutilizations' => $recentInutilizations,
             'sales' => [
                 'data' => $salesPaginator->items(),
                 'current_page' => $salesPaginator->currentPage(),
@@ -103,6 +112,27 @@ class FiscalConsultationService
                     'active' => (bool) $link['active'],
                 ])->values()->all(),
             ],
+        ];
+    }
+
+    protected function serializeInutilization(FiscalNumberInutilization $inutilization): array
+    {
+        return [
+            'id' => $inutilization->id,
+            'status' => $inutilization->status,
+            'status_label' => $this->inutilizationStatusLabel((string) $inutilization->status),
+            'status_tone' => $this->inutilizationStatusTone((string) $inutilization->status),
+            'document_model' => $inutilization->document_model,
+            'series' => $inutilization->series,
+            'number_start' => $inutilization->number_start,
+            'number_end' => $inutilization->number_end,
+            'justification' => $inutilization->justification,
+            'protocol' => $inutilization->protocol,
+            'sefaz_status_code' => $inutilization->sefaz_status_code,
+            'sefaz_status_reason' => $inutilization->sefaz_status_reason,
+            'last_error' => $inutilization->last_error,
+            'created_at' => $inutilization->created_at?->toIso8601String(),
+            'processed_at' => $inutilization->processed_at?->toIso8601String(),
         ];
     }
 
@@ -368,6 +398,28 @@ class FiscalConsultationService
             'cancellation_queued', 'cancellation_processing', 'awaiting_agent', 'queued', 'queued_to_agent', 'processing' => 'warning',
             'failed', 'rejected', 'cancellation_failed' => 'danger',
             'signed_local', 'printed_local' => 'info',
+            default => 'neutral',
+        };
+    }
+
+    protected function inutilizationStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'queued' => 'Na fila',
+            'processing' => 'Processando',
+            'processed' => 'Concluida',
+            'rejected' => 'Rejeitada',
+            'failed' => 'Falhou',
+            default => ucfirst(str_replace('_', ' ', $status)),
+        };
+    }
+
+    protected function inutilizationStatusTone(string $status): string
+    {
+        return match ($status) {
+            'processed' => 'success',
+            'queued', 'processing' => 'warning',
+            'rejected', 'failed' => 'danger',
             default => 'neutral',
         };
     }

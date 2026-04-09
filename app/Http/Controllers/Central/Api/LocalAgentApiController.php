@@ -10,6 +10,7 @@ use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Tenant\Fiscal\FiscalDocumentResultService;
+use App\Services\Tenant\Fiscal\FiscalNumberInutilizationResultService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -103,6 +104,7 @@ class LocalAgentApiController extends Controller
         Request $request,
         LocalAgentCommandService $commandService,
         FiscalDocumentResultService $resultService,
+        FiscalNumberInutilizationResultService $inutilizationResultService,
     ): JsonResponse {
         /** @var LocalAgent $agent */
         $agent = $request->attributes->get('localAgent');
@@ -131,6 +133,12 @@ class LocalAgentApiController extends Controller
             } else {
                 $resultService->markProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
             }
+        } elseif ($command->fiscal_number_inutilization_id) {
+            $inutilizationResultService->markProcessing(
+                $agent->tenant_id,
+                (int) $command->fiscal_number_inutilization_id,
+                $agent->agent_key,
+            );
         }
 
         return response()->json([
@@ -148,6 +156,7 @@ class LocalAgentApiController extends Controller
         LocalAgentCommand $command,
         LocalAgentCommandService $commandService,
         FiscalDocumentResultService $resultService,
+        FiscalNumberInutilizationResultService $inutilizationResultService,
     ): JsonResponse {
         /** @var LocalAgent $agent */
         $agent = $request->attributes->get('localAgent');
@@ -192,6 +201,20 @@ class LocalAgentApiController extends Controller
                 } else {
                     $resultService->markFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
                 }
+            }
+        } elseif ($command->fiscal_number_inutilization_id) {
+            if ($validated['successful']) {
+                $inutilizationResultService->markSucceeded(
+                    $agent->tenant_id,
+                    (int) $command->fiscal_number_inutilization_id,
+                    $validated,
+                );
+            } else {
+                $inutilizationResultService->markFailed(
+                    $agent->tenant_id,
+                    (int) $command->fiscal_number_inutilization_id,
+                    $validated,
+                );
             }
         }
 

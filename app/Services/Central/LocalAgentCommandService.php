@@ -5,6 +5,7 @@ namespace App\Services\Central;
 use App\Models\Central\LocalAgent;
 use App\Models\Central\LocalAgentCommand;
 use App\Models\Tenant\FiscalDocument;
+use App\Models\Tenant\FiscalNumberInutilization;
 use Illuminate\Support\Facades\DB;
 
 class LocalAgentCommandService
@@ -52,6 +53,35 @@ class LocalAgentCommandService
             'tenant_id' => $tenantId,
             'fiscal_document_id' => $document->id,
             'type' => 'cancel_fiscal_document',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
+    public function queueInutilization(
+        LocalAgent $agent,
+        FiscalNumberInutilization $inutilization,
+        string $tenantId,
+        array $payload,
+    ): LocalAgentCommand {
+        $existing = LocalAgentCommand::query()
+            ->where('tenant_id', $tenantId)
+            ->where('fiscal_number_inutilization_id', $inutilization->id)
+            ->where('type', 'invalidate_fiscal_range')
+            ->whereIn('status', ['pending', 'processing'])
+            ->latest('created_at')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'fiscal_number_inutilization_id' => $inutilization->id,
+            'type' => 'invalidate_fiscal_range',
             'status' => 'pending',
             'payload' => $payload,
             'available_at' => now(),
