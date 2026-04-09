@@ -107,11 +107,26 @@ function Get-InstallerVersion {
     return $timestamp
 }
 
+function Copy-BridgePayloadFile {
+    param(
+        [string]$SourcePath,
+        [string]$DestinationPath
+    )
+
+    if (-not (Test-Path -LiteralPath $SourcePath)) {
+        throw "Arquivo do bridge nao encontrado: $SourcePath"
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $DestinationPath) -Force | Out-Null
+    Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+}
+
 $goProjectDir = Join-Path $scriptRoot 'go-agent'
 $installerScriptPath = Join-Path $scriptRoot 'installer.iss'
 $agentIconPath = Join-Path $goProjectDir 'nimvo.ico'
 $agentLogoPath = Join-Path $goProjectDir 'nimvo-logo.png'
 $installMarkerPath = Join-Path $scriptRoot 'installer-marker.txt'
+$repositoryRoot = Split-Path -Parent $scriptRoot
 
 if (-not (Test-Path -LiteralPath $goProjectDir)) {
     throw "Pasta do agente Go nao encontrada: $goProjectDir"
@@ -133,8 +148,12 @@ $resolvedBuildRoot = (Resolve-Path -LiteralPath $BuildRoot).Path
 $resolvedAgentBinaryDir = (Resolve-Path -LiteralPath (Split-Path -Parent $AgentBinaryPath)).Path
 $resolvedAgentBinaryPath = Join-Path $resolvedAgentBinaryDir (Split-Path -Leaf $AgentBinaryPath)
 $compiledAgentBinaryPath = Join-Path $resolvedBuildRoot 'nimvo-fiscal-agent.exe'
+$bridgeBuildRoot = Join-Path $resolvedBuildRoot 'nimvo-fiscal-bridge'
+$bridgeArchivePath = Join-Path $resolvedBuildRoot 'nimvo-fiscal-bridge.zip'
 $installerBaseName = [System.IO.Path]::GetFileNameWithoutExtension($InstallerName)
 $installerPath = Join-Path $resolvedOutputDir $InstallerName
+$outputBridgeArchivePath = Join-Path $resolvedOutputDir 'nimvo-fiscal-bridge.zip'
+$binaryBridgeArchivePath = Join-Path $resolvedAgentBinaryDir 'nimvo-fiscal-bridge.zip'
 $compileLogPath = Join-Path $resolvedBuildRoot 'iscc-build.log'
 $appVersion = Get-InstallerVersion
 
@@ -160,11 +179,48 @@ catch {
     Write-Warning "Nao foi possivel atualizar o binario em $resolvedAgentBinaryPath. O setup sera gerado com o binario novo compilado em $compiledAgentBinaryPath."
 }
 
+Write-Step 'Preparando bridge fiscal embutido'
+New-CleanDirectory -Path $bridgeBuildRoot
+
+$bridgeFileMap = @(
+    @{ Source = (Join-Path $scriptRoot 'php-bridge\bootstrap.php'); Destination = (Join-Path $bridgeBuildRoot 'bootstrap.php') },
+    @{ Source = (Join-Path $scriptRoot 'php-bridge\bridge.php'); Destination = (Join-Path $bridgeBuildRoot 'bridge.php') },
+    @{ Source = (Join-Path $repositoryRoot 'app\Support\EscposConnectorFactory.php'); Destination = (Join-Path $bridgeBuildRoot 'app\Support\EscposConnectorFactory.php') },
+    @{ Source = (Join-Path $repositoryRoot 'app\Support\NfceLayoutBuilder.php'); Destination = (Join-Path $bridgeBuildRoot 'app\Support\NfceLayoutBuilder.php') },
+    @{ Source = (Join-Path $repositoryRoot 'app\Support\Pkcs12CertificateReader.php'); Destination = (Join-Path $bridgeBuildRoot 'app\Support\Pkcs12CertificateReader.php') },
+    @{ Source = (Join-Path $repositoryRoot 'app\Support\SpedNfeNfceEmitter.php'); Destination = (Join-Path $bridgeBuildRoot 'app\Support\SpedNfeNfceEmitter.php') },
+    @{ Source = (Join-Path $repositoryRoot 'app\Support\ThermalSaleReceiptPrinter.php'); Destination = (Join-Path $bridgeBuildRoot 'app\Support\ThermalSaleReceiptPrinter.php') },
+    @{ Source = (Join-Path $repositoryRoot 'bootstrap\ssl\read-pkcs12.php'); Destination = (Join-Path $bridgeBuildRoot 'bootstrap\ssl\read-pkcs12.php') },
+    @{ Source = (Join-Path $repositoryRoot 'bootstrap\ssl\openssl-legacy.cnf'); Destination = (Join-Path $bridgeBuildRoot 'bootstrap\ssl\openssl-legacy.cnf') }
+)
+
+foreach ($bridgeFile in $bridgeFileMap) {
+    Copy-BridgePayloadFile -SourcePath $bridgeFile.Source -DestinationPath $bridgeFile.Destination
+}
+
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'vendor') -Destination (Join-Path $bridgeBuildRoot 'vendor') -Recurse -Force
+
+if (Test-Path -LiteralPath $bridgeArchivePath) {
+    Remove-Item -LiteralPath $bridgeArchivePath -Force
+}
+
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::CreateFromDirectory(
+    $bridgeBuildRoot,
+    $bridgeArchivePath,
+    [System.IO.Compression.CompressionLevel]::Optimal,
+    $false
+)
+
+Copy-Item -LiteralPath $bridgeArchivePath -Destination $outputBridgeArchivePath -Force
+Copy-Item -LiteralPath $bridgeArchivePath -Destination $binaryBridgeArchivePath -Force
+
 $isccArguments = @(
     "/DAppVersion=$appVersion",
     "/DOutputDir=$resolvedOutputDir",
     "/DInstallerBaseName=$installerBaseName",
     "/DAgentBinary=$compiledAgentBinaryPath",
+    "/DBridgeArchive=$bridgeArchivePath",
     "/DAgentIcon=$resolvedAgentIconPath",
     "/DAgentLogo=$resolvedAgentLogoPath",
     "/DInstallMarker=$resolvedInstallMarkerPath",

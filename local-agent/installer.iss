@@ -13,6 +13,9 @@
 #ifndef AgentIcon
   #define AgentIcon "nimvo.ico"
 #endif
+#ifndef BridgeArchive
+  #define BridgeArchive "nimvo-fiscal-bridge.zip"
+#endif
 #ifndef AgentLogo
   #define AgentLogo "nimvo-logo.png"
 #endif
@@ -50,6 +53,7 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 
 [Files]
 Source: "{#AgentBinary}"; Flags: dontcopy
+Source: "{#BridgeArchive}"; Flags: dontcopy
 Source: "{#AgentIcon}"; Flags: dontcopy
 Source: "{#AgentLogo}"; Flags: dontcopy
 Source: "{#InstallMarker}"; DestDir: "{app}"; DestName: "installer-marker.txt"; Flags: ignoreversion
@@ -532,6 +536,7 @@ var
   LabelControl: TNewStaticText;
 begin
   ExtractTemporaryFile('nimvo-fiscal-agent.exe');
+  ExtractTemporaryFile('nimvo-fiscal-bridge.zip');
   ExtractTemporaryFile('nimvo.ico');
   ExtractTemporaryFile('nimvo-logo.png');
 
