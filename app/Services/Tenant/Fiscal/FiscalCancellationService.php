@@ -13,6 +13,7 @@ class FiscalCancellationService
 {
     public function __construct(
         protected LocalAgentCommandService $commandService,
+        protected FiscalCancellationRules $rules,
     ) {
     }
 
@@ -31,10 +32,12 @@ class FiscalCancellationService
                 ->lockForUpdate()
                 ->first();
 
-            if ($sale->status === 'cancelled' || in_array($document?->status, ['cancelled', 'cancelled_local'], true)) {
+            $decision = $this->rules->evaluate($sale, $document);
+
+            if ($decision['mode'] === 'already_cancelled') {
                 return [
                     'mode' => 'already_cancelled',
-                    'message' => 'Essa venda ja esta cancelada.',
+                    'message' => $decision['message'],
                     'sale' => $sale,
                     'document' => $document,
                 ];
@@ -51,17 +54,17 @@ class FiscalCancellationService
                 ];
             }
 
-            if (in_array($document->status, ['queued', 'queued_to_agent', 'processing', 'cancellation_queued', 'cancellation_processing'], true)) {
+            if (! $decision['allowed']) {
                 throw ValidationException::withMessages([
-                    'sale' => 'A venda possui um documento fiscal em processamento. Aguarde a conclusao antes de cancelar.',
+                    'sale' => $decision['message'],
                 ]);
             }
 
-            if (in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'signed_local', 'printed_local'], true)) {
+            if (in_array($decision['mode'], ['commercial_cancelled', 'local_cancelled'], true)) {
                 $sale->forceFill(['status' => 'cancelled'])->save();
 
                 $document->forceFill([
-                    'status' => in_array($document->status, ['signed_local', 'printed_local'], true) ? 'cancelled_local' : 'cancelled',
+                    'status' => $decision['mode'] === 'local_cancelled' ? 'cancelled_local' : 'cancelled',
                     'cancellation_reason' => $reason,
                     'cancellation_requested_at' => now(),
                     'cancelled_at' => now(),
@@ -71,7 +74,7 @@ class FiscalCancellationService
                 $document->events()->create([
                     'status' => $document->status,
                     'source' => 'backend',
-                    'message' => in_array($document->status, ['signed_local', 'printed_local', 'cancelled_local'], true)
+                    'message' => $decision['mode'] === 'local_cancelled'
                         ? 'Venda cancelada localmente sem transmissao fiscal.'
                         : 'Venda cancelada antes da autorizacao fiscal.',
                     'payload' => [
@@ -85,18 +88,6 @@ class FiscalCancellationService
                     'sale' => $sale->fresh(),
                     'document' => $document->fresh('events'),
                 ];
-            }
-
-            if (! in_array($document->status, ['authorized', 'printed', 'cancellation_failed'], true)) {
-                throw ValidationException::withMessages([
-                    'sale' => 'O status atual do documento fiscal nao permite cancelamento por este fluxo.',
-                ]);
-            }
-
-            if (blank($document->access_key) || blank($document->sefaz_protocol) || blank($document->authorized_xml)) {
-                throw ValidationException::withMessages([
-                    'document' => 'O documento fiscal nao possui chave, protocolo e XML autorizado suficientes para cancelamento.',
-                ]);
             }
 
             $tenantId = (string) tenant()->getTenantKey();
@@ -150,10 +141,11 @@ class FiscalCancellationService
     protected function normalizeReason(string $reason): string
     {
         $normalized = trim(preg_replace('/\s+/', ' ', $reason) ?? '');
+        $minLength = $this->rules->minReasonLength();
 
-        if (mb_strlen($normalized) < 15) {
+        if (mb_strlen($normalized) < $minLength) {
             throw ValidationException::withMessages([
-                'reason' => 'Informe uma justificativa com pelo menos 15 caracteres para cancelar a venda.',
+                'reason' => sprintf('Informe uma justificativa com pelo menos %d caracteres para cancelar a venda.', $minLength),
             ]);
         }
 

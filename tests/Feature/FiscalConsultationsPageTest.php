@@ -164,6 +164,42 @@ class FiscalConsultationsPageTest extends TestCase
         ], 'central');
     }
 
+    public function test_it_blocks_cancellation_when_the_authorization_deadline_has_expired(): void
+    {
+        config()->set('fiscal.cancellation.max_hours_after_authorization', 24);
+
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user, now());
+
+        FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'authorized',
+            'idempotency_key' => 'sale:'.$sale->id.':nfce',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 11,
+            'access_key' => '35260412345678000123650010000000011000000011',
+            'payload' => [
+                'flags' => [
+                    'document_model' => '65',
+                ],
+            ],
+            'authorized_xml' => '<nfeProc>authorized</nfeProc>',
+            'sefaz_protocol' => '135260000000011',
+            'authorized_at' => now()->subHours(30),
+        ]);
+
+        $response = $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/vendas/'.$sale->id.'/cancelar', [
+                'reason' => 'Cliente pediu cancelamento depois do prazo operacional.',
+            ]);
+
+        $response->assertRedirect('/consultas-cancelamentos');
+        $response->assertSessionHasErrors(['sale']);
+    }
+
     protected function actingOperator(): User
     {
         $user = User::query()->create([

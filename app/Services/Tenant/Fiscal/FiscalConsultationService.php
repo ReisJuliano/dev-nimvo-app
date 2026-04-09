@@ -13,6 +13,11 @@ use Carbon\Carbon;
 
 class FiscalConsultationService
 {
+    public function __construct(
+        protected FiscalCancellationRules $cancellationRules,
+    ) {
+    }
+
     public function build(array $filters): array
     {
         $period = $this->resolvePeriod((string) ($filters['period'] ?? 'day'));
@@ -149,7 +154,7 @@ class FiscalConsultationService
             ])->values()->all(),
             'recipient' => $recipient,
             'can_cancel' => $this->saleCanBeCancelled($sale, $document),
-            'cancel_hint' => $this->cancelHint($document),
+            'cancel_hint' => $this->cancelHint($sale, $document),
             'fiscal_document' => $document ? [
                 'id' => $document->id,
                 'type' => $document->type,
@@ -306,40 +311,16 @@ class FiscalConsultationService
 
     protected function saleCanBeCancelled(Sale $sale, ?FiscalDocument $document): bool
     {
-        if ($sale->status === 'cancelled') {
-            return false;
-        }
-
-        if (! $document) {
-            return true;
-        }
-
-        return in_array($document->status, [
-            'authorized',
-            'printed',
-            'awaiting_agent',
-            'failed',
-            'rejected',
-            'signed_local',
-            'printed_local',
-            'cancellation_failed',
-        ], true);
+        return (bool) data_get($this->cancellationRules->evaluate($sale, $document), 'allowed', false);
     }
 
-    protected function cancelHint(?FiscalDocument $document): ?string
+    protected function cancelHint(Sale $sale, ?FiscalDocument $document): ?string
     {
         if (! $document) {
             return 'Sem documento fiscal';
         }
 
-        return match ($document->status) {
-            'authorized', 'printed', 'cancellation_failed' => 'Cancela na SEFAZ',
-            'signed_local', 'printed_local' => 'Cancela localmente',
-            'awaiting_agent', 'failed', 'rejected' => 'Cancela a venda',
-            'queued', 'queued_to_agent', 'processing', 'cancellation_queued', 'cancellation_processing' => 'Processamento em andamento',
-            'cancelled', 'cancelled_local' => 'Ja cancelada',
-            default => null,
-        };
+        return (string) data_get($this->cancellationRules->evaluate($sale, $document), 'message', 'Sem cancelamento disponivel');
     }
 
     protected function saleStatusLabel(string $status): string
