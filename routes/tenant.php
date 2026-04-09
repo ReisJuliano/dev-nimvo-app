@@ -8,7 +8,9 @@ use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
+use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
+use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
@@ -50,6 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
+        Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', OperationsPageController::class)->defaults('module', 'compras')->name('purchases.index');
         Route::get('/a-prazo', OperationsPageController::class)->defaults('module', 'a-prazo')->name('credit.index');
@@ -100,6 +103,8 @@ Route::middleware('auth')->group(function () {
         })->name('shortages.index');
         Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
+        Route::post('/consultas-cancelamentos/vendas/{sale}/cancelar', FiscalSaleCancellationController::class)
+            ->name('fiscal.consultations.sales.cancel');
         Route::prefix('/api')->group(function () {
             Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
             Route::get('/pdv/recommendations', [PosApiController::class, 'recommendations'])->name('api.pos.recommendations');

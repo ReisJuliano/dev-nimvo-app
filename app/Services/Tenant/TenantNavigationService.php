@@ -44,6 +44,12 @@ class TenantNavigationService
                         'access_key' => 'prazo',
                         'request_patterns' => ['a-prazo', 'fiado'],
                     ],
+                    [
+                        'href' => '/consultas-cancelamentos',
+                        'label' => 'Consultas',
+                        'icon' => 'fa-magnifying-glass-dollar',
+                        'request_patterns' => ['consultas-cancelamentos*'],
+                    ],
                 ],
             ],
             [

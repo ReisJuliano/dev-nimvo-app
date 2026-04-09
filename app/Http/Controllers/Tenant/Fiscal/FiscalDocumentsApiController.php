@@ -124,12 +124,17 @@ class FiscalDocumentsApiController extends Controller
             'signed_xml_available' => filled($document->signed_xml),
             'response_xml_available' => filled($document->response_xml),
             'authorized_xml_available' => filled($document->authorized_xml),
+            'cancelled_xml_available' => filled($document->cancelled_xml),
             'xml_files' => $xmlFiles,
             'sefaz_status_code' => $document->sefaz_status_code,
             'sefaz_status_reason' => $document->sefaz_status_reason,
+            'cancellation_protocol' => $document->cancellation_protocol,
+            'cancellation_reason' => $document->cancellation_reason,
             'last_error' => $document->last_error,
+            'cancellation_requested_at' => optional($document->cancellation_requested_at)?->toIso8601String(),
             'authorized_at' => optional($document->authorized_at)?->toIso8601String(),
             'printed_at' => optional($document->printed_at)?->toIso8601String(),
+            'cancelled_at' => optional($document->cancelled_at)?->toIso8601String(),
             'events' => $document->relationLoaded('events')
                 ? $document->events->map(fn ($event) => [
                     'status' => $event->status,

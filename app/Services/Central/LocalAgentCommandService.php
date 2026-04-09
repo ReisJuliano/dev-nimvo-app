@@ -33,6 +33,31 @@ class LocalAgentCommandService
         ]);
     }
 
+    public function queueCancellation(LocalAgent $agent, FiscalDocument $document, string $tenantId, array $payload): LocalAgentCommand
+    {
+        $existing = LocalAgentCommand::query()
+            ->where('tenant_id', $tenantId)
+            ->where('fiscal_document_id', $document->id)
+            ->where('type', 'cancel_fiscal_document')
+            ->whereIn('status', ['pending', 'processing'])
+            ->latest('created_at')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'fiscal_document_id' => $document->id,
+            'type' => 'cancel_fiscal_document',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
     public function queuePaymentReceipt(LocalAgent $agent, string $tenantId, array $payload): LocalAgentCommand
     {
         $saleId = (int) ($payload['sale_id'] ?? 0);

@@ -28,15 +28,22 @@ class FiscalDocument extends Model
         'signed_xml',
         'response_xml',
         'authorized_xml',
+        'cancellation_request_xml',
+        'cancellation_response_xml',
+        'cancelled_xml',
         'sefaz_receipt',
         'sefaz_protocol',
+        'cancellation_protocol',
         'sefaz_status_code',
         'sefaz_status_reason',
+        'cancellation_reason',
         'last_error',
         'queued_at',
         'processing_started_at',
+        'cancellation_requested_at',
         'authorized_at',
         'printed_at',
+        'cancelled_at',
         'failed_at',
     ];
 
@@ -44,8 +51,10 @@ class FiscalDocument extends Model
         'payload' => 'array',
         'queued_at' => 'datetime',
         'processing_started_at' => 'datetime',
+        'cancellation_requested_at' => 'datetime',
         'authorized_at' => 'datetime',
         'printed_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'failed_at' => 'datetime',
     ];
 

@@ -3,6 +3,7 @@
 namespace App\Services\Central;
 
 use App\Support\SpedNfeNfceEmitter;
+use App\Support\LocalAgentReceiptPrinter;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -12,6 +13,7 @@ class LocalFiscalAgentRunner
 {
     public function __construct(
         protected SpedNfeNfceEmitter $emitter,
+        protected LocalAgentReceiptPrinter $receiptPrinter,
     ) {
     }
 
@@ -33,6 +35,7 @@ class LocalFiscalAgentRunner
                 $polled = $this->post($runtimeConfig, '/api/local-agents/commands/poll', [
                     'supported_types' => [
                         'emit_nfce',
+                        'cancel_fiscal_document',
                         'print_payment_receipt',
                         'print_test',
                     ],
@@ -71,15 +74,22 @@ class LocalFiscalAgentRunner
             ]);
 
             try {
-                $isLocalTest = (bool) data_get($command, 'payload.flags.local_test', false);
-                $result = $isLocalTest
-                    ? $this->emitter->emitLocalTest($command['payload'], $runtimeConfig)
-                    : $this->emitter->emit($command['payload'], $runtimeConfig);
+                $result = match ($command['type']) {
+                    'emit_nfce' => (bool) data_get($command, 'payload.flags.local_test', false)
+                        ? $this->emitter->emitLocalTest($command['payload'], $runtimeConfig)
+                        : $this->emitter->emit($command['payload'], $runtimeConfig),
+                    'cancel_fiscal_document' => $this->emitter->cancel($command['payload'], $runtimeConfig),
+                    'print_payment_receipt' => $this->printPaymentReceipt($command['payload'], $runtimeConfig),
+                    'print_test' => $this->printTest($command['payload'], $runtimeConfig),
+                    default => throw new RuntimeException(sprintf('Tipo de comando nao suportado pelo runner PHP: %s.', $command['type'])),
+                };
 
                 $this->post(
                     $runtimeConfig,
                     sprintf('/api/local-agents/commands/%s/complete', $command['id']),
-                    array_merge(['successful' => ($result['status'] ?? 'authorized') !== 'rejected'], $result),
+                    array_merge([
+                        'successful' => ! in_array((string) ($result['status'] ?? ''), ['rejected', 'failed'], true),
+                    ], $result),
                 );
 
                 $output('info', sprintf('Comando %s concluido com sucesso.', $command['id']));
@@ -169,6 +179,7 @@ class LocalFiscalAgentRunner
         return [
             'supported_types' => [
                 'emit_nfce',
+                'cancel_fiscal_document',
                 'print_payment_receipt',
                 'print_test',
             ],
@@ -216,5 +227,25 @@ class LocalFiscalAgentRunner
         }
 
         return $merged;
+    }
+
+    protected function printPaymentReceipt(array $payload, array $runtimeConfig): array
+    {
+        $this->receiptPrinter->printPaymentReceipt($payload, (array) ($runtimeConfig['printer'] ?? []));
+
+        return [
+            'status' => 'printed',
+            'message' => 'Comprovante de pagamento impresso localmente.',
+        ];
+    }
+
+    protected function printTest(array $payload, array $runtimeConfig): array
+    {
+        $this->receiptPrinter->printTest((array) ($runtimeConfig['printer'] ?? []), $payload);
+
+        return [
+            'status' => 'printed',
+            'message' => 'Teste de impressao concluido.',
+        ];
     }
 }

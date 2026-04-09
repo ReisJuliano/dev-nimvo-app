@@ -147,6 +147,77 @@ class SpedNfeNfceEmitter
         ];
     }
 
+    public function cancel(array $payload, array $agentConfig): array
+    {
+        $documentModel = $this->documentModel($payload);
+        $tools = $this->makeTools($payload, $agentConfig, $documentModel === '65');
+        $tools->model($documentModel);
+
+        $accessKey = (string) data_get($payload, 'cancellation.access_key', '');
+        $reason = trim((string) data_get($payload, 'cancellation.reason', ''));
+        $protocol = (string) data_get($payload, 'cancellation.protocol', '');
+        $authorizedXml = (string) data_get($payload, 'cancellation.authorized_xml', '');
+
+        if ($accessKey === '' || $protocol === '' || $reason === '' || $authorizedXml === '') {
+            throw new RuntimeException('Os dados do cancelamento fiscal estao incompletos no comando enviado ao agente.');
+        }
+
+        $responseXml = $tools->sefazCancela($accessKey, $reason, $protocol);
+        $requestXml = $tools->lastRequest;
+        $response = (new Standardize($responseXml))->toStd();
+        $batchStatus = (string) ($response->cStat ?? '');
+        $batchReason = (string) ($response->xMotivo ?? '');
+        $eventInfo = data_get($response, 'retEvento.infEvento');
+        $eventStatus = (string) data_get($eventInfo, 'cStat', '');
+        $eventReason = (string) data_get($eventInfo, 'xMotivo', $batchReason);
+        $eventProtocol = (string) data_get($eventInfo, 'nProt', '');
+
+        if ($batchStatus !== '128') {
+            return [
+                'status' => 'failed',
+                'cancellation_request_xml' => $requestXml,
+                'cancellation_response_xml' => $responseXml,
+                'cancelled_xml' => null,
+                'access_key' => $accessKey,
+                'cancellation_protocol' => $eventProtocol,
+                'cancellation_reason' => $reason,
+                'sefaz_status_code' => $batchStatus,
+                'sefaz_status_reason' => $batchReason,
+                'message' => "Retorno de cancelamento inesperado [{$batchStatus}] {$batchReason}",
+                'cancelled_at' => null,
+            ];
+        }
+
+        if (! in_array($eventStatus, ['135', '136', '155'], true)) {
+            return [
+                'status' => 'rejected',
+                'cancellation_request_xml' => $requestXml,
+                'cancellation_response_xml' => $responseXml,
+                'cancelled_xml' => null,
+                'access_key' => $accessKey,
+                'cancellation_protocol' => $eventProtocol,
+                'cancellation_reason' => $reason,
+                'sefaz_status_code' => $eventStatus,
+                'sefaz_status_reason' => $eventReason,
+                'message' => "Cancelamento rejeitado [{$eventStatus}] {$eventReason}",
+                'cancelled_at' => null,
+            ];
+        }
+
+        return [
+            'status' => 'cancelled',
+            'cancellation_request_xml' => $requestXml,
+            'cancellation_response_xml' => $responseXml,
+            'cancelled_xml' => Complements::cancelRegister($authorizedXml, $responseXml),
+            'access_key' => $accessKey,
+            'cancellation_protocol' => $eventProtocol,
+            'cancellation_reason' => $reason,
+            'sefaz_status_code' => $eventStatus,
+            'sefaz_status_reason' => $eventReason,
+            'cancelled_at' => Carbon::now()->toIso8601String(),
+        ];
+    }
+
     protected function print(string $authorizedXml, array $printer): void
     {
         $logoPath = (string) ($printer['logo_path'] ?? '');

@@ -126,7 +126,11 @@ class LocalAgentApiController extends Controller
         }
 
         if ($command->fiscal_document_id) {
-            $resultService->markProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
+            if ($command->type === 'cancel_fiscal_document') {
+                $resultService->markCancellationProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
+            } else {
+                $resultService->markProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
+            }
         }
 
         return response()->json([
@@ -158,22 +162,36 @@ class LocalAgentApiController extends Controller
             'signed_xml' => ['nullable', 'string'],
             'response_xml' => ['nullable', 'string'],
             'authorized_xml' => ['nullable', 'string'],
+            'cancellation_request_xml' => ['nullable', 'string'],
+            'cancellation_response_xml' => ['nullable', 'string'],
+            'cancelled_xml' => ['nullable', 'string'],
             'access_key' => ['nullable', 'string'],
             'receipt' => ['nullable', 'string'],
             'protocol' => ['nullable', 'string'],
+            'cancellation_protocol' => ['nullable', 'string'],
+            'cancellation_reason' => ['nullable', 'string'],
             'sefaz_status_code' => ['nullable', 'string'],
             'sefaz_status_reason' => ['nullable', 'string'],
             'printed_at' => ['nullable', 'date'],
+            'cancelled_at' => ['nullable', 'date'],
             'error' => ['nullable', 'string'],
         ]);
 
         $command = $commandService->complete($command, $validated, (bool) $validated['successful']);
 
         if ($command->fiscal_document_id) {
-            if ($validated['successful']) {
-                $resultService->markAuthorized($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+            if ($command->type === 'cancel_fiscal_document') {
+                if ($validated['successful']) {
+                    $resultService->markCancelled($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                } else {
+                    $resultService->markCancellationFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                }
             } else {
-                $resultService->markFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                if ($validated['successful']) {
+                    $resultService->markAuthorized($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                } else {
+                    $resultService->markFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                }
             }
         }
 

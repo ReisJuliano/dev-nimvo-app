@@ -32,6 +32,25 @@ class FiscalDocumentResultService
         });
     }
 
+    public function markCancellationProcessing(string $tenantId, int $documentId, string $agentKey): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($documentId, $agentKey) {
+            $document = FiscalDocument::query()->findOrFail($documentId);
+
+            $document->forceFill([
+                'status' => 'cancellation_processing',
+                'agent_key' => $agentKey,
+                'processing_started_at' => now(),
+            ])->save();
+
+            $document->events()->create([
+                'status' => 'cancellation_processing',
+                'source' => 'agent',
+                'message' => 'Agente local assumiu o cancelamento fiscal.',
+            ]);
+        });
+    }
+
     public function markAwaitingAgent(string $tenantId, int $documentId): void
     {
         $this->tenantContext->run($tenantId, function () use ($documentId) {
@@ -152,6 +171,72 @@ class FiscalDocumentResultService
                 'payload' => [
                     ...$payload,
                     'xml_files' => $xmlFiles,
+                ],
+            ]);
+        });
+    }
+
+    public function markCancelled(string $tenantId, int $documentId, array $payload): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+            $document = FiscalDocument::query()->with('sale')->findOrFail($documentId);
+            $cancelledAt = $payload['cancelled_at'] ?? now();
+
+            $document->forceFill([
+                'status' => 'cancelled',
+                'cancellation_request_xml' => $payload['cancellation_request_xml'] ?? null,
+                'cancellation_response_xml' => $payload['cancellation_response_xml'] ?? null,
+                'cancelled_xml' => $payload['cancelled_xml'] ?? null,
+                'cancellation_protocol' => $payload['cancellation_protocol'] ?? null,
+                'cancellation_reason' => $payload['cancellation_reason'] ?? $document->cancellation_reason,
+                'sefaz_status_code' => $payload['sefaz_status_code'] ?? $document->sefaz_status_code,
+                'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? $document->sefaz_status_reason,
+                'cancelled_at' => $cancelledAt,
+                'last_error' => null,
+                'failed_at' => null,
+            ])->save();
+
+            if ($document->sale) {
+                $document->sale->forceFill(['status' => 'cancelled'])->save();
+            }
+
+            $document->events()->create([
+                'status' => 'cancelled',
+                'source' => 'agent',
+                'message' => 'Documento fiscal cancelado pela SEFAZ.',
+                'payload' => [
+                    'protocol' => $payload['cancellation_protocol'] ?? null,
+                    'reason' => $payload['cancellation_reason'] ?? null,
+                ],
+            ]);
+        });
+    }
+
+    public function markCancellationFailed(string $tenantId, int $documentId, array $payload): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+            $document = FiscalDocument::query()->findOrFail($documentId);
+            $message = $payload['message'] ?? $payload['error'] ?? 'Falha no cancelamento fiscal.';
+
+            $document->forceFill([
+                'status' => 'cancellation_failed',
+                'cancellation_request_xml' => $payload['cancellation_request_xml'] ?? $document->cancellation_request_xml,
+                'cancellation_response_xml' => $payload['cancellation_response_xml'] ?? $document->cancellation_response_xml,
+                'cancellation_protocol' => $payload['cancellation_protocol'] ?? $document->cancellation_protocol,
+                'cancellation_reason' => $payload['cancellation_reason'] ?? $document->cancellation_reason,
+                'sefaz_status_code' => $payload['sefaz_status_code'] ?? $document->sefaz_status_code,
+                'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? $document->sefaz_status_reason,
+                'last_error' => $message,
+                'failed_at' => now(),
+            ])->save();
+
+            $document->events()->create([
+                'status' => 'cancellation_failed',
+                'source' => 'agent',
+                'message' => $message,
+                'payload' => [
+                    'reason' => $payload['cancellation_reason'] ?? null,
+                    'status_code' => $payload['sefaz_status_code'] ?? null,
                 ],
             ]);
         });
