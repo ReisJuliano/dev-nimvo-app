@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Central\AdminUser;
 use App\Models\Central\Client;
+use App\Models\Central\LocalAgent;
 use App\Models\Tenant;
 use App\Models\Tenant\FiscalProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -39,6 +41,21 @@ class ExampleTest extends TestCase
                 $table->string('document', 30)->nullable();
                 $table->string('domain')->unique();
                 $table->boolean('active')->default(true);
+                $table->timestamps();
+            });
+        }
+
+        if (!Schema::connection('central')->hasTable('local_agents')) {
+            Schema::connection('central')->create('local_agents', function (Blueprint $table): void {
+                $table->id();
+                $table->string('tenant_id')->index();
+                $table->string('name');
+                $table->string('agent_key')->unique();
+                $table->string('secret_hash');
+                $table->boolean('active')->default(true);
+                $table->string('last_ip')->nullable();
+                $table->timestamp('last_seen_at')->nullable();
+                $table->json('metadata')->nullable();
                 $table->timestamps();
             });
         }
@@ -465,5 +482,198 @@ class ExampleTest extends TestCase
         $this->assertSame('Suporte Fiscal Atualizado', $profile->technical_contact_name);
 
         tenancy()->end();
+    }
+
+    public function test_central_admin_can_autofill_nfce_profile_from_cnpj_lookup(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-fiscal-autofill',
+            'name' => 'Tenant Fiscal Autofill',
+            'email' => 'autofill@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'autofill.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Fiscal Autofill',
+            'email' => 'autofill@tenant.com',
+            'document' => '999',
+            'domain' => 'autofill.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        Http::fake([
+            'https://brasilapi.com.br/api/cnpj/v1/*' => Http::response([
+                'razao_social' => 'Autofill Industria LTDA',
+                'nome_fantasia' => 'Autofill Store',
+                'cnae_fiscal' => 4781400,
+                'ddd_telefone_1' => '1130304040',
+                'logradouro' => 'Rua Teste',
+                'numero' => '100',
+                'complemento' => 'Sala 2',
+                'bairro' => 'Centro',
+                'municipio' => 'Sao Paulo',
+                'uf' => 'SP',
+                'cep' => '01001000',
+            ], 200),
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/SP/municipios' => Http::response([
+                ['id' => 3550308, 'nome' => 'Sao Paulo'],
+            ], 200),
+        ]);
+
+        $response = $this->postJson(
+            "http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal/autofill",
+            [
+                'source' => 'cnpj',
+                'cnpj' => '12345678000123',
+            ],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('fiscal.company_name', 'Autofill Industria LTDA')
+            ->assertJsonPath('fiscal.trade_name', 'Autofill Store')
+            ->assertJsonPath('fiscal.city_code', '3550308')
+            ->assertJsonPath('meta.source', 'cnpj');
+    }
+
+    public function test_central_admin_can_autofill_nfce_profile_using_agent_certificate_metadata(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-fiscal-cert',
+            'name' => 'Tenant Fiscal Cert',
+            'email' => 'cert@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'cert.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Fiscal Cert',
+            'email' => 'cert@tenant.com',
+            'document' => '1000',
+            'domain' => 'cert.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        LocalAgent::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Agente Fiscal Cert',
+            'agent_key' => 'agent-cert',
+            'secret_hash' => Hash::make('secret'),
+            'active' => true,
+            'metadata' => [
+                'device' => [
+                    'certificate' => [
+                        'path' => 'C:\\certificados\\empresa.pfx',
+                        'cnpj' => '99887766000155',
+                        'company_name' => 'Empresa do Certificado LTDA',
+                        'valid_to' => '2027-01-10T12:00:00+00:00',
+                    ],
+                ],
+            ],
+        ]);
+
+        Http::fake([
+            'https://brasilapi.com.br/api/cnpj/v1/*' => Http::response([
+                'razao_social' => 'Empresa do Certificado LTDA',
+                'nome_fantasia' => 'Empresa Cert',
+                'cnae_fiscal' => 4781400,
+                'ddd_telefone_1' => '11999998888',
+                'logradouro' => 'Rua do Certificado',
+                'numero' => '55',
+                'bairro' => 'Fiscal',
+                'municipio' => 'Curitiba',
+                'uf' => 'PR',
+                'cep' => '80000000',
+            ], 200),
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/PR/municipios' => Http::response([
+                ['id' => 4106902, 'nome' => 'Curitiba'],
+            ], 200),
+        ]);
+
+        $response = $this->postJson(
+            "http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal/autofill",
+            [
+                'source' => 'certificate',
+            ],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('fiscal.cnpj', '99887766000155')
+            ->assertJsonPath('fiscal.city_code', '4106902')
+            ->assertJsonPath('meta.source', 'certificate')
+            ->assertJsonPath('meta.certificate.company_name', 'Empresa do Certificado LTDA');
+    }
+
+    public function test_central_admin_receives_partial_autofill_when_external_lookup_is_unavailable(): void
+    {
+        $this->authenticateCentralAdmin();
+
+        $tenant = Tenant::create([
+            'id' => 'tenant-fiscal-partial',
+            'name' => 'Tenant Fiscal Partial',
+            'email' => 'partial@tenant.com',
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => 'partial.nimvo.com.br',
+        ]);
+
+        Client::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Cliente Fiscal Partial',
+            'email' => 'partial@tenant.com',
+            'document' => '1001',
+            'domain' => 'partial.nimvo.com.br',
+            'active' => true,
+        ]);
+
+        LocalAgent::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Agente Fiscal Partial',
+            'agent_key' => 'agent-partial',
+            'secret_hash' => Hash::make('secret'),
+            'active' => true,
+            'metadata' => [
+                'device' => [
+                    'certificate' => [
+                        'path' => 'C:\\certificados\\partial.pfx',
+                        'cnpj' => '11222333000144',
+                        'company_name' => 'Partial Fiscal LTDA',
+                    ],
+                ],
+            ],
+        ]);
+
+        Http::fake([
+            'https://brasilapi.com.br/api/cnpj/v1/*' => Http::response(['message' => 'offline'], 503),
+            'https://servicodados.ibge.gov.br/api/v1/localidades/*' => Http::response([], 503),
+        ]);
+
+        $response = $this->postJson(
+            "http://admin.nimvo.com.br/admin/tenants/{$tenant->id}/fiscal/autofill",
+            [
+                'source' => 'certificate',
+            ],
+        );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('fiscal.company_name', 'Partial Fiscal LTDA')
+            ->assertJsonPath('fiscal.cnpj', '11222333000144');
+
+        $this->assertContains('Codigo IBGE', $response->json('meta.missing_fields'));
+        $this->assertContains('Consulta de CNPJ indisponivel no momento.', $response->json('meta.warnings'));
     }
 }

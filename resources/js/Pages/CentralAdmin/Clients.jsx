@@ -50,6 +50,28 @@ const INITIAL_FISCAL_FORM = {
     technical_contact_cnpj: '',
 }
 
+function coerceFiscalFormValue(field, value) {
+    if (field === 'active') {
+        return Boolean(value)
+    }
+
+    return value == null ? '' : String(value)
+}
+
+function mergeFiscalForm(current, patch = {}) {
+    const next = { ...current }
+
+    Object.entries(patch || {}).forEach(([field, value]) => {
+        if (!(field in next)) {
+            return
+        }
+
+        next[field] = coerceFiscalFormValue(field, value)
+    })
+
+    return next
+}
+
 function countEnabledModules(settings) {
     return Object.values(settings?.modules || {}).filter(Boolean).length
 }
@@ -1184,6 +1206,8 @@ export default function CentralAdminClients({
     const [fiscalTenant, setFiscalTenant] = useState(null)
     const [fiscalForm, setFiscalForm] = useState(buildFiscalForm())
     const [fiscalBusy, setFiscalBusy] = useState(false)
+    const [fiscalAutofillBusy, setFiscalAutofillBusy] = useState(false)
+    const [fiscalAutofillMeta, setFiscalAutofillMeta] = useState(null)
     const [localAgentTenant, setLocalAgentTenant] = useState(null)
     const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
     const [localAgentBusy, setLocalAgentBusy] = useState(false)
@@ -1270,6 +1294,7 @@ export default function CentralAdminClients({
     function openFiscalModal(tenant) {
         setFiscalTenant(tenant)
         setFiscalForm(buildFiscalForm(tenant))
+        setFiscalAutofillMeta(null)
     }
 
     function openLocalAgentModal(tenant) {
@@ -1521,6 +1546,33 @@ export default function CentralAdminClients({
         }
     }
 
+    async function handleAutofillFiscal(source) {
+        if (!fiscalTenant) {
+            return
+        }
+
+        setFiscalAutofillBusy(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${fiscalTenant.id}/fiscal/autofill`, {
+                method: 'post',
+                data: {
+                    source,
+                    cnpj: fiscalForm.cnpj,
+                },
+            })
+
+            setFiscalForm((current) => mergeFiscalForm(current, response.fiscal))
+            setFiscalAutofillMeta(response.meta || null)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setFiscalAutofillBusy(false)
+        }
+    }
+
     async function handleSubmitLocalAgent(event) {
         event.preventDefault()
 
@@ -1742,12 +1794,17 @@ export default function CentralAdminClients({
                 tenant={fiscalTenant}
                 form={fiscalForm}
                 busy={fiscalBusy}
+                autofillBusy={fiscalAutofillBusy}
+                autofillMeta={fiscalAutofillMeta}
                 onClose={() => {
                     setFiscalTenant(null)
                     setFiscalForm(buildFiscalForm())
+                    setFiscalAutofillMeta(null)
                 }}
                 onChange={handleFiscalFieldChange}
                 onSubmit={handleSubmitFiscal}
+                onAutofillByCnpj={() => handleAutofillFiscal('cnpj')}
+                onAutofillByCertificate={() => handleAutofillFiscal('certificate')}
             />
 
             <LocalAgentModal

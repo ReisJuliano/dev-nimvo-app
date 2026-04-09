@@ -49,6 +49,21 @@ function AdminSwitch({ checked, onChange, ariaLabel }) {
     )
 }
 
+function formatCertificateDate(value) {
+    if (!value) {
+        return 'Nao informado'
+    }
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+        return value
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+    }).format(date)
+}
+
 function renderField(field, form, canPersist, onChange, fiscal) {
     const value = form[field.name] ?? ''
     const placeholder = field.name === 'csc_token' && fiscal?.csc_token_configured
@@ -95,16 +110,40 @@ function renderField(field, form, canPersist, onChange, fiscal) {
     )
 }
 
-export default function TenantFiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) {
+export default function TenantFiscalModal({
+    open,
+    tenant,
+    form,
+    busy,
+    autofillBusy = false,
+    autofillMeta = null,
+    onClose,
+    onChange,
+    onSubmit,
+    onAutofillByCnpj,
+    onAutofillByCertificate,
+}) {
     if (!open) {
         return null
     }
 
     const fiscal = tenant?.fiscal
+    const certificate = tenant?.local_agent?.device
+        ? {
+            path: tenant.local_agent.device.certificate_path,
+            company_name: tenant.local_agent.device.certificate_company_name,
+            cnpj: tenant.local_agent.device.certificate_cnpj,
+            valid_from: tenant.local_agent.device.certificate_valid_from,
+            valid_to: tenant.local_agent.device.certificate_valid_to,
+        }
+        : null
     const hasProfile = Boolean(fiscal?.has_nfce_profile)
     const canPersist = fiscal?.status !== 'missing_table'
     const pendingCount = Array.isArray(fiscal?.missing_fields) ? fiscal.missing_fields.length : 0
     const environmentLabel = fiscal?.environment === 1 ? 'Producao' : fiscal?.environment === 2 ? 'Homologacao' : 'Nao informado'
+    const hasCertificateSummary = Boolean(certificate?.cnpj || certificate?.company_name || certificate?.valid_to)
+    const autofillCount = Array.isArray(autofillMeta?.filled_fields) ? autofillMeta.filled_fields.length : 0
+    const autofillMissingCount = Array.isArray(autofillMeta?.missing_fields) ? autofillMeta.missing_fields.length : 0
 
     return (
         <div className="central-admin-modal-backdrop" onClick={onClose}>
@@ -199,6 +238,96 @@ export default function TenantFiscalModal({ open, tenant, form, busy, onClose, o
                                 </p>
                             </article>
                         </div>
+
+                        <div className="central-admin-fiscal-actions">
+                            <button
+                                type="button"
+                                className="central-admin-secondary-button"
+                                disabled={autofillBusy || !canPersist || !String(form.cnpj || '').trim()}
+                                onClick={onAutofillByCnpj}
+                            >
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <span>{autofillBusy ? 'Consultando...' : 'Consultar CNPJ'}</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className="central-admin-secondary-button"
+                                disabled={autofillBusy || !canPersist || !hasCertificateSummary}
+                                onClick={onAutofillByCertificate}
+                            >
+                                <i className="fa-solid fa-certificate" />
+                                <span>{autofillBusy ? 'Lendo...' : 'Usar certificado'}</span>
+                            </button>
+                        </div>
+
+                        {(hasCertificateSummary || autofillMeta) ? (
+                            <div className="central-admin-agent-grid">
+                                {hasCertificateSummary ? (
+                                    <article className="central-admin-license-card central-admin-agent-card">
+                                        <div className="central-admin-license-card-top">
+                                            <h3>Certificado</h3>
+                                            <span className="central-admin-status-pill is-active">
+                                                A1
+                                            </span>
+                                        </div>
+
+                                        <div className="central-admin-agent-list">
+                                            <div className="central-admin-agent-item">
+                                                <strong>Empresa</strong>
+                                                <span>{certificate?.company_name || 'Nao informado'}</span>
+                                            </div>
+                                            <div className="central-admin-agent-item">
+                                                <strong>CNPJ</strong>
+                                                <span>{certificate?.cnpj || 'Nao informado'}</span>
+                                            </div>
+                                            <div className="central-admin-agent-item">
+                                                <strong>Valido ate</strong>
+                                                <span>{formatCertificateDate(certificate?.valid_to)}</span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                ) : null}
+
+                                {autofillMeta ? (
+                                    <article className="central-admin-license-card central-admin-agent-card">
+                                        <div className="central-admin-license-card-top">
+                                            <h3>Autofill</h3>
+                                            <span className={`central-admin-status-pill ${autofillMissingCount === 0 ? 'is-active' : 'is-info'}`}>
+                                                {autofillMeta?.source_label || 'Sugestao'}
+                                            </span>
+                                        </div>
+
+                                        <div className="central-admin-agent-list">
+                                            <div className="central-admin-agent-item">
+                                                <strong>CNPJ</strong>
+                                                <span>{autofillMeta?.cnpj || 'Nao informado'}</span>
+                                            </div>
+                                            <div className="central-admin-agent-item">
+                                                <strong>Campos</strong>
+                                                <span>{autofillCount}</span>
+                                            </div>
+                                            <div className="central-admin-agent-item">
+                                                <strong>Pendencias</strong>
+                                                <span>{autofillMissingCount}</span>
+                                            </div>
+                                        </div>
+
+                                        {autofillMissingCount > 0 ? (
+                                            <span className="central-admin-field-note">
+                                                {autofillMeta.missing_fields.join(', ')}
+                                            </span>
+                                        ) : null}
+
+                                        {Array.isArray(autofillMeta?.warnings) && autofillMeta.warnings.length > 0 ? (
+                                            <span className="central-admin-field-note">
+                                                {autofillMeta.warnings.join(' ')}
+                                            </span>
+                                        ) : null}
+                                    </article>
+                                ) : null}
+                            </div>
+                        ) : null}
 
                         <div className="central-admin-form-grid">
                             <div className="central-admin-field is-full">
