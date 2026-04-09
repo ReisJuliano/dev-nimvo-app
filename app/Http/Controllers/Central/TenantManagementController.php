@@ -440,6 +440,7 @@ class TenantManagementController extends Controller
                 'local_api_host' => data_get($agent->metadata, 'device.local_api.host'),
                 'local_api_port' => data_get($agent->metadata, 'device.local_api.port'),
                 'local_api_url' => data_get($agent->metadata, 'device.local_api.url'),
+                'bridge_root' => data_get($agent->metadata, 'device.software.bridge_root'),
                 'project_root' => data_get($agent->metadata, 'device.software.project_root'),
                 'php_path' => data_get($agent->metadata, 'device.software.php_path'),
                 'version' => data_get($agent->metadata, 'device.software.version'),

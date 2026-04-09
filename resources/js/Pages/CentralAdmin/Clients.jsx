@@ -752,8 +752,8 @@ function LocalAgentModal({
                                     <span>{formatDateTime(agent?.device?.last_sync_at)}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
-                                    <strong>Projeto Nimvo</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.project_root || 'Nao informado'}</span>
+                                    <strong>Bridge fiscal</strong>
+                                    <span className="central-admin-path-copy">{agent?.device?.bridge_root || 'Nao informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>PHP</strong>
@@ -794,7 +794,7 @@ function LocalAgentModal({
                             </div>
                             <p className="central-admin-field-note">
                                 Esses dados sao sincronizados pelo agente instalado. O setup do terminal ja solicita o caminho do certificado A1 e a
-                                senha local. Para trocar impressora, certificado ou logo do cupom, rode o setup novamente na maquina do cliente.
+                                senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na maquina do cliente.
                             </p>
                             <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
                                 <button

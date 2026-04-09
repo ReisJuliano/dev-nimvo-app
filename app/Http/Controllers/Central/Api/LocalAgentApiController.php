@@ -86,6 +86,7 @@ class LocalAgentApiController extends Controller
             'local_api.url' => ['nullable', 'string', 'max:255'],
             'software' => ['nullable', 'array'],
             'software.version' => ['nullable', 'string', 'max:255'],
+            'software.bridge_root' => ['nullable', 'string', 'max:1024'],
             'software.project_root' => ['nullable', 'string', 'max:1024'],
             'software.php_path' => ['nullable', 'string', 'max:1024'],
             'software.installed_at' => ['nullable', 'date'],

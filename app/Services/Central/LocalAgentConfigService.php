@@ -57,6 +57,7 @@ class LocalAgentConfigService
             ], fn ($value) => $value !== null && $value !== ''),
             'software' => array_filter([
                 'version' => $payload['software']['version'] ?? null,
+                'bridge_root' => $payload['software']['bridge_root'] ?? null,
                 'project_root' => $payload['software']['project_root'] ?? null,
                 'php_path' => $payload['software']['php_path'] ?? null,
                 'installed_at' => $payload['software']['installed_at'] ?? null,

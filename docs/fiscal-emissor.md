@@ -14,7 +14,7 @@
 3. O documento e persistido em `fiscal_documents` com `idempotency_key` unico.
 4. Um job cria um comando para o agente local em `local_agent_commands`.
 5. O agente local faz `poll` e informa apenas os `supported_types` realmente disponiveis na maquina.
-6. Quando a ponte fiscal local estiver configurada com `project_root` e `php_path`, o agente Go executa emissao e cancelamento via runner PHP local.
+6. Quando o instalador entrega o `bridge` fiscal embutido e existe um `php_path` valido, o agente Go executa emissao, cancelamento e inutilizacao sem depender do projeto Laravel no terminal.
 7. O backend atualiza documento fiscal, eventos, XMLs e status final.
 
 ## Seguranca
@@ -80,16 +80,17 @@ O agente Go so anuncia:
 
 - `emit_nfce`
 - `cancel_fiscal_document`
+- `invalidate_fiscal_range`
 
-quando a configuracao local tiver uma ponte valida para o projeto Laravel:
+quando a configuracao local tiver uma ponte fiscal valida:
 
-- `software.project_root`: raiz local do projeto com arquivo `artisan`
-- `software.php_path`: executavel do PHP usado para chamar `artisan`
+- `software.bridge_root`: runtime fiscal empacotado pelo instalador
+- `software.php_path`: executavel do PHP usado para chamar o bridge
 
 O bridge executa:
 
 ```bash
-php artisan fiscal:agent:execute-command <config> <type> <payload>
+php bridge.php command <config> <type> <payload>
 ```
 
 ## Instalador Windows do agente
@@ -114,7 +115,7 @@ O pacote instala o agente em `%LOCALAPPDATA%\NimvoFiscalAgent`, registra inicial
 - codigo de ativacao do tenant
 - polling em segundos
 - impressora Windows, TCP ou preview em PDF
-- `project_root` opcional
+- `bridge_root` empacotado automaticamente
 - `php_path` opcional
 
 ## Emissao via API tenant
@@ -136,4 +137,4 @@ POST /api/fiscal/documents
 - O instalador do agente usa o codigo de ativacao para trocar as credenciais diretamente com o backend central no primeiro setup.
 - O `/admin` central cuida do bootstrap, do status do agente e do polling.
 - A configuracao local do agente fica na propria maquina e e sincronizada com o Nimvo via `local_agents.metadata`.
-- Sem `project_root` e `php_path`, o agente Go opera apenas com impressao e API local.
+- Sem `bridge_root` ou `php_path`, o agente Go opera apenas com impressao e API local.
