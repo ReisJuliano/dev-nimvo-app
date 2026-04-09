@@ -431,9 +431,15 @@ Artisan::command('fiscal:sale:issue {tenantId} {saleId} {--mode=auto}', function
     $this->line('Agora execute o agente local para concluir a emissao e impressao.');
 })->purpose('Cria um documento fiscal a partir de uma venda');
 
-Artisan::command('fiscal:cert:inspect {path} {--password=123456}', function (string $path) {
+Artisan::command('fiscal:cert:inspect {path} {--password=123456} {--json}', function (string $path) {
     if (!file_exists($path)) {
-        $this->error('Arquivo PFX nao encontrado.');
+        if ($this->option('json')) {
+            $this->line(json_encode([
+                'message' => 'Arquivo PFX nao encontrado.',
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        } else {
+            $this->error('Arquivo PFX nao encontrado.');
+        }
 
         return 1;
     }
@@ -441,9 +447,26 @@ Artisan::command('fiscal:cert:inspect {path} {--password=123456}', function (str
     try {
         $inspection = app(Pkcs12CertificateReader::class)->inspect($path, (string) $this->option('password'));
     } catch (Throwable) {
-        $this->error('Nao foi possivel abrir o PFX com a senha informada.');
+        if ($this->option('json')) {
+            $this->line(json_encode([
+                'message' => 'Nao foi possivel abrir o PFX com a senha informada.',
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        } else {
+            $this->error('Nao foi possivel abrir o PFX com a senha informada.');
+        }
 
         return 1;
+    }
+
+    if ($this->option('json')) {
+        $this->line(json_encode([
+            'company_name' => $inspection['company_name'] ?? null,
+            'cnpj' => $inspection['cnpj'] ?? null,
+            'valid_from' => $inspection['valid_from'] ?? null,
+            'valid_to' => $inspection['valid_to'] ?? null,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+
+        return 0;
     }
 
     $this->info('Certificado lido com sucesso.');

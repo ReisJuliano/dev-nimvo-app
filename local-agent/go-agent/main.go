@@ -266,6 +266,17 @@ func postBackendJSON(config AgentConfig, uri string, payload any) (map[string]an
 func heartbeatPayload(config AgentConfig) map[string]any {
 	hostName, _ := os.Hostname()
 	userName := strings.TrimSpace(os.Getenv("USERNAME"))
+	certificate := map[string]any{
+		"path": strings.TrimSpace(config.Certificate.Path),
+	}
+
+	for key, value := range certificateSummaryForConfig(config) {
+		if strings.TrimSpace(key) == "" || value == nil || value == "" {
+			continue
+		}
+
+		certificate[key] = value
+	}
 
 	return map[string]any{
 		"supported_types": supportedCommandTypesForConfig(config),
@@ -273,9 +284,7 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 			"name": hostName,
 			"user": userName,
 		},
-		"certificate": map[string]any{
-			"path": strings.TrimSpace(config.Certificate.Path),
-		},
+		"certificate": certificate,
 		"printer": map[string]any{
 			"enabled":     config.Printer.Enabled,
 			"connector":   config.Printer.Connector,

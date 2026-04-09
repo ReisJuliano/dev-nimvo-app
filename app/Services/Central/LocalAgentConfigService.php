@@ -32,6 +32,10 @@ class LocalAgentConfigService
             ], [$this, 'filledValue']),
             'certificate' => array_filter([
                 'path' => $payload['certificate']['path'] ?? null,
+                'company_name' => $payload['certificate']['company_name'] ?? null,
+                'cnpj' => $payload['certificate']['cnpj'] ?? null,
+                'valid_from' => $payload['certificate']['valid_from'] ?? null,
+                'valid_to' => $payload['certificate']['valid_to'] ?? null,
             ], [$this, 'filledValue']),
             'printer' => array_filter([
                 'enabled' => array_key_exists('enabled', $payload['printer'] ?? [])

@@ -4,6 +4,7 @@ namespace App\Services\Central;
 
 use App\Support\SpedNfeNfceEmitter;
 use App\Support\LocalAgentReceiptPrinter;
+use App\Support\Pkcs12CertificateReader;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -14,6 +15,7 @@ class LocalFiscalAgentRunner
     public function __construct(
         protected SpedNfeNfceEmitter $emitter,
         protected LocalAgentReceiptPrinter $receiptPrinter,
+        protected Pkcs12CertificateReader $certificateReader,
     ) {
     }
 
@@ -185,6 +187,18 @@ class LocalFiscalAgentRunner
 
     protected function heartbeatPayload(array $config, string $configPath): array
     {
+        $certificate = [
+            'path' => (string) data_get($config, 'certificate.path', ''),
+        ];
+
+        foreach ($this->certificateSummary($config) as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $certificate[$key] = $value;
+        }
+
         return [
             'supported_types' => [
                 'emit_nfce',
@@ -197,9 +211,7 @@ class LocalFiscalAgentRunner
                 'name' => php_uname('n'),
                 'user' => get_current_user() ?: null,
             ],
-            'certificate' => [
-                'path' => (string) data_get($config, 'certificate.path', ''),
-            ],
+            'certificate' => $certificate,
             'printer' => [
                 'enabled' => (bool) data_get($config, 'printer.enabled', true),
                 'connector' => (string) data_get($config, 'printer.connector', 'windows'),
@@ -225,6 +237,29 @@ class LocalFiscalAgentRunner
                 'installed_at' => date(DATE_ATOM, filemtime($configPath) ?: time()),
                 'config_path' => $configPath,
             ],
+        ];
+    }
+
+    protected function certificateSummary(array $config): array
+    {
+        $path = (string) data_get($config, 'certificate.path', '');
+        $password = (string) data_get($config, 'certificate.password', '');
+
+        if ($path === '' || $password === '' || ! is_file($path)) {
+            return [];
+        }
+
+        try {
+            $inspection = $this->certificateReader->inspect($path, $password);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return [
+            'company_name' => $inspection['company_name'] ?? null,
+            'cnpj' => $inspection['cnpj'] ?? null,
+            'valid_from' => $inspection['valid_from'] ?? null,
+            'valid_to' => $inspection['valid_to'] ?? null,
         ];
     }
 
