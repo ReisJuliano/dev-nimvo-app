@@ -46,11 +46,23 @@ class FiscalConsultationService
         $grossTotal = (float) (clone $baseQuery)->sum('total');
         $cancelledCount = (clone $baseQuery)->where('status', 'cancelled')->count();
         $fiscalCount = (clone $baseQuery)->whereHas('fiscalDocuments')->count();
+        $contingencyCount = FiscalDocument::query()
+            ->whereIn('status', ['contingency_pending', 'contingency_failed'])
+            ->count();
         $recentInutilizations = FiscalNumberInutilization::query()
             ->latest('created_at')
             ->limit(6)
             ->get()
             ->map(fn (FiscalNumberInutilization $inutilization) => $this->serializeInutilization($inutilization))
+            ->values()
+            ->all();
+        $recentContingencies = FiscalDocument::query()
+            ->with('sale:id,sale_number,total')
+            ->whereIn('status', ['contingency_pending', 'contingency_failed'])
+            ->latest('updated_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (FiscalDocument $document) => $this->serializeContingency($document))
             ->values()
             ->all();
 
@@ -93,12 +105,20 @@ class FiscalConsultationService
                     'icon' => 'fa-ban',
                     'tone' => 'danger',
                 ],
+                [
+                    'key' => 'contingency',
+                    'label' => 'Conting.',
+                    'value' => $contingencyCount,
+                    'icon' => 'fa-triangle-exclamation',
+                    'tone' => 'warning',
+                ],
             ],
             'range' => [
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
                 'label' => $this->rangeLabel($period, $from, $to),
             ],
+            'contingencies' => $recentContingencies,
             'inutilizations' => $recentInutilizations,
             'sales' => [
                 'data' => $salesPaginator->items(),
@@ -185,6 +205,8 @@ class FiscalConsultationService
             'recipient' => $recipient,
             'can_cancel' => $this->saleCanBeCancelled($sale, $document),
             'cancel_hint' => $this->cancelHint($sale, $document),
+            'can_flag_contingency' => $this->canFlagContingency($document),
+            'contingency_hint' => $this->contingencyHint($document),
             'fiscal_document' => $document ? [
                 'id' => $document->id,
                 'type' => $document->type,
@@ -205,6 +227,10 @@ class FiscalConsultationService
                 'cancellation_requested_at' => $document->cancellation_requested_at?->toIso8601String(),
                 'cancelled_at' => $document->cancelled_at?->toIso8601String(),
                 'cancellation_reason' => $document->cancellation_reason,
+                'contingency_reason' => $document->contingency_reason,
+                'contingency_requested_at' => $document->contingency_requested_at?->toIso8601String(),
+                'contingency_released_at' => $document->contingency_released_at?->toIso8601String(),
+                'contingency_attempts' => (int) ($document->contingency_attempts ?? 0),
                 'files' => [
                     'preview_url' => route('api.fiscal.documents.preview', $document, false),
                     'signed_xml_url' => filled($document->signed_xml) ? route('api.fiscal.documents.signed-xml', $document, false) : null,
@@ -225,6 +251,26 @@ class FiscalConsultationService
                     ->values()
                     ->all(),
             ] : null,
+        ];
+    }
+
+    protected function serializeContingency(FiscalDocument $document): array
+    {
+        return [
+            'id' => $document->id,
+            'sale_id' => $document->sale_id,
+            'sale_number' => $document->sale?->sale_number ?? '--',
+            'total' => (float) ($document->sale?->total ?? 0),
+            'status' => $document->status,
+            'status_label' => $this->documentStatusLabel((string) $document->status),
+            'status_tone' => $this->documentStatusTone((string) $document->status),
+            'document_model' => (string) data_get($document->payload, 'flags.document_model', '65'),
+            'series' => $document->series,
+            'number' => $document->number,
+            'contingency_reason' => $document->contingency_reason,
+            'last_error' => $document->last_error,
+            'contingency_requested_at' => $document->contingency_requested_at?->toIso8601String(),
+            'contingency_attempts' => (int) ($document->contingency_attempts ?? 0),
         ];
     }
 
@@ -353,6 +399,30 @@ class FiscalConsultationService
         return (string) data_get($this->cancellationRules->evaluate($sale, $document), 'message', 'Sem cancelamento disponivel');
     }
 
+    protected function canFlagContingency(?FiscalDocument $document): bool
+    {
+        if (! $document) {
+            return false;
+        }
+
+        return in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'contingency_pending'], true);
+    }
+
+    protected function contingencyHint(?FiscalDocument $document): string
+    {
+        if (! $document) {
+            return 'Sem documento fiscal';
+        }
+
+        return match ($document->status) {
+            'awaiting_agent' => 'Sem agente local disponivel',
+            'failed', 'rejected' => 'Falha fiscal pronta para contingencia',
+            'contingency_pending' => 'Em contingencia operacional',
+            'contingency_failed' => 'Falha ao reenfileirar contingencia',
+            default => 'Sem contingencia disponivel',
+        };
+    }
+
     protected function saleStatusLabel(string $status): string
     {
         return match ($status) {
@@ -384,6 +454,8 @@ class FiscalConsultationService
             'printed_local' => 'Ensaio impresso',
             'cancellation_queued', 'cancellation_processing' => 'Cancelando',
             'cancellation_failed' => 'Falha cancel.',
+            'contingency_pending' => 'Contingencia',
+            'contingency_failed' => 'Falha conting.',
             'cancelled' => 'Cancelada',
             'cancelled_local' => 'Cancelada local',
             default => ucfirst(str_replace('_', ' ', $status)),
@@ -396,7 +468,8 @@ class FiscalConsultationService
             'authorized', 'printed' => 'success',
             'cancelled', 'cancelled_local' => 'danger',
             'cancellation_queued', 'cancellation_processing', 'awaiting_agent', 'queued', 'queued_to_agent', 'processing' => 'warning',
-            'failed', 'rejected', 'cancellation_failed' => 'danger',
+            'contingency_pending' => 'warning',
+            'failed', 'rejected', 'cancellation_failed', 'contingency_failed' => 'danger',
             'signed_local', 'printed_local' => 'info',
             default => 'neutral',
         };

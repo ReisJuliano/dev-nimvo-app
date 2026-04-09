@@ -44,6 +44,8 @@ class FiscalConsultationsPageTest extends TestCase
             PreventAccessFromCentralDomains::class,
         ]);
 
+        config(['queue.default' => 'sync']);
+
         $this->tenant = TenantModel::query()->create([
             'id' => 'tenant-consultas',
             'name' => 'Loja Consultas',
@@ -198,6 +200,106 @@ class FiscalConsultationsPageTest extends TestCase
 
         $response->assertRedirect('/consultas-cancelamentos');
         $response->assertSessionHasErrors(['sale']);
+    }
+
+    public function test_it_can_move_a_failed_document_to_operational_contingency(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user, now());
+
+        $document = FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'failed',
+            'idempotency_key' => 'sale:'.$sale->id.':contingency',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 19,
+            'last_error' => 'Sem agente local no momento.',
+            'payload' => [
+                'flags' => [
+                    'document_model' => '65',
+                ],
+            ],
+        ]);
+
+        $response = $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/vendas/'.$sale->id.'/contingencia', [
+                'reason' => 'Caixa isolado aguardando retorno de conectividade local.',
+            ]);
+
+        $response->assertRedirect('/consultas-cancelamentos');
+
+        $document->refresh();
+
+        $this->assertSame('contingency_pending', $document->status);
+        $this->assertSame('Caixa isolado aguardando retorno de conectividade local.', $document->contingency_reason);
+    }
+
+    public function test_it_can_retry_documents_from_operational_contingency(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user, now());
+
+        FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'contingency_pending',
+            'idempotency_key' => 'sale:'.$sale->id.':retry-contingency',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 21,
+            'payload' => [
+                'profile' => [
+                    'environment' => 2,
+                    'company_name' => 'Loja Consultas LTDA',
+                    'state' => 'SP',
+                    'cnpj' => '12345678000123',
+                    'csc_id' => '000001',
+                    'csc_token' => 'TOKEN1234567890',
+                ],
+                'flags' => [
+                    'document_model' => '65',
+                ],
+                'sale' => [
+                    'requested_document_model' => '65',
+                ],
+            ],
+            'contingency_reason' => 'Fila temporariamente em contingencia operacional.',
+            'contingency_requested_at' => now(),
+        ]);
+
+        LocalAgent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'PDV Fiscal',
+            'agent_key' => 'agent-retry-contingency',
+            'secret_hash' => Hash::make('secret'),
+            'active' => true,
+            'metadata' => [
+                'device' => [
+                    'supported_types' => ['emit_nfce'],
+                ],
+            ],
+            'last_seen_at' => now(),
+        ]);
+
+        $response = $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/contingencia/retry');
+
+        $response->assertRedirect('/consultas-cancelamentos');
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame('queued_to_agent', $document->status);
+        $this->assertSame(1, $document->contingency_attempts);
+
+        $this->assertDatabaseHas('local_agent_commands', [
+            'tenant_id' => $this->tenant->id,
+            'fiscal_document_id' => $document->id,
+            'type' => 'emit_nfce',
+        ], 'central');
     }
 
     protected function actingOperator(): User

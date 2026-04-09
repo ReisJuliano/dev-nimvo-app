@@ -9,7 +9,7 @@
 .fiscal-consultations-periods{display:inline-flex;align-items:center;gap:.75rem;flex-wrap:wrap;justify-content:flex-end}
 .fiscal-period-pill{gap:.55rem;border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.54);color:#cbd5e1;padding:.78rem 1rem;border-radius:999px;font:inherit;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease}
 .fiscal-period-pill:hover,.fiscal-period-pill.active{transform:translateY(-1px);border-color:rgba(56,189,248,.42);background:rgba(14,165,233,.16);color:#f8fafc}
-.fiscal-consultations-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+.fiscal-consultations-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem}
 .fiscal-summary-card{display:flex;align-items:center;gap:1rem;padding:1.15rem 1.2rem;border-radius:1.4rem;background:rgba(255,255,255,.74);backdrop-filter:blur(18px)}
 .fiscal-summary-icon{width:3rem;height:3rem;border-radius:1rem;display:grid;place-items:center;font-size:1rem;background:rgba(148,163,184,.18)}
 .fiscal-summary-card.tone-primary .fiscal-summary-icon{background:rgba(56,189,248,.18);color:#0369a1}
@@ -74,6 +74,7 @@
 .fiscal-sale-modal-footer{align-items:stretch;border-top:1px solid rgba(148,163,184,.14)}
 .fiscal-cancel-signal{display:inline-flex;align-items:center;padding:.95rem 1rem;border-radius:1.1rem;background:rgba(15,23,42,.06);color:#334155;min-width:12rem}
 .fiscal-cancel-signal span{display:inline-flex;align-items:center;gap:.6rem}
+.fiscal-cancel-signal-stack{flex-direction:column;align-items:flex-start;gap:.65rem}
 .fiscal-cancel-form{flex:1}
 .fiscal-cancel-form textarea{width:100%;min-height:5.6rem;resize:vertical;padding:.95rem 1rem;border-radius:1.1rem;border:1px solid rgba(148,163,184,.2);background:rgba(255,255,255,.94);color:#0f172a;font:inherit}
 .fiscal-inutilization-form{display:flex;flex-direction:column;gap:1rem;padding:1.25rem 1.35rem}
@@ -84,9 +85,10 @@
 .fiscal-inutilization-form textarea{min-height:6rem;resize:vertical}
 .fiscal-form-errors{display:flex;flex-direction:column;gap:.45rem}
 .fiscal-form-error{color:#be123c;font-size:.84rem}
-.fiscal-secondary-button,.fiscal-danger-button{gap:.6rem;border:0;border-radius:999px;padding:.84rem 1.15rem;font:inherit;cursor:pointer;justify-content:center}
+.fiscal-secondary-button,.fiscal-warning-button,.fiscal-danger-button{gap:.6rem;border:0;border-radius:999px;padding:.84rem 1.15rem;font:inherit;cursor:pointer;justify-content:center}
 .fiscal-secondary-button{background:rgba(15,23,42,.08);color:#0f172a}
+.fiscal-warning-button{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
 .fiscal-danger-button{background:linear-gradient(135deg,#ef4444,#e11d48);color:#fff}
-.fiscal-danger-button:disabled{opacity:.5;cursor:not-allowed}
+.fiscal-warning-button:disabled,.fiscal-danger-button:disabled{opacity:.5;cursor:not-allowed}
 @media (max-width:1100px){.fiscal-consultations-summary,.fiscal-sales-grid,.fiscal-sale-modal-grid,.fiscal-inutilization-grid{grid-template-columns:1fr}.fiscal-sale-highlight-strip{flex-wrap:wrap}}
 @media (max-width:768px){.fiscal-consultations-hero,.fiscal-sale-modal-header,.fiscal-sale-modal-footer{flex-direction:column;align-items:stretch}.fiscal-consultations-periods,.fiscal-sale-modal-header-actions,.fiscal-cancel-actions{justify-content:stretch}.fiscal-period-pill,.fiscal-secondary-button,.fiscal-danger-button{width:100%}.fiscal-stack-grid,.fiscal-form-grid{grid-template-columns:1fr}.fiscal-sale-modal-backdrop{padding:.75rem}.fiscal-mini-metric,.fiscal-file-link{width:100%}}

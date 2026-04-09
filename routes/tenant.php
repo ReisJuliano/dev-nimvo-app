@@ -9,8 +9,10 @@ use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
+use App\Http\Controllers\Tenant\Fiscal\FiscalContingencyRetryController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalNumberInutilizationController;
+use App\Http\Controllers\Tenant\Fiscal\FiscalSaleContingencyController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
@@ -106,8 +108,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
         Route::post('/consultas-cancelamentos/vendas/{sale}/cancelar', FiscalSaleCancellationController::class)
             ->name('fiscal.consultations.sales.cancel');
+        Route::post('/consultas-cancelamentos/vendas/{sale}/contingencia', FiscalSaleContingencyController::class)
+            ->name('fiscal.consultations.sales.contingency');
         Route::post('/consultas-cancelamentos/inutilizacoes', FiscalNumberInutilizationController::class)
             ->name('fiscal.consultations.inutilizations.store');
+        Route::post('/consultas-cancelamentos/contingencia/retry', FiscalContingencyRetryController::class)
+            ->name('fiscal.consultations.contingency.retry');
         Route::prefix('/api')->group(function () {
             Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
             Route::get('/pdv/recommendations', [PosApiController::class, 'recommendations'])->name('api.pos.recommendations');

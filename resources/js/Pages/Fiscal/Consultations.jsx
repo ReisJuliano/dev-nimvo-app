@@ -72,7 +72,7 @@ function eventSourceLabel(source) {
     return source === 'agent' ? 'Agente' : source === 'backend' ? 'Backend' : 'Sistema'
 }
 
-export default function FiscalConsultationsPage({ filters, periods, summary, range, sales, inutilizations }) {
+export default function FiscalConsultationsPage({ filters, periods, summary, range, sales, inutilizations, contingencies }) {
     const [selectedSaleId, setSelectedSaleId] = useState(null)
     const [showInutilizationModal, setShowInutilizationModal] = useState(false)
     const cancelForm = useForm({ reason: '' })
@@ -155,6 +155,21 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         })
     }
 
+    function submitContingency() {
+        if (!selectedSale) {
+            return
+        }
+
+        cancelForm.post(`/consultas-cancelamentos/vendas/${selectedSale.id}/contingencia`, {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+        })
+    }
+
+    function retryContingencies() {
+        router.post('/consultas-cancelamentos/contingencia/retry', {}, { preserveScroll: true })
+    }
+
     return (
         <AppLayout title="Consultas">
             <div className="fiscal-consultations-page">
@@ -172,6 +187,11 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                     </div>
 
                     <div className="fiscal-consultations-periods">
+                        <button className="fiscal-period-pill" onClick={retryContingencies} type="button">
+                            <i className="fa-solid fa-rotate" />
+                            <span>Reenfileirar</span>
+                        </button>
+
                         <button className="fiscal-period-pill active" onClick={openInutilizationModal} type="button">
                             <i className="fa-solid fa-hashtag" />
                             <span>Inutilizar</span>
@@ -204,6 +224,58 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             </div>
                         </article>
                     ))}
+                </section>
+
+                <section className="fiscal-consultations-list">
+                    <header className="fiscal-consultations-list-header">
+                        <div>
+                            <strong>Contingencia</strong>
+                            <span>{contingencies.length} recentes</span>
+                        </div>
+
+                        <div className="fiscal-list-chip">
+                            <i className="fa-solid fa-triangle-exclamation" />
+                            <span>Pendencias</span>
+                        </div>
+                    </header>
+
+                    {contingencies.length === 0 ? (
+                        <div className="fiscal-consultations-empty fiscal-consultations-empty-sm">
+                            <i className="fa-solid fa-triangle-exclamation" />
+                            <span>Sem contingencia</span>
+                        </div>
+                    ) : (
+                        <div className="fiscal-inutilization-grid">
+                            {contingencies.map((contingency) => (
+                                <article key={contingency.id} className="fiscal-inutilization-card">
+                                    <div className="fiscal-sale-card-top">
+                                        <div className="fiscal-sale-card-title">
+                                            <strong>{contingency.sale_number}</strong>
+                                            <span>{formatDateTime(contingency.contingency_requested_at)}</span>
+                                        </div>
+
+                                        <StatusChip label={contingency.status_label} tone={contingency.status_tone} />
+                                    </div>
+
+                                    <div className="fiscal-sale-card-metrics">
+                                        <div>
+                                            <span>Documento</span>
+                                            <strong>{contingency.document_model} / {contingency.series} / {contingency.number}</strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Tentativas</span>
+                                            <strong>{contingency.contingency_attempts}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div className="fiscal-sale-card-products">
+                                        <span>{contingency.contingency_reason || contingency.last_error || '--'}</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 <section className="fiscal-consultations-list">
@@ -348,6 +420,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
             <SaleDetailsModal
                 cancelForm={cancelForm}
                 onCancelSubmit={submitCancel}
+                onContingencySubmit={submitContingency}
                 onClose={closeModal}
                 sale={selectedSale}
             />
@@ -361,7 +434,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
     )
 }
 
-function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
+function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onContingencySubmit }) {
     if (!sale) {
         return null
     }
@@ -475,7 +548,10 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                                     ['SEFAZ', fiscalDocument.sefaz_status_code ? `${fiscalDocument.sefaz_status_code} - ${fiscalDocument.sefaz_status_reason || '--'}` : '--', true],
                                     ['Autorizada', formatDateTime(fiscalDocument.authorized_at)],
                                     ['Cancelada', formatDateTime(fiscalDocument.cancelled_at)],
+                                    ['Contingencia', formatDateTime(fiscalDocument.contingency_requested_at)],
+                                    ['Tentativas', fiscalDocument.contingency_attempts],
                                     ['Motivo', fiscalDocument.cancellation_reason || '--', true],
+                                    ['Motivo conting.', fiscalDocument.contingency_reason || '--', true],
                                     ['Erro', fiscalDocument.last_error || '--', true],
                                 ]}
                             />
@@ -539,15 +615,16 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                 </div>
 
                 <footer className="fiscal-sale-modal-footer">
-                    <div className="fiscal-cancel-signal">
+                    <div className="fiscal-cancel-signal fiscal-cancel-signal-stack">
                         <span><i className="fa-solid fa-circle-info" />{sale.cancel_hint || 'Sem cancelamento disponivel'}</span>
+                        <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingencia disponivel'}</span>
                     </div>
 
                     <form className="fiscal-cancel-form" onSubmit={onCancelSubmit}>
                         <textarea
                             name="reason"
                             onChange={(event) => cancelForm.setData('reason', event.target.value)}
-                            placeholder="Justificativa do cancelamento"
+                            placeholder="Motivo do cancelamento ou da contingencia"
                             value={cancelForm.data.reason}
                         />
 
@@ -557,6 +634,11 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                             <button className="fiscal-secondary-button" onClick={onClose} type="button">
                                 <i className="fa-solid fa-arrow-left" />
                                 <span>Fechar</span>
+                            </button>
+
+                            <button className="fiscal-warning-button" disabled={!sale.can_flag_contingency || cancelForm.processing} onClick={onContingencySubmit} type="button">
+                                <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-triangle-exclamation'}`} />
+                                <span>{sale.can_flag_contingency ? 'Contingencia' : 'Sem conting.'}</span>
                             </button>
 
                             <button className="fiscal-danger-button" disabled={!sale.can_cancel || cancelForm.processing} type="submit">
