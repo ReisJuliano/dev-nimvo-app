@@ -66,7 +66,7 @@ func runInstall(args []string) error {
 		}
 	}
 
-	if err := copyFile(currentExe, targetExe); err != nil {
+	if err := replaceInstalledExecutable(currentExe, targetExe); err != nil {
 		return err
 	}
 
@@ -401,6 +401,81 @@ func defaultInstallDir() string {
 	}
 
 	return filepath.Join(home, "AppData", "Local", "NimvoFiscalAgent")
+}
+
+func replaceInstalledExecutable(sourceExe, targetExe string) error {
+	if sameResolvedPath(sourceExe, targetExe) {
+		return nil
+	}
+
+	if fileExists(targetExe) {
+		if err := stopProcessesForExecutable(targetExe); err != nil {
+			return err
+		}
+	}
+
+	return copyFileWithRetry(sourceExe, targetExe, 12, 500*time.Millisecond)
+}
+
+func copyFileWithRetry(src, dst string, attempts int, delay time.Duration) error {
+	if attempts <= 0 {
+		attempts = 1
+	}
+
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		if err := copyFile(src, dst); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+
+		if attempt+1 < attempts {
+			time.Sleep(delay)
+		}
+	}
+
+	return lastErr
+}
+
+func stopProcessesForExecutable(executablePath string) error {
+	executablePath = strings.TrimSpace(executablePath)
+	if executablePath == "" || !fileExists(executablePath) {
+		return nil
+	}
+
+	command := buildStopExecutableCommand(executablePath)
+	process := exec.Command("powershell", "-NoProfile", "-Command", command)
+	output, err := process.CombinedOutput()
+	if err != nil {
+		message := strings.TrimSpace(string(output))
+		if message == "" {
+			message = err.Error()
+		}
+
+		return fmt.Errorf("nao foi possivel encerrar a instancia anterior do agente: %s", message)
+	}
+
+	return nil
+}
+
+func buildStopExecutableCommand(executablePath string) string {
+	return strings.Join([]string{
+		fmt.Sprintf(`$target = '%s'`, escapePowerShellSingleQuoted(executablePath)),
+		`$killed = $false`,
+		`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and [string]::Equals($_.ExecutablePath, $target, [System.StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop; $killed = $true }`,
+		`if ($killed) { Start-Sleep -Milliseconds 800 }`,
+	}, "; ")
+}
+
+func sameResolvedPath(left, right string) bool {
+	leftAbs, leftErr := filepath.Abs(strings.TrimSpace(left))
+	rightAbs, rightErr := filepath.Abs(strings.TrimSpace(right))
+	if leftErr != nil || rightErr != nil {
+		return false
+	}
+
+	return strings.EqualFold(filepath.Clean(leftAbs), filepath.Clean(rightAbs))
 }
 
 func buildRunScript(exePath, logPath string) string {

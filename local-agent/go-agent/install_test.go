@@ -71,3 +71,19 @@ func TestPathWithinRoot(t *testing.T) {
 		t.Fatal("expected executable outside install root to be rejected")
 	}
 }
+
+func TestBuildStopExecutableCommandTargetsInstalledBinary(t *testing.T) {
+	command := buildStopExecutableCommand(`C:\Users\PC\AppData\Local\NimvoFiscalAgent\bin\nimvo-fiscal-agent.exe`)
+
+	if !strings.Contains(command, `Get-CimInstance Win32_Process`) {
+		t.Fatalf("expected command to inspect running Windows processes, got %q", command)
+	}
+
+	if !strings.Contains(command, `Stop-Process -Id $_.ProcessId -Force`) {
+		t.Fatalf("expected command to stop the installed process, got %q", command)
+	}
+
+	if !strings.Contains(command, `nimvo-fiscal-agent.exe`) {
+		t.Fatalf("expected command to include target executable path, got %q", command)
+	}
+}
