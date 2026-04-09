@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Central;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Central\AutofillTenantFiscalProfileRequest;
 use App\Http\Requests\Central\StoreTenantRequest;
 use App\Http\Requests\Central\UpdateTenantFiscalProfileRequest;
 use App\Http\Requests\Central\UpdateTenantSettingsRequest;
@@ -16,6 +17,7 @@ use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
 use App\Services\Central\ProvisionTenantService;
+use App\Services\Central\TenantFiscalAutofillService;
 use App\Services\Central\TenantFiscalProfileService;
 use App\Services\Central\TenantLicenseService;
 use App\Support\Tenancy\TenantDomainManager;
@@ -208,6 +210,23 @@ class TenantManagementController extends Controller
         return response()->json([
             'message' => 'Perfil fiscal do tenant salvo com sucesso.',
             'fiscal' => $fiscal,
+        ]);
+    }
+
+    public function autofillFiscalSettings(
+        AutofillTenantFiscalProfileRequest $request,
+        Tenant $tenant,
+        TenantFiscalAutofillService $autofillService,
+    ): JsonResponse {
+        $suggestion = $autofillService->suggestNfceProfile((string) $tenant->id, $request->validated());
+        $missing = (array) data_get($suggestion, 'meta.missing_fields', []);
+
+        return response()->json([
+            'message' => $missing === []
+                ? 'Dados do emitente sugeridos com sucesso.'
+                : sprintf('Sugestao parcial gerada. Complete manualmente: %s.', implode(', ', $missing)),
+            'fiscal' => $suggestion['suggested'],
+            'meta' => $suggestion['meta'],
         ]);
     }
 

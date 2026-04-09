@@ -43,4 +43,14 @@ return [
         'manifest_on_download' => (bool) env('NFE_RECEIVING_MANIFEST_ON_DOWNLOAD', true),
     ],
 
+    'company_lookup' => [
+        'base_url' => 'https://brasilapi.com.br/api',
+        'timeout' => 10,
+    ],
+
+    'ibge' => [
+        'base_url' => 'https://servicodados.ibge.gov.br/api/v1/localidades',
+        'timeout' => 10,
+    ],
+
 ];

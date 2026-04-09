@@ -47,6 +47,7 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::patch('/tenants/{tenant}/status', [TenantManagementController::class, 'updateStatus'])->name('tenants.status');
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
         Route::put('/tenants/{tenant}/fiscal', [TenantManagementController::class, 'updateFiscalSettings'])->name('tenants.fiscal.update');
+        Route::post('/tenants/{tenant}/fiscal/autofill', [TenantManagementController::class, 'autofillFiscalSettings'])->name('tenants.fiscal.autofill');
         Route::put('/tenants/{tenant}/local-agent', [TenantManagementController::class, 'upsertLocalAgent'])->name('tenants.local-agent.upsert');
         Route::post('/tenants/{tenant}/local-agent/activation-code', [TenantManagementController::class, 'issueLocalAgentActivationCode'])->name('tenants.local-agent.activation-code');
         Route::post('/tenants/{tenant}/local-agent/test-print', [TenantManagementController::class, 'queueLocalAgentTestPrint'])->name('tenants.local-agent.test-print');
