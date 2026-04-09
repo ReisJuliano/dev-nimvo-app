@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -110,7 +111,7 @@ func promptFilePath(label, defaultPath, dialogTitle, filter string) (string, err
 
 				fmt.Println("O arquivo informado nao existe mais.")
 			case "b", "browse", "procurar":
-				picked, err := openFileDialog(dialogTitle, filter)
+				picked, err := openFileDialog(dialogTitle, filter, current)
 				if err != nil {
 					return "", err
 				}
@@ -130,7 +131,7 @@ func promptFilePath(label, defaultPath, dialogTitle, filter string) (string, err
 
 			value = strings.TrimSpace(value)
 			if value == "" {
-				picked, err := openFileDialog(dialogTitle, filter)
+				picked, err := openFileDialog(dialogTitle, filter, current)
 				if err != nil {
 					return "", err
 				}
@@ -196,12 +197,14 @@ func promptPrinterName(current string) (string, error) {
 	}
 }
 
-func openFileDialog(title, filter string) (string, error) {
+func openFileDialog(title, filter, initialPath string) (string, error) {
+	initialDirectory := resolveDialogInitialDirectory(initialPath)
 	command := strings.Join([]string{
 		"Add-Type -AssemblyName System.Windows.Forms",
 		fmt.Sprintf(`$dialog = New-Object System.Windows.Forms.OpenFileDialog`),
 		fmt.Sprintf(`$dialog.Title = '%s'`, escapePowerShellSingleQuoted(title)),
 		fmt.Sprintf(`$dialog.Filter = '%s'`, escapePowerShellSingleQuoted(filter)),
+		fmt.Sprintf(`if ('%s' -ne '') { $dialog.InitialDirectory = '%s' }`, escapePowerShellSingleQuoted(initialDirectory), escapePowerShellSingleQuoted(initialDirectory)),
 		`$dialog.Multiselect = $false`,
 		`if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dialog.FileName) }`,
 	}, "; ")
@@ -217,6 +220,28 @@ func openFileDialog(title, filter string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+func resolveDialogInitialDirectory(initialPath string) string {
+	initialPath = strings.TrimSpace(initialPath)
+	if initialPath == "" {
+		return ""
+	}
+
+	if dirExists(initialPath) {
+		return initialPath
+	}
+
+	if fileExists(initialPath) {
+		return filepath.Dir(initialPath)
+	}
+
+	candidate := filepath.Dir(initialPath)
+	if dirExists(candidate) {
+		return candidate
+	}
+
+	return ""
 }
 
 func listInstalledPrinters() []string {

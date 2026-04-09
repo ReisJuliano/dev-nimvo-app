@@ -71,6 +71,7 @@ var
   PollIntervalEdit: TNewEdit;
   CertificatePathEdit: TNewEdit;
   CertificatePasswordEdit: TPasswordEdit;
+  BrowseCertificateButton: TNewButton;
 
   EnablePrintingCheck: TNewCheckBox;
   ConnectorCombo: TNewComboBox;
@@ -221,6 +222,41 @@ end;
 procedure RefreshPrintersClicked(Sender: TObject);
 begin
   PopulatePrinterList;
+end;
+
+procedure BrowseCertificateClicked(Sender: TObject);
+var
+  ResultCode: Integer;
+  OutputFile: string;
+  OutputText: string;
+  CommandLine: string;
+begin
+  OutputFile := ExpandConstant('{tmp}\nimvo-agent-certificate.txt');
+  CommandLine := AddQuotes(BootstrapExePath) + ' pick-certificate';
+
+  if Trim(CertificatePathEdit.Text) <> '' then begin
+    CommandLine := CommandLine + ' --path ' + AddQuotes(Trim(CertificatePathEdit.Text));
+  end;
+
+  if not RunHiddenCommand(CommandLine, OutputFile, ResultCode) then begin
+    MsgBox('Nao foi possivel abrir o seletor do certificado digital nesta maquina.', mbError, MB_OK);
+    Exit;
+  end;
+
+  if ResultCode <> 0 then begin
+    OutputText := Trim(ReadTextFileSafe(OutputFile));
+    if OutputText = '' then begin
+      OutputText := 'O seletor do certificado foi encerrado com erro.';
+    end;
+
+    MsgBox(OutputText, mbError, MB_OK);
+    Exit;
+  end;
+
+  OutputText := Trim(ReadTextFileSafe(OutputFile));
+  if OutputText <> '' then begin
+    CertificatePathEdit.Text := OutputText;
+  end;
 end;
 
 function ValidateConnectionPage: Boolean;
@@ -562,7 +598,16 @@ begin
   CertificatePathEdit.Parent := CertificatePage.Surface;
   CertificatePathEdit.Left := ScaleX(0);
   CertificatePathEdit.Top := ScaleY(28);
-  CertificatePathEdit.Width := ScaleX(520);
+  CertificatePathEdit.Width := ScaleX(430);
+
+  BrowseCertificateButton := TNewButton.Create(CertificatePage);
+  BrowseCertificateButton.Parent := CertificatePage.Surface;
+  BrowseCertificateButton.Left := ScaleX(442);
+  BrowseCertificateButton.Top := ScaleY(26);
+  BrowseCertificateButton.Width := ScaleX(100);
+  BrowseCertificateButton.Height := ScaleY(26);
+  BrowseCertificateButton.Caption := 'Procurar';
+  BrowseCertificateButton.OnClick := @BrowseCertificateClicked;
 
   LabelControl := TNewStaticText.Create(CertificatePage);
   LabelControl.Parent := CertificatePage.Surface;

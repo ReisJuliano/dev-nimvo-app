@@ -59,6 +59,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+	case "pick-certificate":
+		if err := runPickCertificate(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 	case "status":
 		if err := runStatus(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -140,6 +145,29 @@ func runListPrinters(args []string) error {
 
 	for _, name := range listInstalledPrinters() {
 		fmt.Println(strings.TrimSpace(name))
+	}
+
+	return nil
+}
+
+func runPickCertificate(args []string) error {
+	fs := flag.NewFlagSet("pick-certificate", flag.ContinueOnError)
+	currentPath := fs.String("path", "", "Caminho atual do certificado para usar como pasta inicial")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	selectedPath, err := openFileDialog(
+		"Selecione o certificado digital",
+		"Certificados digitais (*.pfx;*.p12)|*.pfx;*.p12|Todos os arquivos (*.*)|*.*",
+		strings.TrimSpace(*currentPath),
+	)
+	if err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(selectedPath) != "" {
+		fmt.Print(strings.TrimSpace(selectedPath))
 	}
 
 	return nil
@@ -334,6 +362,7 @@ func printUsage() {
 	fmt.Println("  daemon     Sobe a API local e envia heartbeat para o backend do Nimvo")
 	fmt.Println("  tray       Sobe o agente em segundo plano com icone na bandeja do Windows")
 	fmt.Println("  run        Alias de daemon")
+	fmt.Println("  pick-certificate Abre o seletor de certificado digital do Windows")
 	fmt.Println("  list-printers Lista as impressoras Windows compativeis com o Nimvo")
 	fmt.Println("  local-test Imprime um cupom de teste usando a configuracao instalada")
 	fmt.Println("  status     Mostra o estado da instalacao local")
