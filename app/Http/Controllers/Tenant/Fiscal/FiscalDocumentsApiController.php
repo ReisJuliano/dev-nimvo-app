@@ -19,13 +19,16 @@ class FiscalDocumentsApiController extends Controller
         $validated = $request->validate([
             'sale_id' => ['required', 'integer', 'exists:sales,id'],
             'idempotency_key' => ['nullable', 'string', 'max:255'],
-            'mode' => ['nullable', 'string', 'in:auto,sefaz,local_test'],
+            'mode' => ['nullable', 'string', 'in:auto,sefaz,local_test,contingency_offline'],
+            'contingency_reason' => ['nullable', 'string', 'min:15', 'max:255'],
         ]);
 
         $document = $service->issueFromSale(
             (int) $validated['sale_id'],
             $validated['idempotency_key'] ?? null,
             $validated['mode'] ?? null,
+            null,
+            $validated['contingency_reason'] ?? null,
         );
 
         return response()->json([
@@ -57,7 +60,11 @@ class FiscalDocumentsApiController extends Controller
         DanfePdfRenderer $danfeRenderer,
     ): Response
     {
-        $xml = $fiscalDocument->cancelled_xml ?: $fiscalDocument->authorized_xml;
+        $xml = $fiscalDocument->cancelled_xml
+            ?: $fiscalDocument->authorized_xml
+            ?: ((bool) data_get($fiscalDocument->payload, 'flags.offline_contingency', false)
+                ? $fiscalDocument->signed_xml
+                : null);
 
         abort_unless(filled($xml), 422, 'O documento fiscal ainda nao possui XML disponivel para visualizacao.');
 
@@ -164,8 +171,12 @@ class FiscalDocumentsApiController extends Controller
             'sefaz_status_reason' => $document->sefaz_status_reason,
             'cancellation_protocol' => $document->cancellation_protocol,
             'cancellation_reason' => $document->cancellation_reason,
+            'contingency_reason' => $document->contingency_reason,
             'last_error' => $document->last_error,
             'cancellation_requested_at' => optional($document->cancellation_requested_at)?->toIso8601String(),
+            'contingency_requested_at' => optional($document->contingency_requested_at)?->toIso8601String(),
+            'contingency_released_at' => optional($document->contingency_released_at)?->toIso8601String(),
+            'contingency_attempts' => (int) ($document->contingency_attempts ?? 0),
             'authorized_at' => optional($document->authorized_at)?->toIso8601String(),
             'printed_at' => optional($document->printed_at)?->toIso8601String(),
             'cancelled_at' => optional($document->cancelled_at)?->toIso8601String(),

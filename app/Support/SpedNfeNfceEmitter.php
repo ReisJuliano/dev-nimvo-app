@@ -28,87 +28,14 @@ class SpedNfeNfceEmitter
 
         $requestXml = $this->layoutBuilder->build($payload);
         $signedXml = $tools->signNFe($requestXml);
-        $responseXml = $tools->sefazEnviaLote(
-            [$signedXml],
-            str_pad((string) random_int(1, 999999999999999), 15, '0', STR_PAD_LEFT),
-            1,
+
+        return $this->authorizeSignedXml(
+            $tools,
+            $requestXml,
+            $signedXml,
+            $documentModel,
+            $agentConfig,
         );
-
-        $response = (new Standardize($responseXml))->toStd();
-        $statusCode = (string) ($response->cStat ?? '');
-        $statusReason = (string) ($response->xMotivo ?? '');
-
-        if ($statusCode !== '104') {
-            return $this->failedResult(
-                $requestXml,
-                $signedXml,
-                $responseXml,
-                $this->extractAccessKey($signedXml),
-                $statusCode,
-                $statusReason,
-                "Retorno da SEFAZ inesperado [{$statusCode}] {$statusReason}",
-            );
-        }
-
-        $protocolInfo = $response->protNFe->infProt ?? null;
-
-        if (! $protocolInfo) {
-            return $this->failedResult(
-                $requestXml,
-                $signedXml,
-                $responseXml,
-                $this->extractAccessKey($signedXml),
-                $statusCode,
-                $statusReason,
-                'A SEFAZ nao retornou o protocolo do documento fiscal.',
-            );
-        }
-
-        $protocolStatus = (string) ($protocolInfo->cStat ?? '');
-        $protocolReason = (string) ($protocolInfo->xMotivo ?? '');
-        $accessKey = $this->extractAccessKey($signedXml);
-
-        if (! in_array($protocolStatus, ['100', '150'], true)) {
-            return [
-                'status' => 'rejected',
-                'request_xml' => $requestXml,
-                'signed_xml' => $signedXml,
-                'response_xml' => $responseXml,
-                'authorized_xml' => null,
-                'access_key' => $accessKey,
-                'receipt' => (string) ($response->infRec->nRec ?? ''),
-                'protocol' => (string) ($protocolInfo->nProt ?? ''),
-                'sefaz_status_code' => $protocolStatus,
-                'sefaz_status_reason' => $protocolReason,
-                'message' => "Documento fiscal rejeitado [{$protocolStatus}] {$protocolReason}",
-                'printed_at' => null,
-            ];
-        }
-
-        $authorizedXml = Complements::toAuthorize($signedXml, $responseXml);
-        $printedAt = null;
-
-        if ($documentModel === '65' && ($agentConfig['printer']['enabled'] ?? true) === true) {
-            $this->print($authorizedXml, $agentConfig['printer'] ?? []);
-            $printedAt = Carbon::now()->toIso8601String();
-        }
-
-        $accessKey = $this->extractAccessKey($authorizedXml) ?: $accessKey;
-
-        return [
-            'status' => 'authorized',
-            'document_model' => $documentModel,
-            'request_xml' => $requestXml,
-            'signed_xml' => $signedXml,
-            'response_xml' => $responseXml,
-            'authorized_xml' => $authorizedXml,
-            'access_key' => $accessKey,
-            'receipt' => (string) ($response->infRec->nRec ?? ''),
-            'protocol' => (string) ($protocolInfo->nProt ?? ''),
-            'sefaz_status_code' => $protocolStatus,
-            'sefaz_status_reason' => $protocolReason,
-            'printed_at' => $printedAt,
-        ];
     }
 
     public function emitLocalTest(array $payload, array $agentConfig): array
@@ -145,6 +72,78 @@ class SpedNfeNfceEmitter
             'sefaz_status_reason' => 'Ensaio local sem transmissao para a SEFAZ.',
             'printed_at' => $printedAt,
         ];
+    }
+
+    public function emitOfflineContingency(array $payload, array $agentConfig): array
+    {
+        $documentModel = $this->documentModel($payload);
+
+        if ($documentModel !== '65') {
+            throw new RuntimeException('A contingencia offline legal esta disponivel apenas para NFC-e modelo 65.');
+        }
+
+        $tools = $this->makeTools($payload, $agentConfig, true);
+        $tools->model($documentModel);
+
+        $requestXml = $this->layoutBuilder->build($payload);
+        $signedXml = $tools->signNFe($requestXml);
+        $accessKey = $this->extractAccessKey($signedXml);
+        $printedAt = null;
+
+        if (($agentConfig['printer']['enabled'] ?? true) === true) {
+            $this->print($signedXml, $agentConfig['printer'] ?? []);
+            $printedAt = Carbon::now()->toIso8601String();
+        }
+
+        return [
+            'status' => $printedAt ? 'contingency_offline_printed' : 'contingency_offline_signed',
+            'document_model' => $documentModel,
+            'request_xml' => $requestXml,
+            'signed_xml' => $signedXml,
+            'response_xml' => null,
+            'authorized_xml' => null,
+            'access_key' => $accessKey,
+            'receipt' => null,
+            'protocol' => null,
+            'sefaz_status_code' => null,
+            'sefaz_status_reason' => 'NFC-e emitida em contingencia offline legal e pendente de transmissao posterior.',
+            'printed_at' => $printedAt,
+        ];
+    }
+
+    public function transmitOfflineContingency(array $payload, array $agentConfig): array
+    {
+        $documentModel = $this->documentModel($payload);
+
+        if ($documentModel !== '65') {
+            throw new RuntimeException('A transmissao de contingencia offline esta disponivel apenas para NFC-e modelo 65.');
+        }
+
+        $tools = $this->makeTools($payload, $agentConfig, true);
+        $tools->model($documentModel);
+
+        $requestXml = (string) data_get($payload, 'existing_document.request_xml', '');
+        $signedXml = (string) data_get($payload, 'existing_document.signed_xml', '');
+        $printedAt = data_get($payload, 'existing_document.printed_at');
+
+        if ($requestXml === '') {
+            $requestXml = $this->layoutBuilder->build($payload);
+        }
+
+        if ($signedXml === '') {
+            $signedXml = $tools->signNFe($requestXml);
+        }
+
+        return $this->authorizeSignedXml(
+            $tools,
+            $requestXml,
+            $signedXml,
+            $documentModel,
+            $agentConfig,
+            printAfterAuthorization: false,
+            printedAt: filled($printedAt) ? (string) $printedAt : null,
+            successStatus: 'contingency_transmitted',
+        );
     }
 
     public function cancel(array $payload, array $agentConfig): array
@@ -263,7 +262,7 @@ class SpedNfeNfceEmitter
         ];
     }
 
-    protected function print(string $authorizedXml, array $printer): void
+    protected function print(string $xml, array $printer): void
     {
         $logoPath = (string) ($printer['logo_path'] ?? '');
         $danfce = new DanfcePos($this->connectorFactory->make($printer));
@@ -272,8 +271,100 @@ class SpedNfeNfceEmitter
             $danfce->logo($logoPath);
         }
 
-        $danfce->loadNFCe($authorizedXml);
+        $danfce->loadNFCe($xml);
         $danfce->imprimir();
+    }
+
+    protected function authorizeSignedXml(
+        Tools $tools,
+        string $requestXml,
+        string $signedXml,
+        string $documentModel,
+        array $agentConfig,
+        bool $printAfterAuthorization = true,
+        ?string $printedAt = null,
+        string $successStatus = 'authorized',
+    ): array {
+        $responseXml = $tools->sefazEnviaLote(
+            [$signedXml],
+            str_pad((string) random_int(1, 999999999999999), 15, '0', STR_PAD_LEFT),
+            1,
+        );
+
+        $response = (new Standardize($responseXml))->toStd();
+        $statusCode = (string) ($response->cStat ?? '');
+        $statusReason = (string) ($response->xMotivo ?? '');
+
+        if ($statusCode !== '104') {
+            return $this->failedResult(
+                $requestXml,
+                $signedXml,
+                $responseXml,
+                $this->extractAccessKey($signedXml),
+                $statusCode,
+                $statusReason,
+                "Retorno da SEFAZ inesperado [{$statusCode}] {$statusReason}",
+            );
+        }
+
+        $protocolInfo = $response->protNFe->infProt ?? null;
+
+        if (! $protocolInfo) {
+            return $this->failedResult(
+                $requestXml,
+                $signedXml,
+                $responseXml,
+                $this->extractAccessKey($signedXml),
+                $statusCode,
+                $statusReason,
+                'A SEFAZ nao retornou o protocolo do documento fiscal.',
+            );
+        }
+
+        $protocolStatus = (string) ($protocolInfo->cStat ?? '');
+        $protocolReason = (string) ($protocolInfo->xMotivo ?? '');
+        $accessKey = $this->extractAccessKey($signedXml);
+
+        if (! in_array($protocolStatus, ['100', '150'], true)) {
+            return [
+                'status' => 'rejected',
+                'request_xml' => $requestXml,
+                'signed_xml' => $signedXml,
+                'response_xml' => $responseXml,
+                'authorized_xml' => null,
+                'access_key' => $accessKey,
+                'receipt' => (string) ($response->infRec->nRec ?? ''),
+                'protocol' => (string) ($protocolInfo->nProt ?? ''),
+                'sefaz_status_code' => $protocolStatus,
+                'sefaz_status_reason' => $protocolReason,
+                'message' => "Documento fiscal rejeitado [{$protocolStatus}] {$protocolReason}",
+                'printed_at' => $printedAt,
+            ];
+        }
+
+        $authorizedXml = Complements::toAuthorize($signedXml, $responseXml);
+
+        if ($documentModel === '65' && $printAfterAuthorization && ($agentConfig['printer']['enabled'] ?? true) === true) {
+            $this->print($authorizedXml, $agentConfig['printer'] ?? []);
+            $printedAt = Carbon::now()->toIso8601String();
+        }
+
+        $accessKey = $this->extractAccessKey($authorizedXml) ?: $accessKey;
+
+        return [
+            'status' => $successStatus,
+            'document_model' => $documentModel,
+            'request_xml' => $requestXml,
+            'signed_xml' => $signedXml,
+            'response_xml' => $responseXml,
+            'authorized_xml' => $authorizedXml,
+            'access_key' => $accessKey,
+            'receipt' => (string) ($response->infRec->nRec ?? ''),
+            'protocol' => (string) ($protocolInfo->nProt ?? ''),
+            'sefaz_status_code' => $protocolStatus,
+            'sefaz_status_reason' => $protocolReason,
+            'printed_at' => $printedAt,
+        ];
     }
 
     protected function makeTools(array $payload, array $agentConfig, bool $includeCsc): Tools

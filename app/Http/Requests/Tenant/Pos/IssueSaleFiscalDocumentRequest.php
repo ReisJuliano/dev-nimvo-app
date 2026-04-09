@@ -23,7 +23,8 @@ class IssueSaleFiscalDocumentRequest extends FormRequest
             : ['nullable', 'integer'];
 
         return [
-            'mode' => ['nullable', 'string', Rule::in(['auto', 'sefaz', 'local_test'])],
+            'mode' => ['nullable', 'string', Rule::in(['auto', 'sefaz', 'local_test', 'contingency_offline'])],
+            'contingency_reason' => ['nullable', 'string', 'min:15', 'max:255'],
             'document_model' => ['required', 'string', Rule::in(['55', '65'])],
             'recipient' => ['nullable', 'array'],
             'recipient.type' => ['nullable', 'string', Rule::in(['customer', 'company', 'document'])],

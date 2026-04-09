@@ -93,15 +93,47 @@ class FiscalDocumentResultService
     {
         $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
             $document = FiscalDocument::query()->findOrFail($documentId);
-            $printedAt = $payload['printed_at'] ?? null;
+            $documentPayload = is_array($document->payload) ? $document->payload : [];
+            $printedAt = $payload['printed_at'] ?? optional($document->printed_at)?->toIso8601String();
             $isLocalTest = ($payload['status'] ?? null) === 'local_test'
                 || (bool) data_get($document->payload, 'flags.local_test', false);
-            $status = $isLocalTest
-                ? ($printedAt ? 'printed_local' : 'signed_local')
-                : ($printedAt ? 'printed' : 'authorized');
+            $isOfflineIssue = in_array($payload['status'] ?? null, ['contingency_offline_signed', 'contingency_offline_printed'], true);
+            $isOfflineTransmission = ($payload['status'] ?? null) === 'contingency_transmitted';
+
+            if ($isLocalTest) {
+                $status = $printedAt ? 'printed_local' : 'signed_local';
+                $authorizedAt = now();
+                $eventMessage = $printedAt
+                    ? 'NFC-e de ensaio assinada e impressa localmente.'
+                    : 'NFC-e de ensaio assinada localmente.';
+            } elseif ($isOfflineIssue) {
+                $status = $printedAt ? 'contingency_offline_printed' : 'contingency_offline_signed';
+                $authorizedAt = null;
+                data_set($documentPayload, 'flags.mode', 'contingency_offline');
+                data_set($documentPayload, 'flags.offline_contingency', true);
+                data_set($documentPayload, 'flags.offline_contingency_stage', 'transmit_pending');
+                $eventMessage = $printedAt
+                    ? 'NFC-e emitida e impressa em contingencia offline legal.'
+                    : 'NFC-e emitida em contingencia offline legal e pendente de impressao.';
+            } else {
+                $status = $printedAt ? 'printed' : 'authorized';
+                $authorizedAt = now();
+
+                if ($isOfflineTransmission) {
+                    data_set($documentPayload, 'flags.offline_contingency_stage', 'transmitted');
+                    $eventMessage = $printedAt
+                        ? 'NFC-e autorizada pela SEFAZ apos contingencia offline, mantendo a impressao local.'
+                        : 'NFC-e autorizada pela SEFAZ apos contingencia offline.';
+                } else {
+                    $eventMessage = $printedAt
+                        ? 'NFC-e autorizada e impressa pelo agente local.'
+                        : 'NFC-e autorizada pelo agente local.';
+                }
+            }
 
             $document->forceFill([
                 'status' => $status,
+                'payload' => $documentPayload,
                 'request_xml' => $payload['request_xml'] ?? null,
                 'signed_xml' => $payload['signed_xml'] ?? null,
                 'response_xml' => $payload['response_xml'] ?? null,
@@ -111,8 +143,14 @@ class FiscalDocumentResultService
                 'sefaz_protocol' => $payload['protocol'] ?? null,
                 'sefaz_status_code' => $payload['sefaz_status_code'] ?? null,
                 'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? null,
-                'authorized_at' => now(),
+                'authorized_at' => $authorizedAt,
                 'printed_at' => $printedAt,
+                'contingency_requested_at' => $isOfflineIssue
+                    ? ($document->contingency_requested_at ?: now())
+                    : $document->contingency_requested_at,
+                'contingency_released_at' => $isOfflineTransmission
+                    ? now()
+                    : $document->contingency_released_at,
                 'last_error' => null,
                 'failed_at' => null,
             ])->save();
@@ -122,13 +160,7 @@ class FiscalDocumentResultService
             $document->events()->create([
                 'status' => $status,
                 'source' => 'agent',
-                'message' => $isLocalTest
-                    ? ($printedAt
-                        ? 'NFC-e de ensaio assinada e impressa localmente.'
-                        : 'NFC-e de ensaio assinada localmente.')
-                    : ($printedAt
-                        ? 'NFC-e autorizada e impressa pelo agente local.'
-                        : 'NFC-e autorizada pelo agente local.'),
+                'message' => $eventMessage,
                 'payload' => [
                     'access_key' => $payload['access_key'] ?? null,
                     'protocol' => $payload['protocol'] ?? null,
@@ -142,13 +174,29 @@ class FiscalDocumentResultService
     {
         $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
             $document = FiscalDocument::query()->findOrFail($documentId);
+            $documentPayload = is_array($document->payload) ? $document->payload : [];
             $message = $payload['message'] ?? $payload['error'] ?? 'Falha no processamento fiscal.';
             $rejected = ($payload['status'] ?? null) === 'rejected'
                 || filled($payload['sefaz_status_code'] ?? null);
-            $status = $rejected ? 'rejected' : 'failed';
+            $isOfflineContingency = (bool) data_get($documentPayload, 'flags.offline_contingency', false);
+            $status = $isOfflineContingency ? 'contingency_failed' : ($rejected ? 'rejected' : 'failed');
+
+            if ($isOfflineContingency) {
+                $hasSignedArtifacts = filled($payload['signed_xml'] ?? null)
+                    || filled($document->signed_xml)
+                    || filled($payload['access_key'] ?? null)
+                    || filled($document->access_key);
+
+                data_set(
+                    $documentPayload,
+                    'flags.offline_contingency_stage',
+                    $hasSignedArtifacts ? 'transmit_pending' : 'issue',
+                );
+            }
 
             $document->forceFill([
                 'status' => $status,
+                'payload' => $documentPayload,
                 'request_xml' => $payload['request_xml'] ?? $document->request_xml,
                 'signed_xml' => $payload['signed_xml'] ?? $document->signed_xml,
                 'response_xml' => $payload['response_xml'] ?? $document->response_xml,
@@ -158,6 +206,7 @@ class FiscalDocumentResultService
                 'sefaz_protocol' => $payload['protocol'] ?? $document->sefaz_protocol,
                 'sefaz_status_code' => $payload['sefaz_status_code'] ?? $document->sefaz_status_code,
                 'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? $document->sefaz_status_reason,
+                'printed_at' => $payload['printed_at'] ?? $document->printed_at,
                 'last_error' => $message,
                 'failed_at' => now(),
             ])->save();

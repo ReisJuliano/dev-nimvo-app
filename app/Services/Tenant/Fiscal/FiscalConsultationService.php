@@ -47,7 +47,12 @@ class FiscalConsultationService
         $cancelledCount = (clone $baseQuery)->where('status', 'cancelled')->count();
         $fiscalCount = (clone $baseQuery)->whereHas('fiscalDocuments')->count();
         $contingencyCount = FiscalDocument::query()
-            ->whereIn('status', ['contingency_pending', 'contingency_failed'])
+            ->whereIn('status', [
+                'contingency_pending',
+                'contingency_failed',
+                'contingency_offline_signed',
+                'contingency_offline_printed',
+            ])
             ->count();
         $recentInutilizations = FiscalNumberInutilization::query()
             ->latest('created_at')
@@ -58,7 +63,12 @@ class FiscalConsultationService
             ->all();
         $recentContingencies = FiscalDocument::query()
             ->with('sale:id,sale_number,total')
-            ->whereIn('status', ['contingency_pending', 'contingency_failed'])
+            ->whereIn('status', [
+                'contingency_pending',
+                'contingency_failed',
+                'contingency_offline_signed',
+                'contingency_offline_printed',
+            ])
             ->latest('updated_at')
             ->limit(6)
             ->get()
@@ -213,6 +223,8 @@ class FiscalConsultationService
                 'status' => $document->status,
                 'status_label' => $this->documentStatusLabel((string) $document->status),
                 'status_tone' => $this->documentStatusTone((string) $document->status),
+                'mode' => (string) data_get($document->payload, 'flags.mode', 'sefaz'),
+                'offline_contingency_stage' => data_get($document->payload, 'flags.offline_contingency_stage'),
                 'document_model' => (string) data_get($document->payload, 'flags.document_model', data_get($document->payload, 'sale.requested_document_model', $sale->requested_document_model ?? '65')),
                 'series' => $document->series,
                 'number' => $document->number,
@@ -264,6 +276,7 @@ class FiscalConsultationService
             'status' => $document->status,
             'status_label' => $this->documentStatusLabel((string) $document->status),
             'status_tone' => $this->documentStatusTone((string) $document->status),
+            'mode' => (string) data_get($document->payload, 'flags.mode', 'sefaz'),
             'document_model' => (string) data_get($document->payload, 'flags.document_model', '65'),
             'series' => $document->series,
             'number' => $document->number,
@@ -405,7 +418,11 @@ class FiscalConsultationService
             return false;
         }
 
-        return in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'contingency_pending'], true);
+        if ((bool) data_get($document->payload, 'flags.offline_contingency', false)) {
+            return false;
+        }
+
+        return in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'contingency_pending', 'contingency_failed'], true);
     }
 
     protected function contingencyHint(?FiscalDocument $document): string
@@ -415,10 +432,14 @@ class FiscalConsultationService
         }
 
         return match ($document->status) {
-            'awaiting_agent' => 'Sem agente local disponivel',
-            'failed', 'rejected' => 'Falha fiscal pronta para contingencia',
-            'contingency_pending' => 'Em contingencia operacional',
-            'contingency_failed' => 'Falha ao reenfileirar contingencia',
+            'awaiting_agent' => 'Sem agente local; contingencia offline indisponivel',
+            'failed', 'rejected' => 'Falha fiscal pronta para emissao offline',
+            'contingency_pending' => 'Em contingencia operacional aguardando agente',
+            'contingency_failed' => (bool) data_get($document->payload, 'flags.offline_contingency', false)
+                ? 'Falha ao regularizar a contingencia offline'
+                : 'Falha ao reenfileirar contingencia',
+            'contingency_offline_signed' => 'NFC-e offline assinada e pendente de impressao/transmissao',
+            'contingency_offline_printed' => 'NFC-e impressa offline e pendente de transmissao',
             default => 'Sem contingencia disponivel',
         };
     }
@@ -456,6 +477,8 @@ class FiscalConsultationService
             'cancellation_failed' => 'Falha cancel.',
             'contingency_pending' => 'Contingencia',
             'contingency_failed' => 'Falha conting.',
+            'contingency_offline_signed' => 'Offline ass.',
+            'contingency_offline_printed' => 'Offline imp.',
             'cancelled' => 'Cancelada',
             'cancelled_local' => 'Cancelada local',
             default => ucfirst(str_replace('_', ' ', $status)),
@@ -469,6 +492,7 @@ class FiscalConsultationService
             'cancelled', 'cancelled_local' => 'danger',
             'cancellation_queued', 'cancellation_processing', 'awaiting_agent', 'queued', 'queued_to_agent', 'processing' => 'warning',
             'contingency_pending' => 'warning',
+            'contingency_offline_signed', 'contingency_offline_printed' => 'info',
             'failed', 'rejected', 'cancellation_failed', 'contingency_failed' => 'danger',
             'signed_local', 'printed_local' => 'info',
             default => 'neutral',

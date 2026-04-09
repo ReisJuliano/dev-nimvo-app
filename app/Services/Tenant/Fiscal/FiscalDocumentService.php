@@ -31,8 +31,9 @@ class FiscalDocumentService
         ?string $idempotencyKey = null,
         ?string $mode = null,
         ?array $recipient = null,
+        ?string $contingencyReason = null,
     ): FiscalDocument {
-        return DB::transaction(function () use ($saleId, $idempotencyKey, $mode, $recipient) {
+        return DB::transaction(function () use ($saleId, $idempotencyKey, $mode, $recipient, $contingencyReason) {
             $sale = Sale::query()
                 ->with($this->saleRelations())
                 ->lockForUpdate()
@@ -51,6 +52,7 @@ class FiscalDocumentService
 
             $resolvedMode = $this->resolveMode($profile, $documentModel, $mode);
             $localTest = $resolvedMode === 'local_test';
+            $offlineContingency = $resolvedMode === 'contingency_offline';
             $type = $this->documentTypeFor($documentModel, $localTest);
             $idempotencyKey = $idempotencyKey ?: sprintf('sale:%d:%s', $sale->id, $type);
 
@@ -84,7 +86,15 @@ class FiscalDocumentService
                 'environment' => (int) $profile->environment,
                 'series' => (int) $profile->series,
                 'number' => $number,
-                'payload' => $this->buildPayload($sale, $profile, $number, $documentModel, $resolvedRecipient, $localTest),
+                'payload' => $this->buildPayload(
+                    $sale,
+                    $profile,
+                    $number,
+                    $documentModel,
+                    $resolvedRecipient,
+                    $resolvedMode,
+                    $contingencyReason,
+                ),
                 'queued_at' => now(),
             ]);
 
@@ -93,7 +103,9 @@ class FiscalDocumentService
                 'source' => 'backend',
                 'message' => $localTest
                     ? 'Documento fiscal reservado e enviado para ensaio local.'
-                    : 'Documento fiscal reservado e enviado para a fila de emissao.',
+                    : ($offlineContingency
+                        ? 'Documento fiscal reservado e enviado para contingencia offline legal.'
+                        : 'Documento fiscal reservado e enviado para a fila de emissao.'),
             ]);
 
             QueueFiscalDocumentForEmission::dispatch((string) tenant()->getTenantKey(), $document->id)
@@ -119,6 +131,7 @@ class FiscalDocumentService
                 sprintf('sale:%d:nfe', $sale->id),
                 'sefaz',
                 $recipient,
+                null,
             );
         });
     }
@@ -171,7 +184,7 @@ class FiscalDocumentService
 
         $number = 900000 + (int) $sale->id;
 
-        return $this->buildPayload($sale, $profile, $number, '65', $resolvedRecipient, true);
+        return $this->buildPayload($sale, $profile, $number, '65', $resolvedRecipient, 'local_test');
     }
 
     protected function resolveProfileForDocument(string $documentModel): ?FiscalProfile
@@ -211,13 +224,13 @@ class FiscalDocumentService
             $mode = 'sefaz';
         }
 
-        if (! in_array($mode, ['sefaz', 'local_test'], true)) {
+        if (! in_array($mode, ['sefaz', 'local_test', 'contingency_offline'], true)) {
             $mode = 'sefaz';
         }
 
-        if ($documentModel !== '65' && $mode === 'local_test') {
+        if ($documentModel !== '65' && in_array($mode, ['local_test', 'contingency_offline'], true)) {
             throw ValidationException::withMessages([
-                'mode' => 'O modo de ensaio local so esta disponivel para NFC-e modelo 65.',
+                'mode' => 'Os modos locais de contingencia e ensaio estao disponiveis apenas para NFC-e modelo 65.',
             ]);
         }
 
@@ -344,8 +357,12 @@ class FiscalDocumentService
         int $number,
         string $documentModel,
         array $recipient,
-        bool $localTest = false,
+        string $mode = 'sefaz',
+        ?string $contingencyReason = null,
     ): array {
+        $localTest = $mode === 'local_test';
+        $offlineContingency = $mode === 'contingency_offline';
+        $issuedAt = now()->format('Y-m-d\TH:i:sP');
         $randomCode = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
         $notes = trim((string) $sale->notes);
         $changeAmount = $this->saleChangeAmount($sale);
@@ -353,11 +370,19 @@ class FiscalDocumentService
         $discount = round((float) $sale->discount, 2);
         $total = round((float) $sale->total, 2);
         $consumerFinal = $recipient['consumer_final'] ?? true;
+        $resolvedContingencyReason = $offlineContingency
+            ? $this->normalizeContingencyReason($contingencyReason)
+            : null;
 
         if ($localTest) {
             $notes = trim(implode(' | ', array_filter([
                 $notes,
                 'ENSAIO LOCAL NFC-E SEM TRANSMISSAO SEFAZ',
+            ])));
+        } elseif ($offlineContingency) {
+            $notes = trim(implode(' | ', array_filter([
+                $notes,
+                'NFC-E EMITIDA EM CONTINGENCIA OFFLINE LEGAL',
             ])));
         }
 
@@ -395,7 +420,7 @@ class FiscalDocumentService
                 'series' => (int) $profile->series,
                 'random_code' => $randomCode,
                 'sale_number' => $sale->sale_number,
-                'issued_at' => now()->format('Y-m-d\TH:i:sP'),
+                'issued_at' => $issuedAt,
                 'subtotal' => $subtotal,
                 'discount' => $discount,
                 'total' => $total,
@@ -404,7 +429,9 @@ class FiscalDocumentService
                 'id_destination' => $this->resolveDestinationIndicator($profile, $recipient),
                 'presence_indicator' => 1,
                 'print_type' => $documentModel === '65' ? 4 : 1,
-                'emission_type' => 1,
+                'emission_type' => $offlineContingency ? 9 : 1,
+                'dh_contingency' => $offlineContingency ? $issuedAt : null,
+                'contingency_reason' => $resolvedContingencyReason,
                 'consumer_final' => $consumerFinal ? 1 : 0,
             ],
             'items' => $sale->items->map(function (SaleItem $item) {
@@ -474,10 +501,23 @@ class FiscalDocumentService
             'additional_info' => $notes,
             'flags' => [
                 'local_test' => $localTest,
-                'mode' => $localTest ? 'local_test' : 'sefaz',
+                'mode' => $mode,
                 'document_model' => $documentModel,
+                'offline_contingency' => $offlineContingency,
+                'offline_contingency_stage' => $offlineContingency ? 'issue' : null,
             ],
         ];
+    }
+
+    protected function normalizeContingencyReason(?string $reason): string
+    {
+        $normalized = trim(preg_replace('/\s+/', ' ', (string) $reason) ?? '');
+
+        if (mb_strlen($normalized) < 15) {
+            $normalized = 'FALHA DE COMUNICACAO E EMISSAO EM CONTINGENCIA OFFLINE';
+        }
+
+        return mb_substr($normalized, 0, 255);
     }
 
     protected function resolveConsumerPayload(Sale $sale, ?array $override = null): array

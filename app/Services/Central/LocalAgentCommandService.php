@@ -29,7 +29,16 @@ class LocalAgentCommandService
             'fiscal_document_id' => $document->id,
             'type' => 'emit_nfce',
             'status' => 'pending',
-            'payload' => $document->payload,
+            'payload' => array_merge(is_array($document->payload) ? $document->payload : [], [
+                'existing_document' => [
+                    'request_xml' => $document->request_xml,
+                    'signed_xml' => $document->signed_xml,
+                    'response_xml' => $document->response_xml,
+                    'authorized_xml' => $document->authorized_xml,
+                    'access_key' => $document->access_key,
+                    'printed_at' => optional($document->printed_at)?->toIso8601String(),
+                ],
+            ]),
             'available_at' => now(),
         ]);
     }

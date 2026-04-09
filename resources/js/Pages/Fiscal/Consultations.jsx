@@ -37,7 +37,7 @@ function buildFileActions(fiscalDocument) {
     const files = fiscalDocument.files || {}
     const actions = []
 
-    if (files.authorized_xml_url || files.cancelled_xml_url) {
+    if (files.authorized_xml_url || files.cancelled_xml_url || (fiscalDocument.mode === 'contingency_offline' && files.signed_xml_url)) {
         actions.push({ key: 'preview', label: 'Preview', icon: 'fa-file-pdf', href: files.preview_url })
     }
 
@@ -541,6 +541,7 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                             <InfoGrid
                                 items={[
                                     ['Modelo', fiscalDocument.document_model],
+                                    ['Modo', fiscalDocument.mode === 'contingency_offline' ? 'Offline legal' : (fiscalDocument.mode || '--')],
                                     ['Numero', `${fiscalDocument.number} / ${fiscalDocument.series}`],
                                     ['Status', fiscalDocument.status_label],
                                     ['Protocolo', fiscalDocument.protocol || fiscalDocument.cancellation_protocol || '--'],

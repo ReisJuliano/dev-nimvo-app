@@ -48,6 +48,17 @@ class FiscalCancellationRules
             ];
         }
 
+        if (
+            (bool) data_get($document->payload, 'flags.offline_contingency', false)
+            && in_array($document->status, ['contingency_offline_signed', 'contingency_offline_printed', 'contingency_failed'], true)
+        ) {
+            return [
+                'allowed' => false,
+                'mode' => 'blocked_offline_contingency',
+                'message' => 'A NFC-e em contingencia offline precisa ser transmitida ou regularizada antes do cancelamento.',
+            ];
+        }
+
         if (in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'signed_local', 'printed_local'], true)) {
             return [
                 'allowed' => true,

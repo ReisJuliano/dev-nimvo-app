@@ -362,6 +362,7 @@ class PosApiController extends Controller
             null,
             $validated['mode'] ?? null,
             $recipient,
+            $validated['contingency_reason'] ?? null,
         );
 
         return response()->json([

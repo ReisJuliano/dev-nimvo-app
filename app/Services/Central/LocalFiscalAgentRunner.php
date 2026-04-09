@@ -76,9 +76,16 @@ class LocalFiscalAgentRunner
 
             try {
                 $result = match ($command['type']) {
-                    'emit_nfce' => (bool) data_get($command, 'payload.flags.local_test', false)
-                        ? $this->emitter->emitLocalTest($command['payload'], $runtimeConfig)
-                        : $this->emitter->emit($command['payload'], $runtimeConfig),
+                    'emit_nfce' => match (true) {
+                        (bool) data_get($command, 'payload.flags.local_test', false)
+                            => $this->emitter->emitLocalTest($command['payload'], $runtimeConfig),
+                        (bool) data_get($command, 'payload.flags.offline_contingency', false)
+                            && data_get($command, 'payload.flags.offline_contingency_stage') === 'issue'
+                            => $this->emitter->emitOfflineContingency($command['payload'], $runtimeConfig),
+                        (bool) data_get($command, 'payload.flags.offline_contingency', false)
+                            => $this->emitter->transmitOfflineContingency($command['payload'], $runtimeConfig),
+                        default => $this->emitter->emit($command['payload'], $runtimeConfig),
+                    },
                     'cancel_fiscal_document' => $this->emitter->cancel($command['payload'], $runtimeConfig),
                     'invalidate_fiscal_range' => $this->emitter->invalidateRange($command['payload'], $runtimeConfig),
                     'print_payment_receipt' => $this->printPaymentReceipt($command['payload'], $runtimeConfig),

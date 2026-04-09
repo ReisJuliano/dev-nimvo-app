@@ -39,6 +39,8 @@ class NfceLayoutBuilder
             'serie' => (string) $sale['series'],
             'nNF' => (string) $sale['number'],
             'dhEmi' => $sale['issued_at'],
+            'dhCont' => (int) ($sale['emission_type'] ?? 1) === 9 ? ($sale['dh_contingency'] ?? $sale['issued_at']) : null,
+            'xJust' => (int) ($sale['emission_type'] ?? 1) === 9 ? ($sale['contingency_reason'] ?? null) : null,
             'tpNF' => 1,
             'idDest' => (int) ($sale['id_destination'] ?? 1),
             'cMunFG' => $profile['city_code'],

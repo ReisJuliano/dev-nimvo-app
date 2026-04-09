@@ -166,9 +166,16 @@ Artisan::command('fiscal:agent:execute-command {config} {type} {payloadFile}', f
 
     try {
         $result = match ($type) {
-            'emit_nfce' => (bool) data_get($payload, 'flags.local_test', false)
-                ? app(SpedNfeNfceEmitter::class)->emitLocalTest($payload, $agentConfig)
-                : app(SpedNfeNfceEmitter::class)->emit($payload, $agentConfig),
+            'emit_nfce' => match (true) {
+                (bool) data_get($payload, 'flags.local_test', false)
+                    => app(SpedNfeNfceEmitter::class)->emitLocalTest($payload, $agentConfig),
+                (bool) data_get($payload, 'flags.offline_contingency', false)
+                    && data_get($payload, 'flags.offline_contingency_stage') === 'issue'
+                    => app(SpedNfeNfceEmitter::class)->emitOfflineContingency($payload, $agentConfig),
+                (bool) data_get($payload, 'flags.offline_contingency', false)
+                    => app(SpedNfeNfceEmitter::class)->transmitOfflineContingency($payload, $agentConfig),
+                default => app(SpedNfeNfceEmitter::class)->emit($payload, $agentConfig),
+            },
             'cancel_fiscal_document' => app(SpedNfeNfceEmitter::class)->cancel($payload, $agentConfig),
             'invalidate_fiscal_range' => app(SpedNfeNfceEmitter::class)->invalidateRange($payload, $agentConfig),
             'print_payment_receipt' => tap([
