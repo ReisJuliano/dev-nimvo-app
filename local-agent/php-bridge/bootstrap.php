@@ -6,8 +6,6 @@ use Illuminate\Support\Carbon;
 
 define('NIMVO_FISCAL_BRIDGE_BASE_PATH', __DIR__);
 
-require __DIR__.'/vendor/autoload.php';
-
 if (!function_exists('base_path')) {
     function base_path(string $path = ''): string
     {
@@ -111,3 +109,5 @@ spl_autoload_register(static function (string $class): void {
         require_once $path;
     }
 });
+
+require __DIR__.'/vendor/autoload.php';
