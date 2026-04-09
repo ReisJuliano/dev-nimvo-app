@@ -573,6 +573,146 @@ class FiscalDocumentsApiTest extends TestCase
             ->assertJsonPath('document.agent_key', $agent->agent_key);
     }
 
+    public function test_it_queues_a_legal_offline_contingency_document(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        $agent = $this->makeAgent();
+
+        $response = $this->postJson('/api/fiscal/documents', [
+            'sale_id' => $sale->id,
+            'mode' => 'contingency_offline',
+            'contingency_reason' => 'Internet instavel no caixa principal durante a venda.',
+        ]);
+
+        $response->assertStatus(202)
+            ->assertJsonPath('document.status', 'queued_to_agent')
+            ->assertJsonPath('document.mode', 'contingency_offline')
+            ->assertJsonPath('document.agent_key', $agent->agent_key);
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertTrue((bool) data_get($document->payload, 'flags.offline_contingency'));
+        $this->assertSame('issue', data_get($document->payload, 'flags.offline_contingency_stage'));
+        $this->assertSame(9, data_get($document->payload, 'sale.emission_type'));
+        $this->assertSame('Internet instavel no caixa principal durante a venda.', $document->contingency_reason);
+    }
+
+    public function test_local_agent_can_complete_and_later_transmit_a_legal_offline_contingency_document(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        [$agent, $secret] = $this->makeAgentWithSecret();
+
+        $this->postJson('/api/fiscal/documents', [
+            'sale_id' => $sale->id,
+            'mode' => 'contingency_offline',
+            'contingency_reason' => 'Link principal indisponivel no momento da autorizacao.',
+        ])->assertStatus(202);
+
+        $firstPoll = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/commands/poll');
+
+        $firstPoll->assertOk()
+            ->assertJsonPath('command.type', 'emit_nfce')
+            ->assertJsonPath('command.payload.flags.offline_contingency_stage', 'issue');
+
+        $document = FiscalDocument::query()->firstOrFail();
+        $firstCommandId = $firstPoll->json('command.id');
+
+        $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson("/api/local-agents/commands/{$firstCommandId}/complete", [
+            'successful' => true,
+            'status' => 'contingency_offline_printed',
+            'request_xml' => '<NFe>offline-request</NFe>',
+            'signed_xml' => '<NFe>offline-signed</NFe>',
+            'access_key' => '35260412345678000123650010000000011000000030',
+            'printed_at' => now()->toIso8601String(),
+            'sefaz_status_reason' => 'NFC-e emitida em contingencia offline legal e pendente de transmissao posterior.',
+        ])->assertOk();
+
+        $document->refresh();
+
+        $this->assertSame('contingency_offline_printed', $document->status);
+        $this->assertNull($document->authorized_at);
+        $this->assertNotNull($document->printed_at);
+        $this->assertSame('transmit_pending', data_get($document->payload, 'flags.offline_contingency_stage'));
+
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/signed.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+
+        $this->postJson("/api/fiscal/documents/{$document->id}/retry")
+            ->assertOk()
+            ->assertJsonPath('document.status', 'queued_to_agent');
+
+        $secondPoll = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/commands/poll');
+
+        $secondPoll->assertOk()
+            ->assertJsonPath('command.type', 'emit_nfce')
+            ->assertJsonPath('command.payload.flags.offline_contingency_stage', 'transmit_pending');
+
+        $secondCommandId = $secondPoll->json('command.id');
+
+        $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson("/api/local-agents/commands/{$secondCommandId}/complete", [
+            'successful' => true,
+            'status' => 'contingency_transmitted',
+            'request_xml' => '<NFe>offline-request</NFe>',
+            'signed_xml' => '<NFe>offline-signed</NFe>',
+            'response_xml' => '<retEnviNFe>offline-response</retEnviNFe>',
+            'authorized_xml' => '<nfeProc>offline-authorized</nfeProc>',
+            'access_key' => '35260412345678000123650010000000011000000030',
+            'receipt' => '123456789012346',
+            'protocol' => '135260000000030',
+            'sefaz_status_code' => '100',
+            'sefaz_status_reason' => 'Autorizado o uso da NF-e',
+        ])->assertOk();
+
+        $document->refresh();
+
+        $this->assertSame('printed', $document->status);
+        $this->assertNotNull($document->authorized_at);
+        $this->assertNotNull($document->printed_at);
+        $this->assertSame('transmitted', data_get($document->payload, 'flags.offline_contingency_stage'));
+        $this->assertSame('135260000000030', $document->sefaz_protocol);
+
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/authorized.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/response.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+
+        $this->getJson("/api/fiscal/documents/{$document->id}")
+            ->assertOk()
+            ->assertJsonPath('document.mode', 'contingency_offline')
+            ->assertJsonPath('document.authorized_xml_available', true)
+            ->assertJsonPath('document.response_xml_available', true);
+    }
+
     protected function actingOperator(): User
     {
         $user = User::query()->create([

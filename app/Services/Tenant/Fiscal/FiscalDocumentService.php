@@ -53,6 +53,9 @@ class FiscalDocumentService
             $resolvedMode = $this->resolveMode($profile, $documentModel, $mode);
             $localTest = $resolvedMode === 'local_test';
             $offlineContingency = $resolvedMode === 'contingency_offline';
+            $normalizedContingencyReason = $offlineContingency
+                ? $this->normalizeContingencyReason($contingencyReason)
+                : null;
             $type = $this->documentTypeFor($documentModel, $localTest);
             $idempotencyKey = $idempotencyKey ?: sprintf('sale:%d:%s', $sale->id, $type);
 
@@ -86,6 +89,8 @@ class FiscalDocumentService
                 'environment' => (int) $profile->environment,
                 'series' => (int) $profile->series,
                 'number' => $number,
+                'contingency_reason' => $normalizedContingencyReason,
+                'contingency_requested_at' => $offlineContingency ? now() : null,
                 'payload' => $this->buildPayload(
                     $sale,
                     $profile,
@@ -93,7 +98,7 @@ class FiscalDocumentService
                     $documentModel,
                     $resolvedRecipient,
                     $resolvedMode,
-                    $contingencyReason,
+                    $normalizedContingencyReason,
                 ),
                 'queued_at' => now(),
             ]);

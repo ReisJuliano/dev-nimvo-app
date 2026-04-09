@@ -237,6 +237,70 @@ class FiscalConsultationsPageTest extends TestCase
         $this->assertSame('Caixa isolado aguardando retorno de conectividade local.', $document->contingency_reason);
     }
 
+    public function test_it_queues_legal_offline_contingency_when_agent_is_available(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user, now());
+
+        $document = FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'failed',
+            'idempotency_key' => 'sale:'.$sale->id.':offline-contingency',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 20,
+            'last_error' => 'Timeout na autorizacao.',
+            'payload' => [
+                'flags' => [
+                    'document_model' => '65',
+                    'mode' => 'sefaz',
+                ],
+                'sale' => [
+                    'requested_document_model' => '65',
+                    'random_code' => '12345678',
+                    'issued_at' => now()->subMinute()->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        LocalAgent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'PDV Fiscal Offline',
+            'agent_key' => 'agent-offline-contingency',
+            'secret_hash' => Hash::make('secret'),
+            'active' => true,
+            'metadata' => [
+                'device' => [
+                    'supported_types' => ['emit_nfce'],
+                ],
+            ],
+            'last_seen_at' => now(),
+        ]);
+
+        $response = $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/vendas/'.$sale->id.'/contingencia', [
+                'reason' => 'Internet caiu na loja e o caixa precisa continuar atendendo.',
+            ]);
+
+        $response->assertRedirect('/consultas-cancelamentos');
+
+        $document->refresh();
+
+        $this->assertSame('queued_to_agent', $document->status);
+        $this->assertSame('contingency_offline', data_get($document->payload, 'flags.mode'));
+        $this->assertTrue((bool) data_get($document->payload, 'flags.offline_contingency'));
+        $this->assertSame('issue', data_get($document->payload, 'flags.offline_contingency_stage'));
+
+        $this->assertDatabaseHas('local_agent_commands', [
+            'tenant_id' => $this->tenant->id,
+            'fiscal_document_id' => $document->id,
+            'type' => 'emit_nfce',
+            'status' => 'pending',
+        ], 'central');
+    }
+
     public function test_it_can_retry_documents_from_operational_contingency(): void
     {
         $user = $this->actingOperator();
@@ -300,6 +364,73 @@ class FiscalConsultationsPageTest extends TestCase
             'fiscal_document_id' => $document->id,
             'type' => 'emit_nfce',
         ], 'central');
+    }
+
+    public function test_it_can_retry_a_signed_offline_contingency_document_for_later_transmission(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user, now());
+
+        FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'contingency_offline_printed',
+            'idempotency_key' => 'sale:'.$sale->id.':offline-retry',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 22,
+            'access_key' => '35260412345678000123650010000000011000000022',
+            'signed_xml' => '<NFe>signed-offline</NFe>',
+            'printed_at' => now()->subMinute(),
+            'payload' => [
+                'flags' => [
+                    'document_model' => '65',
+                    'mode' => 'contingency_offline',
+                    'offline_contingency' => true,
+                    'offline_contingency_stage' => 'transmit_pending',
+                ],
+                'sale' => [
+                    'requested_document_model' => '65',
+                ],
+            ],
+            'contingency_reason' => 'Sem internet na autorizacao inicial.',
+            'contingency_requested_at' => now()->subMinute(),
+        ]);
+
+        LocalAgent::query()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'PDV Fiscal Retry',
+            'agent_key' => 'agent-retry-offline',
+            'secret_hash' => Hash::make('secret'),
+            'active' => true,
+            'metadata' => [
+                'device' => [
+                    'supported_types' => ['emit_nfce'],
+                ],
+            ],
+            'last_seen_at' => now(),
+        ]);
+
+        $response = $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/contingencia/retry');
+
+        $response->assertRedirect('/consultas-cancelamentos');
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame('queued_to_agent', $document->status);
+        $this->assertSame(1, $document->contingency_attempts);
+        $this->assertSame('transmit', data_get($document->payload, 'flags.offline_contingency_stage'));
+
+        $command = LocalAgentCommand::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('fiscal_document_id', $document->id)
+            ->latest('created_at')
+            ->firstOrFail();
+
+        $this->assertSame('emit_nfce', $command->type);
+        $this->assertSame('<NFe>signed-offline</NFe>', data_get($command->payload, 'existing_document.signed_xml'));
     }
 
     protected function actingOperator(): User
