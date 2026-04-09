@@ -243,7 +243,7 @@ export default function TenantFiscalModal({
                             <button
                                 type="button"
                                 className="central-admin-secondary-button"
-                                disabled={autofillBusy || !canPersist || !String(form.cnpj || '').trim()}
+                                disabled={autofillBusy || !canPersist}
                                 onClick={onAutofillByCnpj}
                             >
                                 <i className="fa-solid fa-magnifying-glass" />
@@ -253,13 +253,17 @@ export default function TenantFiscalModal({
                             <button
                                 type="button"
                                 className="central-admin-secondary-button"
-                                disabled={autofillBusy || !canPersist || !hasCertificateSummary}
+                                disabled={autofillBusy || !canPersist}
                                 onClick={onAutofillByCertificate}
                             >
                                 <i className="fa-solid fa-certificate" />
                                 <span>{autofillBusy ? 'Lendo...' : 'Usar certificado'}</span>
                             </button>
                         </div>
+
+                        <span className="central-admin-field-note">
+                            Consultar CNPJ usa o valor digitado no campo CNPJ. Usar certificado depende do agente local sincronizar o resumo do A1.
+                        </span>
 
                         {(hasCertificateSummary || autofillMeta) ? (
                             <div className="central-admin-agent-grid">
