@@ -26,7 +26,7 @@ class FiscalConsultationService
                 'company:id,name,trade_name,document,document_type,email,phone,state_registration,street,number,complement,district,city_name,city_code,state,zip_code',
                 'items.product:id,name,code,barcode,unit,commercial_unit,taxable_unit',
                 'payments:id,sale_id,payment_method,amount',
-                'latestFiscalDocument',
+                'latestFiscalDocument.events:id,fiscal_document_id,status,source,message,created_at',
             ])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
 
@@ -170,6 +170,25 @@ class FiscalConsultationService
                 'cancellation_requested_at' => $document->cancellation_requested_at?->toIso8601String(),
                 'cancelled_at' => $document->cancelled_at?->toIso8601String(),
                 'cancellation_reason' => $document->cancellation_reason,
+                'files' => [
+                    'preview_url' => route('api.fiscal.documents.preview', $document, false),
+                    'signed_xml_url' => filled($document->signed_xml) ? route('api.fiscal.documents.signed-xml', $document, false) : null,
+                    'authorized_xml_url' => filled($document->authorized_xml) ? route('api.fiscal.documents.authorized-xml', $document, false) : null,
+                    'response_xml_url' => filled($document->response_xml) ? route('api.fiscal.documents.response-xml', $document, false) : null,
+                    'cancellation_request_xml_url' => filled($document->cancellation_request_xml) ? route('api.fiscal.documents.cancellation-request-xml', $document, false) : null,
+                    'cancellation_response_xml_url' => filled($document->cancellation_response_xml) ? route('api.fiscal.documents.cancellation-response-xml', $document, false) : null,
+                    'cancelled_xml_url' => filled($document->cancelled_xml) ? route('api.fiscal.documents.cancelled-xml', $document, false) : null,
+                ],
+                'events' => $document->events
+                    ->sortByDesc('created_at')
+                    ->map(fn ($event) => [
+                        'status' => $event->status,
+                        'source' => $event->source,
+                        'message' => $event->message,
+                        'created_at' => $event->created_at?->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all(),
             ] : null,
         ];
     }
@@ -257,7 +276,7 @@ class FiscalConsultationService
             $data['zip_code'] ?? null,
         ]);
 
-        return $parts === [] ? null : implode(' • ', $parts);
+        return $parts === [] ? null : implode(' - ', $parts);
     }
 
     protected function resolvePeriod(string $period): string
@@ -279,9 +298,9 @@ class FiscalConsultationService
     protected function rangeLabel(string $period, Carbon $from, Carbon $to): string
     {
         return match ($period) {
-            'week' => sprintf('Semana • %s ate %s', $from->format('d/m'), $to->format('d/m')),
-            'month' => sprintf('Mes • %s', $from->translatedFormat('F \\d\\e Y')),
-            default => sprintf('Hoje • %s', $from->format('d/m/Y')),
+            'week' => sprintf('Semana - %s ate %s', $from->format('d/m'), $to->format('d/m')),
+            'month' => sprintf('Mes - %s', $from->translatedFormat('F \\d\\e Y')),
+            default => sprintf('Hoje - %s', $from->format('d/m/Y')),
         };
     }
 

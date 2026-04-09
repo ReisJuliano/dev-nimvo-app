@@ -178,7 +178,7 @@ class FiscalDocumentResultService
 
     public function markCancelled(string $tenantId, int $documentId, array $payload): void
     {
-        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+        $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
             $document = FiscalDocument::query()->with('sale')->findOrFail($documentId);
             $cancelledAt = $payload['cancelled_at'] ?? now();
 
@@ -196,6 +196,8 @@ class FiscalDocumentResultService
                 'failed_at' => null,
             ])->save();
 
+            $xmlFiles = $this->xmlStorage->persist($tenantId, $document, $payload);
+
             if ($document->sale) {
                 $document->sale->forceFill(['status' => 'cancelled'])->save();
             }
@@ -207,6 +209,7 @@ class FiscalDocumentResultService
                 'payload' => [
                     'protocol' => $payload['cancellation_protocol'] ?? null,
                     'reason' => $payload['cancellation_reason'] ?? null,
+                    'xml_files' => $xmlFiles,
                 ],
             ]);
         });
@@ -214,7 +217,7 @@ class FiscalDocumentResultService
 
     public function markCancellationFailed(string $tenantId, int $documentId, array $payload): void
     {
-        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+        $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
             $document = FiscalDocument::query()->findOrFail($documentId);
             $message = $payload['message'] ?? $payload['error'] ?? 'Falha no cancelamento fiscal.';
 
@@ -230,6 +233,8 @@ class FiscalDocumentResultService
                 'failed_at' => now(),
             ])->save();
 
+            $xmlFiles = $this->xmlStorage->persist($tenantId, $document, $payload);
+
             $document->events()->create([
                 'status' => 'cancellation_failed',
                 'source' => 'agent',
@@ -237,6 +242,7 @@ class FiscalDocumentResultService
                 'payload' => [
                     'reason' => $payload['cancellation_reason'] ?? null,
                     'status_code' => $payload['sefaz_status_code'] ?? null,
+                    'xml_files' => $xmlFiles,
                 ],
             ]);
         });

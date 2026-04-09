@@ -98,6 +98,9 @@ class FiscalDocumentXmlStorage
             'signed_xml' => 'signed.xml',
             'response_xml' => 'response.xml',
             'authorized_xml' => 'authorized.xml',
+            'cancellation_request_xml' => 'cancellation-request.xml',
+            'cancellation_response_xml' => 'cancellation-response.xml',
+            'cancelled_xml' => 'cancelled.xml',
         ];
     }
 }

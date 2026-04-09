@@ -222,6 +222,110 @@ class FiscalDocumentsApiTest extends TestCase
             ->assertSee('<retEnviNFe>response</retEnviNFe>', false);
     }
 
+    public function test_it_persists_and_exposes_cancellation_xml_after_agent_completion(): void
+    {
+        Storage::fake('local');
+
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        [$agent, $secret] = $this->makeAgentWithSecret(['cancel_fiscal_document']);
+
+        $document = FiscalDocument::query()->create([
+            'sale_id' => $sale->id,
+            'profile_id' => null,
+            'type' => 'nfce',
+            'status' => 'authorized',
+            'idempotency_key' => 'sale:'.$sale->id.':nfce',
+            'environment' => 2,
+            'series' => 1,
+            'number' => 15,
+            'access_key' => '35260412345678000123650010000000011000000010',
+            'payload' => [
+                'flags' => [
+                    'document_model' => '65',
+                ],
+            ],
+            'authorized_xml' => '<nfeProc>authorized</nfeProc>',
+            'sefaz_protocol' => '135260000000001',
+            'authorized_at' => now(),
+        ]);
+
+        $this->from('/consultas-cancelamentos')
+            ->post('/consultas-cancelamentos/vendas/'.$sale->id.'/cancelar', [
+                'reason' => 'Cliente desistiu apos a emissao.',
+            ])
+            ->assertRedirect('/consultas-cancelamentos');
+
+        $poll = $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson('/api/local-agents/commands/poll');
+
+        $poll->assertOk()
+            ->assertJsonPath('command.type', 'cancel_fiscal_document');
+
+        $commandId = $poll->json('command.id');
+
+        $this->withHeaders([
+            'X-Agent-Key' => $agent->agent_key,
+            'X-Agent-Secret' => $secret,
+        ])->postJson("/api/local-agents/commands/{$commandId}/complete", [
+            'successful' => true,
+            'cancellation_request_xml' => '<envEvento>cancel-request</envEvento>',
+            'cancellation_response_xml' => '<retEnvEvento>cancel-response</retEnvEvento>',
+            'cancelled_xml' => '<nfeProcEvento>cancelled</nfeProcEvento>',
+            'cancellation_protocol' => '135260000000099',
+            'cancellation_reason' => 'Cliente desistiu apos a emissao.',
+            'sefaz_status_code' => '135',
+            'sefaz_status_reason' => 'Evento registrado e vinculado a NF-e',
+            'cancelled_at' => now()->toIso8601String(),
+        ])->assertOk();
+
+        $document->refresh();
+        $sale->refresh();
+
+        $this->assertSame('cancelled', $document->status);
+        $this->assertSame('cancelled', $sale->status);
+        $this->assertSame('135260000000099', $document->cancellation_protocol);
+
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/cancellation-request.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/cancellation-response.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+        Storage::disk('local')->assertExists(sprintf(
+            'fiscal-documents/%s/sales/%s/document-%s/cancelled.xml',
+            $this->tenant->id,
+            $document->sale_id,
+            $document->id,
+        ));
+
+        $this->getJson("/api/fiscal/documents/{$document->id}")
+            ->assertOk()
+            ->assertJsonPath('document.cancellation_request_xml_available', true)
+            ->assertJsonPath('document.cancellation_response_xml_available', true)
+            ->assertJsonPath('document.cancelled_xml_available', true);
+
+        $this->get("/api/fiscal/documents/{$document->id}/cancellation-request-xml")
+            ->assertOk()
+            ->assertSee('<envEvento>cancel-request</envEvento>', false);
+
+        $this->get("/api/fiscal/documents/{$document->id}/cancellation-response-xml")
+            ->assertOk()
+            ->assertSee('<retEnvEvento>cancel-response</retEnvEvento>', false);
+
+        $this->get("/api/fiscal/documents/{$document->id}/cancelled-xml")
+            ->assertOk()
+            ->assertSee('<nfeProcEvento>cancelled</nfeProcEvento>', false);
+    }
+
     public function test_heartbeat_syncs_local_machine_data_without_returning_central_printer_overrides(): void
     {
         [$agent, $secret] = $this->makeAgentWithSecret();
@@ -585,7 +689,7 @@ class FiscalDocumentsApiTest extends TestCase
         return $this->makeAgentWithSecret()[0];
     }
 
-    protected function makeAgentWithSecret(): array
+    protected function makeAgentWithSecret(array $supportedTypes = ['emit_nfce', 'print_payment_receipt', 'print_test']): array
     {
         $secret = 'segredo-do-agente';
 
@@ -596,7 +700,7 @@ class FiscalDocumentsApiTest extends TestCase
             'secret_hash' => Hash::make($secret),
             'metadata' => [
                 'device' => [
-                    'supported_types' => ['emit_nfce', 'print_payment_receipt', 'print_test'],
+                    'supported_types' => $supportedTypes,
                 ],
             ],
             'active' => true,

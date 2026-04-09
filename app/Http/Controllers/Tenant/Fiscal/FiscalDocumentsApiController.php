@@ -57,12 +57,14 @@ class FiscalDocumentsApiController extends Controller
         DanfePdfRenderer $danfeRenderer,
     ): Response
     {
-        abort_unless(filled($fiscalDocument->authorized_xml), 422, 'O documento fiscal ainda nao possui XML autorizado.');
+        $xml = $fiscalDocument->cancelled_xml ?: $fiscalDocument->authorized_xml;
+
+        abort_unless(filled($xml), 422, 'O documento fiscal ainda nao possui XML disponivel para visualizacao.');
 
         $documentModel = (string) data_get($fiscalDocument->payload, 'flags.document_model', '65');
         $pdf = $documentModel === '55'
-            ? $danfeRenderer->render($fiscalDocument->authorized_xml)
-            : $danfceRenderer->render($fiscalDocument->authorized_xml);
+            ? $danfeRenderer->render($xml)
+            : $danfceRenderer->render($xml);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -104,6 +106,36 @@ class FiscalDocumentsApiController extends Controller
         ]);
     }
 
+    public function cancellationRequestXml(FiscalDocument $fiscalDocument): Response
+    {
+        abort_unless(filled($fiscalDocument->cancellation_request_xml), 422, 'O documento fiscal ainda nao possui XML de pedido de cancelamento.');
+
+        return response($fiscalDocument->cancellation_request_xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="cancellation-request-%s.xml"', $fiscalDocument->number),
+        ]);
+    }
+
+    public function cancellationResponseXml(FiscalDocument $fiscalDocument): Response
+    {
+        abort_unless(filled($fiscalDocument->cancellation_response_xml), 422, 'O documento fiscal ainda nao possui XML de retorno de cancelamento.');
+
+        return response($fiscalDocument->cancellation_response_xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="cancellation-response-%s.xml"', $fiscalDocument->number),
+        ]);
+    }
+
+    public function cancelledXml(FiscalDocument $fiscalDocument): Response
+    {
+        abort_unless(filled($fiscalDocument->cancelled_xml), 422, 'O documento fiscal ainda nao possui XML cancelado.');
+
+        return response($fiscalDocument->cancelled_xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="cancelled-%s.xml"', $fiscalDocument->number),
+        ]);
+    }
+
     protected function serialize(FiscalDocument $document): array
     {
         $tenantId = (string) tenant('id');
@@ -124,6 +156,8 @@ class FiscalDocumentsApiController extends Controller
             'signed_xml_available' => filled($document->signed_xml),
             'response_xml_available' => filled($document->response_xml),
             'authorized_xml_available' => filled($document->authorized_xml),
+            'cancellation_request_xml_available' => filled($document->cancellation_request_xml),
+            'cancellation_response_xml_available' => filled($document->cancellation_response_xml),
             'cancelled_xml_available' => filled($document->cancelled_xml),
             'xml_files' => $xmlFiles,
             'sefaz_status_code' => $document->sefaz_status_code,

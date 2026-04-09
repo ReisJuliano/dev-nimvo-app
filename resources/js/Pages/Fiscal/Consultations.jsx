@@ -9,8 +9,12 @@ const formatCurrency = (value) => currencyFormatter.format(Number(value || 0))
 
 function formatDateTime(value) {
     if (!value) return '--'
+
     const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
+
+    if (Number.isNaN(date.getTime())) {
+        return value
+    }
 
     return new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
@@ -21,7 +25,52 @@ function formatDateTime(value) {
     }).format(date)
 }
 
-const toneClass = (tone) => `tone-${tone || 'neutral'}`
+function toneClass(tone) {
+    return `tone-${tone || 'neutral'}`
+}
+
+function buildFileActions(fiscalDocument) {
+    if (!fiscalDocument) {
+        return []
+    }
+
+    const files = fiscalDocument.files || {}
+    const actions = []
+
+    if (files.authorized_xml_url || files.cancelled_xml_url) {
+        actions.push({ key: 'preview', label: 'Preview', icon: 'fa-file-pdf', href: files.preview_url })
+    }
+
+    if (files.signed_xml_url) {
+        actions.push({ key: 'signed', label: 'Assinado', icon: 'fa-file-signature', href: files.signed_xml_url })
+    }
+
+    if (files.authorized_xml_url) {
+        actions.push({ key: 'authorized', label: 'Autorizado', icon: 'fa-file-circle-check', href: files.authorized_xml_url })
+    }
+
+    if (files.response_xml_url) {
+        actions.push({ key: 'response', label: 'Retorno', icon: 'fa-file-waveform', href: files.response_xml_url })
+    }
+
+    if (files.cancellation_request_xml_url) {
+        actions.push({ key: 'cancellation-request', label: 'Pedido', icon: 'fa-file-export', href: files.cancellation_request_xml_url })
+    }
+
+    if (files.cancellation_response_xml_url) {
+        actions.push({ key: 'cancellation-response', label: 'Retorno cancel.', icon: 'fa-file-import', href: files.cancellation_response_xml_url })
+    }
+
+    if (files.cancelled_xml_url) {
+        actions.push({ key: 'cancelled', label: 'Cancelado', icon: 'fa-file-circle-xmark', href: files.cancelled_xml_url })
+    }
+
+    return actions.filter((item) => item.href)
+}
+
+function eventSourceLabel(source) {
+    return source === 'agent' ? 'Agente' : source === 'backend' ? 'Backend' : 'Sistema'
+}
 
 export default function FiscalConsultationsPage({ filters, periods, summary, range, sales }) {
     const [selectedSaleId, setSelectedSaleId] = useState(null)
@@ -33,7 +82,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
     )
 
     useEffect(() => {
-        if (!selectedSaleId) return
+        if (!selectedSaleId) {
+            return
+        }
+
         if (!sales.data.some((sale) => sale.id === selectedSaleId)) {
             setSelectedSaleId(null)
             cancelForm.reset()
@@ -42,7 +94,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
     }, [cancelForm, sales.data, selectedSaleId])
 
     function changePeriod(period) {
-        if (period === filters.period) return
+        if (period === filters.period) {
+            return
+        }
+
         setSelectedSaleId(null)
         router.get('/consultas-cancelamentos', { period }, { preserveScroll: true, replace: true })
     }
@@ -61,7 +116,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
 
     function submitCancel(event) {
         event.preventDefault()
-        if (!selectedSale) return
+
+        if (!selectedSale) {
+            return
+        }
 
         cancelForm.post(`/consultas-cancelamentos/vendas/${selectedSale.id}/cancelar`, {
             preserveScroll: true,
@@ -78,9 +136,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <i className="fa-solid fa-wave-square" />
                             {range.label}
                         </span>
+
                         <div>
                             <h1>Consultas e cancelamentos</h1>
-                            <span>{range.from} • {range.to}</span>
+                            <span>{range.from} - {range.to}</span>
                         </div>
                     </div>
 
@@ -105,6 +164,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <div className="fiscal-summary-icon">
                                 <i className={`fa-solid ${item.icon}`} />
                             </div>
+
                             <div className="fiscal-summary-copy">
                                 <span>{item.label}</span>
                                 <strong>{item.format === 'currency' ? formatCurrency(item.value) : item.value}</strong>
@@ -119,6 +179,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <strong>Vendas</strong>
                             <span>{sales.total} registros</span>
                         </div>
+
                         <div className="fiscal-list-chip">
                             <i className="fa-solid fa-bolt" />
                             <span>{sales.current_page}/{sales.last_page}</span>
@@ -144,7 +205,8 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                             <strong>{sale.sale_number}</strong>
                                             <span>{formatDateTime(sale.created_at)}</span>
                                         </div>
-                                        <span className={`fiscal-status-chip ${toneClass(sale.status_tone)}`}>{sale.status_label}</span>
+
+                                        <StatusChip label={sale.status_label} tone={sale.status_tone} />
                                     </div>
 
                                     <div className="fiscal-sale-card-metrics">
@@ -152,6 +214,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                             <span>Total</span>
                                             <strong>{formatCurrency(sale.total)}</strong>
                                         </div>
+
                                         <div>
                                             <span>Cliente</span>
                                             <strong>{sale.recipient.label || 'Consumidor final'}</strong>
@@ -161,7 +224,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                     <div className="fiscal-sale-card-tags">
                                         <span><i className="fa-solid fa-boxes-stacked" />{sale.item_count} item(ns)</span>
                                         <span><i className="fa-solid fa-credit-card" />{sale.payment_method}</span>
-                                        <span><i className="fa-solid fa-file-waveform" />{sale.fiscal_document?.status_label || 'Sem fiscal'}</span>
+                                        <span><i className="fa-solid fa-file-invoice-dollar" />{sale.fiscal_document?.status_label || 'Sem fiscal'}</span>
                                     </div>
 
                                     <div className="fiscal-sale-card-products">
@@ -197,25 +260,40 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                 </section>
             </div>
 
-            <SaleDetailsModal sale={selectedSale} onClose={closeModal} cancelForm={cancelForm} onCancelSubmit={submitCancel} />
+            <SaleDetailsModal
+                cancelForm={cancelForm}
+                onCancelSubmit={submitCancel}
+                onClose={closeModal}
+                sale={selectedSale}
+            />
         </AppLayout>
     )
 }
 
 function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
-    if (!sale) return null
+    if (!sale) {
+        return null
+    }
 
     const fiscalDocument = sale.fiscal_document
+    const fileActions = buildFileActions(fiscalDocument)
+    const eventCount = fiscalDocument?.events?.length || 0
 
     return (
         <div className="fiscal-sale-modal-backdrop" onClick={onClose}>
-            <section className="fiscal-sale-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
+            <section
+                aria-modal="true"
+                className="fiscal-sale-modal"
+                onClick={(event) => event.stopPropagation()}
+                role="dialog"
+            >
                 <header className="fiscal-sale-modal-header">
                     <div className="fiscal-sale-modal-title">
                         <span className="fiscal-sale-modal-badge">
                             <i className="fa-solid fa-receipt" />
                             {sale.sale_number}
                         </span>
+
                         <div>
                             <h2>{formatCurrency(sale.total)}</h2>
                             <span>{formatDateTime(sale.created_at)}</span>
@@ -223,24 +301,33 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                     </div>
 
                     <div className="fiscal-sale-modal-header-actions">
-                        <span className={`fiscal-status-chip ${toneClass(sale.status_tone)}`}>{sale.status_label}</span>
-                        {fiscalDocument ? <span className={`fiscal-status-chip ${toneClass(fiscalDocument.status_tone)}`}>{fiscalDocument.status_label}</span> : null}
+                        <StatusChip label={sale.status_label} tone={sale.status_tone} />
+                        {fiscalDocument ? <StatusChip label={fiscalDocument.status_label} tone={fiscalDocument.status_tone} /> : null}
                         <button className="fiscal-modal-close" onClick={onClose} type="button">
                             <i className="fa-solid fa-xmark" />
                         </button>
                     </div>
                 </header>
 
+                <div className="fiscal-sale-highlight-strip">
+                    <MiniMetric icon="fa-boxes-stacked" label="Itens" value={sale.item_count} />
+                    <MiniMetric icon="fa-sack-dollar" label="Recebido" value={formatCurrency(sale.cash_received)} />
+                    <MiniMetric icon="fa-arrow-rotate-left" label="Troco" value={formatCurrency(sale.change_amount)} />
+                    <MiniMetric icon="fa-clock-rotate-left" label="Eventos" value={eventCount} />
+                </div>
+
                 <div className="fiscal-sale-modal-grid">
                     <section className="fiscal-modal-panel fiscal-modal-panel-lg">
                         <header><strong><i className="fa-solid fa-box-open" />Itens</strong></header>
+
                         <div className="fiscal-items-list">
                             {sale.items.map((item) => (
                                 <article key={item.id} className="fiscal-item-row">
                                     <div>
                                         <strong>{item.name}</strong>
-                                        <span>{item.quantity} {item.unit_label || 'un'} • {formatCurrency(item.unit_price)}</span>
+                                        <span>{item.quantity} {item.unit_label || 'un'} - {formatCurrency(item.unit_price)}</span>
                                     </div>
+
                                     <div className="fiscal-item-row-meta">
                                         {item.discount_amount > 0 ? <span>- {formatCurrency(item.discount_amount)}</span> : null}
                                         <strong>{formatCurrency(item.total)}</strong>
@@ -294,9 +381,10 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                                     ['Status', fiscalDocument.status_label],
                                     ['Protocolo', fiscalDocument.protocol || fiscalDocument.cancellation_protocol || '--'],
                                     ['Chave', fiscalDocument.access_key || '--', true],
-                                    ['SEFAZ', fiscalDocument.sefaz_status_code ? `${fiscalDocument.sefaz_status_code} • ${fiscalDocument.sefaz_status_reason || '--'}` : '--', true],
+                                    ['SEFAZ', fiscalDocument.sefaz_status_code ? `${fiscalDocument.sefaz_status_code} - ${fiscalDocument.sefaz_status_reason || '--'}` : '--', true],
                                     ['Autorizada', formatDateTime(fiscalDocument.authorized_at)],
                                     ['Cancelada', formatDateTime(fiscalDocument.cancelled_at)],
+                                    ['Motivo', fiscalDocument.cancellation_reason || '--', true],
                                     ['Erro', fiscalDocument.last_error || '--', true],
                                 ]}
                             />
@@ -304,6 +392,56 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                             <div className="fiscal-modal-empty">
                                 <i className="fa-solid fa-file-circle-minus" />
                                 <span>Sem fiscal</span>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="fiscal-modal-panel">
+                        <header><strong><i className="fa-solid fa-folder-tree" />Arquivos</strong></header>
+                        {fileActions.length > 0 ? (
+                            <div className="fiscal-file-grid">
+                                {fileActions.map((action) => (
+                                    <Link
+                                        key={action.key}
+                                        className="fiscal-file-link"
+                                        href={action.href}
+                                        target="_blank"
+                                    >
+                                        <i className={`fa-solid ${action.icon}`} />
+                                        <span>{action.label}</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="fiscal-modal-empty fiscal-modal-empty-sm">
+                                <i className="fa-solid fa-folder-open" />
+                                <span>Sem arquivos</span>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="fiscal-modal-panel">
+                        <header><strong><i className="fa-solid fa-timeline" />Eventos</strong></header>
+                        {eventCount > 0 ? (
+                            <div className="fiscal-timeline">
+                                {fiscalDocument.events.map((event, index) => (
+                                    <article key={`${event.status}-${event.created_at || index}`} className="fiscal-timeline-item">
+                                        <div className="fiscal-timeline-marker" />
+                                        <div className="fiscal-timeline-body">
+                                            <div className="fiscal-timeline-head">
+                                                <StatusChip label={eventSourceLabel(event.source)} tone={event.source === 'agent' ? 'info' : 'neutral'} />
+                                                <span>{formatDateTime(event.created_at)}</span>
+                                            </div>
+                                            <strong>{event.message}</strong>
+                                            <small>{event.status}</small>
+                                        </div>
+                                    </article>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="fiscal-modal-empty fiscal-modal-empty-sm">
+                                <i className="fa-solid fa-clock-rotate-left" />
+                                <span>Sem eventos</span>
                             </div>
                         )}
                     </section>
@@ -321,12 +459,15 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                             placeholder="Justificativa do cancelamento"
                             value={cancelForm.data.reason}
                         />
+
                         {cancelForm.errors.reason ? <span className="fiscal-form-error">{cancelForm.errors.reason}</span> : null}
+
                         <div className="fiscal-cancel-actions">
                             <button className="fiscal-secondary-button" onClick={onClose} type="button">
                                 <i className="fa-solid fa-arrow-left" />
                                 <span>Fechar</span>
                             </button>
+
                             <button className="fiscal-danger-button" disabled={!sale.can_cancel || cancelForm.processing} type="submit">
                                 <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-ban'}`} />
                                 <span>{sale.can_cancel ? 'Cancelar' : 'Bloqueado'}</span>
@@ -337,6 +478,19 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
             </section>
         </div>
     )
+}
+
+function MiniMetric({ icon, label, value }) {
+    return (
+        <div className="fiscal-mini-metric">
+            <span><i className={`fa-solid ${icon}`} />{label}</span>
+            <strong>{value}</strong>
+        </div>
+    )
+}
+
+function StatusChip({ label, tone }) {
+    return <span className={`fiscal-status-chip ${toneClass(tone)}`}>{label}</span>
 }
 
 function InfoList({ items }) {
