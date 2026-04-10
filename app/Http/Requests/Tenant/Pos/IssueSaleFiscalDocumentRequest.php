@@ -27,7 +27,7 @@ class IssueSaleFiscalDocumentRequest extends FormRequest
             'contingency_reason' => ['nullable', 'string', 'min:15', 'max:255'],
             'document_model' => ['required', 'string', Rule::in(['55', '65'])],
             'recipient' => ['nullable', 'array'],
-            'recipient.type' => ['nullable', 'string', Rule::in(['customer', 'company', 'document'])],
+            'recipient.type' => ['nullable', 'string', Rule::in(['customer', 'company', 'document', 'consumer_final'])],
             'recipient.name' => ['nullable', 'string', 'max:255'],
             'recipient.document' => ['nullable', 'string', 'max:30'],
             'recipient.customer_id' => ['nullable', 'integer', 'exists:customers,id'],

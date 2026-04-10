@@ -2354,7 +2354,9 @@ export default function PosIndex({
                 }
             }
 
-            return payload
+            return documentModel === '65'
+                ? { ...payload, consumer_final: true }
+                : payload
         }
 
         if (selectedCustomerData?.document) {
@@ -2370,15 +2372,27 @@ export default function PosIndex({
                     name: selectedCustomerData.name,
                     document: normalizeDocument(selectedCustomerData.document),
                     email: fallbackEmail,
+                    ...(documentModel === '65' ? { consumer_final: true } : {}),
                 }
             }
 
-            return { type: 'customer', customer_id: selectedCustomerData.id }
+            return {
+                type: 'customer',
+                customer_id: selectedCustomerData.id,
+                ...(documentModel === '65' ? { consumer_final: true } : {}),
+            }
         }
 
         const name = customerLinkForm.name.trim()
         const document = normalizeDocument(customerLinkForm.document)
         const email = customerLinkForm.email.trim()
+
+        if (documentModel === '65' && !name && !document) {
+            return {
+                type: 'consumer_final',
+                consumer_final: true,
+            }
+        }
 
         if (!name || !document) {
             throw new Error('Identifique o consumidor com nome e CPF/CNPJ antes de emitir o documento fiscal.')
@@ -2397,6 +2411,7 @@ export default function PosIndex({
             name,
             document,
             email: email || null,
+            ...(documentModel === '65' ? { consumer_final: true } : {}),
         }
     }
 
@@ -2578,12 +2593,20 @@ export default function PosIndex({
         } else if (selectedCompanyData?.document) {
             setRecipientSelectionMode('company')
         } else {
-            setRecipientSelectionMode('document')
+            setRecipientSelectionMode('consumer_final')
             setManualRecipient((current) => ({
                 name: current.name || selectedCustomerData?.name || '',
                 document: current.document || selectedCustomerData?.document || '',
                 email: current.email || selectedCustomerData?.email || '',
             }))
+        }
+    }
+
+    function handleRecipientDocumentModelChange(nextModel) {
+        setRecipientDocumentModel(nextModel)
+
+        if (nextModel === '55' && recipientSelectionMode === 'consumer_final') {
+            setRecipientSelectionMode('document')
         }
     }
 
@@ -2649,10 +2672,25 @@ export default function PosIndex({
     }
 
     function buildRecipientPayload() {
+        if (recipientSelectionMode === 'consumer_final') {
+            if (recipientDocumentModel !== '65') {
+                throw new Error('Consumidor final nao identificado esta disponivel apenas para NFC-e.')
+            }
+
+            return {
+                type: 'consumer_final',
+                consumer_final: true,
+            }
+        }
+
         if (recipientSelectionMode === 'customer') {
             const customer = customers.find((entry) => String(entry.id) === String(selectedCustomer))
             if (!customer) throw new Error('Selecione um cliente valido para emitir o documento fiscal.')
-            return { type: 'customer', customer_id: customer.id }
+            return {
+                type: 'customer',
+                customer_id: customer.id,
+                ...(recipientDocumentModel === '65' ? { consumer_final: true } : {}),
+            }
         }
 
         if (recipientSelectionMode === 'company') {
@@ -2662,12 +2700,22 @@ export default function PosIndex({
 
             const company = companies.find((entry) => String(entry.id) === String(selectedCompany))
             if (!company) throw new Error('Selecione uma empresa valida para emitir o documento fiscal.')
-            return { type: 'company', company_id: company.id }
+            return {
+                type: 'company',
+                company_id: company.id,
+                ...(recipientDocumentModel === '65' ? { consumer_final: true } : {}),
+            }
         }
 
         const name = manualRecipient.name.trim()
         const document = manualRecipient.document.replace(/\D/g, '')
-        if (!name || !document) throw new Error('Informe nome e CPF/CNPJ do destinatario antes de continuar.')
+        if (!name || !document) {
+            if (recipientDocumentModel === '65') {
+                throw new Error('Informe nome e CPF/CNPJ do destinatario ou selecione o consumidor final nao identificado.')
+            }
+
+            throw new Error('Informe nome e CPF/CNPJ do destinatario antes de continuar.')
+        }
 
         if (recipientDocumentModel === '55') {
             const requiredFields = [
@@ -2687,7 +2735,11 @@ export default function PosIndex({
             }
         }
 
-        return buildManualRecipientPayload(manualRecipient)
+        const payload = buildManualRecipientPayload(manualRecipient)
+
+        return recipientDocumentModel === '65'
+            ? { ...payload, consumer_final: true }
+            : payload
     }
 
     async function handleSubmitRecipient(event) {
@@ -3336,7 +3388,7 @@ export default function PosIndex({
                 open={recipientModalOpen}
                 onClose={() => setRecipientModalOpen(false)}
                 documentModel={recipientDocumentModel}
-                onDocumentModelChange={setRecipientDocumentModel}
+                onDocumentModelChange={handleRecipientDocumentModelChange}
                 selectionMode={recipientSelectionMode}
                 onSelectionModeChange={setRecipientSelectionMode}
                 searchTerm={recipientSearch}

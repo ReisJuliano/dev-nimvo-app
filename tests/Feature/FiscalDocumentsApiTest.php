@@ -551,6 +551,118 @@ class FiscalDocumentsApiTest extends TestCase
             ->assertJsonValidationErrors(['fiscal_profile']);
     }
 
+    public function test_nfce_issue_route_allows_unidentified_consumer_final(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        $agent = $this->makeAgent();
+
+        $response = $this->postJson("/api/pdv/sales/{$sale->id}/issue-fiscal", [
+            'document_model' => '65',
+            'mode' => 'auto',
+            'recipient' => [
+                'type' => 'consumer_final',
+                'consumer_final' => true,
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('document.status', 'queued_to_agent')
+            ->assertJsonPath('document.agent_key', $agent->agent_key);
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame(1, data_get($document->payload, 'sale.consumer_final'));
+        $this->assertNull(data_get($document->payload, 'consumer.name'));
+        $this->assertNull(data_get($document->payload, 'consumer.document'));
+    }
+
+    public function test_nfce_issue_route_forces_consumer_final_for_identified_recipient(): void
+    {
+        $user = $this->actingOperator();
+        $sale = $this->makeSale($user);
+        $this->makeFiscalProfile();
+        $this->makeAgent();
+
+        $response = $this->postJson("/api/pdv/sales/{$sale->id}/issue-fiscal", [
+            'document_model' => '65',
+            'mode' => 'auto',
+            'recipient' => [
+                'type' => 'document',
+                'name' => 'Cliente de Teste',
+                'document' => '12345678901',
+                'consumer_final' => false,
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('document.status', 'queued_to_agent');
+
+        $document = FiscalDocument::query()->firstOrFail();
+
+        $this->assertSame(1, data_get($document->payload, 'sale.consumer_final'));
+        $this->assertSame('Cliente de Teste', data_get($document->payload, 'consumer.name'));
+        $this->assertSame('12345678901', data_get($document->payload, 'consumer.document'));
+    }
+
+    public function test_finalize_sale_accepts_unidentified_consumer_final_payload_for_nfce(): void
+    {
+        $user = $this->actingOperator();
+        $cashRegister = CashRegister::query()->create([
+            'user_id' => $user->id,
+            'status' => 'open',
+            'opening_amount' => 0,
+            'opened_at' => now(),
+        ]);
+
+        $product = Product::query()->create([
+            'code' => 'PROD-ANON',
+            'barcode' => '7899999999999',
+            'name' => 'Produto NFCe',
+            'description' => null,
+            'unit' => 'UN',
+            'cost_price' => 5,
+            'sale_price' => 12.5,
+            'stock_quantity' => 20,
+            'min_stock' => 0,
+            'active' => true,
+        ]);
+
+        $response = $this->postJson('/api/pdv/sales', [
+            'cash_register_id' => $cashRegister->id,
+            'discount' => 0,
+            'notes' => 'Consumidor final nao identificado',
+            'fiscal_decision' => 'emit',
+            'requested_document_model' => '65',
+            'recipient_payload' => [
+                'type' => 'consumer_final',
+                'consumer_final' => true,
+            ],
+            'items' => [
+                [
+                    'id' => $product->id,
+                    'qty' => 1,
+                    'discount' => 0,
+                ],
+            ],
+            'payments' => [
+                [
+                    'method' => 'cash',
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('sale.fiscal_decision', 'emit')
+            ->assertJsonPath('sale.requested_document_model', '65');
+
+        $sale = Sale::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('consumer_final', data_get($sale->recipient_payload, 'type'));
+        $this->assertTrue((bool) data_get($sale->recipient_payload, 'consumer_final'));
+    }
+
     public function test_it_allows_explicit_local_test_when_csc_is_missing(): void
     {
         $user = $this->actingOperator();

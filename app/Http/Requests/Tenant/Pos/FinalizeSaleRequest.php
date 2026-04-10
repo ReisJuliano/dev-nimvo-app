@@ -34,7 +34,7 @@ class FinalizeSaleRequest extends FormRequest
             'fiscal_decision' => ['nullable', 'string', Rule::in(['close', 'emit'])],
             'requested_document_model' => ['nullable', 'string', Rule::in(['55', '65'])],
             'recipient_payload' => ['nullable', 'array'],
-            'recipient_payload.type' => ['nullable', 'string', Rule::in(['customer', 'company', 'document'])],
+            'recipient_payload.type' => ['nullable', 'string', Rule::in(['customer', 'company', 'document', 'consumer_final'])],
             'recipient_payload.name' => ['nullable', 'string', 'max:255'],
             'recipient_payload.document' => ['nullable', 'string', 'max:30'],
             'recipient_payload.customer_id' => ['nullable', 'integer', 'exists:customers,id'],

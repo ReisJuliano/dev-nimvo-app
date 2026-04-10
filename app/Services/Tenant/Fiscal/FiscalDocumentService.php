@@ -374,7 +374,9 @@ class FiscalDocumentService
         $subtotal = round((float) $sale->subtotal, 2);
         $discount = round((float) $sale->discount, 2);
         $total = round((float) $sale->total, 2);
-        $consumerFinal = $recipient['consumer_final'] ?? true;
+        $consumerFinal = $documentModel === '65'
+            ? true
+            : ($recipient['consumer_final'] ?? true);
         $resolvedContingencyReason = $offlineContingency
             ? $this->normalizeContingencyReason($contingencyReason)
             : null;
@@ -548,6 +550,12 @@ class FiscalDocumentService
             'zip_code' => $payload['zip_code'] ?? null,
             'consumer_final' => $payload['consumer_final'] ?? null,
         ]);
+
+        if (($payload['type'] ?? null) === 'consumer_final') {
+            return $this->normalizeRecipient([
+                'consumer_final' => true,
+            ]);
+        }
 
         if (($payload['type'] ?? null) === 'document' || (filled($manualRecipient['name'] ?? null) && filled($manualRecipient['document'] ?? null))) {
             return $manualRecipient;
