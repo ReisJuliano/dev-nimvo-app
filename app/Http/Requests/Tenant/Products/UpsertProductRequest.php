@@ -16,7 +16,7 @@ class UpsertProductRequest extends FormRequest
     {
         return [
             'code' => ['nullable', 'string', 'max:255'],
-            'barcode' => ['required', 'string', 'max:255'],
+            'barcode' => ['nullable', 'string', 'max:255'],
             'ncm' => ['nullable', 'regex:/^\d{8}$/'],
             'cfop' => ['nullable', 'regex:/^\d{4}$/'],
             'cest' => ['nullable', 'regex:/^\d{7}$/'],

@@ -154,7 +154,6 @@ function validateForm(form) {
     const cest = String(form.cest || '').trim()
 
     if (!String(form.name || '').trim()) errors.name = 'Informe o nome do produto.'
-    if (!String(form.barcode || '').trim()) errors.barcode = 'Informe o EAN/codigo de barras.'
     if (form.cost_price === '' || form.cost_price === null || form.cost_price === undefined) errors.cost_price = 'Informe o custo.'
     if (form.sale_price === '' || form.sale_price === null || form.sale_price === undefined) errors.sale_price = 'Informe o preco de venda.'
     if (!String(form.category_id || '').trim()) errors.category_id = 'Selecione uma categoria.'
@@ -507,10 +506,14 @@ export default function ProductFormModal({
                                     </div>
                                 </label>
                                 <label className={`products-editor-field ${errors.barcode ? 'has-error' : ''}`}>
-                                    <span>EAN / Codigo de barras *</span>
+                                    <span>EAN / GTIN</span>
                                     <div className="products-editor-input-wrap">
                                         <i className="fa-solid fa-barcode" />
-                                        <input value={form.barcode ?? ''} onChange={(event) => updateField('barcode', event.target.value)} required />
+                                        <input
+                                            value={form.barcode ?? ''}
+                                            onChange={(event) => updateField('barcode', event.target.value)}
+                                            placeholder="Opcional. Vazio usa SEM GTIN"
+                                        />
                                     </div>
                                     {renderFieldError('barcode')}
                                 </label>

@@ -253,7 +253,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             const payload = {
                 ...form,
                 name: form.name?.trim() || '',
-                barcode: form.barcode?.trim() || '',
+                barcode: form.barcode?.trim() || null,
                 category_id: form.category_id ? Number(form.category_id) : null,
                 supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
                 internal_notes: form.internal_notes?.trim() || null,
