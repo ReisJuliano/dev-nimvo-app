@@ -20,9 +20,24 @@ class IncomingNfeDocument extends Model
         'manifest_status',
         'distribution_nsu',
         'environment',
+        'document_model',
         'series',
         'number',
         'operation_nature',
+        'fiscal_status',
+        'sefaz_status_code',
+        'sefaz_status_reason',
+        'sefaz_protocol',
+        'sefaz_verified_at',
+        'signature_status',
+        'signature_subject',
+        'signature_checked_at',
+        'authenticity_status',
+        'bookkeeping_status',
+        'physical_receipt_status',
+        'physical_received_at',
+        'last_manifested_at',
+        'last_audited_at',
         'supplier_name',
         'supplier_trade_name',
         'supplier_document',
@@ -35,6 +50,9 @@ class IncomingNfeDocument extends Model
         'xml_path',
         'danfe_path',
         'validation_snapshot',
+        'fiscal_snapshot',
+        'match_snapshot',
+        'bookkeeping_snapshot',
         'metadata',
         'issued_at',
         'authorized_at',
@@ -50,10 +68,18 @@ class IncomingNfeDocument extends Model
         'freight_total' => 'decimal:2',
         'invoice_total' => 'decimal:2',
         'validation_snapshot' => 'array',
+        'fiscal_snapshot' => 'array',
+        'match_snapshot' => 'array',
+        'bookkeeping_snapshot' => 'array',
         'metadata' => 'array',
         'issued_at' => 'datetime',
         'authorized_at' => 'datetime',
         'last_synced_at' => 'datetime',
+        'sefaz_verified_at' => 'datetime',
+        'signature_checked_at' => 'datetime',
+        'physical_received_at' => 'datetime',
+        'last_manifested_at' => 'datetime',
+        'last_audited_at' => 'datetime',
         'last_processed_at' => 'datetime',
     ];
 
@@ -70,5 +96,20 @@ class IncomingNfeDocument extends Model
     public function items(): HasMany
     {
         return $this->hasMany(IncomingNfeItem::class, 'document_id');
+    }
+
+    public function manifestations(): HasMany
+    {
+        return $this->hasMany(IncomingNfeManifestation::class, 'document_id');
+    }
+
+    public function bookkeepingEntries(): HasMany
+    {
+        return $this->hasMany(IncomingNfeBookEntry::class, 'document_id');
+    }
+
+    public function taxCredits(): HasMany
+    {
+        return $this->hasMany(IncomingNfeTaxCredit::class, 'document_id');
     }
 }
