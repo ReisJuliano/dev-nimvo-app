@@ -729,6 +729,9 @@ class OperationsWorkspaceService
             'freight' => ['nullable', 'numeric', 'gte:0'],
             'notes' => ['nullable', 'string'],
             'invoice_number' => ['nullable', 'string', 'max:80'],
+            'invoice_date' => ['nullable', 'date'],
+            'invoice_series' => ['nullable', 'string', 'max:20'],
+            'invoice_access_key' => ['nullable', 'string', 'max:80'],
             'billing_barcode' => ['nullable', 'string', 'max:255'],
             'billing_amount' => ['nullable', 'numeric', 'gte:0'],
             'billing_due_date' => ['nullable', 'date'],
@@ -774,6 +777,17 @@ class OperationsWorkspaceService
             $invoiceNumber = array_key_exists('invoice_number', $validated)
                 ? ($validated['invoice_number'] ?? null)
                 : ($purchaseMetadata['invoice_number'] ?? null);
+            $invoiceDate = array_key_exists('invoice_date', $validated)
+                ? ($validated['invoice_date'] ?? null)
+                : ($purchaseMetadata['invoice_date'] ?? null);
+            $invoiceSeries = array_key_exists('invoice_series', $validated)
+                ? ($validated['invoice_series'] ?? null)
+                : ($purchaseMetadata['invoice_series'] ?? null);
+            $invoiceAccessKey = array_key_exists('invoice_access_key', $validated)
+                ? (filled($validated['invoice_access_key'] ?? null)
+                    ? preg_replace('/\D+/', '', (string) $validated['invoice_access_key'])
+                    : null)
+                : ($purchaseMetadata['invoice_access_key'] ?? null);
             $billingBarcode = array_key_exists('billing_barcode', $validated)
                 ? ($validated['billing_barcode'] ?? null)
                 : ($purchaseMetadata['billing_barcode'] ?? null);
@@ -789,6 +803,9 @@ class OperationsWorkspaceService
                 : ($purchaseMetadata['billing_due_date'] ?? null);
             $shouldEncodeNotes = $this->hasStructuredPurchaseNotes($purchase->notes)
                 || filled($invoiceNumber)
+                || filled($invoiceDate)
+                || filled($invoiceSeries)
+                || filled($invoiceAccessKey)
                 || filled($billingBarcode)
                 || $billingAmount !== null
                 || filled($billingDueDate);
@@ -809,6 +826,9 @@ class OperationsWorkspaceService
                     ? $this->encodePurchaseNotes([
                         'notes' => $plainNotes,
                         'invoice_number' => $invoiceNumber,
+                        'invoice_date' => $invoiceDate,
+                        'invoice_series' => $invoiceSeries,
+                        'invoice_access_key' => $invoiceAccessKey,
                         'billing_barcode' => $billingBarcode,
                         'billing_amount' => $billingAmount,
                         'billing_due_date' => $billingDueDate,
@@ -1064,11 +1084,13 @@ class OperationsWorkspaceService
         return Supplier::query()
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'document'])
+            ->get(['id', 'name', 'document', 'city_name', 'state'])
             ->map(fn (Supplier $supplier) => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
                 'document' => $supplier->document,
+                'city_name' => $supplier->city_name,
+                'state' => $supplier->state,
             ])
             ->values()
             ->all();
@@ -1360,6 +1382,9 @@ class OperationsWorkspaceService
             'total' => (float) $purchase->total,
             'notes' => $metadata['notes'] ?? null,
             'invoice_number' => $metadata['invoice_number'] ?? null,
+            'invoice_date' => $metadata['invoice_date'] ?? null,
+            'invoice_series' => $metadata['invoice_series'] ?? null,
+            'invoice_access_key' => $metadata['invoice_access_key'] ?? null,
             'document' => $metadata['invoice_number'] ?? null,
             'billing_barcode' => $metadata['billing_barcode'] ?? null,
             'billing_amount' => array_key_exists('billing_amount', $metadata) ? (float) $metadata['billing_amount'] : null,
