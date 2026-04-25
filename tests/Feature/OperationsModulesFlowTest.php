@@ -10,11 +10,28 @@ use App\Models\Tenant\User;
 use App\Services\Tenant\OperationsWorkspaceService;
 use App\Services\Tenant\PosService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Tests\TestCase;
 
 class OperationsModulesFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->artisan('migrate', [
+            '--path' => database_path('migrations/tenant'),
+            '--realpath' => true,
+        ])->run();
+
+        $this->withoutMiddleware([
+            InitializeTenancyByDomain::class,
+            PreventAccessFromCentralDomains::class,
+        ]);
+    }
 
     public function test_stock_inbound_entry_creates_received_purchase_and_updates_stock(): void
     {
