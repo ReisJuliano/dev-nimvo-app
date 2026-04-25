@@ -1,9 +1,13 @@
 @import 'tailwindcss';
+@import '@heroui/react/styles';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+@source '../**/*.jsx';
+@source '../**/*.ts';
+@source '../**/*.tsx';
 
 @theme {
     --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
