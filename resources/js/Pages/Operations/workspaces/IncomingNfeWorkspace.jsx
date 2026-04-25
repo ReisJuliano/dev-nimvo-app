@@ -17,6 +17,16 @@ function digits(value) {
     return String(value || '').replace(/\D+/g, '')
 }
 
+function toDateTimeLocal(value) {
+    return value ? String(value).slice(0, 16) : ''
+}
+
+function toneByStatus(status) {
+    if (['processed', 'authorized', 'verified', 'confirmed', 'posted', 'ready', 'matched'].includes(status)) return 'success'
+    if (['pending', 'pending_review', 'pending_receipt', 'summary_only', 'review_required', 'divergent', 'unknown', 'science'].includes(status)) return 'warning'
+    return 'info'
+}
+
 function upsertIncomingRecord(records, record) {
     const exists = records.some((entry) => entry.id === record.id)
 
@@ -41,8 +51,12 @@ export default function IncomingNfeWorkspace({ payload }) {
     const [xmlFile, setXmlFile] = useState(null)
     const [selectedId, setSelectedId] = useState((payload.incoming_nfe_documents || [])[0]?.id ?? null)
     const [supplierLinkId, setSupplierLinkId] = useState('')
+    const [purchaseLinkId, setPurchaseLinkId] = useState('')
     const [costMethod, setCostMethod] = useState(payload.cost_methods?.[0]?.value || 'last_cost')
     const [autoCreateMissing, setAutoCreateMissing] = useState(false)
+    const [receiptAt, setReceiptAt] = useState('')
+    const [manifestEvent, setManifestEvent] = useState('science')
+    const [manifestJustification, setManifestJustification] = useState('')
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
 
@@ -72,6 +86,21 @@ export default function IncomingNfeWorkspace({ payload }) {
         return suppliers.find((entry) => digits(entry.document) === digits(selectedRecord.supplier_document))
     }, [selectedRecord, suppliers])
 
+    const purchaseOptions = useMemo(() => {
+        return (payload.records || []).map((record) => ({
+            id: record.id,
+            code: record.code,
+            supplier_name: record.supplier_name,
+            status: record.status,
+        }))
+    }, [payload.records])
+
+    const linkedPurchase = useMemo(() => {
+        if (!selectedRecord?.purchase_id) return null
+
+        return purchaseOptions.find((entry) => String(entry.id) === String(selectedRecord.purchase_id)) || null
+    }, [purchaseOptions, selectedRecord?.purchase_id])
+
     useEffect(() => {
         if (selectedRecord && selectedRecord.id !== selectedId) {
             setSelectedId(selectedRecord.id)
@@ -81,6 +110,11 @@ export default function IncomingNfeWorkspace({ payload }) {
     useEffect(() => {
         setSupplierLinkId(matchedSupplier?.id ? String(matchedSupplier.id) : '')
     }, [matchedSupplier?.id, selectedRecord?.id])
+
+    useEffect(() => {
+        setPurchaseLinkId(selectedRecord?.purchase_id ? String(selectedRecord.purchase_id) : '')
+        setReceiptAt(toDateTimeLocal(selectedRecord?.physical_received_at || selectedRecord?.authorized_at || selectedRecord?.issued_at))
+    }, [selectedRecord?.id, selectedRecord?.purchase_id, selectedRecord?.physical_received_at, selectedRecord?.authorized_at, selectedRecord?.issued_at])
 
     function replaceRecord(record) {
         setRecords((current) => upsertIncomingRecord(current, record))
@@ -145,6 +179,25 @@ export default function IncomingNfeWorkspace({ payload }) {
             const response = await apiRequest(`/api/purchases/incoming-nfe/${selectedRecord.id}/mappings`, {
                 method: 'put',
                 data: { supplier_id: Number(supplierLinkId) },
+            })
+            replaceRecord(response.record)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBusyAction(null)
+        }
+    }
+
+    async function handlePurchaseLink() {
+        if (!selectedRecord) return
+
+        setBusyAction('purchase-link')
+        setFeedback(null)
+        try {
+            const response = await apiRequest(`/api/purchases/incoming-nfe/${selectedRecord.id}/mappings`, {
+                method: 'put',
+                data: { purchase_id: purchaseLinkId ? Number(purchaseLinkId) : null },
             })
             replaceRecord(response.record)
             setFeedback({ type: 'success', text: response.message })
@@ -232,6 +285,65 @@ export default function IncomingNfeWorkspace({ payload }) {
         }
     }
 
+    async function handleValidateWithSefaz() {
+        if (!selectedRecord) return
+
+        setBusyAction('validate-sefaz')
+        setFeedback(null)
+        try {
+            const response = await apiRequest(`/api/purchases/incoming-nfe/${selectedRecord.id}/validate-sefaz`, { method: 'post' })
+            replaceRecord(response.record)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBusyAction(null)
+        }
+    }
+
+    async function handleManifest() {
+        if (!selectedRecord) return
+
+        setBusyAction('manifest')
+        setFeedback(null)
+        try {
+            const response = await apiRequest(`/api/purchases/incoming-nfe/${selectedRecord.id}/manifest`, {
+                method: 'post',
+                data: {
+                    event: manifestEvent,
+                    justification: manifestJustification || null,
+                },
+            })
+            replaceRecord(response.record)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBusyAction(null)
+        }
+    }
+
+    async function handlePhysicalReceipt() {
+        if (!selectedRecord) return
+
+        setBusyAction('physical-receipt')
+        setFeedback(null)
+        try {
+            const response = await apiRequest(`/api/purchases/incoming-nfe/${selectedRecord.id}/physical-receipt`, {
+                method: 'post',
+                data: {
+                    received_at: receiptAt || null,
+                },
+            })
+            replaceRecord(response.record)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBusyAction(null)
+        }
+    }
+
     async function handleConfirm() {
         if (!selectedRecord) return
 
@@ -253,6 +365,8 @@ export default function IncomingNfeWorkspace({ payload }) {
                 data: {
                     cost_method: costMethod,
                     auto_create_missing: autoCreateMissing,
+                    purchase_id: purchaseLinkId ? Number(purchaseLinkId) : null,
+                    received_at: receiptAt || null,
                 },
             })
             replaceRecord(response.record)
@@ -387,6 +501,35 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     </div>
                                 </div>
                             </div>
+                            <div className="ops-nfe-status-card">
+                                <strong>Pedido e recebimento</strong>
+                                <p>{linkedPurchase ? `${linkedPurchase.code} - ${linkedPurchase.supplier_name || 'Sem fornecedor'}` : 'Sem pedido de compra vinculado'}</p>
+                                <div className="ops-workspace-form-grid">
+                                    <label>
+                                        <FieldLabel icon="fa-cart-shopping" text="Pedido de compra" />
+                                        <select value={purchaseLinkId} onChange={(event) => setPurchaseLinkId(event.target.value)}>
+                                            <option value="">Nao vinculado</option>
+                                            {purchaseOptions.map((purchase) => (
+                                                <option key={purchase.id} value={purchase.id}>
+                                                    {purchase.code} - {purchase.supplier_name || 'Sem fornecedor'} - {purchase.status}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <FieldLabel icon="fa-box-open" text="Recebimento fisico" />
+                                        <input type="datetime-local" value={receiptAt} onChange={(event) => setReceiptAt(event.target.value)} />
+                                    </label>
+                                    <div className="ops-workspace-actions span-2">
+                                        <button type="button" className="ui-button-ghost" onClick={handlePurchaseLink} disabled={busyAction === 'purchase-link'}>
+                                            {busyAction === 'purchase-link' ? 'Salvando...' : 'Vincular pedido'}
+                                        </button>
+                                        <button type="button" className="ui-button-ghost" onClick={handlePhysicalReceipt} disabled={busyAction === 'physical-receipt'}>
+                                            {busyAction === 'physical-receipt' ? 'Registrando...' : 'Registrar recebimento'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="ops-nfe-summary-grid">
                                 <article>
                                     <span>Itens vinculados</span>
@@ -404,8 +547,104 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <span>Divergencias NCM</span>
                                     <strong>{selectedRecord.validation?.ncm_mismatches || 0}</strong>
                                 </article>
+                                <article>
+                                    <span>Lacunas fiscais</span>
+                                    <strong>{selectedRecord.validation?.tax_gaps || 0}</strong>
+                                </article>
+                                <article>
+                                    <span>3-way match</span>
+                                    <strong>{selectedRecord.validation?.three_way_divergences || 0}</strong>
+                                </article>
+                                <article>
+                                    <span>Creditos</span>
+                                    <strong>{selectedRecord.validation?.credit_suggestions || 0}</strong>
+                                </article>
+                                <article>
+                                    <span>Status fiscal</span>
+                                    <strong>{selectedRecord.fiscal_status || 'pendente'}</strong>
+                                </article>
+                            </div>
+                            <div className="ops-nfe-summary-grid">
+                                <article>
+                                    <span>Assinatura</span>
+                                    <strong>{selectedRecord.signature_status || 'pendente'}</strong>
+                                </article>
+                                <article>
+                                    <span>Autenticidade</span>
+                                    <strong>{selectedRecord.authenticity_status || 'pendente'}</strong>
+                                </article>
+                                <article>
+                                    <span>Escrituracao</span>
+                                    <strong>{selectedRecord.bookkeeping_status || 'pendente'}</strong>
+                                </article>
+                                <article>
+                                    <span>Recebimento</span>
+                                    <strong>{selectedRecord.physical_receipt_status || 'pendente'}</strong>
+                                </article>
                             </div>
                             {selectedRecord.summary_only ? <div className="ops-workspace-inline-alert">NF-e em resumo. Reprocesse para buscar o XML completo.</div> : null}
+                            <div className="ops-nfe-status-card">
+                                <strong>SEFAZ e manifestacao</strong>
+                                <p>{selectedRecord.sefaz_status_reason || 'Sem consulta recente na SEFAZ.'}</p>
+                                <div className="ops-workspace-list-card-meta">
+                                    <span>{selectedRecord.sefaz_status_code || 'Sem cStat'}</span>
+                                    <span>{selectedRecord.sefaz_protocol || 'Sem protocolo'}</span>
+                                    <span>{selectedRecord.signature_subject || 'Sem certificado lido'}</span>
+                                </div>
+                                <div className="ops-workspace-form-grid">
+                                    <label>
+                                        <FieldLabel icon="fa-eye" text="Evento" />
+                                        <select value={manifestEvent} onChange={(event) => setManifestEvent(event.target.value)}>
+                                            <option value="science">Ciencia</option>
+                                            <option value="confirm">Confirmacao</option>
+                                            <option value="unknown">Desconhecimento</option>
+                                            <option value="not_realized">Nao realizada</option>
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <FieldLabel icon="fa-file-signature" text="Justificativa" />
+                                        <input value={manifestJustification} onChange={(event) => setManifestJustification(event.target.value)} placeholder="Opcional" />
+                                    </label>
+                                    <div className="ops-workspace-actions span-2">
+                                        <button type="button" className="ui-button-ghost" onClick={handleValidateWithSefaz} disabled={busyAction === 'validate-sefaz'}>
+                                            {busyAction === 'validate-sefaz' ? 'Consultando...' : 'Validar SEFAZ'}
+                                        </button>
+                                        <button type="button" className="ui-button-ghost" onClick={handleManifest} disabled={busyAction === 'manifest'}>
+                                            {busyAction === 'manifest' ? 'Enviando...' : 'Manifestar'}
+                                        </button>
+                                    </div>
+                                </div>
+                                {(selectedRecord.manifestations || []).length ? (
+                                    <div className="ops-workspace-list-card-meta">
+                                        {(selectedRecord.manifestations || []).slice(0, 3).map((entry) => (
+                                            <span key={entry.id}>{entry.event_type} {entry.sefaz_status_code ? `(${entry.sefaz_status_code})` : ''}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
+                            <div className="ops-nfe-status-card">
+                                <strong>Tributos e creditos</strong>
+                                <p>{formatMoney(selectedRecord.fiscal?.credits?.recoverable_total || 0)} em creditos potencialmente recuperaveis.</p>
+                                <div className="ops-workspace-list-card-meta">
+                                    <span>ICMS {formatMoney(selectedRecord.fiscal?.taxes?.icms || 0)}</span>
+                                    <span>IPI {formatMoney(selectedRecord.fiscal?.taxes?.ipi || 0)}</span>
+                                    <span>PIS/COFINS {formatMoney((selectedRecord.fiscal?.taxes?.pis || 0) + (selectedRecord.fiscal?.taxes?.cofins || 0))}</span>
+                                </div>
+                                {(selectedRecord.tax_credits || []).length ? (
+                                    <div className="ops-nfe-item-warnings">
+                                        {(selectedRecord.tax_credits || []).slice(0, 4).map((credit) => (
+                                            <span key={credit.id || `${credit.tax_type}-${credit.item_id}`}>{credit.tax_type.toUpperCase()} {formatMoney(credit.amount || 0)} - {credit.status}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                {(selectedRecord.bookkeeping?.entries || []).length ? (
+                                    <div className="ops-workspace-list-card-meta">
+                                        {(selectedRecord.bookkeeping?.entries || []).map((entry) => (
+                                            <span key={entry.id || entry.entry_type}>{entry.entry_type} {entry.status}</span>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </div>
                             {(selectedRecord.validation?.alerts || []).length ? (
                                 <div className="ops-nfe-alert-list">
                                     {(selectedRecord.validation?.alerts || []).slice(0, 6).map((alert, index) => (
@@ -430,7 +669,21 @@ export default function IncomingNfeWorkspace({ payload }) {
                                             <span>{item.supplier_code || 'Sem codigo do fornecedor'}</span>
                                             <span>{item.barcode || 'Sem GTIN'}</span>
                                             <span>{item.ncm || 'Sem NCM'}</span>
+                                            <span>{item.cfop || 'Sem CFOP'}</span>
                                         </div>
+                                        <div className="ops-workspace-list-card-meta">
+                                            <span>ICMS {item.icms_cst_csosn || '---'} {formatMoney(item.icms_amount || 0)}</span>
+                                            <span>IPI {item.ipi_cst || '---'} {formatMoney(item.ipi_amount || 0)}</span>
+                                            <span>PIS {item.pis_cst || '---'} {formatMoney(item.pis_amount || 0)}</span>
+                                            <span>COFINS {item.cofins_cst || '---'} {formatMoney(item.cofins_amount || 0)}</span>
+                                        </div>
+                                        {item.purchase_order_reference || item.fiscal_snapshot?.purchase_match?.status ? (
+                                            <div className="ops-workspace-list-card-meta">
+                                                <span>{item.purchase_order_reference ? `Pedido ${item.purchase_order_reference}` : 'Sem xPed'}</span>
+                                                <span>3-way {item.fiscal_snapshot?.purchase_match?.status || 'pendente'}</span>
+                                                <span>Custo aq. {formatMoney(item.fiscal_snapshot?.acquisition_cost?.estimated_total || item.total_price || 0)}</span>
+                                            </div>
+                                        ) : null}
                                         {(item.validation_warnings || []).length ? (
                                             <div className="ops-nfe-item-warnings">
                                                 {(item.validation_warnings || []).map((warning) => <span key={warning.code}>{warning.message}</span>)}

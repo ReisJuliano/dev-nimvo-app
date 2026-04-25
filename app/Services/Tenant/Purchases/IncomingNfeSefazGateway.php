@@ -60,6 +60,38 @@ class IncomingNfeSefazGateway
         );
     }
 
+    public function consultAccessKey(FiscalProfile $profile, string $accessKey): array
+    {
+        $tools = $this->makeTools($profile);
+        $tools->model('55');
+        $responseXml = $tools->sefazConsultaChave($accessKey);
+        $parsed = $this->parseConsultationResponse($responseXml);
+
+        return [
+            ...$parsed,
+            'request_xml' => $tools->lastRequest,
+            'response_xml' => $responseXml,
+        ];
+    }
+
+    public function manifest(
+        FiscalProfile $profile,
+        string $accessKey,
+        int $eventType,
+        string $justification = '',
+    ): array {
+        $tools = $this->makeTools($profile);
+        $tools->model('55');
+        $responseXml = $tools->sefazManifesta($accessKey, $eventType, $justification);
+        $parsed = $this->parseManifestationResponse($responseXml);
+
+        return [
+            ...$parsed,
+            'request_xml' => $tools->lastRequest,
+            'response_xml' => $responseXml,
+        ];
+    }
+
     protected function makeTools(FiscalProfile $profile): Tools
     {
         $config = $this->config();
@@ -133,6 +165,49 @@ class IncomingNfeSefazGateway
             'last_nsu' => trim((string) $xpath->evaluate('string(//*[local-name()="ultNSU"][1])')),
             'max_nsu' => trim((string) $xpath->evaluate('string(//*[local-name()="maxNSU"][1])')),
             'documents' => $documents,
+        ];
+    }
+
+    protected function parseConsultationResponse(string $xml): array
+    {
+        $document = new DOMDocument('1.0', 'UTF-8');
+
+        if (!$document->loadXML($xml)) {
+            throw new RuntimeException('A SEFAZ retornou um XML invalido na consulta de chave da NF-e.');
+        }
+
+        $xpath = new DOMXPath($document);
+        $protocolStatus = trim((string) $xpath->evaluate('string(//*[local-name()="protNFe"]//*[local-name()="cStat"][1])'));
+        $protocolReason = trim((string) $xpath->evaluate('string(//*[local-name()="protNFe"]//*[local-name()="xMotivo"][1])'));
+
+        return [
+            'status_code' => $protocolStatus !== '' ? $protocolStatus : trim((string) $xpath->evaluate('string(//*[local-name()="cStat"][1])')),
+            'reason' => $protocolReason !== '' ? $protocolReason : trim((string) $xpath->evaluate('string(//*[local-name()="xMotivo"][1])')),
+            'protocol' => trim((string) $xpath->evaluate('string(//*[local-name()="protNFe"]//*[local-name()="nProt"][1])')),
+            'received_at' => trim((string) $xpath->evaluate('string(//*[local-name()="protNFe"]//*[local-name()="dhRecbto"][1])')),
+            'access_key' => trim((string) $xpath->evaluate('string(//*[local-name()="protNFe"]//*[local-name()="chNFe"][1])')),
+        ];
+    }
+
+    protected function parseManifestationResponse(string $xml): array
+    {
+        $document = new DOMDocument('1.0', 'UTF-8');
+
+        if (!$document->loadXML($xml)) {
+            throw new RuntimeException('A SEFAZ retornou um XML invalido na manifestacao do destinatario.');
+        }
+
+        $xpath = new DOMXPath($document);
+
+        return [
+            'status_code' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="cStat"][1])'))
+                ?: trim((string) $xpath->evaluate('string(//*[local-name()="cStat"][1])')),
+            'reason' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="xMotivo"][1])'))
+                ?: trim((string) $xpath->evaluate('string(//*[local-name()="xMotivo"][1])')),
+            'event_type' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="tpEvento"][1])')),
+            'sequence' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="nSeqEvento"][1])')),
+            'registered_at' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="dhRegEvento"][1])')),
+            'protocol' => trim((string) $xpath->evaluate('string(//*[local-name()="retEvento"]//*[local-name()="nProt"][1])')),
         ];
     }
 

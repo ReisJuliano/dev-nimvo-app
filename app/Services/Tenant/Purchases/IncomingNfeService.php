@@ -4,6 +4,7 @@ namespace App\Services\Tenant\Purchases;
 
 use App\Models\Tenant\AppSetting;
 use App\Models\Tenant\FiscalProfile;
+use App\Models\Tenant\IncomingNfeManifestation;
 use App\Models\Tenant\IncomingNfeDocument;
 use App\Models\Tenant\IncomingNfeItem;
 use App\Models\Tenant\Product;
@@ -26,6 +27,7 @@ class IncomingNfeService
         protected IncomingNfeXmlParser $parser,
         protected IncomingNfeStorage $storage,
         protected IncomingNfeSefazGateway $sefazGateway,
+        protected IncomingNfeFiscalAnalyzer $fiscalAnalyzer,
         protected InventoryMovementService $inventoryMovementService,
         protected ProductService $productService,
         protected DanfePdfRenderer $danfePdfRenderer,
@@ -142,6 +144,99 @@ class IncomingNfeService
             ->findOrFail($document->id);
     }
 
+    public function validateWithSefaz(IncomingNfeDocument $document): IncomingNfeDocument
+    {
+        $profile = $this->activeFiscalProfile();
+
+        if (!$profile) {
+            throw ValidationException::withMessages([
+                'fiscal_profile' => 'Ative um perfil fiscal para consultar a chave da NF-e na SEFAZ.',
+            ]);
+        }
+
+        $response = $this->sefazGateway->consultAccessKey($profile, $document->access_key);
+
+        $document->forceFill([
+            'fiscal_status' => $this->mapSefazStatusToDocument((string) ($response['status_code'] ?? '')),
+            'sefaz_status_code' => $response['status_code'] ?? $document->sefaz_status_code,
+            'sefaz_status_reason' => $response['reason'] ?? $document->sefaz_status_reason,
+            'sefaz_protocol' => $response['protocol'] ?? $document->sefaz_protocol,
+            'sefaz_verified_at' => now(),
+            'authenticity_status' => in_array((string) ($response['status_code'] ?? ''), ['100', '150', '101', '151', '155', '110', '301', '302', '303'], true)
+                ? 'verified'
+                : 'pending_sefaz',
+        ])->save();
+
+        $this->recalculateDocument($document->fresh(['items.product', 'purchase.items']));
+
+        return $document->fresh(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price', 'manifestations']);
+    }
+
+    public function manifest(IncomingNfeDocument $document, array $input): IncomingNfeDocument
+    {
+        $validated = Validator::make($input, [
+            'event' => ['required', 'string', Rule::in(['science', 'confirm', 'unknown', 'not_realized'])],
+            'justification' => ['nullable', 'string', 'max:255', Rule::requiredIf(($input['event'] ?? null) === 'not_realized')],
+        ])->validate();
+
+        $profile = $this->activeFiscalProfile();
+
+        if (!$profile) {
+            throw ValidationException::withMessages([
+                'fiscal_profile' => 'Ative um perfil fiscal para manifestar o destinatario na SEFAZ.',
+            ]);
+        }
+
+        $eventType = $this->manifestEventCode($validated['event']);
+        $response = $this->sefazGateway->manifest(
+            $profile,
+            $document->access_key,
+            $eventType,
+            (string) ($validated['justification'] ?? ''),
+        );
+
+        IncomingNfeManifestation::query()->create([
+            'document_id' => $document->id,
+            'event_type' => $validated['event'],
+            'status' => in_array((string) ($response['status_code'] ?? ''), ['135', '136', '573'], true) ? 'processed' : 'review',
+            'sefaz_status_code' => $response['status_code'] ?? null,
+            'sefaz_status_reason' => $response['reason'] ?? null,
+            'justification' => $validated['justification'] ?? null,
+            'request_xml' => $response['request_xml'] ?? null,
+            'response_xml' => $response['response_xml'] ?? null,
+            'payload' => [
+                'protocol' => $response['protocol'] ?? null,
+                'registered_at' => $response['registered_at'] ?? null,
+                'sequence' => $response['sequence'] ?? null,
+            ],
+            'manifested_at' => filled($response['registered_at'] ?? null) ? Carbon::parse((string) $response['registered_at']) : now(),
+        ]);
+
+        $document->forceFill([
+            'manifest_status' => $validated['event'],
+            'last_manifested_at' => now(),
+        ])->save();
+
+        return $document->fresh(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price', 'manifestations']);
+    }
+
+    public function recordPhysicalReceipt(IncomingNfeDocument $document, array $input): IncomingNfeDocument
+    {
+        $validated = Validator::make($input, [
+            'received_at' => ['nullable', 'date'],
+        ])->validate();
+
+        $document->forceFill([
+            'physical_received_at' => filled($validated['received_at'] ?? null)
+                ? Carbon::parse((string) $validated['received_at'])
+                : now(),
+        ])->save();
+
+        $this->recalculateDocument($document->fresh(['items.product', 'purchase.items']));
+
+        return $document->fresh(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price']);
+    }
+
     public function quickCreateSupplier(IncomingNfeDocument $document, array $input = []): IncomingNfeDocument
     {
         $document->loadMissing('supplier');
@@ -183,6 +278,7 @@ class IncomingNfeService
     {
         $validated = Validator::make($input, [
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
             'items' => ['nullable', 'array'],
             'items.*.id' => ['required', 'integer'],
             'items.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
@@ -204,6 +300,22 @@ class IncomingNfeService
 
             if (array_key_exists('supplier_id', $validated)) {
                 $document->forceFill(['supplier_id' => $validated['supplier_id']])->save();
+            }
+
+            if (array_key_exists('purchase_id', $validated)) {
+                $purchase = filled($validated['purchase_id'])
+                    ? Purchase::query()->with('items')->findOrFail((int) $validated['purchase_id'])
+                    : null;
+
+                if ($purchase && filled($purchase->stock_applied_at) && $purchase->id !== $document->purchase_id) {
+                    throw ValidationException::withMessages([
+                        'purchase_id' => 'Selecione um pedido de compra ainda nao consolidado no estoque.',
+                    ]);
+                }
+
+                $document->forceFill([
+                    'purchase_id' => $purchase?->id,
+                ])->save();
             }
 
             foreach ($validated['items'] ?? [] as $entry) {
@@ -236,7 +348,7 @@ class IncomingNfeService
 
             $this->recalculateDocument($document->fresh(['items.product', 'purchase']));
 
-            return $document->fresh(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price']);
+            return $document->fresh(['supplier:id,name,document', 'purchase.items', 'items.product:id,name,code,barcode,ncm,cost_price']);
         });
     }
 
@@ -245,6 +357,8 @@ class IncomingNfeService
         $validated = Validator::make($input, [
             'cost_method' => ['nullable', Rule::in(['last_cost', 'average_cost'])],
             'auto_create_missing' => ['nullable', 'boolean'],
+            'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
+            'received_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
         ])->validate();
 
@@ -252,7 +366,7 @@ class IncomingNfeService
 
         return DB::transaction(function () use ($document, $validated, $costMethod, $userId) {
             $document = IncomingNfeDocument::query()
-                ->with(['items.product', 'purchase.items'])
+                ->with(['items.product', 'purchase.items', 'taxCredits'])
                 ->lockForUpdate()
                 ->findOrFail($document->id);
 
@@ -279,11 +393,35 @@ class IncomingNfeService
                 ]);
             }
 
+            if (filled($validated['purchase_id'] ?? null) && (int) $validated['purchase_id'] !== (int) $document->purchase_id) {
+                $purchase = Purchase::query()->with('items')->lockForUpdate()->findOrFail((int) $validated['purchase_id']);
+
+                if (filled($purchase->stock_applied_at)) {
+                    throw ValidationException::withMessages([
+                        'purchase_id' => 'Esse pedido de compra ja foi consolidado no estoque.',
+                    ]);
+                }
+
+                $document->forceFill(['purchase_id' => $purchase->id])->save();
+            }
+
             $purchase = $document->purchase ?: new Purchase();
             $subtotal = round((float) $document->items->sum(fn (IncomingNfeItem $item) => (float) $item->total_price), 2);
             $freight = round((float) $document->freight_total, 2);
             $total = round((float) ($document->invoice_total ?: ($subtotal + $freight)), 2);
-            $receivedAt = $document->authorized_at ?: $document->issued_at ?: now();
+            $receivedAt = filled($validated['received_at'] ?? null)
+                ? Carbon::parse((string) $validated['received_at'])
+                : ($document->authorized_at ?: $document->issued_at ?: now());
+            $originalPurchaseSnapshot = $purchase->exists
+                ? $purchase->items->map(fn ($entry) => [
+                    'purchase_item_id' => $entry->id,
+                    'product_id' => $entry->product_id,
+                    'product_name' => $entry->product_name,
+                    'quantity' => (float) $entry->quantity,
+                    'unit_cost' => (float) $entry->unit_cost,
+                    'total' => (float) $entry->total,
+                ])->values()->all()
+                : [];
 
             $purchase->fill([
                 'supplier_id' => $document->supplier_id,
@@ -306,13 +444,13 @@ class IncomingNfeService
 
             foreach ($document->items as $incomingItem) {
                 $product = Product::query()->lockForUpdate()->findOrFail((int) $incomingItem->product_id);
-                $unitCost = round((float) $incomingItem->unit_price, 4);
+                $unitCost = round($this->resolvedAcquisitionUnitCost($document, $incomingItem), 4);
                 $purchaseItem = $purchase->items()->create([
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'quantity' => round((float) $incomingItem->quantity, 3),
                     'unit_cost' => round($unitCost, 2),
-                    'total' => round((float) $incomingItem->total_price, 2),
+                    'total' => round($unitCost * (float) $incomingItem->quantity, 2),
                 ]);
 
                 $this->updateProductCost($product, (float) $incomingItem->quantity, $unitCost, $costMethod, $document->supplier_id, $incomingItem);
@@ -334,31 +472,60 @@ class IncomingNfeService
             $document->forceFill([
                 'purchase_id' => $purchase->id,
                 'status' => 'processed',
+                'physical_received_at' => $receivedAt,
                 'last_processed_at' => now(),
+                'metadata' => array_merge((array) $document->metadata, [
+                    'linked_purchase_before_receipt' => $originalPurchaseSnapshot,
+                ]),
             ])->save();
 
             $this->recalculateDocument($document->fresh(['items.product', 'purchase']));
 
-            return $document->fresh(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price']);
+            return $document->fresh(['supplier:id,name,document', 'purchase.items', 'items.product:id,name,code,barcode,ncm,cost_price']);
         });
     }
 
     public function serializeDocument(IncomingNfeDocument $document): array
     {
-        $document->loadMissing(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price']);
+        $document->loadMissing([
+            'supplier:id,name,document',
+            'purchase.items',
+            'items.product:id,name,code,barcode,ncm,cost_price',
+            'manifestations',
+            'bookkeepingEntries',
+            'taxCredits',
+        ]);
         $snapshot = is_array($document->validation_snapshot) ? $document->validation_snapshot : [];
+        $fiscalSnapshot = is_array($document->fiscal_snapshot) ? $document->fiscal_snapshot : [];
+        $matchSnapshot = is_array($document->match_snapshot) ? $document->match_snapshot : [];
+        $bookkeepingSnapshot = is_array($document->bookkeeping_snapshot) ? $document->bookkeeping_snapshot : [];
 
         return [
             'id' => $document->id,
             'purchase_id' => $document->purchase_id,
+            'purchase_code' => $document->purchase?->code,
             'supplier_id' => $document->supplier_id,
             'supplier_name' => $document->supplier?->name ?? $document->supplier_name,
             'supplier_document' => $document->supplier?->document ?? $document->supplier_document,
             'access_key' => $document->access_key,
             'status' => $document->status,
+            'fiscal_status' => $document->fiscal_status,
+            'sefaz_status_code' => $document->sefaz_status_code,
+            'sefaz_status_reason' => $document->sefaz_status_reason,
+            'sefaz_protocol' => $document->sefaz_protocol,
+            'sefaz_verified_at' => $document->sefaz_verified_at?->toIso8601String(),
+            'signature_status' => $document->signature_status,
+            'signature_subject' => $document->signature_subject,
+            'signature_checked_at' => $document->signature_checked_at?->toIso8601String(),
+            'authenticity_status' => $document->authenticity_status,
+            'bookkeeping_status' => $document->bookkeeping_status,
+            'physical_receipt_status' => $document->physical_receipt_status,
+            'physical_received_at' => $document->physical_received_at?->toIso8601String(),
             'source' => $document->source,
             'manifest_status' => $document->manifest_status,
+            'last_manifested_at' => $document->last_manifested_at?->toIso8601String(),
             'distribution_nsu' => $document->distribution_nsu,
+            'document_model' => $document->document_model,
             'number' => $document->number,
             'series' => $document->series,
             'issued_at' => $document->issued_at?->toIso8601String(),
@@ -378,8 +545,56 @@ class IncomingNfeService
                 'new_products' => (int) ($snapshot['new_products'] ?? 0),
                 'price_changes' => (int) ($snapshot['price_changes'] ?? 0),
                 'ncm_mismatches' => (int) ($snapshot['ncm_mismatches'] ?? 0),
+                'tax_gaps' => (int) ($snapshot['tax_gaps'] ?? 0),
+                'three_way_divergences' => (int) ($snapshot['three_way_divergences'] ?? 0),
+                'credit_suggestions' => (int) ($snapshot['credit_suggestions'] ?? 0),
                 'alerts' => $snapshot['alerts'] ?? [],
             ],
+            'fiscal' => $fiscalSnapshot,
+            'matching' => $matchSnapshot,
+            'bookkeeping' => array_merge($bookkeepingSnapshot, [
+                'entries' => $document->bookkeepingEntries
+                    ->sortBy('entry_type')
+                    ->values()
+                    ->map(fn ($entry) => [
+                        'id' => $entry->id,
+                        'entry_type' => $entry->entry_type,
+                        'status' => $entry->status,
+                        'period_reference' => $entry->period_reference,
+                        'reference_code' => $entry->reference_code,
+                        'generated_at' => $entry->generated_at?->toIso8601String(),
+                    ])
+                    ->all(),
+            ]),
+            'tax_credits' => $document->taxCredits
+                ->sortBy(fn ($credit) => sprintf('%s-%010d', $credit->tax_type, $credit->id))
+                ->values()
+                ->map(fn ($credit) => [
+                    'id' => $credit->id,
+                    'item_id' => $credit->incoming_nfe_item_id,
+                    'tax_type' => $credit->tax_type,
+                    'status' => $credit->status,
+                    'recoverable' => (bool) $credit->recoverable,
+                    'amount' => (float) $credit->amount,
+                    'basis' => $credit->basis !== null ? (float) $credit->basis : null,
+                    'rate' => $credit->rate !== null ? (float) $credit->rate : null,
+                    'description' => $credit->description,
+                    'available_at' => $credit->available_at?->toDateString(),
+                ])
+                ->all(),
+            'manifestations' => $document->manifestations
+                ->sortByDesc('manifested_at')
+                ->values()
+                ->map(fn ($manifestation) => [
+                    'id' => $manifestation->id,
+                    'event_type' => $manifestation->event_type,
+                    'status' => $manifestation->status,
+                    'sefaz_status_code' => $manifestation->sefaz_status_code,
+                    'sefaz_status_reason' => $manifestation->sefaz_status_reason,
+                    'justification' => $manifestation->justification,
+                    'manifested_at' => $manifestation->manifested_at?->toIso8601String(),
+                ])
+                ->all(),
             'items' => $document->items
                 ->sortBy('item_number')
                 ->values()
@@ -392,8 +607,34 @@ class IncomingNfeService
                     'supplier_code' => $item->supplier_code,
                     'barcode' => $item->barcode,
                     'description' => $item->description,
+                    'purchase_order_reference' => $item->purchase_order_reference,
+                    'purchase_order_item' => $item->purchase_order_item,
                     'ncm' => $item->ncm,
+                    'cest' => $item->cest,
                     'cfop' => $item->cfop,
+                    'origin_code' => $item->origin_code,
+                    'icms_cst_csosn' => $item->icms_cst_csosn,
+                    'icms_base' => $item->icms_base !== null ? (float) $item->icms_base : null,
+                    'icms_rate' => $item->icms_rate !== null ? (float) $item->icms_rate : null,
+                    'icms_amount' => $item->icms_amount !== null ? (float) $item->icms_amount : null,
+                    'icms_st_base' => $item->icms_st_base !== null ? (float) $item->icms_st_base : null,
+                    'icms_st_rate' => $item->icms_st_rate !== null ? (float) $item->icms_st_rate : null,
+                    'icms_st_amount' => $item->icms_st_amount !== null ? (float) $item->icms_st_amount : null,
+                    'icms_mva_rate' => $item->icms_mva_rate !== null ? (float) $item->icms_mva_rate : null,
+                    'difal_amount' => $item->difal_amount !== null ? (float) $item->difal_amount : null,
+                    'fcp_st_amount' => $item->fcp_st_amount !== null ? (float) $item->fcp_st_amount : null,
+                    'ipi_cst' => $item->ipi_cst,
+                    'ipi_base' => $item->ipi_base !== null ? (float) $item->ipi_base : null,
+                    'ipi_rate' => $item->ipi_rate !== null ? (float) $item->ipi_rate : null,
+                    'ipi_amount' => $item->ipi_amount !== null ? (float) $item->ipi_amount : null,
+                    'pis_cst' => $item->pis_cst,
+                    'pis_base' => $item->pis_base !== null ? (float) $item->pis_base : null,
+                    'pis_rate' => $item->pis_rate !== null ? (float) $item->pis_rate : null,
+                    'pis_amount' => $item->pis_amount !== null ? (float) $item->pis_amount : null,
+                    'cofins_cst' => $item->cofins_cst,
+                    'cofins_base' => $item->cofins_base !== null ? (float) $item->cofins_base : null,
+                    'cofins_rate' => $item->cofins_rate !== null ? (float) $item->cofins_rate : null,
+                    'cofins_amount' => $item->cofins_amount !== null ? (float) $item->cofins_amount : null,
                     'unit' => $item->unit,
                     'quantity' => (float) $item->quantity,
                     'unit_price' => (float) $item->unit_price,
@@ -402,6 +643,7 @@ class IncomingNfeService
                     'match_type' => $item->match_type,
                     'match_confidence' => $item->match_confidence !== null ? (float) $item->match_confidence : null,
                     'validation_warnings' => $item->validation_warnings ?? [],
+                    'fiscal_snapshot' => $item->fiscal_snapshot ?? [],
                     'suggested_product_id' => data_get($item->metadata, 'suggested_product_id'),
                     'suggested_product_name' => data_get($item->metadata, 'suggested_product_name'),
                 ])
@@ -439,37 +681,66 @@ class IncomingNfeService
             }
 
             $supplier = $this->findSupplier($parsed);
+            $profile = $this->activeFiscalProfile();
             $document = $existing ?: new IncomingNfeDocument();
             $document->fill([
                 'purchase_id' => $existing?->purchase_id,
                 'supplier_id' => $supplier?->id,
                 'access_key' => $parsed['access_key'],
                 'status' => data_get($parsed, 'metadata.summary_only') ? 'summary_only' : 'pending_products',
+                'fiscal_status' => $parsed['fiscal_status'] ?? 'pending_review',
                 'source' => $source,
                 'manifest_status' => data_get($parsed, 'metadata.summary_only') ? 'pending' : 'available',
                 'distribution_nsu' => $distributionNsu ?: $existing?->distribution_nsu,
                 'environment' => $parsed['environment'],
+                'document_model' => $parsed['document_model'] ?? data_get($parsed, 'metadata.model'),
                 'series' => $parsed['series'],
                 'number' => $parsed['number'],
                 'operation_nature' => $parsed['operation_nature'],
+                'sefaz_status_code' => $parsed['sefaz_status_code'] ?? null,
+                'sefaz_status_reason' => $parsed['sefaz_status_reason'] ?? null,
+                'sefaz_protocol' => $parsed['sefaz_protocol'] ?? null,
+                'signature_status' => $parsed['signature_status'] ?? 'pending',
+                'signature_subject' => $parsed['signature_subject'] ?? null,
+                'signature_checked_at' => array_key_exists('signature_status', $parsed) ? now() : $existing?->signature_checked_at,
+                'authenticity_status' => $parsed['authenticity_status'] ?? 'pending',
                 'supplier_name' => data_get($parsed, 'supplier.name'),
                 'supplier_trade_name' => data_get($parsed, 'supplier.trade_name'),
                 'supplier_document' => data_get($parsed, 'supplier.document'),
                 'supplier_state_registration' => data_get($parsed, 'supplier.state_registration'),
-                'recipient_name' => data_get($parsed, 'recipient.name') ?: $this->activeFiscalProfile()?->company_name,
-                'recipient_document' => data_get($parsed, 'recipient.document') ?: $this->activeFiscalProfile()?->cnpj,
+                'recipient_name' => data_get($parsed, 'recipient.name') ?: $profile?->company_name,
+                'recipient_document' => data_get($parsed, 'recipient.document') ?: $profile?->cnpj,
                 'products_total' => data_get($parsed, 'totals.products_total', 0),
                 'freight_total' => data_get($parsed, 'totals.freight_total', 0),
                 'invoice_total' => data_get($parsed, 'totals.invoice_total', 0),
                 'metadata' => array_filter([
                     'supplier' => data_get($parsed, 'supplier'),
-                    'recipient' => data_get($parsed, 'recipient'),
+                    'recipient' => array_filter(array_merge(
+                        (array) data_get($parsed, 'recipient', []),
+                        [
+                            'crt' => $profile?->crt,
+                        ],
+                    ), fn ($value) => $value !== null),
+                    'profile' => $profile ? [
+                        'crt' => $profile->crt,
+                        'cnpj' => $profile->cnpj,
+                        'company_name' => $profile->company_name,
+                    ] : null,
+                    'totals' => data_get($parsed, 'totals'),
                     'summary_only' => (bool) data_get($parsed, 'metadata.summary_only', false),
                     'schema' => $parsed['schema'] ?? null,
+                    'key_valid' => data_get($parsed, 'metadata.key_valid', null),
+                    'additional_info' => data_get($parsed, 'metadata.additional_info'),
+                    'complementary_info' => data_get($parsed, 'metadata.complementary_info'),
+                    'protocol_received_at' => data_get($parsed, 'metadata.protocol_received_at'),
+                    'signature_message' => data_get($parsed, 'metadata.signature_message'),
                 ], fn ($value) => $value !== null),
                 'issued_at' => $parsed['issued_at'] ?? null,
                 'authorized_at' => $parsed['authorized_at'] ?? null,
                 'last_synced_at' => $source === 'sefaz_sync' ? now() : $existing?->last_synced_at,
+                'sefaz_verified_at' => $source === 'sefaz_sync' && !data_get($parsed, 'metadata.summary_only')
+                    ? now()
+                    : $existing?->sefaz_verified_at,
             ])->save();
 
             $paths = ['xml' => $existing?->xml_path, 'danfe' => $existing?->danfe_path];
@@ -501,8 +772,34 @@ class IncomingNfeService
                         'supplier_code' => $itemData['supplier_code'],
                         'barcode' => $itemData['barcode'],
                         'description' => $itemData['description'],
+                        'purchase_order_reference' => $itemData['purchase_order_reference'] ?? null,
+                        'purchase_order_item' => $itemData['purchase_order_item'] ?? null,
                         'ncm' => $itemData['ncm'],
+                        'cest' => $itemData['cest'] ?? null,
                         'cfop' => $itemData['cfop'],
+                        'origin_code' => $itemData['origin_code'] ?? null,
+                        'icms_cst_csosn' => $itemData['icms_cst_csosn'] ?? null,
+                        'icms_base' => $itemData['icms_base'] ?? null,
+                        'icms_rate' => $itemData['icms_rate'] ?? null,
+                        'icms_amount' => $itemData['icms_amount'] ?? null,
+                        'icms_st_base' => $itemData['icms_st_base'] ?? null,
+                        'icms_st_rate' => $itemData['icms_st_rate'] ?? null,
+                        'icms_st_amount' => $itemData['icms_st_amount'] ?? null,
+                        'icms_mva_rate' => $itemData['icms_mva_rate'] ?? null,
+                        'difal_amount' => $itemData['difal_amount'] ?? null,
+                        'fcp_st_amount' => $itemData['fcp_st_amount'] ?? null,
+                        'ipi_cst' => $itemData['ipi_cst'] ?? null,
+                        'ipi_base' => $itemData['ipi_base'] ?? null,
+                        'ipi_rate' => $itemData['ipi_rate'] ?? null,
+                        'ipi_amount' => $itemData['ipi_amount'] ?? null,
+                        'pis_cst' => $itemData['pis_cst'] ?? null,
+                        'pis_base' => $itemData['pis_base'] ?? null,
+                        'pis_rate' => $itemData['pis_rate'] ?? null,
+                        'pis_amount' => $itemData['pis_amount'] ?? null,
+                        'cofins_cst' => $itemData['cofins_cst'] ?? null,
+                        'cofins_base' => $itemData['cofins_base'] ?? null,
+                        'cofins_rate' => $itemData['cofins_rate'] ?? null,
+                        'cofins_amount' => $itemData['cofins_amount'] ?? null,
                         'unit' => $itemData['unit'],
                         'quantity' => $itemData['quantity'],
                         'unit_price' => $itemData['unit_price'],
@@ -511,7 +808,7 @@ class IncomingNfeService
                         'match_type' => $matched['match_type'],
                         'match_confidence' => $matched['match_confidence'],
                         'validation_warnings' => $matched['validation_warnings'],
-                        'metadata' => $matched['metadata'],
+                        'metadata' => array_merge((array) ($itemData['metadata'] ?? []), $matched['metadata']),
                     ]);
                 }
             }
@@ -524,13 +821,9 @@ class IncomingNfeService
 
     protected function recalculateDocument(IncomingNfeDocument $document): void
     {
-        $document->loadMissing(['items.product', 'purchase']);
-        $items = $document->items;
-        $matchedItems = $items->filter(fn (IncomingNfeItem $item) => filled($item->product_id))->count();
-        $pendingItems = $items->count() - $matchedItems;
-        $alerts = $items
-            ->flatMap(fn (IncomingNfeItem $item) => collect($item->validation_warnings ?? []))
-            ->values();
+        $document->loadMissing(['items.product', 'purchase.items']);
+        $analysis = $this->fiscalAnalyzer->analyze($document);
+        $pendingItems = (int) data_get($analysis, 'validation_snapshot.pending_items', 0);
 
         $document->forceFill([
             'status' => filled($document->purchase?->stock_applied_at)
@@ -538,15 +831,16 @@ class IncomingNfeService
                 : ((bool) data_get($document->metadata, 'summary_only')
                     ? 'summary_only'
                     : ($pendingItems > 0 ? 'pending_products' : 'ready')),
-            'validation_snapshot' => [
-                'matched_items' => $matchedItems,
-                'pending_items' => $pendingItems,
-                'new_products' => $items->where('match_status', 'pending')->count(),
-                'price_changes' => $alerts->where('code', 'price_change')->count(),
-                'ncm_mismatches' => $alerts->where('code', 'ncm_mismatch')->count(),
-                'alerts' => $alerts->all(),
-            ],
+            'validation_snapshot' => $analysis['validation_snapshot'],
+            'fiscal_snapshot' => $analysis['fiscal_snapshot'],
+            'match_snapshot' => $analysis['match_snapshot'],
+            'bookkeeping_snapshot' => $analysis['bookkeeping_snapshot'],
+            'bookkeeping_status' => $analysis['bookkeeping_status'],
+            'physical_receipt_status' => $analysis['physical_receipt_status'],
+            'last_audited_at' => now(),
         ])->save();
+
+        $this->fiscalAnalyzer->syncArtifacts($document->fresh(['items.product', 'purchase.items']), $analysis);
     }
 
     protected function createProductFromItem(IncomingNfeItem $item, IncomingNfeDocument $document, array $data): Product
@@ -613,6 +907,42 @@ class IncomingNfeService
         }
 
         $product->forceFill($payload)->save();
+    }
+
+    protected function resolvedAcquisitionUnitCost(IncomingNfeDocument $document, IncomingNfeItem $item): float
+    {
+        $quantity = max(0.001, (float) $item->quantity);
+        $productValue = (float) $item->total_price;
+        $freightShare = $this->allocatedDocumentExpense($document, $productValue, 'freight_total');
+        $otherShare = $this->allocatedDocumentExpense($document, $productValue, 'other_total')
+            + $this->allocatedDocumentExpense($document, $productValue, 'insurance_total');
+        $ipiComponent = $this->nonRecoverableIpiAmount($document, $item);
+
+        return round(($productValue + $freightShare + $otherShare + $ipiComponent) / $quantity, 4);
+    }
+
+    protected function allocatedDocumentExpense(IncomingNfeDocument $document, float $itemProductValue, string $metadataKey): float
+    {
+        $productsTotal = (float) ($document->products_total ?: 0);
+        $expenseTotal = (float) data_get($document->metadata, "totals.{$metadataKey}", 0);
+
+        if ($productsTotal <= 0 || $expenseTotal <= 0) {
+            return 0.0;
+        }
+
+        return round(($itemProductValue / $productsTotal) * $expenseTotal, 2);
+    }
+
+    protected function nonRecoverableIpiAmount(IncomingNfeDocument $document, IncomingNfeItem $item): float
+    {
+        $credit = $document->taxCredits
+            ->first(fn ($entry) => (int) $entry->incoming_nfe_item_id === (int) $item->id && $entry->tax_type === 'ipi');
+
+        if ($credit && $credit->recoverable) {
+            return 0.0;
+        }
+
+        return round((float) ($item->ipi_amount ?? 0), 2);
     }
 
     protected function resolveProductMatch(array $item, Collection $products, ?IncomingNfeItem $previous = null): array
@@ -778,6 +1108,27 @@ class IncomingNfeService
                 'recipient' => 'A NF-e selecionada nao pertence a empresa destinataria configurada neste tenant.',
             ]);
         }
+    }
+
+    protected function mapSefazStatusToDocument(string $statusCode): string
+    {
+        return match ($statusCode) {
+            '100', '150' => 'authorized',
+            '101', '151', '155' => 'cancelled',
+            '110', '301', '302', '303' => 'denied',
+            '204' => 'duplicate',
+            default => 'pending_review',
+        };
+    }
+
+    protected function manifestEventCode(string $event): int
+    {
+        return match ($event) {
+            'science' => \NFePHP\NFe\Tools::EVT_CIENCIA,
+            'confirm' => \NFePHP\NFe\Tools::EVT_CONFIRMACAO,
+            'unknown' => \NFePHP\NFe\Tools::EVT_DESCONHECIMENTO,
+            'not_realized' => \NFePHP\NFe\Tools::EVT_NAO_REALIZADA,
+        };
     }
 
     protected function activeFiscalProfile(): ?FiscalProfile

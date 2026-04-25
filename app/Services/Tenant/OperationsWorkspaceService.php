@@ -207,7 +207,14 @@ class OperationsWorkspaceService
             'suppliers' => $this->supplierOptions(),
             'products' => $this->productOptions(),
             'incoming_nfe_documents' => IncomingNfeDocument::query()
-                ->with(['supplier:id,name,document', 'purchase', 'items.product:id,name,code,barcode,ncm,cost_price'])
+                ->with([
+                    'supplier:id,name,document',
+                    'purchase.items',
+                    'items.product:id,name,code,barcode,ncm,cost_price',
+                    'manifestations',
+                    'bookkeepingEntries',
+                    'taxCredits',
+                ])
                 ->orderByDesc('issued_at')
                 ->orderByDesc('id')
                 ->limit(80)

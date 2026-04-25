@@ -165,6 +165,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/purchases/incoming-nfe/import-xml', [IncomingNfeApiController::class, 'importXml'])->name('api.purchases.incoming-nfe.import-xml');
             Route::put('/purchases/incoming-nfe/{document}/mappings', [IncomingNfeApiController::class, 'updateMappings'])->name('api.purchases.incoming-nfe.mappings.update');
             Route::post('/purchases/incoming-nfe/{document}/supplier/quick', [IncomingNfeApiController::class, 'quickCreateSupplier'])->name('api.purchases.incoming-nfe.supplier.quick');
+            Route::post('/purchases/incoming-nfe/{document}/validate-sefaz', [IncomingNfeApiController::class, 'validateWithSefaz'])->name('api.purchases.incoming-nfe.validate-sefaz');
+            Route::post('/purchases/incoming-nfe/{document}/manifest', [IncomingNfeApiController::class, 'manifest'])->name('api.purchases.incoming-nfe.manifest');
+            Route::post('/purchases/incoming-nfe/{document}/physical-receipt', [IncomingNfeApiController::class, 'recordPhysicalReceipt'])->name('api.purchases.incoming-nfe.physical-receipt');
             Route::post('/purchases/incoming-nfe/{document}/confirm', [IncomingNfeApiController::class, 'confirm'])->name('api.purchases.incoming-nfe.confirm');
             Route::post('/purchases/incoming-nfe/{document}/reprocess', [IncomingNfeApiController::class, 'reprocess'])->name('api.purchases.incoming-nfe.reprocess');
             Route::get('/purchases/incoming-nfe/{document}/xml', [IncomingNfeApiController::class, 'xml'])->name('api.purchases.incoming-nfe.xml');

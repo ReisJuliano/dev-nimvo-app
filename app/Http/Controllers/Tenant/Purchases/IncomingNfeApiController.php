@@ -97,6 +97,42 @@ class IncomingNfeApiController extends Controller
         ]);
     }
 
+    public function validateWithSefaz(IncomingNfeDocument $document, IncomingNfeService $service): JsonResponse
+    {
+        $document = $service->validateWithSefaz($document);
+
+        return response()->json([
+            'message' => 'Status da NF-e consultado na SEFAZ com sucesso.',
+            'record' => $service->serializeDocument($document),
+        ]);
+    }
+
+    public function manifest(
+        Request $request,
+        IncomingNfeDocument $document,
+        IncomingNfeService $service,
+    ): JsonResponse {
+        $document = $service->manifest($document, $request->all());
+
+        return response()->json([
+            'message' => 'Manifestacao do destinatario registrada com sucesso.',
+            'record' => $service->serializeDocument($document),
+        ]);
+    }
+
+    public function recordPhysicalReceipt(
+        Request $request,
+        IncomingNfeDocument $document,
+        IncomingNfeService $service,
+    ): JsonResponse {
+        $document = $service->recordPhysicalReceipt($document, $request->all());
+
+        return response()->json([
+            'message' => 'Recebimento fisico registrado com sucesso.',
+            'record' => $service->serializeDocument($document),
+        ]);
+    }
+
     public function xml(IncomingNfeDocument $document, IncomingNfeStorage $storage)
     {
         $contents = $storage->readXml($document->xml_path);
