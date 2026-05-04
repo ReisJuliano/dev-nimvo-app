@@ -6,6 +6,8 @@ use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
+use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
+use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
@@ -55,6 +57,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
+        Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
         Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', OperationsPageController::class)->defaults('module', 'compras')->name('purchases.index');
@@ -110,6 +113,12 @@ Route::middleware('auth')->group(function () {
             ->name('fiscal.consultations.sales.cancel');
         Route::post('/consultas-cancelamentos/vendas/{sale}/contingencia', FiscalSaleContingencyController::class)
             ->name('fiscal.consultations.sales.contingency');
+        Route::post('/venda-condicional', [ConditionalSalesController::class, 'store'])
+            ->name('conditional-sales.store');
+        Route::post('/venda-condicional/{conditionalSale}/devolver', [ConditionalSalesController::class, 'returnItems'])
+            ->name('conditional-sales.return-items');
+        Route::post('/venda-condicional/{conditionalSale}/finalizar', [ConditionalSalesController::class, 'finalize'])
+            ->name('conditional-sales.finalize');
         Route::post('/consultas-cancelamentos/inutilizacoes', FiscalNumberInutilizationController::class)
             ->name('fiscal.consultations.inutilizations.store');
         Route::post('/consultas-cancelamentos/contingencia/retry', FiscalContingencyRetryController::class)
