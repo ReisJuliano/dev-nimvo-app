@@ -41,7 +41,7 @@ fi
 echo '[deploy] running database migrations'
 php artisan migrate --force
 
-is_multi_database_tenancy="$(php -r 'require __DIR__ . "/../vendor/autoload.php"; $app = require __DIR__ . "/../bootstrap/app.php"; $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class); $kernel->bootstrap(); echo config("tenancy.dev_single_database") ? "0" : "1";')"
+is_multi_database_tenancy="$(APP_BASE_PATH="$APP_DIR" php -r 'require getenv("APP_BASE_PATH") . "/vendor/autoload.php"; $app = require getenv("APP_BASE_PATH") . "/bootstrap/app.php"; $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class); $kernel->bootstrap(); echo config("tenancy.dev_single_database") ? "0" : "1";')"
 
 if [ "$is_multi_database_tenancy" = "1" ]; then
   echo '[deploy] running tenant database migrations'
