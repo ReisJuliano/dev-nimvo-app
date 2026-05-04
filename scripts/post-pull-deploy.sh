@@ -41,6 +41,13 @@ fi
 echo '[deploy] running database migrations'
 php artisan migrate --force
 
+is_multi_database_tenancy="$(php -r 'require __DIR__ . "/../vendor/autoload.php"; $app = require __DIR__ . "/../bootstrap/app.php"; $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class); $kernel->bootstrap(); echo config("tenancy.dev_single_database") ? "0" : "1";')"
+
+if [ "$is_multi_database_tenancy" = "1" ]; then
+  echo '[deploy] running tenant database migrations'
+  php artisan tenants:migrate --force
+fi
+
 if [ ! -L public/storage ] && [ -d storage/app/public ]; then
   echo '[deploy] creating storage symlink'
   php artisan storage:link || true
