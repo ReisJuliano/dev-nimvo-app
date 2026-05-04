@@ -74,4 +74,9 @@ class Product extends Model
     {
         return $this->hasMany(SaleItem::class);
     }
+
+    public function conditionalSaleItems(): HasMany
+    {
+        return $this->hasMany(ConditionalSaleItem::class);
+    }
 }
