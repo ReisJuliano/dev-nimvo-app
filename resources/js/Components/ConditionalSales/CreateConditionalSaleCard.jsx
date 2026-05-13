@@ -112,19 +112,10 @@ export default function CreateConditionalSaleCard({
     onAddItem,
     onRemoveItem,
     onItemChange,
+    embedded = false,
 }) {
-    return (
-        <section className="products-table-card">
-            <div className="products-table-header">
-                <div>
-                    <h2>Nova retirada</h2>
-                    <p>Total previsto {formatMoney(totalPreview)}</p>
-                </div>
-                <span className="ui-badge warning">Abertura</span>
-            </div>
-
-            <div className="products-table-scroll" style={{ padding: '1rem' }}>
-                <form className="conditional-form-grid" onSubmit={onSubmit}>
+    const formBody = (
+        <form className="conditional-form-grid" onSubmit={onSubmit}>
                     <label className="products-sidebar-field">
                         <span>Cliente</span>
                         <select
@@ -204,6 +195,32 @@ export default function CreateConditionalSaleCard({
                         {form.processing ? 'Salvando...' : 'Criar condicional'}
                     </ActionButton>
                 </form>
+    )
+
+    if (embedded) {
+        return (
+            <div className="conditional-create-embedded">
+                <div className="conditional-create-meta">
+                    <span className="ui-badge warning">Resumo</span>
+                    <span className="conditional-create-total">Total previsto <strong>{formatMoney(totalPreview)}</strong></span>
+                </div>
+                {formBody}
+            </div>
+        )
+    }
+
+    return (
+        <section className="products-table-card">
+            <div className="products-table-header">
+                <div>
+                    <h2>Nova retirada</h2>
+                    <p>Total previsto {formatMoney(totalPreview)}</p>
+                </div>
+                <span className="ui-badge warning">Abertura</span>
+            </div>
+
+            <div className="products-table-scroll" style={{ padding: '1rem' }}>
+                {formBody}
             </div>
         </section>
     )

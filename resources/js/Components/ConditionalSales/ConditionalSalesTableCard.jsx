@@ -13,29 +13,32 @@ export default function ConditionalSalesTableCard({
     filters,
     onStatusChange,
     onSelect,
+    hideStatusFilter = false,
 }) {
     return (
-        <section className="products-table-card">
-            <div className="products-table-header">
+        <section className="products-table-card conditional-list-card">
+            <div className="products-table-header conditional-list-head">
                 <div>
-                    <h2>Condicionais</h2>
-                    <p>{conditionals.length} registro(s)</p>
+                    <h2>Carteira</h2>
+                    <p>{conditionals.length} registro(s) neste filtro</p>
                 </div>
-                <label className="products-sidebar-field" style={{ minWidth: '12rem' }}>
-                    <span>Status</span>
-                    <select className="products-input" value={filters.status} onChange={(event) => onStatusChange(event.target.value)}>
-                        {statusOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                {hideStatusFilter ? null : (
+                    <label className="products-sidebar-field" style={{ minWidth: '12rem' }}>
+                        <span>Status</span>
+                        <select className="products-input" value={filters.status} onChange={(event) => onStatusChange(event.target.value)}>
+                            {statusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                )}
             </div>
 
             <div className="conditional-table-wrap">
                 {conditionals.length ? (
-                    <table className="conditional-table">
+                    <table className="conditional-table conditional-table-dense">
                         <thead>
                             <tr>
                                 <th>Codigo</th>

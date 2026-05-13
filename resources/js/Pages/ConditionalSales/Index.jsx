@@ -1,10 +1,11 @@
 import { router, useForm } from '@inertiajs/react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateConditionalSaleCard'
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
-import MetricCard from '@/Components/ConditionalSales/MetricCard'
+import ConditionalSearchPanel from '@/Components/ConditionalSales/ConditionalSearchPanel'
 import ConditionalSalesTableCard from '@/Components/ConditionalSales/ConditionalSalesTableCard'
-import Toolbar from '@/Components/ConditionalSales/Toolbar'
+import ModalForm from '@/Components/UI/ModalForm'
+import ActionButton from '@/Components/UI/ActionButton'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatMoney, formatNumber } from '@/lib/format'
 import '@/Pages/Products/products.css'
@@ -84,16 +85,16 @@ function parseNumber(value) {
 
 function TopProductsCard({ topProducts }) {
     return (
-        <section className="products-table-card">
-            <div className="products-table-header">
+        <section className="products-table-card conditional-side-card">
+            <div className="products-table-header conditional-side-head">
                 <div>
-                    <h2>Mais levados</h2>
-                    <p>{topProducts.length} item(ns)</p>
+                    <h2>Top saidas</h2>
+                    <p>Itens mais levados</p>
                 </div>
             </div>
             <div className="conditional-table-wrap">
                 {topProducts.length ? (
-                    <table className="conditional-table">
+                    <table className="conditional-table conditional-table-dense">
                         <thead>
                             <tr>
                                 <th>Item</th>
@@ -112,9 +113,9 @@ function TopProductsCard({ topProducts }) {
                         </tbody>
                     </table>
                 ) : (
-                    <div className="conditional-empty">
+                    <div className="conditional-empty conditional-empty-tight">
                         <i className="fa-solid fa-box-open" />
-                        <strong>Sem historico</strong>
+                        <span>Sem historico</span>
                     </div>
                 )}
             </div>
@@ -133,6 +134,7 @@ export default function ConditionalSalesPage({
     statusOptions,
     filters,
 }) {
+    const [createOpen, setCreateOpen] = useState(false)
     const filterForm = useForm({
         search: filters.search || '',
         status: filters.status || 'open',
@@ -268,7 +270,10 @@ export default function ConditionalSalesPage({
         event.preventDefault()
         createForm.post('/venda-condicional', {
             preserveScroll: true,
-            onSuccess: () => createForm.setData(buildCreateDefaults()),
+            onSuccess: () => {
+                createForm.setData(buildCreateDefaults())
+                setCreateOpen(false)
+            },
         })
     }
 
@@ -349,77 +354,60 @@ export default function ConditionalSalesPage({
         })
     }
 
-    const metricCards = [
-        {
-            key: 'open',
-            title: 'Abertos',
-            value: formatNumber(summary.open_count),
-            chipLabel: 'Carteira',
-            chipTone: 'warning',
-            icon: 'fa-right-left',
-        },
-        {
-            key: 'overdue',
-            title: 'Atrasados',
-            value: formatNumber(summary.overdue_count),
-            chipLabel: 'Alerta',
-            chipTone: summary.overdue_count > 0 ? 'danger' : 'success',
-            icon: 'fa-triangle-exclamation',
-        },
-        {
-            key: 'outstanding',
-            title: 'Em aberto',
-            value: formatMoney(summary.outstanding_total),
-            chipLabel: 'Saldo',
-            chipTone: 'warning',
-            icon: 'fa-wallet',
-        },
-        {
-            key: 'conversion',
-            title: 'Conversao',
-            value: `${formatNumber(summary.conversion_rate)}%`,
-            chipLabel: formatNumber(summary.loss_quantity),
-            chipTone: summary.loss_quantity > 0 ? 'danger' : 'success',
-            icon: 'fa-chart-line',
-        },
+    const statPills = [
+        { key: 'open', label: 'Abertos', value: formatNumber(summary.open_count), tone: 'warning', icon: 'fa-right-left' },
+        { key: 'overdue', label: 'Atrasados', value: formatNumber(summary.overdue_count), tone: summary.overdue_count > 0 ? 'danger' : 'success', icon: 'fa-clock' },
+        { key: 'out', label: 'Saldo', value: formatMoney(summary.outstanding_total), tone: 'primary', icon: 'fa-wallet' },
+        { key: 'conv', label: 'Conv.', value: `${formatNumber(summary.conversion_rate)}%`, tone: summary.loss_quantity > 0 ? 'danger' : 'success', icon: 'fa-chart-line' },
     ]
 
     return (
         <AppLayout title="Condicional">
             <div className="products-page">
-                <section className="products-shell">
-                    <header className="products-header">
-                        <div className="products-title-block">
+                <section className="products-shell conditional-page-shell">
+                    <header className="conditional-page-head">
+                        <div className="conditional-page-head-text">
                             <span className="products-kicker">Prazo</span>
-                            <h1>Venda condicional</h1>
+                            <h1>Condicional</h1>
+                        </div>
+                        <div className="conditional-page-head-actions">
+                            <ActionButton icon="fa-plus" onClick={() => setCreateOpen(true)}>
+                                Nova condicional
+                            </ActionButton>
+                            <button
+                                type="button"
+                                className="conditional-fab-plus"
+                                title="Abrir formulario de nova condicional"
+                                aria-label="Nova condicional"
+                                onClick={() => setCreateOpen(true)}
+                            >
+                                <i className="fa-solid fa-plus" />
+                            </button>
                         </div>
                     </header>
 
-                    <Toolbar filterForm={filterForm} onReset={handleToolbarReset} onSubmit={handleToolbarSubmit} />
-
-                    <div className="products-summary-grid">
-                        {metricCards.map((card) => (
-                            <MetricCard key={card.key} {...card} />
+                    <div className="conditional-metrics-strip" role="list">
+                        {statPills.map((pill) => (
+                            <div key={pill.key} className={`conditional-stat-pill tone-${pill.tone}`} role="listitem">
+                                <i className={`fa-solid ${pill.icon}`} aria-hidden />
+                                <div>
+                                    <span>{pill.label}</span>
+                                    <strong>{pill.value}</strong>
+                                </div>
+                            </div>
                         ))}
                     </div>
 
-                    <div className="conditional-workspace">
-                        <div className="conditional-stack">
-                            <CreateConditionalSaleCard
-                                customers={customers}
-                                form={createForm}
-                                products={products}
-                                selectedCustomer={selectedCustomer}
-                                totalPreview={createPreview}
-                                onAddItem={addCreateItem}
-                                onItemChange={updateCreateItem}
-                                onRemoveItem={removeCreateItem}
-                                onSubmit={handleCreateSubmit}
-                            />
-                            <TopProductsCard topProducts={topProducts} />
-                        </div>
+                    <ConditionalSearchPanel
+                        filterForm={filterForm}
+                        statusOptions={statusOptions}
+                        onReset={handleToolbarReset}
+                        onStatusChange={handleStatusChange}
+                        onSubmit={handleToolbarSubmit}
+                    />
 
-                        <div className="conditional-main">
+                    <div className="conditional-main-split">
+                        <div className="conditional-main-col-list">
                             <ConditionalSalesTableCard
                                 conditionals={conditionals}
                                 filters={filterForm.data}
@@ -427,8 +415,10 @@ export default function ConditionalSalesPage({
                                 statusOptions={statusOptions}
                                 onSelect={handleSelectConditional}
                                 onStatusChange={handleStatusChange}
+                                hideStatusFilter
                             />
-
+                        </div>
+                        <aside className="conditional-main-col-side">
                             <ConditionalSaleDetailCard
                                 conditionalSale={selectedConditional}
                                 finalizeForm={finalizeForm}
@@ -446,10 +436,33 @@ export default function ConditionalSalesPage({
                                 onReturnItemChange={updateReturnItem}
                                 onReturnSubmit={handleReturnSubmit}
                             />
-                        </div>
+                            <TopProductsCard topProducts={topProducts} />
+                        </aside>
                     </div>
                 </section>
             </div>
+
+            <ModalForm
+                description="Preencha cliente, datas e itens. O estoque sera reservado na abertura."
+                icon="fa-shirt"
+                open={createOpen}
+                size="lg"
+                title="Nova condicional"
+                onClose={() => setCreateOpen(false)}
+            >
+                <CreateConditionalSaleCard
+                    customers={customers}
+                    embedded
+                    form={createForm}
+                    products={products}
+                    selectedCustomer={selectedCustomer}
+                    totalPreview={createPreview}
+                    onAddItem={addCreateItem}
+                    onItemChange={updateCreateItem}
+                    onRemoveItem={removeCreateItem}
+                    onSubmit={handleCreateSubmit}
+                />
+            </ModalForm>
         </AppLayout>
     )
 }

@@ -51,7 +51,7 @@ export default function ConditionalSaleDetailCard({
 }) {
     if (!conditionalSale) {
         return (
-            <section className="products-table-card">
+            <section className="products-table-card conditional-detail-card">
                 <div className="conditional-empty" style={{ minHeight: '14rem' }}>
                     <i className="fa-solid fa-magnifying-glass" />
                     <strong>Sem selecao</strong>
@@ -64,7 +64,7 @@ export default function ConditionalSaleDetailCard({
     const unresolvedItems = conditionalSale.items.filter((item) => Number(item.remaining_quantity) > 0)
 
     return (
-        <section className="products-table-card">
+        <section className="products-table-card conditional-detail-card">
             <div className="products-table-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                     <span className="data-list-icon" aria-hidden>{initials(conditionalSale.customer.name)}</span>
