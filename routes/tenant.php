@@ -10,6 +10,8 @@ use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
+use App\Http\Controllers\Tenant\Fashion\FashionModuleApiController;
+use App\Http\Controllers\Tenant\Fashion\FashionModulePageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalContingencyRetryController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
@@ -28,6 +30,8 @@ use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
+use App\Http\Controllers\Tenant\Shop\ShopApiController;
+use App\Http\Controllers\Tenant\Shop\ShopPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +46,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->name('login.store');
 });
+
+Route::get('/shop', ShopPageController::class)->name('shop.index');
+Route::post('/shop/api/checkout', [ShopApiController::class, 'checkout'])->name('shop.checkout');
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
@@ -109,6 +116,9 @@ Route::middleware('auth')->group(function () {
         })->name('shortages.index');
         Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
+        Route::get('/moda/{module}', FashionModulePageController::class)
+            ->where('module', 'promotions|returns|catalog|online-orders|whatsapp')
+            ->name('fashion.workspace');
         Route::post('/consultas-cancelamentos/vendas/{sale}/cancelar', FiscalSaleCancellationController::class)
             ->name('fiscal.consultations.sales.cancel');
         Route::post('/consultas-cancelamentos/vendas/{sale}/contingencia', FiscalSaleContingencyController::class)
@@ -170,6 +180,22 @@ Route::middleware('auth')->group(function () {
             Route::post('/orders/{orderDraft}/send-to-cashier', [OrdersApiController::class, 'sendToCashier'])->name('api.orders.send-to-cashier');
             Route::post('/orders/{orderDraft}/partial-checkout', [OrdersApiController::class, 'partialCheckout'])->name('api.orders.partial-checkout');
             Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');
+
+            Route::prefix('fashion')->group(function () {
+                Route::post('/promotions', [FashionModuleApiController::class, 'storePromotion'])->name('api.fashion.promotions.store');
+                Route::put('/promotions/{promotion}', [FashionModuleApiController::class, 'updatePromotion'])->name('api.fashion.promotions.update');
+                Route::delete('/promotions/{promotion}', [FashionModuleApiController::class, 'destroyPromotion'])->name('api.fashion.promotions.destroy');
+                Route::post('/returns', [FashionModuleApiController::class, 'storeReturn'])->name('api.fashion.returns.store');
+                Route::put('/returns/{returnExchange}', [FashionModuleApiController::class, 'updateReturn'])->name('api.fashion.returns.update');
+                Route::delete('/returns/{returnExchange}', [FashionModuleApiController::class, 'destroyReturn'])->name('api.fashion.returns.destroy');
+                Route::put('/catalog/settings', [FashionModuleApiController::class, 'updateCatalogSettings'])->name('api.fashion.catalog.settings');
+                Route::put('/catalog/products/{product}', [FashionModuleApiController::class, 'updateCatalogProduct'])->name('api.fashion.catalog.products.update');
+                Route::post('/online-orders', [FashionModuleApiController::class, 'storeOnlineOrder'])->name('api.fashion.online-orders.store');
+                Route::put('/online-orders/{orderDraft}', [FashionModuleApiController::class, 'updateOnlineOrder'])->name('api.fashion.online-orders.update');
+                Route::post('/online-orders/{orderDraft}/send-to-cashier', [FashionModuleApiController::class, 'sendOnlineOrderToCashier'])->name('api.fashion.online-orders.send-to-cashier');
+                Route::put('/whatsapp/settings', [FashionModuleApiController::class, 'updateWhatsAppSettings'])->name('api.fashion.whatsapp.settings');
+            });
+
             Route::post('/purchases/incoming-nfe/sync', [IncomingNfeApiController::class, 'sync'])->name('api.purchases.incoming-nfe.sync');
             Route::post('/purchases/incoming-nfe/import-xml', [IncomingNfeApiController::class, 'importXml'])->name('api.purchases.incoming-nfe.import-xml');
             Route::put('/purchases/incoming-nfe/{document}/mappings', [IncomingNfeApiController::class, 'updateMappings'])->name('api.purchases.incoming-nfe.mappings.update');

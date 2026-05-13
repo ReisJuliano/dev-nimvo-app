@@ -1,5 +1,4 @@
-import { Button, Card, Chip, Input, TextArea } from '@heroui/react'
-import { Plus, Trash2 } from 'lucide-react'
+import ActionButton from '@/Components/UI/ActionButton'
 import { formatMoney, formatNumber } from '@/lib/format'
 
 function CustomerHint({ customer }) {
@@ -8,61 +7,61 @@ function CustomerHint({ customer }) {
     }
 
     return (
-        <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-2xl bg-slate-50 p-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-500">Limite</span>
-                <strong className="mt-1 block text-sm text-foreground">{formatMoney(customer.credit_limit)}</strong>
+        <div className="conditional-customer-tiles">
+            <div>
+                <span>Limite</span>
+                <strong>{formatMoney(customer.credit_limit)}</strong>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-500">Livre</span>
-                <strong className="mt-1 block text-sm text-foreground">{formatMoney(customer.available_limit)}</strong>
+            <div>
+                <span>Livre</span>
+                <strong>{formatMoney(customer.available_limit)}</strong>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-500">Doc</span>
-                <strong className="mt-1 block text-sm text-foreground">{customer.document || '-'}</strong>
+            <div>
+                <span>Doc</span>
+                <strong>{customer.document || '-'}</strong>
             </div>
-            <div className="rounded-2xl bg-slate-50 p-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-500">Atrasos</span>
-                <strong className="mt-1 block text-sm text-foreground">{customer.overdue_count || 0}</strong>
+            <div>
+                <span>Atrasos</span>
+                <strong>{customer.overdue_count || 0}</strong>
             </div>
         </div>
     )
+}
+
+function ErrorLine({ message }) {
+    if (!message) {
+        return null
+    }
+
+    return <span className="conditional-error">{message}</span>
 }
 
 function ItemRow({ item, index, products, onChange, onRemove, disableRemove }) {
     const product = products.find((entry) => String(entry.id) === String(item.product_id))
 
     return (
-        <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Produto {index + 1}</span>
-                    <div className="flex flex-wrap gap-2">
-                        <Chip color="warning" size="sm" variant="flat">
-                            Estoque {formatNumber(product?.stock_quantity || 0)}
-                        </Chip>
-                        <Chip color="success" size="sm" variant="flat">
-                            Cond. {formatNumber(product?.conditional_quantity || 0)}
-                        </Chip>
-                    </div>
+        <div className="conditional-item-card">
+            <div className="products-form-section" style={{ marginBottom: '0.5rem' }}>
+                <h3>Produto {index + 1}</h3>
+                <div className="conditional-inline-actions">
+                    <span className="ui-badge warning">Est. {formatNumber(product?.stock_quantity || 0)}</span>
+                    <span className="ui-badge success">Cond. {formatNumber(product?.conditional_quantity || 0)}</span>
+                    <button
+                        type="button"
+                        className="ui-button-danger"
+                        disabled={disableRemove}
+                        onClick={onRemove}
+                        aria-label="Remover item"
+                    >
+                        <i className="fa-solid fa-trash" /> Remover
+                    </button>
                 </div>
-                <Button
-                    isIconOnly
-                    aria-label="Remover item"
-                    color="danger"
-                    isDisabled={disableRemove}
-                    type="button"
-                    variant="flat"
-                    onPress={onRemove}
-                >
-                    <Trash2 size={16} strokeWidth={2.2} />
-                </Button>
             </div>
 
-            <label className="flex flex-col gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">SKU</span>
+            <label className="products-sidebar-field">
+                <span>SKU</span>
                 <select
-                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-sky-400"
+                    className="products-input"
                     value={item.product_id}
                     onChange={(event) => onChange(index, 'product_id', event.target.value)}
                 >
@@ -75,10 +74,11 @@ function ItemRow({ item, index, products, onChange, onRemove, disableRemove }) {
                 </select>
             </label>
 
-            <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Qtd</span>
-                    <Input
+            <div className="conditional-form-grid cols-2" style={{ marginTop: '0.75rem' }}>
+                <label className="products-sidebar-field">
+                    <span>Qtd</span>
+                    <input
+                        className="products-input"
                         type="number"
                         min="1"
                         step="1"
@@ -86,9 +86,10 @@ function ItemRow({ item, index, products, onChange, onRemove, disableRemove }) {
                         onChange={(event) => onChange(index, 'quantity', event.target.value)}
                     />
                 </label>
-                <label className="flex flex-col gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Valor</span>
-                    <Input
+                <label className="products-sidebar-field">
+                    <span>Valor</span>
+                    <input
+                        className="products-input"
                         type="number"
                         min="0"
                         step="0.01"
@@ -99,14 +100,6 @@ function ItemRow({ item, index, products, onChange, onRemove, disableRemove }) {
             </div>
         </div>
     )
-}
-
-function ErrorLine({ message }) {
-    if (!message) {
-        return null
-    }
-
-    return <span className="text-xs font-medium text-danger">{message}</span>
 }
 
 export default function CreateConditionalSaleCard({
@@ -121,22 +114,21 @@ export default function CreateConditionalSaleCard({
     onItemChange,
 }) {
     return (
-        <Card className="col-span-12 bg-content1 rounded-large shadow-small xl:col-span-4">
-            <Card.Header className="flex items-center justify-between p-4 pb-0">
-                <div className="flex flex-col">
-                    <strong className="text-base text-foreground">Nova retirada</strong>
-                    <span className="text-sm text-foreground-500">{formatMoney(totalPreview)}</span>
+        <section className="products-table-card">
+            <div className="products-table-header">
+                <div>
+                    <h2>Nova retirada</h2>
+                    <p>Total previsto {formatMoney(totalPreview)}</p>
                 </div>
-                <Chip color="warning" size="sm" variant="flat">
-                    Abertura
-                </Chip>
-            </Card.Header>
-            <Card.Content className="space-y-4 p-4">
-                <form className="space-y-4" onSubmit={onSubmit}>
-                    <label className="flex flex-col gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Cliente</span>
+                <span className="ui-badge warning">Abertura</span>
+            </div>
+
+            <div className="products-table-scroll" style={{ padding: '1rem' }}>
+                <form className="conditional-form-grid" onSubmit={onSubmit}>
+                    <label className="products-sidebar-field">
+                        <span>Cliente</span>
                         <select
-                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-sky-400"
+                            className="products-input"
                             value={form.data.customer_id}
                             onChange={(event) => form.setData('customer_id', event.target.value)}
                         >
@@ -152,19 +144,21 @@ export default function CreateConditionalSaleCard({
 
                     <CustomerHint customer={selectedCustomer} />
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <label className="flex flex-col gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Retirada</span>
-                            <Input
+                    <div className="conditional-form-grid cols-2">
+                        <label className="products-sidebar-field">
+                            <span>Retirada</span>
+                            <input
+                                className="products-input"
                                 type="datetime-local"
                                 value={form.data.withdrawn_at}
                                 onChange={(event) => form.setData('withdrawn_at', event.target.value)}
                             />
                             <ErrorLine message={form.errors.withdrawn_at} />
                         </label>
-                        <label className="flex flex-col gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Prazo</span>
-                            <Input
+                        <label className="products-sidebar-field">
+                            <span>Prazo</span>
+                            <input
+                                className="products-input"
                                 type="date"
                                 value={form.data.due_at}
                                 onChange={(event) => form.setData('due_at', event.target.value)}
@@ -173,25 +167,25 @@ export default function CreateConditionalSaleCard({
                         </label>
                     </div>
 
-                    <label className="flex flex-col gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Obs</span>
-                        <TextArea
-                            minRows={3}
+                    <label className="products-sidebar-field">
+                        <span>Observacoes</span>
+                        <textarea
+                            className="products-input"
+                            rows={3}
                             value={form.data.notes}
                             onChange={(event) => form.setData('notes', event.target.value)}
                         />
                         <ErrorLine message={form.errors.notes} />
                     </label>
 
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <strong className="text-sm text-foreground">Itens</strong>
-                            <Button type="button" variant="flat" onPress={onAddItem}>
-                                <Plus size={16} strokeWidth={2.2} />
-                                <span>Item</span>
-                            </Button>
-                        </div>
+                    <div className="products-form-section">
+                        <h3>Itens</h3>
+                        <button type="button" className="ui-button-ghost" onClick={onAddItem}>
+                            <i className="fa-solid fa-plus" /> Item
+                        </button>
+                    </div>
 
+                    <div className="conditional-form-grid">
                         {form.data.items.map((item, index) => (
                             <ItemRow
                                 key={`create-item-${index}`}
@@ -203,15 +197,14 @@ export default function CreateConditionalSaleCard({
                                 onRemove={() => onRemoveItem(index)}
                             />
                         ))}
-
-                        <ErrorLine message={form.errors.items} />
                     </div>
+                    <ErrorLine message={form.errors.items} />
 
-                    <Button color="primary" fullWidth isLoading={form.processing} type="submit">
-                        Criar condicional
-                    </Button>
+                    <ActionButton icon="fa-shirt" type="submit" disabled={form.processing}>
+                        {form.processing ? 'Salvando...' : 'Criar condicional'}
+                    </ActionButton>
                 </form>
-            </Card.Content>
-        </Card>
+            </div>
+        </section>
     )
 }

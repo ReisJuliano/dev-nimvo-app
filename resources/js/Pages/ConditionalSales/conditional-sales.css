@@ -1,0 +1,152 @@
+/* Layout especifico da venda condicional (alinha ao shell de Produtos / tokens globais) */
+.conditional-workspace {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+}
+
+@media (min-width: 1200px) {
+    .conditional-workspace {
+        grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    }
+}
+
+.conditional-stack {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.conditional-main {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.conditional-inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.conditional-item-card {
+    padding: 0.85rem;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 253, 0.94));
+}
+
+.conditional-subcard {
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    overflow: hidden;
+}
+
+.conditional-subcard-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--app-border);
+    background: rgba(246, 248, 252, 0.9);
+}
+
+.conditional-subcard-body {
+    padding: 0.9rem 1rem 1rem;
+}
+
+.conditional-table-wrap {
+    overflow: auto;
+}
+
+.conditional-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.conditional-table th,
+.conditional-table td {
+    padding: 0.65rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.conditional-table th {
+    color: var(--app-text-muted);
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(246, 248, 252, 0.95);
+}
+
+.conditional-table tr.is-selected td {
+    background: rgba(47, 124, 246, 0.08);
+}
+
+.conditional-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    min-height: 12rem;
+    color: var(--app-text-muted);
+    font-size: 0.88rem;
+}
+
+.conditional-empty i {
+    font-size: 1.75rem;
+    opacity: 0.45;
+}
+
+.conditional-form-grid {
+    display: grid;
+    gap: 0.85rem;
+}
+
+@media (min-width: 640px) {
+    .conditional-form-grid.cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .conditional-form-grid.cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.conditional-customer-tiles {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.conditional-customer-tiles > div {
+    padding: 0.65rem 0.75rem;
+    border-radius: 14px;
+    border: 1px solid var(--app-border);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.conditional-customer-tiles span {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--app-text-muted);
+}
+
+.conditional-customer-tiles strong {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.86rem;
+    color: var(--app-text-primary);
+}
+
+.conditional-error {
+    color: var(--app-danger);
+    font-size: 0.78rem;
+    font-weight: 600;
+}

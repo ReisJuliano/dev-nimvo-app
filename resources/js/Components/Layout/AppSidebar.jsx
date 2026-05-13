@@ -15,6 +15,7 @@ export default function AppSidebar({
 }) {
     const navRef = useRef(null)
     const [isHovered, setIsHovered] = useState(false)
+    const [logoBroken, setLogoBroken] = useState(false)
 
     useEffect(() => {
         if (!collapsed || sidebarOpen) {
@@ -96,15 +97,15 @@ export default function AppSidebar({
             <div className="app-sidebar-header">
                 <div className="app-logo">
                     <div className="app-logo-icon">
-                        <img
-                            src="/assets/img/logo.png"
-                            alt="Logo Nimvo"
-                            onError={(event) => {
-                                event.currentTarget.style.display = 'none'
-                                event.currentTarget.parentElement.innerHTML =
-                                    '<i class="fas fa-store" style="color:white;font-size:16px"></i>'
-                            }}
-                        />
+                        {logoBroken ? (
+                            <i className="fas fa-store" style={{ color: 'white', fontSize: '16px' }} />
+                        ) : (
+                            <img
+                                src="/assets/img/logo.png"
+                                alt="Logo Nimvo"
+                                onError={() => setLogoBroken(true)}
+                            />
+                        )}
                     </div>
                     <div className="app-logo-text">
                         <span className="app-logo-name">Nimvo</span>

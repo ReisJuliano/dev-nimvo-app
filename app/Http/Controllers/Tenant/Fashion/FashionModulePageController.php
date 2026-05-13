@@ -11,7 +11,7 @@ use App\Models\Tenant\Promotion;
 use App\Models\Tenant\ReturnExchange;
 use App\Services\Tenant\FashionModuleSettingsService;
 use App\Services\Tenant\OrderDraftService;
-use Illuminate\Http\Request;
+use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,11 +23,13 @@ class FashionModulePageController extends Controller
     protected array $schemaColumnCache = [];
 
     public function __invoke(
-        Request $request,
         FashionModuleSettingsService $settingsService,
         OrderDraftService $orderDraftService,
+        TenantSettingsService $tenantSettingsService,
         string $module,
     ): Response {
+        abort_unless($tenantSettingsService->isModuleEnabled('moda'), 404);
+
         return match ($module) {
             'promotions' => Inertia::render('Fashion/Workspace', $this->promotionsPayload()),
             'returns' => Inertia::render('Fashion/Workspace', $this->returnsPayload()),

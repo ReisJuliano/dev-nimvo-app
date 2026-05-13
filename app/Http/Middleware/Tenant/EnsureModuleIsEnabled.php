@@ -19,7 +19,7 @@ class EnsureModuleIsEnabled
     public function handle(Request $request, Closure $next): Response
     {
         $navigationItem = $this->navigationService->resolveItem($request);
-        $moduleKey = $navigationItem['access_key'] ?? null;
+        $moduleKey = $this->navigationService->resolveModuleAccessKey($request);
 
         abort_unless($this->navigationService->userHasRequiredRole($request, $navigationItem), 403);
 

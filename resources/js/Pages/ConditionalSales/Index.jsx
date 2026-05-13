@@ -1,6 +1,4 @@
-import { router, useForm, usePage } from '@inertiajs/react'
-import { Card, Table } from '@heroui/react'
-import { AlertTriangle, ArrowRightLeft, Package2, TrendingUp, Wallet } from 'lucide-react'
+import { router, useForm } from '@inertiajs/react'
 import { useEffect, useMemo } from 'react'
 import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateConditionalSaleCard'
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
@@ -9,6 +7,8 @@ import ConditionalSalesTableCard from '@/Components/ConditionalSales/Conditional
 import Toolbar from '@/Components/ConditionalSales/Toolbar'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatMoney, formatNumber } from '@/lib/format'
+import '@/Pages/Products/products.css'
+import './conditional-sales.css'
 
 function toLocalDateTimeValue(value = new Date()) {
     const date = new Date(value)
@@ -84,48 +84,41 @@ function parseNumber(value) {
 
 function TopProductsCard({ topProducts }) {
     return (
-        <Card className="col-span-12 bg-content1 rounded-large shadow-small xl:col-span-4">
-            <Card.Header className="flex items-center justify-between p-4 pb-0">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                        <Package2 size={20} strokeWidth={2.2} />
-                    </div>
-                    <div className="flex flex-col">
-                        <strong className="text-base text-foreground">Mais levados</strong>
-                        <span className="text-sm text-foreground-500">{topProducts.length} item(ns)</span>
-                    </div>
+        <section className="products-table-card">
+            <div className="products-table-header">
+                <div>
+                    <h2>Mais levados</h2>
+                    <p>{topProducts.length} item(ns)</p>
                 </div>
-            </Card.Header>
-            <Card.Content className="p-4">
+            </div>
+            <div className="conditional-table-wrap">
                 {topProducts.length ? (
-                    <Table variant="secondary">
-                        <Table.ScrollContainer>
-                            <Table.Content aria-label="Produtos mais levados em condicional">
-                                <Table.Header>
-                                    <Table.Column>Item</Table.Column>
-                                    <Table.Column>Saida</Table.Column>
-                                    <Table.Column>Aberto</Table.Column>
-                                </Table.Header>
-                                <Table.Body>
-                                    {topProducts.map((product) => (
-                                        <Table.Row key={product.product_id}>
-                                            <Table.Cell>{product.product_name}</Table.Cell>
-                                            <Table.Cell>{formatNumber(product.sent_quantity)}</Table.Cell>
-                                            <Table.Cell>{formatNumber(product.outstanding_quantity)}</Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Content>
-                        </Table.ScrollContainer>
-                    </Table>
+                    <table className="conditional-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Saida</th>
+                                <th>Aberto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {topProducts.map((product) => (
+                                <tr key={product.product_id}>
+                                    <td>{product.product_name}</td>
+                                    <td>{formatNumber(product.sent_quantity)}</td>
+                                    <td>{formatNumber(product.outstanding_quantity)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 ) : (
-                    <div className="flex min-h-72 flex-col items-center justify-center gap-3 text-foreground-400">
-                        <Package2 size={28} strokeWidth={2} />
-                        <span className="text-sm font-semibold uppercase tracking-[0.18em]">Sem historico</span>
+                    <div className="conditional-empty">
+                        <i className="fa-solid fa-box-open" />
+                        <strong>Sem historico</strong>
                     </div>
                 )}
-            </Card.Content>
-        </Card>
+            </div>
+        </section>
     )
 }
 
@@ -140,7 +133,6 @@ export default function ConditionalSalesPage({
     statusOptions,
     filters,
 }) {
-    const { auth } = usePage().props
     const filterForm = useForm({
         search: filters.search || '',
         status: filters.status || 'open',
@@ -363,93 +355,100 @@ export default function ConditionalSalesPage({
             title: 'Abertos',
             value: formatNumber(summary.open_count),
             chipLabel: 'Carteira',
-            chipColor: 'warning',
-            icon: ArrowRightLeft,
+            chipTone: 'warning',
+            icon: 'fa-right-left',
         },
         {
             key: 'overdue',
             title: 'Atrasados',
             value: formatNumber(summary.overdue_count),
             chipLabel: 'Alerta',
-            chipColor: summary.overdue_count > 0 ? 'danger' : 'success',
-            icon: AlertTriangle,
+            chipTone: summary.overdue_count > 0 ? 'danger' : 'success',
+            icon: 'fa-triangle-exclamation',
         },
         {
             key: 'outstanding',
             title: 'Em aberto',
             value: formatMoney(summary.outstanding_total),
             chipLabel: 'Saldo',
-            chipColor: 'warning',
-            icon: Wallet,
+            chipTone: 'warning',
+            icon: 'fa-wallet',
         },
         {
             key: 'conversion',
             title: 'Conversao',
             value: `${formatNumber(summary.conversion_rate)}%`,
             chipLabel: formatNumber(summary.loss_quantity),
-            chipColor: summary.loss_quantity > 0 ? 'danger' : 'success',
-            icon: TrendingUp,
+            chipTone: summary.loss_quantity > 0 ? 'danger' : 'success',
+            icon: 'fa-chart-line',
         },
     ]
 
     return (
         <AppLayout title="Condicional">
-            <div className="min-h-full bg-gradient-to-br from-slate-50 via-sky-50 to-white p-1">
-                <div className="grid grid-cols-12 gap-4">
-                    <Toolbar
-                        authUser={auth?.user}
-                        filterForm={filterForm}
-                        onReset={handleToolbarReset}
-                        onSubmit={handleToolbarSubmit}
-                    />
-
-                    {metricCards.map((card) => (
-                        <div key={card.key} className="col-span-12 sm:col-span-6 xl:col-span-3">
-                            <MetricCard {...card} />
+            <div className="products-page">
+                <section className="products-shell">
+                    <header className="products-header">
+                        <div className="products-title-block">
+                            <span className="products-kicker">Prazo</span>
+                            <h1>Venda condicional</h1>
                         </div>
-                    ))}
+                    </header>
 
-                    <CreateConditionalSaleCard
-                        customers={customers}
-                        form={createForm}
-                        products={products}
-                        selectedCustomer={selectedCustomer}
-                        totalPreview={createPreview}
-                        onAddItem={addCreateItem}
-                        onItemChange={updateCreateItem}
-                        onRemoveItem={removeCreateItem}
-                        onSubmit={handleCreateSubmit}
-                    />
+                    <Toolbar filterForm={filterForm} onReset={handleToolbarReset} onSubmit={handleToolbarSubmit} />
 
-                    <ConditionalSalesTableCard
-                        conditionals={conditionals}
-                        filters={filterForm.data}
-                        selectedConditionalId={selectedConditionalId}
-                        statusOptions={statusOptions}
-                        onSelect={handleSelectConditional}
-                        onStatusChange={handleStatusChange}
-                    />
+                    <div className="products-summary-grid">
+                        {metricCards.map((card) => (
+                            <MetricCard key={card.key} {...card} />
+                        ))}
+                    </div>
 
-                    <ConditionalSaleDetailCard
-                        conditionalSale={selectedConditional}
-                        finalizeForm={finalizeForm}
-                        finalizePreview={finalizePreview}
-                        hasCashPayment={hasCashPayment}
-                        paymentMethods={paymentMethods}
-                        returnForm={returnForm}
-                        onAddPayment={addPaymentRow}
-                        onFinalizeItemChange={updateFinalizeItem}
-                        onFinalizePreset={applyFinalizePreset}
-                        onFinalizeSubmit={handleFinalizeSubmit}
-                        onPaymentChange={updatePaymentRow}
-                        onRemovePayment={removePaymentRow}
-                        onReturnAll={applyReturnAll}
-                        onReturnItemChange={updateReturnItem}
-                        onReturnSubmit={handleReturnSubmit}
-                    />
+                    <div className="conditional-workspace">
+                        <div className="conditional-stack">
+                            <CreateConditionalSaleCard
+                                customers={customers}
+                                form={createForm}
+                                products={products}
+                                selectedCustomer={selectedCustomer}
+                                totalPreview={createPreview}
+                                onAddItem={addCreateItem}
+                                onItemChange={updateCreateItem}
+                                onRemoveItem={removeCreateItem}
+                                onSubmit={handleCreateSubmit}
+                            />
+                            <TopProductsCard topProducts={topProducts} />
+                        </div>
 
-                    <TopProductsCard topProducts={topProducts} />
-                </div>
+                        <div className="conditional-main">
+                            <ConditionalSalesTableCard
+                                conditionals={conditionals}
+                                filters={filterForm.data}
+                                selectedConditionalId={selectedConditionalId}
+                                statusOptions={statusOptions}
+                                onSelect={handleSelectConditional}
+                                onStatusChange={handleStatusChange}
+                            />
+
+                            <ConditionalSaleDetailCard
+                                conditionalSale={selectedConditional}
+                                finalizeForm={finalizeForm}
+                                finalizePreview={finalizePreview}
+                                hasCashPayment={hasCashPayment}
+                                paymentMethods={paymentMethods}
+                                returnForm={returnForm}
+                                onAddPayment={addPaymentRow}
+                                onFinalizeItemChange={updateFinalizeItem}
+                                onFinalizePreset={applyFinalizePreset}
+                                onFinalizeSubmit={handleFinalizeSubmit}
+                                onPaymentChange={updatePaymentRow}
+                                onRemovePayment={removePaymentRow}
+                                onReturnAll={applyReturnAll}
+                                onReturnItemChange={updateReturnItem}
+                                onReturnSubmit={handleReturnSubmit}
+                            />
+                        </div>
+                    </div>
+                </section>
             </div>
         </AppLayout>
     )

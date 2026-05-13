@@ -1,5 +1,3 @@
-import { Avatar, Button, Card, Chip, Input, Table } from '@heroui/react'
-import { AlertTriangle, Check, CreditCard, PackageSearch, RotateCcw, ShoppingBag } from 'lucide-react'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 
 function initials(name) {
@@ -16,24 +14,22 @@ function FieldError({ message }) {
         return null
     }
 
-    return <span className="text-xs font-medium text-danger">{message}</span>
+    return <span className="conditional-error">{message}</span>
 }
 
 function InfoTile({ label, value }) {
     return (
-        <div className="rounded-2xl bg-slate-50 p-3">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground-500">{label}</span>
-            <strong className="mt-1 block text-sm text-foreground">{value}</strong>
+        <div className="products-field-group">
+            <span className="products-summary-kicker">{label}</span>
+            <strong style={{ display: 'block', marginTop: '0.35rem', fontSize: '0.92rem', color: 'var(--app-text-primary)' }}>{value}</strong>
         </div>
     )
 }
 
-function StatusChip({ label, color }) {
-    return (
-        <Chip color={color} size="sm" variant="flat">
-            {label}
-        </Chip>
-    )
+function StatusBadge({ label, tone }) {
+    const cls = tone === 'danger' ? 'danger' : tone === 'success' ? 'success' : 'warning'
+
+    return <span className={`ui-badge ${cls}`}>{label}</span>
 }
 
 export default function ConditionalSaleDetailCard({
@@ -55,130 +51,127 @@ export default function ConditionalSaleDetailCard({
 }) {
     if (!conditionalSale) {
         return (
-            <Card className="col-span-12 bg-content1 rounded-large shadow-small xl:col-span-8">
-                <Card.Content className="flex min-h-96 flex-col items-center justify-center gap-3 p-4 text-foreground-400">
-                    <PackageSearch size={30} strokeWidth={2} />
-                    <span className="text-sm font-semibold uppercase tracking-[0.18em]">Sem selecao</span>
-                </Card.Content>
-            </Card>
+            <section className="products-table-card">
+                <div className="conditional-empty" style={{ minHeight: '14rem' }}>
+                    <i className="fa-solid fa-magnifying-glass" />
+                    <strong>Sem selecao</strong>
+                    <span>Escolha uma condicional na lista ao lado.</span>
+                </div>
+            </section>
         )
     }
 
     const unresolvedItems = conditionalSale.items.filter((item) => Number(item.remaining_quantity) > 0)
 
     return (
-        <Card className="col-span-12 bg-content1 rounded-large shadow-small xl:col-span-8">
-            <Card.Header className="flex flex-col gap-4 p-4 pb-0 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex items-center gap-3">
-                    <Avatar size="md" variant="flat">
-                        <Avatar.Fallback>{initials(conditionalSale.customer.name)}</Avatar.Fallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                        <strong className="text-base text-foreground">{conditionalSale.code}</strong>
-                        <span className="text-sm text-foreground-500">{conditionalSale.customer.name}</span>
+        <section className="products-table-card">
+            <div className="products-table-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <span className="data-list-icon" aria-hidden>{initials(conditionalSale.customer.name)}</span>
+                    <div>
+                        <h2>{conditionalSale.code}</h2>
+                        <p>{conditionalSale.customer.name}</p>
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <StatusChip color={conditionalSale.status_tone} label={conditionalSale.status_label} />
+                <div className="conditional-inline-actions">
+                    <StatusBadge label={conditionalSale.status_label} tone={conditionalSale.status_tone} />
                     {conditionalSale.sale ? (
-                        <Chip color="success" size="sm" variant="flat">
-                            {conditionalSale.sale.sale_number}
-                        </Chip>
+                        <span className="ui-badge success">{conditionalSale.sale.sale_number}</span>
                     ) : null}
                 </div>
-            </Card.Header>
+            </div>
 
-            <Card.Content className="space-y-4 p-4">
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <div className="products-table-scroll" style={{ padding: '1rem', display: 'grid', gap: '1rem' }}>
+                <div className="conditional-form-grid cols-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                     <InfoTile label="Retirada" value={formatDateTime(conditionalSale.withdrawn_at)} />
                     <InfoTile label="Prazo" value={formatDate(conditionalSale.due_at)} />
                     <InfoTile label="Aberto" value={formatMoney(conditionalSale.outstanding_total)} />
                     <InfoTile label="Contato" value={conditionalSale.customer.phone || '-'} />
                 </div>
 
-                <Card className="rounded-large border border-slate-200 bg-slate-50 shadow-none">
-                    <Card.Header className="p-4 pb-0">
-                        <strong className="text-sm text-foreground">Itens</strong>
-                    </Card.Header>
-                    <Card.Content className="p-4">
-                        <Table variant="secondary">
-                            <Table.ScrollContainer>
-                                <Table.Content aria-label="Itens da condicional">
-                                    <Table.Header>
-                                        <Table.Column>SKU</Table.Column>
-                                        <Table.Column>Item</Table.Column>
-                                        <Table.Column>Saida</Table.Column>
-                                        <Table.Column>Volta</Table.Column>
-                                        <Table.Column>Aberto</Table.Column>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {conditionalSale.items.map((item) => (
-                                            <Table.Row key={item.id}>
-                                                <Table.Cell>{item.product_code}</Table.Cell>
-                                                <Table.Cell>{item.product_name}</Table.Cell>
-                                                <Table.Cell>{formatNumber(item.quantity_sent)}</Table.Cell>
-                                                <Table.Cell>{formatNumber(item.quantity_returned)}</Table.Cell>
-                                                <Table.Cell>{formatNumber(item.remaining_quantity)}</Table.Cell>
-                                            </Table.Row>
-                                        ))}
-                                    </Table.Body>
-                                </Table.Content>
-                            </Table.ScrollContainer>
-                        </Table>
-                    </Card.Content>
-                </Card>
+                <div className="conditional-subcard">
+                    <div className="conditional-subcard-header">
+                        <strong>Itens</strong>
+                    </div>
+                    <div className="conditional-subcard-body">
+                        <div className="conditional-table-wrap">
+                            <table className="conditional-table">
+                                <thead>
+                                    <tr>
+                                        <th>SKU</th>
+                                        <th>Item</th>
+                                        <th>Saida</th>
+                                        <th>Volta</th>
+                                        <th>Aberto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {conditionalSale.items.map((item) => (
+                                        <tr key={item.id}>
+                                            <td>{item.product_code}</td>
+                                            <td>{item.product_name}</td>
+                                            <td>{formatNumber(item.quantity_sent)}</td>
+                                            <td>{formatNumber(item.quantity_returned)}</td>
+                                            <td>{formatNumber(item.remaining_quantity)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
                 {conditionalSale.status === 'closed' ? (
-                    <Card className="rounded-large border border-slate-200 bg-slate-50 shadow-none">
-                        <Card.Content className="grid gap-3 p-4 md:grid-cols-3">
-                            <InfoTile label="Subtotal" value={formatMoney(conditionalSale.subtotal)} />
-                            <InfoTile label="Cobrado" value={formatMoney(conditionalSale.billed_total)} />
-                            <InfoTile label="Devolvido" value={formatMoney(conditionalSale.returned_total)} />
-                        </Card.Content>
-                    </Card>
+                    <div className="conditional-form-grid cols-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+                        <InfoTile label="Subtotal" value={formatMoney(conditionalSale.subtotal)} />
+                        <InfoTile label="Cobrado" value={formatMoney(conditionalSale.billed_total)} />
+                        <InfoTile label="Devolvido" value={formatMoney(conditionalSale.returned_total)} />
+                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                        <Card className="rounded-large border border-slate-200 bg-slate-50 shadow-none">
-                            <Card.Header className="flex items-center justify-between p-4 pb-0">
-                                <div className="flex items-center gap-2">
-                                    <RotateCcw size={18} strokeWidth={2.2} />
-                                    <strong className="text-sm text-foreground">Devolucao</strong>
-                                </div>
-                                <Chip color="warning" size="sm" variant="flat">
-                                    Parcial
-                                </Chip>
-                            </Card.Header>
-                            <Card.Content className="space-y-4 p-4">
-                                <form className="space-y-4" onSubmit={onReturnSubmit}>
-                                    <Input
+                    <div className="conditional-form-grid cols-2" style={{ alignItems: 'stretch' }}>
+                        <div className="conditional-subcard">
+                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <strong>
+                                    <i className="fa-solid fa-rotate-left" style={{ marginRight: '0.45rem' }} />
+                                    Devolucao
+                                </strong>
+                                <span className="ui-badge warning">Parcial</span>
+                            </div>
+                            <div className="conditional-subcard-body">
+                                <form className="conditional-form-grid" onSubmit={onReturnSubmit}>
+                                    <input
+                                        className="products-input"
                                         type="datetime-local"
                                         value={returnForm.data.returned_at}
                                         onChange={(event) => returnForm.setData('returned_at', event.target.value)}
                                     />
                                     <FieldError message={returnForm.errors.returned_at} />
 
-                                    <div className="space-y-3">
+                                    <div className="conditional-form-grid">
                                         {unresolvedItems.length ? unresolvedItems.map((item) => {
                                             const formItem = returnForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
 
                                             return (
-                                                <div key={`return-${item.id}`} className="space-y-2 rounded-3xl border border-slate-200 bg-white p-3">
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="flex flex-col">
-                                                            <strong className="text-sm text-foreground">{item.product_name}</strong>
-                                                            <span className="text-xs text-foreground-500">Aberto {formatNumber(item.remaining_quantity)}</span>
+                                                <div key={`return-${item.id}`} className="conditional-item-card">
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                                        <div>
+                                                            <strong style={{ fontSize: '0.9rem' }}>{item.product_name}</strong>
+                                                            <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginTop: '0.2rem' }}>
+                                                                Aberto {formatNumber(item.remaining_quantity)}
+                                                            </div>
                                                         </div>
-                                                        <Button
-                                                            isIconOnly
-                                                            aria-label="Devolver tudo"
+                                                        <button
                                                             type="button"
-                                                            variant="flat"
-                                                            onPress={() => onReturnAll(item.id, item.remaining_quantity)}
+                                                            className="ui-button-ghost"
+                                                            aria-label="Devolver tudo"
+                                                            onClick={() => onReturnAll(item.id, item.remaining_quantity)}
                                                         >
-                                                            <Check size={16} strokeWidth={2.2} />
-                                                        </Button>
+                                                            <i className="fa-solid fa-check" />
+                                                        </button>
                                                     </div>
-                                                    <Input
+                                                    <input
+                                                        className="products-input"
+                                                        style={{ marginTop: '0.65rem' }}
                                                         type="number"
                                                         min="0"
                                                         step="0.001"
@@ -188,99 +181,108 @@ export default function ConditionalSaleDetailCard({
                                                 </div>
                                             )
                                         }) : (
-                                            <div className="flex min-h-40 flex-col items-center justify-center gap-3 text-foreground-400">
-                                                <RotateCcw size={24} strokeWidth={2} />
-                                                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Sem saldo</span>
+                                            <div className="conditional-empty" style={{ minHeight: '8rem' }}>
+                                                <i className="fa-solid fa-rotate-left" />
+                                                <strong>Sem saldo</strong>
                                             </div>
                                         )}
                                     </div>
 
                                     <FieldError message={returnForm.errors.items} />
-                                    <Button color="warning" fullWidth isLoading={returnForm.processing} type="submit">
-                                        Registrar devolucao
-                                    </Button>
+                                    <button className="ui-button-secondary" type="submit" disabled={returnForm.processing}>
+                                        {returnForm.processing ? 'Salvando...' : 'Registrar devolucao'}
+                                    </button>
                                 </form>
-                            </Card.Content>
-                        </Card>
+                            </div>
+                        </div>
 
-                        <Card className="rounded-large border border-slate-200 bg-slate-50 shadow-none">
-                            <Card.Header className="flex items-center justify-between p-4 pb-0">
-                                <div className="flex items-center gap-2">
-                                    <ShoppingBag size={18} strokeWidth={2.2} />
-                                    <strong className="text-sm text-foreground">Fechamento</strong>
-                                </div>
-                                <Chip color={finalizePreview > 0 ? 'success' : 'warning'} size="sm" variant="flat">
-                                    {formatMoney(finalizePreview)}
-                                </Chip>
-                            </Card.Header>
-                            <Card.Content className="space-y-4 p-4">
-                                <form className="space-y-4" onSubmit={onFinalizeSubmit}>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <Input
+                        <div className="conditional-subcard">
+                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <strong>
+                                    <i className="fa-solid fa-bag-shopping" style={{ marginRight: '0.45rem' }} />
+                                    Fechamento
+                                </strong>
+                                <span className={`ui-badge ${finalizePreview > 0 ? 'success' : 'warning'}`}>{formatMoney(finalizePreview)}</span>
+                            </div>
+                            <div className="conditional-subcard-body">
+                                <form className="conditional-form-grid" onSubmit={onFinalizeSubmit}>
+                                    <div className="conditional-form-grid cols-2">
+                                        <input
+                                            className="products-input"
                                             type="datetime-local"
                                             value={finalizeForm.data.resolved_at}
                                             onChange={(event) => finalizeForm.setData('resolved_at', event.target.value)}
                                         />
-                                        <Input
+                                        <input
+                                            className="products-input"
+                                            readOnly
                                             value={conditionalSale.customer.document || '-'}
-                                            isReadOnly
+                                            aria-label="Documento do cliente"
                                         />
                                     </div>
                                     <FieldError message={finalizeForm.errors.resolved_at} />
 
-                                    <div className="space-y-3">
+                                    <div className="conditional-form-grid">
                                         {unresolvedItems.map((item) => {
                                             const formItem = finalizeForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
 
                                             return (
-                                                <div key={`finalize-${item.id}`} className="space-y-3 rounded-3xl border border-slate-200 bg-white p-3">
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div className="flex flex-col">
-                                                            <strong className="text-sm text-foreground">{item.product_name}</strong>
-                                                            <span className="text-xs text-foreground-500">Aberto {formatNumber(item.remaining_quantity)}</span>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            <Button size="sm" type="button" variant="flat" onPress={() => onFinalizePreset(item.id, 'returned_quantity', item.remaining_quantity)}>
-                                                                Volta
-                                                            </Button>
-                                                            <Button size="sm" type="button" variant="flat" onPress={() => onFinalizePreset(item.id, 'kept_quantity', item.remaining_quantity)}>
-                                                                Fica
-                                                            </Button>
-                                                            <Button size="sm" type="button" variant="flat" onPress={() => onFinalizePreset(item.id, 'lost_quantity', item.remaining_quantity)}>
-                                                                Perda
-                                                            </Button>
-                                                            <Button size="sm" type="button" variant="flat" onPress={() => onFinalizePreset(item.id, 'damaged_quantity', item.remaining_quantity)}>
-                                                                Avaria
-                                                            </Button>
+                                                <div key={`finalize-${item.id}`} className="conditional-item-card">
+                                                    <div style={{ marginBottom: '0.65rem' }}>
+                                                        <strong style={{ fontSize: '0.9rem' }}>{item.product_name}</strong>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginTop: '0.2rem' }}>
+                                                            Aberto {formatNumber(item.remaining_quantity)}
                                                         </div>
                                                     </div>
+                                                    <div className="conditional-inline-actions" style={{ marginBottom: '0.65rem' }}>
+                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'returned_quantity', item.remaining_quantity)}>
+                                                            Volta
+                                                        </button>
+                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'kept_quantity', item.remaining_quantity)}>
+                                                            Fica
+                                                        </button>
+                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'lost_quantity', item.remaining_quantity)}>
+                                                            Perda
+                                                        </button>
+                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'damaged_quantity', item.remaining_quantity)}>
+                                                            Avaria
+                                                        </button>
+                                                    </div>
 
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <Input
+                                                    <div className="conditional-form-grid cols-2">
+                                                        <input
+                                                            className="products-input"
                                                             type="number"
                                                             min="0"
                                                             step="0.001"
+                                                            placeholder="Volta"
                                                             value={formItem?.returned_quantity || ''}
                                                             onChange={(event) => onFinalizeItemChange(item.id, 'returned_quantity', event.target.value)}
                                                         />
-                                                        <Input
+                                                        <input
+                                                            className="products-input"
                                                             type="number"
                                                             min="0"
                                                             step="0.001"
+                                                            placeholder="Fica"
                                                             value={formItem?.kept_quantity || ''}
                                                             onChange={(event) => onFinalizeItemChange(item.id, 'kept_quantity', event.target.value)}
                                                         />
-                                                        <Input
+                                                        <input
+                                                            className="products-input"
                                                             type="number"
                                                             min="0"
                                                             step="0.001"
+                                                            placeholder="Perda"
                                                             value={formItem?.lost_quantity || ''}
                                                             onChange={(event) => onFinalizeItemChange(item.id, 'lost_quantity', event.target.value)}
                                                         />
-                                                        <Input
+                                                        <input
+                                                            className="products-input"
                                                             type="number"
                                                             min="0"
                                                             step="0.001"
+                                                            placeholder="Avaria"
                                                             value={formItem?.damaged_quantity || ''}
                                                             onChange={(event) => onFinalizeItemChange(item.id, 'damaged_quantity', event.target.value)}
                                                         />
@@ -293,21 +295,30 @@ export default function ConditionalSaleDetailCard({
                                     <FieldError message={finalizeForm.errors.items} />
 
                                     {finalizePreview > 0 ? (
-                                        <Card className="rounded-large border border-slate-200 bg-white shadow-none">
-                                            <Card.Header className="flex items-center justify-between p-4 pb-0">
-                                                <div className="flex items-center gap-2">
-                                                    <CreditCard size={18} strokeWidth={2.2} />
-                                                    <strong className="text-sm text-foreground">Pagamento</strong>
-                                                </div>
-                                                <Button size="sm" type="button" variant="flat" onPress={onAddPayment}>
+                                        <div className="conditional-subcard">
+                                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <strong>
+                                                    <i className="fa-solid fa-credit-card" style={{ marginRight: '0.45rem' }} />
+                                                    Pagamento
+                                                </strong>
+                                                <button type="button" className="ui-button-ghost" onClick={onAddPayment}>
                                                     Parcela
-                                                </Button>
-                                            </Card.Header>
-                                            <Card.Content className="space-y-3 p-4">
+                                                </button>
+                                            </div>
+                                            <div className="conditional-subcard-body">
                                                 {finalizeForm.data.payments.map((payment, index) => (
-                                                    <div key={`payment-${index}`} className="grid grid-cols-[1fr,1fr,auto] gap-3">
+                                                    <div
+                                                        key={`payment-${index}`}
+                                                        style={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: '1fr 1fr auto',
+                                                            gap: '0.65rem',
+                                                            marginBottom: '0.65rem',
+                                                            alignItems: 'center',
+                                                        }}
+                                                    >
                                                         <select
-                                                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-sky-400"
+                                                            className="products-input"
                                                             value={payment.method}
                                                             onChange={(event) => onPaymentChange(index, 'method', event.target.value)}
                                                         >
@@ -317,57 +328,61 @@ export default function ConditionalSaleDetailCard({
                                                                 </option>
                                                             ))}
                                                         </select>
-                                                        <Input
+                                                        <input
+                                                            className="products-input"
                                                             type="number"
                                                             min="0"
                                                             step="0.01"
                                                             value={payment.amount}
                                                             onChange={(event) => onPaymentChange(index, 'amount', event.target.value)}
                                                         />
-                                                        <Button
-                                                            isIconOnly
-                                                            aria-label="Remover parcela"
-                                                            color="danger"
-                                                            isDisabled={finalizeForm.data.payments.length === 1}
+                                                        <button
                                                             type="button"
-                                                            variant="flat"
-                                                            onPress={() => onRemovePayment(index)}
+                                                            className="ui-button-danger"
+                                                            disabled={finalizeForm.data.payments.length === 1}
+                                                            aria-label="Remover parcela"
+                                                            onClick={() => onRemovePayment(index)}
                                                         >
-                                                            <AlertTriangle size={16} strokeWidth={2.2} />
-                                                        </Button>
+                                                            <i className="fa-solid fa-xmark" />
+                                                        </button>
                                                     </div>
                                                 ))}
 
                                                 {hasCashPayment ? (
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={finalizeForm.data.cash_received}
-                                                        onChange={(event) => finalizeForm.setData('cash_received', event.target.value)}
-                                                    />
+                                                    <label className="products-sidebar-field">
+                                                        <span>Recebido (dinheiro)</span>
+                                                        <input
+                                                            className="products-input"
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={finalizeForm.data.cash_received}
+                                                            onChange={(event) => finalizeForm.setData('cash_received', event.target.value)}
+                                                        />
+                                                    </label>
                                                 ) : null}
                                                 <FieldError message={finalizeForm.errors.payments} />
                                                 <FieldError message={finalizeForm.errors.cash_received} />
-                                            </Card.Content>
-                                        </Card>
+                                            </div>
+                                        </div>
                                     ) : null}
 
-                                    <Input
+                                    <input
+                                        className="products-input"
                                         value={finalizeForm.data.notes}
                                         onChange={(event) => finalizeForm.setData('notes', event.target.value)}
-                                        placeholder="Obs"
+                                        placeholder="Observacoes"
                                     />
 
-                                    <Button color="success" fullWidth isLoading={finalizeForm.processing} type="submit">
-                                        Encerrar condicional
-                                    </Button>
+                                    <button className="ui-button" type="submit" disabled={finalizeForm.processing}>
+                                        {finalizeForm.processing ? 'Salvando...' : 'Encerrar condicional'}
+                                    </button>
                                 </form>
-                            </Card.Content>
-                        </Card>
+                            </div>
+                        </div>
                     </div>
                 )}
-            </Card.Content>
-        </Card>
+            </div>
+        </section>
     )
 }

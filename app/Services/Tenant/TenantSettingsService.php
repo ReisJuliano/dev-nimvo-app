@@ -49,6 +49,10 @@ class TenantSettingsService
             'controle_validade' => false,
             'mesas' => false,
             'impressao_automatica' => false,
+            'catalogo_online' => false,
+            'pedidos_online' => false,
+            'whatsapp_pedidos' => false,
+            'moda' => false,
         ];
     }
 
@@ -126,6 +130,15 @@ class TenantSettingsService
                 'section' => 'Gestao',
                 'items' => [
                     ['key' => 'relatorios_avancados', 'label' => 'Relatorios', 'description' => 'Libera visoes consolidadas.'],
+                ],
+            ],
+            [
+                'section' => 'Digital',
+                'items' => [
+                    ['key' => 'catalogo_online', 'label' => 'Shop online', 'description' => 'Exibe vitrine publica para o cliente final.'],
+                    ['key' => 'pedidos_online', 'label' => 'Pedidos pelo site', 'description' => 'Permite checkout pelo shop integrado aos pedidos.'],
+                    ['key' => 'whatsapp_pedidos', 'label' => 'WhatsApp pedidos', 'description' => 'Monta fluxo de pedido via WhatsApp a partir do shop.'],
+                    ['key' => 'moda', 'label' => 'Moda', 'description' => 'Promocoes, catalogo digital e pedidos online no painel.'],
                 ],
             ],
         ];
@@ -218,6 +231,10 @@ class TenantSettingsService
             'usuarios' => true,
             'delivery' => $modules['delivery'],
             'compras' => $modules['compras'],
+            'catalogo_online' => $modules['catalogo_online'],
+            'pedidos_online' => $modules['pedidos_online'],
+            'whatsapp_pedidos' => $modules['whatsapp_pedidos'],
+            'moda' => $modules['moda'],
         ];
     }
 
@@ -399,6 +416,10 @@ class TenantSettingsService
             'controle_validade' => false,
             'mesas' => false,
             'impressao_automatica' => false,
+            'catalogo_online' => false,
+            'pedidos_online' => false,
+            'whatsapp_pedidos' => false,
+            'moda' => false,
         ];
 
         return match ($this->normalizePreset($preset)) {

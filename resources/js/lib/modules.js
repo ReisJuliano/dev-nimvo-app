@@ -18,6 +18,10 @@ export const MODULE_DEFAULTS = {
     controle_validade: false,
     mesas: false,
     impressao_automatica: false,
+    catalogo_online: false,
+    pedidos_online: false,
+    whatsapp_pedidos: false,
+    moda: false,
 }
 
 export const PRESET_LABELS = {
@@ -79,6 +83,10 @@ export function deriveCapabilities(inputModules = {}) {
         usuarios: true,
         delivery: modules.delivery,
         compras: modules.compras,
+        catalogo_online: modules.catalogo_online,
+        pedidos_online: modules.pedidos_online,
+        whatsapp_pedidos: modules.whatsapp_pedidos,
+        moda: modules.moda,
     }
 }
 

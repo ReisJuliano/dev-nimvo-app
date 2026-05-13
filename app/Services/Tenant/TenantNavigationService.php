@@ -31,6 +31,13 @@ class TenantNavigationService
                         'request_patterns' => ['pdv', 'api/pdv*'],
                     ],
                     [
+                        'href' => '/caixa',
+                        'label' => 'Caixa',
+                        'icon' => 'fa-vault',
+                        'access_key' => 'caixa',
+                        'request_patterns' => ['caixa', 'api/cash-registers*'],
+                    ],
+                    [
                         'href' => '/pedidos',
                         'label_type' => 'orders',
                         'icon' => 'fa-clipboard-list',
@@ -62,6 +69,13 @@ class TenantNavigationService
             [
                 'section' => 'Operacao',
                 'items' => [
+                    [
+                        'href' => '/delivery',
+                        'label' => 'Entregas',
+                        'icon' => 'fa-motorcycle',
+                        'access_key' => 'delivery',
+                        'request_patterns' => ['delivery', 'api/delivery*'],
+                    ],
                     [
                         'href' => '/compras',
                         'label' => 'Compras',
@@ -136,6 +150,25 @@ class TenantNavigationService
                 ],
             ],
             [
+                'section' => 'Digital',
+                'items' => [
+                    [
+                        'href' => '/shop',
+                        'label' => 'Shop online',
+                        'icon' => 'fa-store',
+                        'access_key' => 'catalogo_online',
+                        'request_patterns' => ['shop', 'shop/*'],
+                    ],
+                    [
+                        'href' => '/moda/catalog',
+                        'label' => 'Moda',
+                        'icon' => 'fa-shirt',
+                        'access_key' => 'moda',
+                        'request_patterns' => ['moda*', 'api/fashion*'],
+                    ],
+                ],
+            ],
+            [
                 'section' => 'Admin',
                 'items' => [
                     [
@@ -161,6 +194,44 @@ class TenantNavigationService
     public function resolveAccessKey(Request $request): ?string
     {
         return $this->resolveItem($request)['access_key'] ?? null;
+    }
+
+    /**
+     * Chave de modulo para o middleware `module.enabled` (inclui fallback por path).
+     */
+    public function resolveModuleAccessKey(Request $request): ?string
+    {
+        $item = $this->resolveItem($request);
+        $fromNav = $item['access_key'] ?? null;
+
+        if (filled($fromNav)) {
+            return $fromNav;
+        }
+
+        return $this->fallbackModuleAccessKeyFromRequest($request);
+    }
+
+    protected function fallbackModuleAccessKeyFromRequest(Request $request): ?string
+    {
+        foreach ($this->fallbackPathModuleMap() as $pattern => $key) {
+            if ($request->is($pattern)) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, string> pattern => access_key
+     */
+    protected function fallbackPathModuleMap(): array
+    {
+        return [
+            'api/cash-registers*' => 'caixa',
+            'api/delivery*' => 'delivery',
+            'api/fashion*' => 'moda',
+        ];
     }
 
     public function resolveItem(Request $request): ?array

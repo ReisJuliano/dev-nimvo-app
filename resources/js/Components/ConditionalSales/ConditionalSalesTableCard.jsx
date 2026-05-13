@@ -1,13 +1,9 @@
-import { Button, Card, Chip, Table } from '@heroui/react'
-import { ArrowRightLeft, Eye } from 'lucide-react'
 import { formatDate, formatMoney } from '@/lib/format'
 
-function StatusChip({ label, color }) {
-    return (
-        <Chip color={color} size="sm" variant="flat">
-            {label}
-        </Chip>
-    )
+function StatusBadge({ label, tone }) {
+    const cls = tone === 'danger' ? 'danger' : tone === 'success' ? 'success' : 'warning'
+
+    return <span className={`ui-badge ${cls}`}>{label}</span>
 }
 
 export default function ConditionalSalesTableCard({
@@ -19,25 +15,15 @@ export default function ConditionalSalesTableCard({
     onSelect,
 }) {
     return (
-        <Card className="col-span-12 bg-content1 rounded-large shadow-small xl:col-span-8">
-            <Card.Header className="flex flex-col gap-3 p-4 pb-0 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
-                        <ArrowRightLeft size={20} strokeWidth={2.2} />
-                    </div>
-                    <div className="flex flex-col">
-                        <strong className="text-base text-foreground">Condicionais</strong>
-                        <span className="text-sm text-foreground-500">{conditionals.length} registro(s)</span>
-                    </div>
+        <section className="products-table-card">
+            <div className="products-table-header">
+                <div>
+                    <h2>Condicionais</h2>
+                    <p>{conditionals.length} registro(s)</p>
                 </div>
-
-                <label className="flex min-w-48 flex-col gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground-500">Filtro</span>
-                    <select
-                        className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-sky-400"
-                        value={filters.status}
-                        onChange={(event) => onStatusChange(event.target.value)}
-                    >
+                <label className="products-sidebar-field" style={{ minWidth: '12rem' }}>
+                    <span>Status</span>
+                    <select className="products-input" value={filters.status} onChange={(event) => onStatusChange(event.target.value)}>
                         {statusOptions.map((option) => (
                             <option key={option.value} value={option.value}>
                                 {option.label}
@@ -45,56 +31,56 @@ export default function ConditionalSalesTableCard({
                         ))}
                     </select>
                 </label>
-            </Card.Header>
-            <Card.Content className="p-4">
+            </div>
+
+            <div className="conditional-table-wrap">
                 {conditionals.length ? (
-                    <Table variant="secondary">
-                        <Table.ScrollContainer>
-                            <Table.Content aria-label="Lista de condicionais">
-                                <Table.Header>
-                                    <Table.Column>Code</Table.Column>
-                                    <Table.Column>Cliente</Table.Column>
-                                    <Table.Column>Prazo</Table.Column>
-                                    <Table.Column>Valor</Table.Column>
-                                    <Table.Column>Status</Table.Column>
-                                    <Table.Column>Acoes</Table.Column>
-                                </Table.Header>
-                                <Table.Body>
-                                    {conditionals.map((conditionalSale) => (
-                                        <Table.Row
-                                            key={conditionalSale.id}
-                                            className={selectedConditionalId === conditionalSale.id ? 'bg-sky-50' : ''}
+                    <table className="conditional-table">
+                        <thead>
+                            <tr>
+                                <th>Codigo</th>
+                                <th>Cliente</th>
+                                <th>Prazo</th>
+                                <th>Valor aberto</th>
+                                <th>Status</th>
+                                <th style={{ width: '4rem' }} />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {conditionals.map((conditionalSale) => (
+                                <tr
+                                    key={conditionalSale.id}
+                                    className={selectedConditionalId === conditionalSale.id ? 'is-selected' : ''}
+                                >
+                                    <td>{conditionalSale.code}</td>
+                                    <td>{conditionalSale.customer.name}</td>
+                                    <td>{formatDate(conditionalSale.due_at)}</td>
+                                    <td>{formatMoney(conditionalSale.outstanding_total)}</td>
+                                    <td>
+                                        <StatusBadge label={conditionalSale.status_label} tone={conditionalSale.status_tone} />
+                                    </td>
+                                    <td>
+                                        <button
+                                            type="button"
+                                            className="ui-button-ghost"
+                                            style={{ padding: '0.35rem 0.5rem' }}
+                                            aria-label="Abrir condicional"
+                                            onClick={() => onSelect(conditionalSale.id)}
                                         >
-                                            <Table.Cell>{conditionalSale.code}</Table.Cell>
-                                            <Table.Cell>{conditionalSale.customer.name}</Table.Cell>
-                                            <Table.Cell>{formatDate(conditionalSale.due_at)}</Table.Cell>
-                                            <Table.Cell>{formatMoney(conditionalSale.outstanding_total)}</Table.Cell>
-                                            <Table.Cell>
-                                                <StatusChip color={conditionalSale.status_tone} label={conditionalSale.status_label} />
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Button
-                                                    isIconOnly
-                                                    aria-label="Abrir condicional"
-                                                    variant="flat"
-                                                    onPress={() => onSelect(conditionalSale.id)}
-                                                >
-                                                    <Eye size={16} strokeWidth={2.2} />
-                                                </Button>
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Content>
-                        </Table.ScrollContainer>
-                    </Table>
+                                            <i className="fa-solid fa-eye" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 ) : (
-                    <div className="flex min-h-72 flex-col items-center justify-center gap-3 text-foreground-400">
-                        <ArrowRightLeft size={28} strokeWidth={2} />
-                        <span className="text-sm font-semibold uppercase tracking-[0.18em]">Sem registros</span>
+                    <div className="conditional-empty">
+                        <i className="fa-solid fa-right-left" />
+                        <strong>Sem registros</strong>
                     </div>
                 )}
-            </Card.Content>
-        </Card>
+            </div>
+        </section>
     )
 }
