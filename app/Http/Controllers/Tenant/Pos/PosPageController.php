@@ -8,6 +8,7 @@ use App\Models\Tenant\Category;
 use App\Models\Tenant\Company;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\User;
+use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PosRecommendationService;
@@ -24,6 +25,7 @@ class PosPageController extends Controller
     protected array $schemaColumnCache = [];
 
     public function __invoke(
+        CashRegisterReportService $cashRegisterReportService,
         OrderDraftService $orderDraftService,
         PendingSaleService $pendingSaleService,
         PosRecommendationService $recommendationService,
@@ -39,10 +41,36 @@ class PosPageController extends Controller
             ->where('status', 'open')
             ->latest('opened_at')
             ->first();
+        $openRegister = $cashRegister ? $cashRegisterReportService->build($cashRegister) : null;
+        $cashRegisterHistory = CashRegister::query()
+            ->with('user:id,name')
+            ->where('user_id', $userId)
+            ->where('status', 'closed')
+            ->latest('closed_at')
+            ->limit(30)
+            ->get()
+            ->map(function (CashRegister $register) use ($cashRegisterReportService) {
+                $report = $cashRegisterReportService->build($register);
+
+                return [
+                    'id' => $register->id,
+                    'user_name' => $register->user?->name,
+                    'opening_amount' => (float) $register->opening_amount,
+                    'closing_amount' => (float) ($register->closing_amount ?? 0),
+                    'opened_at' => $register->opened_at?->toIso8601String(),
+                    'closed_at' => $register->closed_at?->toIso8601String(),
+                    'difference' => (float) ($report['difference'] ?? 0),
+                    'sales_count' => (int) ($report['sales_count'] ?? 0),
+                    'total_sales' => (float) ($report['total_sales'] ?? 0),
+                ];
+            })
+            ->values()
+            ->all();
         $preloadedOrderDraft = $ordersEnabled && $requestedOrderDraftId
             ? $orderDraftService->findForCheckout($requestedOrderDraftId)
             : null;
         $pendingSale = $pendingSaleService->currentForUser((int) $userId);
+        $settings = $settingsService->get();
 
         return Inertia::render('Pos/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
@@ -61,14 +89,10 @@ class PosPageController extends Controller
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'pendingSale' => $pendingSaleService->serialize($pendingSale),
             'recommendations' => $recommendationService->build(),
-            'cashRegister' => $cashRegister ? [
-                'id' => $cashRegister->id,
-                'user_name' => auth()->user()?->name,
-                'status' => $cashRegister->status,
-                'opened_at' => $cashRegister->opened_at?->toIso8601String(),
-                'opening_amount' => (float) $cashRegister->opening_amount,
-                'opening_notes' => $cashRegister->opening_notes,
-            ] : null,
+            'cashRegister' => $openRegister['cashRegister'] ?? null,
+            'openRegister' => $openRegister,
+            'cashRegisterHistory' => $cashRegisterHistory,
+            'cashRegisterSettings' => $settings,
             'posCapabilities' => [
                 'pending_sales' => $this->hasTable('pending_sales'),
                 'companies' => $this->hasTable('companies'),

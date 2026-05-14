@@ -11,6 +11,7 @@ use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -77,6 +78,32 @@ class FiscalConsultationsPageTest extends TestCase
             ->where('sales.data.0.total', 50)
             ->where('sales.data.0.recipient.label', 'Consumidor final')
         );
+    }
+
+    public function test_it_accepts_a_custom_period_for_sales_consultation(): void
+    {
+        $user = $this->actingOperator();
+        $outsideSale = $this->makeSale($user, now()->subDays(9));
+        $insideSale = $this->makeSale($user, now()->subDays(2));
+
+        $from = now()->subDays(3)->toDateString();
+        $to = now()->subDay()->toDateString();
+
+        $response = $this->get("/consultas-cancelamentos?period=custom&from={$from}&to={$to}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Fiscal/Consultations')
+            ->where('filters.period', 'custom')
+            ->where('filters.from', $from)
+            ->where('filters.to', $to)
+            ->where('range.from', $from)
+            ->where('range.to', $to)
+            ->has('sales.data', 1)
+            ->where('sales.data.0.sale_number', $insideSale->sale_number)
+        );
+
+        $this->assertNotSame($outsideSale->sale_number, $insideSale->sale_number);
     }
 
     public function test_it_can_cancel_a_sale_without_authorized_document_immediately(): void
@@ -458,9 +485,12 @@ class FiscalConsultationsPageTest extends TestCase
 
     protected function makeSale(User $user, mixed $createdAt): Sale
     {
+        $sequence = Sale::query()->count() + 1;
+        $createdAt = Carbon::parse($createdAt);
+
         $product = Product::query()->create([
-            'code' => 'ITEM-CONSULTA',
-            'barcode' => '7891234567001',
+            'code' => 'ITEM-CONSULTA-'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT),
+            'barcode' => '7891234567'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT),
             'ncm' => '61091000',
             'cfop' => '5102',
             'cest' => null,
@@ -481,7 +511,7 @@ class FiscalConsultationsPageTest extends TestCase
         ]);
 
         $sale = Sale::query()->create([
-            'sale_number' => 'VND-CONS-'.str_pad((string) (Sale::query()->count() + 1), 4, '0', STR_PAD_LEFT),
+            'sale_number' => 'VND-CONS-'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT),
             'customer_id' => null,
             'user_id' => $user->id,
             'cash_register_id' => CashRegister::query()->where('user_id', $user->id)->value('id'),
@@ -498,9 +528,12 @@ class FiscalConsultationsPageTest extends TestCase
             'fiscal_decision' => 'emit',
             'notes' => 'Consulta fiscal',
             'recipient_payload' => ['name' => 'Consumidor final'],
+        ]);
+
+        $sale->forceFill([
             'created_at' => $createdAt,
             'updated_at' => $createdAt,
-        ]);
+        ])->saveQuietly();
 
         $sale->items()->create([
             'product_id' => $product->id,

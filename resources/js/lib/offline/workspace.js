@@ -191,6 +191,15 @@ function normalizeCashMovementRecord(movement) {
     }
 }
 
+function normalizeCashSaleRow(sale) {
+    return {
+        id: sale.id ?? null,
+        sale_number: sale.sale_number || null,
+        total: normalizeNumber(sale.total, 0),
+        created_at: sale.created_at || nowIso(),
+    }
+}
+
 function normalizeCashRegisterClosingBreakdownRow(row) {
     return {
         payment_method: row.payment_method,
@@ -227,6 +236,7 @@ function normalizeCashRegisterReport(report) {
     return {
         ...report,
         cashRegister: normalizeCashRegisterRecord(report.cashRegister),
+        sales_rows: Array.isArray(report.sales_rows) ? report.sales_rows.map(normalizeCashSaleRow) : [],
         payments,
         payment_totals: paymentTotals,
         movements: Array.isArray(report.movements) ? report.movements.map(normalizeCashMovementRecord) : [],
@@ -1846,9 +1856,18 @@ export function buildOfflineCashRegisterReport(tenantId, options = {}) {
     const baseSalesCount = useFallbackTotals ? Number(fallbackReport?.sales_count || 0) : 0
     const baseSupplies = useFallbackTotals ? Number(fallbackReport?.total_supplies || 0) : 0
     const baseWithdrawals = useFallbackTotals ? Number(fallbackReport?.total_withdrawals || 0) : 0
+    const baseSalesRows = useFallbackTotals
+        ? (fallbackReport?.sales_rows || []).map(normalizeCashSaleRow)
+        : []
     const baseMovements = useFallbackTotals
         ? (fallbackReport?.movements || []).map(normalizeCashMovementRecord)
         : []
+    const queuedSalesRows = queuedSales.map((entry) => normalizeCashSaleRow({
+        id: entry.payload?.sale_id,
+        sale_number: entry.payload?.sale_number,
+        total: entry.payload?.total,
+        created_at: entry.payload?.created_at,
+    }))
     const queuedMovements = state.queue.cashRegisters
         .filter((entry) => entry.action === 'movement' && queueEntryMatchesCashRegister(state, entry, cashRegister.id))
         .map((entry) => buildQueuedCashRegisterMovement(entry, cashRegister.user_name || options.userName || 'Operador'))
@@ -1874,6 +1893,7 @@ export function buildOfflineCashRegisterReport(tenantId, options = {}) {
             closing_notes: null,
             closed_at: null,
         },
+        sales_rows: [...baseSalesRows, ...queuedSalesRows],
         payments,
         payment_totals: paymentTotals,
         movements: [...baseMovements, ...queuedMovements],

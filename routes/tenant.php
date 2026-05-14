@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
-use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
@@ -61,7 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware([EnsurePasswordIsChanged::class, 'tenant.license', 'module.enabled'])->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/pdv', PosPageController::class)->name('pos.index');
-        Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
+        Route::get('/caixa', fn () => redirect()->route('pos.index'))->name('cash-register.index');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');

@@ -1,11 +1,10 @@
 const OFFLINE_CACHE_VERSION = 'nimvo-offline-v2'
 const OFFLINE_APP_CACHE = `${OFFLINE_CACHE_VERSION}:app`
-const OFFLINE_WORKSPACE_PATHS = ['/pdv', '/pedidos', '/produtos', '/caixa']
+const OFFLINE_WORKSPACE_PATHS = ['/pdv', '/pedidos', '/produtos']
 const OFFLINE_WORKSPACE_PAGE_ENTRIES = [
     'resources/js/Pages/Pos/Index.jsx',
     'resources/js/Pages/Orders/Index.jsx',
     'resources/js/Pages/Products/Index.jsx',
-    'resources/js/Pages/CashRegister/Index.jsx',
 ]
 const BUILD_MANIFEST_URL = '/build/manifest.json'
 

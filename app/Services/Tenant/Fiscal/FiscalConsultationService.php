@@ -21,8 +21,7 @@ class FiscalConsultationService
 
     public function build(array $filters): array
     {
-        $period = $this->resolvePeriod((string) ($filters['period'] ?? 'day'));
-        [$from, $to] = $this->periodRange($period);
+        [$period, $from, $to] = $this->resolveRange($filters);
         $perPage = 18;
 
         $baseQuery = Sale::query()
@@ -43,8 +42,13 @@ class FiscalConsultationService
             ->withQueryString();
 
         $salesCount = (clone $baseQuery)->count();
-        $grossTotal = (float) (clone $baseQuery)->sum('total');
+        $soldTotal = (float) (clone $baseQuery)
+            ->where('status', '!=', 'cancelled')
+            ->sum('total');
         $cancelledCount = (clone $baseQuery)->where('status', 'cancelled')->count();
+        $cancelledTotal = (float) (clone $baseQuery)
+            ->where('status', 'cancelled')
+            ->sum('total');
         $fiscalCount = (clone $baseQuery)->whereHas('fiscalDocuments')->count();
         $contingencyCount = FiscalDocument::query()
             ->whereIn('status', [
@@ -79,6 +83,8 @@ class FiscalConsultationService
         return [
             'filters' => [
                 'period' => $period,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
             ],
             'periods' => [
                 ['key' => 'day', 'label' => 'Hoje'],
@@ -94,19 +100,12 @@ class FiscalConsultationService
                     'tone' => 'primary',
                 ],
                 [
-                    'key' => 'total',
-                    'label' => 'Total',
-                    'value' => round($grossTotal, 2),
+                    'key' => 'sold_total',
+                    'label' => 'Faturado',
+                    'value' => round($soldTotal, 2),
                     'icon' => 'fa-wallet',
                     'tone' => 'success',
                     'format' => 'currency',
-                ],
-                [
-                    'key' => 'fiscal',
-                    'label' => 'Fiscais',
-                    'value' => $fiscalCount,
-                    'icon' => 'fa-file-invoice-dollar',
-                    'tone' => 'info',
                 ],
                 [
                     'key' => 'cancelled',
@@ -116,11 +115,19 @@ class FiscalConsultationService
                     'tone' => 'danger',
                 ],
                 [
-                    'key' => 'contingency',
-                    'label' => 'Conting.',
-                    'value' => $contingencyCount,
-                    'icon' => 'fa-triangle-exclamation',
+                    'key' => 'cancelled_total',
+                    'label' => 'Valor cancel.',
+                    'value' => round($cancelledTotal, 2),
+                    'icon' => 'fa-receipt',
                     'tone' => 'warning',
+                    'format' => 'currency',
+                ],
+                [
+                    'key' => 'fiscal',
+                    'label' => 'Fiscais',
+                    'value' => $fiscalCount,
+                    'icon' => 'fa-file-invoice-dollar',
+                    'tone' => 'info',
                 ],
             ],
             'range' => [
@@ -375,7 +382,48 @@ class FiscalConsultationService
 
     protected function resolvePeriod(string $period): string
     {
-        return in_array($period, ['day', 'week', 'month'], true) ? $period : 'day';
+        return in_array($period, ['day', 'week', 'month', 'custom'], true) ? $period : 'day';
+    }
+
+    protected function resolveRange(array $filters): array
+    {
+        $period = $this->resolvePeriod((string) ($filters['period'] ?? 'day'));
+        $customFrom = $this->parseFilterDate($filters['from'] ?? null);
+        $customTo = $this->parseFilterDate($filters['to'] ?? null);
+
+        if ($period === 'custom' || $customFrom || $customTo) {
+            $from = $customFrom?->copy() ?? $customTo?->copy();
+            $to = $customTo?->copy() ?? $customFrom?->copy();
+
+            if ($from && $to && $from->gt($to)) {
+                [$from, $to] = [$to, $from];
+            }
+
+            if ($from && $to) {
+                return ['custom', $from->startOfDay(), $to->endOfDay()];
+            }
+        }
+
+        if ($period === 'custom') {
+            $period = 'day';
+        }
+
+        [$from, $to] = $this->periodRange($period);
+
+        return [$period, $from, $to];
+    }
+
+    protected function parseFilterDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', trim($value))->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function periodRange(string $period): array
@@ -392,6 +440,9 @@ class FiscalConsultationService
     protected function rangeLabel(string $period, Carbon $from, Carbon $to): string
     {
         return match ($period) {
+            'custom' => $from->isSameDay($to)
+                ? sprintf('Dia personalizado - %s', $from->format('d/m/Y'))
+                : sprintf('Periodo personalizado - %s ate %s', $from->format('d/m/Y'), $to->format('d/m/Y')),
             'week' => sprintf('Semana - %s ate %s', $from->format('d/m'), $to->format('d/m')),
             'month' => sprintf('Mes - %s', $from->translatedFormat('F \\d\\e Y')),
             default => sprintf('Hoje - %s', $from->format('d/m/Y')),

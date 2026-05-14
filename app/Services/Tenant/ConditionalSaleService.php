@@ -1039,7 +1039,7 @@ class ConditionalSaleService
             return $selectedId;
         }
 
-        return $conditionals[0]['id'] ?? null;
+        return null;
     }
 
     protected function resolveOpenCashRegister(int $userId): CashRegister

@@ -119,6 +119,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
     const [selectedSaleId, setSelectedSaleId] = useState(null)
     const [showInutilizationModal, setShowInutilizationModal] = useState(false)
     const cancelForm = useForm({ reason: '' })
+    const rangeForm = useForm({
+        from: filters.from || range.from || '',
+        to: filters.to || range.to || '',
+    })
     const inutilizationForm = useForm({
         document_model: '65',
         series: 1,
@@ -144,6 +148,13 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         }
     }, [cancelForm, sales.data, selectedSaleId])
 
+    useEffect(() => {
+        rangeForm.setData({
+            from: filters.from || range.from || '',
+            to: filters.to || range.to || '',
+        })
+    }, [filters.from, filters.to, range.from, range.to])
+
     function changePeriod(period) {
         if (period === filters.period) {
             return
@@ -151,6 +162,20 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
 
         setSelectedSaleId(null)
         router.get('/consultas-cancelamentos', { period }, { preserveScroll: true, replace: true })
+    }
+
+    function applyCustomRange(event) {
+        event.preventDefault()
+
+        setSelectedSaleId(null)
+        router.get('/consultas-cancelamentos', {
+            period: 'custom',
+            from: rangeForm.data.from,
+            to: rangeForm.data.to,
+        }, {
+            preserveScroll: true,
+            replace: true,
+        })
     }
 
     function openSale(sale) {
@@ -214,7 +239,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
     }
 
     return (
-        <AppLayout title="Consultas">
+        <AppLayout title="Vendas">
             <div className="fiscal-consultations-page fiscal-compact-page">
                 <PageContainer
                     className="fiscal-page-container"
@@ -239,17 +264,17 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                         onClick: openInutilizationModal,
                                     },
                                 ]}
-                                title="Acoes"
+                                title="Fiscal"
                             />
 
                             <section className="fiscal-sidebar-card">
                                 <header>
-                                    <strong>Contexto fiscal</strong>
+                                    <strong>Resumo fiscal</strong>
                                     <span>{range.label}</span>
                                 </header>
                                 <div className="fiscal-sidebar-meta">
                                     <div>
-                                        <span>Contingencias</span>
+                                        <span>Pendencias</span>
                                         <strong>{contingencies.length}</strong>
                                     </div>
                                     <div>
@@ -270,23 +295,54 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <div className="fiscal-compact-heading">
                                 <StatusBadge compact icon="fa-wave-square" label={range.label} tone="info" />
                                 <div>
-                                    <strong>Consultas e cancelamentos</strong>
-                                    <span>{range.from} - {range.to}</span>
+                                    <strong>Vendas do periodo</strong>
+                                    <span>Acompanhe faturamento, cancelamentos e documentos emitidos.</span>
                                 </div>
                             </div>
 
-                            <div className="ui-tabs fiscal-period-tabs">
-                                {periods.map((period) => (
-                                    <button
-                                        key={period.key}
-                                        className={`ui-tab ${filters.period === period.key ? 'active' : ''}`}
-                                        onClick={() => changePeriod(period.key)}
-                                        type="button"
-                                    >
-                                        <i className={`fa-solid ${filters.period === period.key ? 'fa-circle-dot' : 'fa-circle'}`} />
-                                        <span>{period.label}</span>
+                            <div className="fiscal-filter-stack">
+                                <div className="ui-tabs fiscal-period-tabs">
+                                    {periods.map((period) => (
+                                        <button
+                                            key={period.key}
+                                            className={`ui-tab ${filters.period === period.key ? 'active' : ''}`}
+                                            onClick={() => changePeriod(period.key)}
+                                            type="button"
+                                        >
+                                            <i className={`fa-solid ${filters.period === period.key ? 'fa-circle-dot' : 'fa-circle'}`} />
+                                            <span>{period.label}</span>
+                                        </button>
+                                    ))}
+                                    {filters.period === 'custom' ? (
+                                        <span className="fiscal-custom-indicator">
+                                            <i className="fa-solid fa-calendar-days" />
+                                            <span>Personalizado</span>
+                                        </span>
+                                    ) : null}
+                                </div>
+
+                                <form className="fiscal-custom-range-form" onSubmit={applyCustomRange}>
+                                    <label>
+                                        <span>De</span>
+                                        <input
+                                            type="date"
+                                            value={rangeForm.data.from}
+                                            onChange={(event) => rangeForm.setData('from', event.target.value)}
+                                        />
+                                    </label>
+                                    <label>
+                                        <span>Ate</span>
+                                        <input
+                                            type="date"
+                                            value={rangeForm.data.to}
+                                            onChange={(event) => rangeForm.setData('to', event.target.value)}
+                                        />
+                                    </label>
+                                    <button type="submit" className="fiscal-range-apply">
+                                        <i className="fa-solid fa-calendar-check" />
+                                        <span>Aplicar</span>
                                     </button>
-                                ))}
+                                </form>
                             </div>
                         </section>
 
@@ -307,8 +363,8 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                         <section className="fiscal-sales-panel">
                             <header className="fiscal-sales-panel-head">
                                 <div>
-                                    <strong>Vendas</strong>
-                                    <span>{sales.total} registro(s)</span>
+                                    <strong>Vendas e cancelamentos</strong>
+                                    <span>{sales.total} registro(s) em {range.from} ate {range.to}</span>
                                 </div>
                                 <StatusBadge compact icon="fa-receipt" label={`${sales.current_page}/${sales.last_page}`} tone="warning" />
                             </header>
@@ -336,7 +392,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                 rowKey="id"
                                 selectedRowKey={selectedSale?.id}
                                 onRowClick={openSale}
-                                emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas neste periodo.</span></div>}
+                                emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas no periodo selecionado.</span></div>}
                                 getRowActions={(sale) => [
                                     {
                                         key: 'view',

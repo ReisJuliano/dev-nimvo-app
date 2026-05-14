@@ -4,6 +4,10 @@ import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
 import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
+import ActionDrawer from '@/Components/UI/ActionDrawer'
+import CompactModal from '@/Components/UI/CompactModal'
+import QuickActionBar from '@/Components/UI/QuickActionBar'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
@@ -20,6 +24,7 @@ import {
     createOfflineCompany,
     createOfflineCustomer,
     discardOfflinePendingSale,
+    getOfflineCashRegisterHistory,
     getOfflineCashRegisterReport,
     hasOfflineWorkspaceData,
     getOfflineOrderDetail,
@@ -32,6 +37,7 @@ import {
     saveOfflinePendingSale,
     searchOfflineProducts,
     seedOfflineWorkspace,
+    registerOfflineCashMovement,
     subscribeOfflineWorkspace,
     syncOfflineWorkspace,
 } from '@/lib/offline/workspace'
@@ -102,6 +108,104 @@ const initialManualRecipient = {
 }
 const initialCustomerLinkForm = { name: '', document: '', email: '' }
 const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
+const cashPanelCollapseStoragePrefix = 'nimvo:pos:cash-panel:collapsed'
+
+function buildCashPanelCollapseStorageKey(tenantId) {
+    if (!tenantId) {
+        return null
+    }
+
+    return `${cashPanelCollapseStoragePrefix}:${tenantId}`
+}
+
+function readCashPanelCollapsedPreference(tenantId) {
+    const storageKey = buildCashPanelCollapseStorageKey(tenantId)
+
+    if (!storageKey || typeof window === 'undefined') {
+        return null
+    }
+
+    try {
+        const storedValue = window.localStorage.getItem(storageKey)
+
+        if (storedValue === '1') {
+            return true
+        }
+
+        if (storedValue === '0') {
+            return false
+        }
+    } catch {
+        return null
+    }
+
+    return null
+}
+
+function writeCashPanelCollapsedPreference(tenantId, collapsed) {
+    const storageKey = buildCashPanelCollapseStorageKey(tenantId)
+
+    if (!storageKey || typeof window === 'undefined') {
+        return
+    }
+
+    try {
+        window.localStorage.setItem(storageKey, collapsed ? '1' : '0')
+    } catch {
+        return
+    }
+}
+
+function formatShortDateTime(value) {
+    if (!value) {
+        return 'Sem horario'
+    }
+
+    return new Date(value).toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+function formatShortTime(value) {
+    if (!value) {
+        return '--:--'
+    }
+
+    return new Date(value).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+
+function buildCashActivityRows(report) {
+    if (!report) {
+        return []
+    }
+
+    const movementRows = (report.movements || []).map((movement, index) => ({
+        id: `movement-${movement.id ?? movement.created_at ?? index}`,
+        type: movement.type,
+        label: movement.type === 'supply' ? 'Suprimento' : 'Sangria',
+        amount: Number(movement.amount || 0),
+        detail: movement.reason || movement.user_name || 'Movimento manual',
+        created_at: movement.created_at || null,
+    }))
+    const salesRows = (report.sales_rows || []).map((sale, index) => ({
+        id: `sale-${sale.id ?? sale.sale_number ?? sale.created_at ?? index}`,
+        type: 'sale',
+        label: sale.sale_number ? `Venda ${sale.sale_number}` : 'Venda',
+        amount: Number(sale.total || 0),
+        detail: 'Venda finalizada',
+        created_at: sale.created_at || null,
+    }))
+
+    return [...movementRows, ...salesRows].sort((left, right) =>
+        new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime(),
+    )
+}
 
 function createEmptyRecommendations() {
     return {
@@ -251,6 +355,9 @@ export default function PosIndex({
     managers,
     supervisors = [],
     cashRegister,
+    openRegister = null,
+    cashRegisterHistory: initialCashRegisterHistory = [],
+    cashRegisterSettings = {},
     pendingOrderDrafts: initialPendingOrderDrafts,
     pendingOrderDraftDetails = [],
     preloadedOrderDraft,
@@ -265,7 +372,10 @@ export default function PosIndex({
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
     const supportsPendingSales = posCapabilities.pending_sales !== false
     const supportsCompanies = posCapabilities.companies !== false
-    const requireCashClosingConference = moduleState.settings?.cash_closing?.require_conference !== false
+    const requireCashClosingConference = (
+        cashRegisterSettings?.cash_closing?.require_conference
+        ?? moduleState.settings?.cash_closing?.require_conference
+    ) !== false
     const visibleInitialPendingSale = supportsPendingSales
         ? resolveVisiblePendingSale(tenantId, auth?.user?.id, initialPendingSale)
         : null
@@ -275,7 +385,9 @@ export default function PosIndex({
 
     const [customers, setCustomers] = useState(initialCustomers || [])
     const [companies, setCompanies] = useState(initialCompanies || [])
-    const [cashRegisterState, setCashRegisterState] = useState(cashRegister)
+    const [cashRegisterState, setCashRegisterState] = useState(openRegister?.cashRegister || cashRegister)
+    const [cashRegisterReport, setCashRegisterReport] = useState(openRegister || null)
+    const [cashRegisterHistory, setCashRegisterHistory] = useState(initialCashRegisterHistory || [])
     const [pendingOrderDrafts, setPendingOrderDrafts] = useState(initialPendingOrderDrafts || [])
     const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? visibleInitialPendingSale?.order_draft_id ?? null)
     const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
@@ -334,8 +446,28 @@ export default function PosIndex({
     const [invoiceChoice, setInvoiceChoice] = useState('65')
     const [cancelModalOpen, setCancelModalOpen] = useState(false)
     const [discountReason, setDiscountReason] = useState('')
+    const [cashMovementModalType, setCashMovementModalType] = useState(null)
+    const [cashMovementForm, setCashMovementForm] = useState({ amount: '', reason: '' })
+    const [submittingCashMovement, setSubmittingCashMovement] = useState(false)
+    const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false)
+    const [mobileCashPanelOpen, setMobileCashPanelOpen] = useState(false)
+    const [isMobileCashPanel, setIsMobileCashPanel] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024)
+    const [cashPanelCollapsed, setCashPanelCollapsed] = useState(() => {
+        const storedValue = readCashPanelCollapsedPreference(tenantId)
+
+        if (storedValue != null) {
+            return storedValue
+        }
+
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 1280
+        }
+
+        return false
+    })
 
     const productSearchInputRef = useRef(null)
+    const cashRegisterReportRef = useRef(openRegister || null)
     const searchTerm = productSearchControl.draftValue
     const appliedSearchTerm = productSearchControl.value
     const customerSearch = customerSearchControl.draftValue
@@ -377,6 +509,111 @@ export default function PosIndex({
         return resolveVisiblePendingSale(tenantId, auth?.user?.id, nextPendingSale)
     }
 
+    function toggleCashPanelCollapsed() {
+        setCashPanelCollapsed((current) => {
+            const nextValue = !current
+            writeCashPanelCollapsedPreference(tenantId, nextValue)
+            return nextValue
+        })
+    }
+
+    function syncCashRegisterPanelFromOffline(nextCashRegister = null, fallbackReport = null) {
+        if (!tenantId) {
+            return null
+        }
+
+        const offlineHistory = getOfflineCashRegisterHistory(tenantId)
+        const activeRegister = nextCashRegister
+        setCashRegisterState(activeRegister || null)
+        setCashRegisterHistory(offlineHistory)
+
+        if (!activeRegister?.id) {
+            setCashRegisterReport(null)
+            return null
+        }
+
+        const offlineReport = getOfflineCashRegisterReport(tenantId, activeRegister.id, {
+            userName: auth?.user?.name,
+            fallbackReport: fallbackReport || cashRegisterReport || openRegister,
+        })
+
+        setCashRegisterReport(offlineReport || null)
+
+        return offlineReport || null
+    }
+
+    async function refreshCashRegisterPanel(registerId = cashRegisterState?.id, fallbackReport = null) {
+        if (!tenantId) {
+            return null
+        }
+
+        if (!registerId) {
+            setCashRegisterState(null)
+            setCashRegisterReport(null)
+            setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
+            return null
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+            return syncCashRegisterPanelFromOffline(snapshot.cashRegister, fallbackReport)
+        }
+
+        try {
+            const response = await apiRequest(`/api/cash-registers/${registerId}/report`)
+            const nextReport = cacheOfflineCashRegisterReport(tenantId, response.report) || response.report
+
+            setCashRegisterState(nextReport?.cashRegister || null)
+            setCashRegisterReport(nextReport || null)
+            setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
+
+            return nextReport || null
+        } catch (error) {
+            if (isNetworkApiError(error)) {
+                const snapshot = getOfflineWorkspaceSnapshot(tenantId)
+                return syncCashRegisterPanelFromOffline(snapshot.cashRegister, fallbackReport)
+            }
+
+            throw error
+        }
+    }
+
+    function openCashMovementModal(type) {
+        if (!cashRegisterState) {
+            showFeedback('error', 'Abra o caixa antes de registrar uma movimentacao.')
+            return
+        }
+
+        setMobileCashPanelOpen(false)
+        setCashMovementForm({ amount: '', reason: '' })
+        setCashMovementModalType(type)
+    }
+
+    function closeCashMovementModal() {
+        setCashMovementModalType(null)
+        setCashMovementForm({ amount: '', reason: '' })
+    }
+
+    function openCashHistoryDrawer() {
+        setMobileCashPanelOpen(false)
+        setHistoryDrawerOpen(true)
+    }
+
+    function closeCashHistoryDrawer() {
+        setHistoryDrawerOpen(false)
+    }
+
+    function handleCashMovementFieldChange(field, value) {
+        setCashMovementForm((current) => ({
+            ...current,
+            [field]: value,
+        }))
+    }
+
+    useEffect(() => {
+        cashRegisterReportRef.current = cashRegisterReport || null
+    }, [cashRegisterReport])
+
     useEffect(() => {
         if (!tenantId) {
             return undefined
@@ -391,6 +628,17 @@ export default function PosIndex({
             setCompanies(snapshot.catalogs.companies)
             setPendingOrderDrafts(getOfflinePendingCheckoutSummaries(tenantId))
             setCashRegisterState(snapshot.cashRegister)
+            setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
+
+            if (snapshot.cashRegister?.id) {
+                const offlineReport = getOfflineCashRegisterReport(tenantId, snapshot.cashRegister.id, {
+                    userName: auth?.user?.name,
+                    fallbackReport: cashRegisterReportRef.current || openRegister,
+                })
+                setCashRegisterReport(offlineReport || null)
+            } else {
+                setCashRegisterReport(null)
+            }
 
             if (!supportsPendingSales) {
                 return
@@ -430,10 +678,15 @@ export default function PosIndex({
                     customers: initialCustomers,
                     companies: initialCompanies,
                     orders: pendingOrderDraftDetails,
-                    cashRegister,
+                    cashRegister: openRegister?.cashRegister || cashRegister,
+                    cashRegisterHistory: initialCashRegisterHistory,
                     pendingSaleUserId: auth?.user?.id,
                     pendingSale: visibleInitialPendingSale,
                 })
+
+                if (openRegister) {
+                    cacheOfflineCashRegisterReport(tenantId, openRegister)
+                }
             }
 
             if (cancelled) {
@@ -461,6 +714,8 @@ export default function PosIndex({
         categories,
         initialCompanies,
         initialCustomers,
+        initialCashRegisterHistory,
+        openRegister,
         visibleInitialPendingSale,
         localAgentBridge,
         pendingOrderDraftDetails,
@@ -471,8 +726,42 @@ export default function PosIndex({
     ])
 
     useEffect(() => {
-        setCashRegisterState(cashRegister)
-    }, [cashRegister])
+        setCashRegisterState(openRegister?.cashRegister || cashRegister || null)
+        setCashRegisterReport(openRegister || null)
+        setCashRegisterHistory(initialCashRegisterHistory || [])
+
+        if (tenantId && openRegister) {
+            cacheOfflineCashRegisterReport(tenantId, openRegister)
+        }
+    }, [cashRegister, initialCashRegisterHistory, openRegister, tenantId])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined
+        }
+
+        const syncViewportState = () => {
+            const mobile = window.innerWidth < 1024
+            const storedValue = readCashPanelCollapsedPreference(tenantId)
+
+            setIsMobileCashPanel(mobile)
+
+            if (!mobile && storedValue == null) {
+                setCashPanelCollapsed(window.innerWidth < 1280)
+            } else if (storedValue != null) {
+                setCashPanelCollapsed(storedValue)
+            }
+
+            if (!mobile) {
+                setMobileCashPanelOpen(false)
+            }
+        }
+
+        syncViewportState()
+        window.addEventListener('resize', syncViewportState)
+
+        return () => window.removeEventListener('resize', syncViewportState)
+    }, [tenantId])
 
     useEffect(() => {
         const hasBlockingModal = Boolean(
@@ -485,6 +774,9 @@ export default function PosIndex({
             || openCashRegisterModal
             || closeCashRegisterModal
             || cashReportModal
+            || cashMovementModalType
+            || historyDrawerOpen
+            || mobileCashPanelOpen
             || pendingSalePromptOpen,
         )
 
@@ -507,6 +799,9 @@ export default function PosIndex({
         openCashRegisterModal,
         closeCashRegisterModal,
         cashReportModal,
+        cashMovementModalType,
+        historyDrawerOpen,
+        mobileCashPanelOpen,
         pendingSalePromptOpen,
     ])
 
@@ -720,6 +1015,24 @@ export default function PosIndex({
         if (!closeCashRegisterModal?.report) return []
         return buildCloseCashRegisterRows(closeCashRegisterModal, requireCashClosingConference)
     }, [closeCashRegisterModal, requireCashClosingConference])
+    const cashActivityRows = useMemo(() => buildCashActivityRows(cashRegisterReport), [cashRegisterReport])
+    const cashMovementModalConfig = cashMovementModalType === 'withdrawal'
+        ? {
+            title: 'Sangria',
+            icon: 'fa-arrow-up-right-from-square',
+            badge: 'Saida manual',
+            confirmLabel: 'Confirmar retirada',
+            description: 'Retire um valor do turno atual e registre o motivo para auditoria.',
+        }
+        : cashMovementModalType === 'supply'
+            ? {
+                title: 'Suprimento',
+                icon: 'fa-arrow-down-left-and-arrow-up-right-to-center',
+                badge: 'Entrada manual',
+                confirmLabel: 'Confirmar entrada',
+                description: 'Adicione dinheiro ao caixa e descreva rapidamente o motivo.',
+            }
+            : null
 
     const filteredCustomers = useMemo(() => {
         const normalizedTerm = normalizeTextSearch(deferredCustomerSearch)
@@ -1728,6 +2041,8 @@ export default function PosIndex({
     }
 
     function handleOpenCashWorkflow() {
+        setMobileCashPanelOpen(false)
+
         if (cashRegisterState) {
             if (!loadingClosePreview && !closingCashRegister) {
                 handleOpenCloseCashRegister()
@@ -1768,6 +2083,7 @@ export default function PosIndex({
                 }, {
                     userName: auth?.user?.name,
                 })
+                syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister)
                 setOpenCashRegisterModal(null)
                 showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
                 return
@@ -1799,6 +2115,7 @@ export default function PosIndex({
                     opening_notes: openCashRegisterModal.openingNotes.trim() || null,
                 },
             })
+            await refreshCashRegisterPanel(response.cash_register_id)
             setOpenCashRegisterModal(null)
             showFeedback('success', response.message || 'Caixa aberto com sucesso.')
         } catch (error) {
@@ -1811,6 +2128,7 @@ export default function PosIndex({
                 }, {
                     userName: auth?.user?.name,
                 })
+                syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister)
                 setOpenCashRegisterModal(null)
                 showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
             } else {
@@ -1821,9 +2139,90 @@ export default function PosIndex({
         }
     }
 
+    async function handleSubmitCashMovement(event) {
+        event.preventDefault()
+
+        if (!cashRegisterState || !cashMovementModalType) {
+            return
+        }
+
+        const amount = Number(cashMovementForm.amount || 0)
+        const reason = cashMovementForm.reason.trim()
+        const isWithdrawal = cashMovementModalType === 'withdrawal'
+
+        if (amount <= 0) {
+            showFeedback('error', 'Informe um valor maior que zero para continuar.')
+            return
+        }
+
+        if (!reason) {
+            showFeedback('error', 'Informe o motivo desta movimentacao antes de confirmar.')
+            return
+        }
+
+        setSubmittingCashMovement(true)
+
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                registerOfflineCashMovement(tenantId, cashRegisterState.id, {
+                    type: cashMovementModalType,
+                    amount,
+                    reason,
+                }, {
+                    userName: auth?.user?.name,
+                })
+                syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister, cashRegisterReport)
+                closeCashMovementModal()
+                showFeedback(
+                    'warning',
+                    isWithdrawal
+                        ? 'Sangria registrada no modo offline. A sincronizacao sera feita quando a internet voltar.'
+                        : 'Suprimento registrado no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                )
+                return
+            }
+
+            const response = await apiRequest(`/api/cash-registers/${cashRegisterState.id}/movements`, {
+                method: 'post',
+                data: {
+                    type: cashMovementModalType,
+                    amount,
+                    reason,
+                },
+            })
+
+            await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
+            closeCashMovementModal()
+            showFeedback('success', response.message || 'Movimentacao registrada com sucesso.')
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                registerOfflineCashMovement(tenantId, cashRegisterState.id, {
+                    type: cashMovementModalType,
+                    amount,
+                    reason,
+                }, {
+                    userName: auth?.user?.name,
+                })
+                syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister, cashRegisterReport)
+                closeCashMovementModal()
+                showFeedback(
+                    'warning',
+                    isWithdrawal
+                        ? 'Sangria registrada no modo offline. A sincronizacao sera feita quando a internet voltar.'
+                        : 'Suprimento registrado no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                )
+            } else {
+                showFeedback('error', error.message)
+            }
+        } finally {
+            setSubmittingCashMovement(false)
+        }
+    }
+
     async function handleOpenCloseCashRegister() {
         if (!cashRegisterState) return
 
+        setMobileCashPanelOpen(false)
         setLoadingClosePreview(true)
 
         try {
@@ -2053,6 +2452,9 @@ export default function PosIndex({
                     fallbackReport: closeCashRegisterModal.report,
                 })
                 setCloseCashRegisterModal(null)
+                setCashRegisterState(null)
+                setCashRegisterReport(null)
+                setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
                 setCashReportModal(result.report)
                 showFeedback('warning', result.message)
                 return
@@ -2066,6 +2468,8 @@ export default function PosIndex({
             cacheOfflineCashRegisterReport(tenantId, response.report)
             setCloseCashRegisterModal(null)
             setCashRegisterState(null)
+            setCashRegisterReport(null)
+            setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
             seedOfflineWorkspace(tenantId, {
                 cashRegister: null,
             })
@@ -2087,6 +2491,9 @@ export default function PosIndex({
                     fallbackReport: closeCashRegisterModal.report,
                 })
                 setCloseCashRegisterModal(null)
+                setCashRegisterState(null)
+                setCashRegisterReport(null)
+                setCashRegisterHistory(getOfflineCashRegisterHistory(tenantId))
                 setCashReportModal(result.report)
                 showFeedback('warning', result.message)
             } else {
@@ -2504,7 +2911,11 @@ export default function PosIndex({
             const finalizedOrderDraftId = activeOrderDraftId
             const response = await finalizeSale({ fiscalDecision: 'close', requestedDocumentModel: '65' })
 
-            await concludeFinalizedSale(finalizedOrderDraftId)
+            await concludeFinalizedSale(finalizedOrderDraftId, async () => {
+                if (response.sale?.sale_id > 0 && cashRegisterState?.id) {
+                    await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
+                }
+            })
 
             const printMessage = response.local_agent_print?.message
                 ? ` ${response.local_agent_print.message}`
@@ -2562,7 +2973,11 @@ export default function PosIndex({
                 },
             })
 
-            await concludeFinalizedSale(finalizedOrderDraftId)
+            await concludeFinalizedSale(finalizedOrderDraftId, async () => {
+                if (cashRegisterState?.id) {
+                    await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
+                }
+            })
             showFeedback(
                 'success',
                 requestedDocumentModel === '55'
@@ -2771,7 +3186,11 @@ export default function PosIndex({
                     },
                 })
 
-                await concludeFinalizedSale(finalizedOrderDraftId)
+                await concludeFinalizedSale(finalizedOrderDraftId, async () => {
+                    if (cashRegisterState?.id) {
+                        await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
+                    }
+                })
                 showFeedback(
                     'success',
                     recipientDocumentModel === '55'
@@ -2779,7 +3198,11 @@ export default function PosIndex({
                         : `Venda ${response.sale.sale_number} enviada para emissao fiscal.`,
                 )
             } catch (error) {
-                await concludeFinalizedSale(finalizedOrderDraftId)
+                await concludeFinalizedSale(finalizedOrderDraftId, async () => {
+                    if (cashRegisterState?.id) {
+                        await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
+                    }
+                })
                 showFeedback('error', `Venda ${response.sale.sale_number} concluida, mas a etapa fiscal falhou: ${error.message}`)
             }
         } catch (error) {
@@ -2811,6 +3234,8 @@ export default function PosIndex({
 
     function closeShortcutDrivenPanels() {
         setCashReportModal(null)
+        closeCashMovementModal()
+        closeCashHistoryDrawer()
         setQuickCustomerOpen(false)
         closeCustomerPicker()
         setDiscountModalOpen(false)
@@ -2823,6 +3248,7 @@ export default function PosIndex({
         setCancelModalOpen(false)
         setOpenCashRegisterModal(null)
         setCloseCashRegisterModal(null)
+        setMobileCashPanelOpen(false)
     }
 
     function focusProductsShortcut() {
@@ -2871,6 +3297,8 @@ export default function PosIndex({
                 cashReportModal
                 || openCashRegisterModal
                 || closeCashRegisterModal
+                || cashMovementModalType
+                || historyDrawerOpen
                 || quickCustomerOpen
                 || customerPickerOpen
                 || discountModalOpen
@@ -2881,6 +3309,7 @@ export default function PosIndex({
                 || cashierDraftsModalOpen
                 || invoiceModalOpen
                 || cancelModalOpen
+                || mobileCashPanelOpen
                 || pendingSalePromptOpen,
             )
             const hasBlockingModal = Boolean(pendingSalePromptOpen)
@@ -2889,10 +3318,13 @@ export default function PosIndex({
                 : null
 
             if (event.key === 'Escape') {
+                if (historyDrawerOpen) return void (event.preventDefault(), closeCashHistoryDrawer())
+                if (cashMovementModalType) return void (event.preventDefault(), closeCashMovementModal())
                 if (cashReportModal) return void (event.preventDefault(), closeCashReportModal())
                 if (openCashRegisterModal) return void (event.preventDefault(), closeOpenCashRegisterModal())
                 if (closeCashRegisterModal?.supervisorPromptOpen) return void (event.preventDefault(), handleCloseCashSupervisorPrompt())
                 if (closeCashRegisterModal) return void (event.preventDefault(), closeCloseCashRegisterModal())
+                if (mobileCashPanelOpen) return void (event.preventDefault(), setMobileCashPanelOpen(false))
                 if (quickCustomerOpen) return void (event.preventDefault(), setQuickCustomerOpen(false))
                 if (customerPickerOpen) return void (event.preventDefault(), closeCustomerPicker())
                 if (discountModalOpen) return void (event.preventDefault(), closeDiscountModal())
@@ -2952,6 +3384,8 @@ export default function PosIndex({
         cashReportModal,
         openCashRegisterModal,
         closeCashRegisterModal,
+        cashMovementModalType,
+        historyDrawerOpen,
         quickCustomerOpen,
         customerPickerOpen,
         discountModalOpen,
@@ -2962,6 +3396,7 @@ export default function PosIndex({
         cashierDraftsModalOpen,
         invoiceModalOpen,
         cancelModalOpen,
+        mobileCashPanelOpen,
         pendingSalePromptOpen,
         cashRegisterState,
         cart.length,
@@ -2978,6 +3413,11 @@ export default function PosIndex({
     const workspaceProps = {
         tenantName: tenant?.name,
         cashRegisterState,
+        cashRegisterReport,
+        cashRegisterHistory,
+        cashPanelCollapsed,
+        isMobileCashPanel,
+        mobileCashPanelOpen,
         linkedCustomerSummary,
         productSearchInputRef,
         searchTerm,
@@ -3014,6 +3454,16 @@ export default function PosIndex({
         openCashierDraftsModal,
         openInvoiceStep,
         openFinalizeStep,
+        onToggleCashPanel: toggleCashPanelCollapsed,
+        onOpenMobileCashPanel: () => setMobileCashPanelOpen(true),
+        onCloseMobileCashPanel: () => setMobileCashPanelOpen(false),
+        onOpenCashRegister: handleOpenCashWorkflow,
+        onOpenCashMovement: openCashMovementModal,
+        onOpenCashHistory: openCashHistoryDrawer,
+        onOpenCloseCashRegister: handleOpenCashWorkflow,
+        loadingClosePreview,
+        openingCashRegister,
+        closingCashRegister,
         onOpenCancel: () => setCancelModalOpen(true),
         supportsOrders,
         pendingOrderDrafts,
@@ -3078,7 +3528,7 @@ export default function PosIndex({
 
     return (
         <AppLayout title="" showTopbar={false} contentClassName="app-page-content-flush">
-            <Head title="Checkout">
+            <Head title="PDV">
                 <link
                     href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
                     rel="stylesheet"
@@ -3093,6 +3543,66 @@ export default function PosIndex({
                 busy={pendingSaleActionBusy}
                 onRestore={handleRestorePendingSale}
                 onDiscard={handleDiscardPendingSale}
+            />
+
+            <CompactModal
+                open={Boolean(cashMovementModalType && cashMovementModalConfig)}
+                title={cashMovementModalConfig?.title || 'Movimentacao'}
+                description={cashMovementModalConfig?.description || 'Registrar movimentacao manual.'}
+                icon={cashMovementModalConfig?.icon || 'fa-arrow-right-arrow-left'}
+                badge={cashMovementModalConfig?.badge || null}
+                onClose={closeCashMovementModal}
+                footer={(
+                    <>
+                        <button type="button" className="pos-button ghost" onClick={closeCashMovementModal}>
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            form="pos-cash-movement-form"
+                            className="pos-button confirm"
+                            disabled={submittingCashMovement}
+                        >
+                            {submittingCashMovement ? 'Salvando...' : cashMovementModalConfig?.confirmLabel || 'Confirmar'}
+                        </button>
+                    </>
+                )}
+            >
+                <form id="pos-cash-movement-form" className="pos-modal-form" onSubmit={handleSubmitCashMovement}>
+                    <label className="pos-field">
+                        <span>Valor</span>
+                        <input
+                            className="pos-field-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={cashMovementForm.amount}
+                            onChange={(event) => handleCashMovementFieldChange('amount', event.target.value)}
+                            placeholder="0,00"
+                            autoFocus
+                        />
+                    </label>
+
+                    <label className="pos-field">
+                        <span>Motivo</span>
+                        <textarea
+                            className="pos-field-input textarea"
+                            rows="3"
+                            value={cashMovementForm.reason}
+                            onChange={(event) => handleCashMovementFieldChange('reason', event.target.value)}
+                            placeholder="Descreva rapidamente o motivo da movimentacao"
+                        />
+                    </label>
+                </form>
+            </CompactModal>
+
+            <PosCashActivityDrawer
+                open={historyDrawerOpen}
+                cashRegisterState={cashRegisterState}
+                report={cashRegisterReport}
+                activityRows={cashActivityRows}
+                history={cashRegisterHistory}
+                onClose={closeCashHistoryDrawer}
             />
 
             {openCashRegisterModal ? (
@@ -3608,6 +4118,11 @@ function totalsKey(cart, selectedCustomer, notes, discountConfig) {
 function PosWorkspace({
     tenantName,
     cashRegisterState,
+    cashRegisterReport,
+    cashRegisterHistory,
+    cashPanelCollapsed,
+    isMobileCashPanel,
+    mobileCashPanelOpen,
     linkedCustomerSummary,
     productSearchInputRef,
     searchTerm,
@@ -3644,6 +4159,16 @@ function PosWorkspace({
     openCashierDraftsModal,
     openInvoiceStep,
     openFinalizeStep,
+    onToggleCashPanel,
+    onOpenMobileCashPanel,
+    onCloseMobileCashPanel,
+    onOpenCashRegister,
+    onOpenCashMovement,
+    onOpenCashHistory,
+    onOpenCloseCashRegister,
+    loadingClosePreview,
+    openingCashRegister,
+    closingCashRegister,
     onOpenCancel,
     supportsOrders,
     pendingOrderDrafts,
@@ -3705,9 +4230,25 @@ function PosWorkspace({
     onCloseCancelModal,
     onCancelSale,
 }) {
+    const checkoutActionItems = [
+        { key: 'payment', label: 'Pagamento', icon: 'card', onClick: openPaymentStep, disabled: !cartLength || submitting },
+        { key: 'discount', label: 'Desconto', icon: 'discount', onClick: () => openDiscountModal(), disabled: !cartLength || submitting },
+        { key: 'customer', label: 'Cliente', icon: 'user', onClick: openCustomerPicker, disabled: submitting },
+        ...(supportsOrders ? [{ key: 'drafts', label: 'Comandas', icon: 'cart', onClick: openCashierDraftsModal, disabled: submitting }] : []),
+        { key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting },
+        { key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting },
+        { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
+    ]
+    const shellClassName = [
+        'pos-shell',
+        isMobileCashPanel ? 'panel-mobile' : 'panel-visible',
+        !isMobileCashPanel && cashPanelCollapsed ? 'panel-collapsed' : 'panel-expanded',
+    ].filter(Boolean).join(' ')
+    const checkoutBlocked = !cashRegisterState
+
     return (
         <div className="pos-screen">
-            <div className="pos-shell">
+            <div className={shellClassName}>
                 <section className="pos-main-column">
                     <header className="pos-topbar">
                         <div className="pos-terminal-line">
@@ -3782,6 +4323,31 @@ function PosWorkspace({
                     <div className="pos-toolbar-status">
                         <span>{barcodeHelperText}</span>
                         <span>{paymentReady ? 'Pagamento confirmado. Escolha a emissao para concluir.' : cashRegisterState ? 'Pagamento pendente.' : 'Abra o caixa com Shift + X.'}</span>
+                    </div>
+
+                    <div className="pos-checkout-actions">
+                        {checkoutActionItems.map((action) => (
+                            <button
+                                key={action.key}
+                                type="button"
+                                className={`pos-checkout-action-button ${action.tone || 'default'}`}
+                                onClick={action.onClick}
+                                disabled={action.disabled}
+                            >
+                                <PosIcon name={action.icon} />
+                                <span>{action.label}</span>
+                            </button>
+                        ))}
+
+                        <button
+                            type="button"
+                            className="pos-checkout-finalize"
+                            onClick={openFinalizeStep}
+                            disabled={!cartLength || submitting}
+                        >
+                            <PosIcon name="check" />
+                            <span>{submitting ? 'Finalizando...' : 'Finalizar venda'}</span>
+                        </button>
                     </div>
 
                     <div className="pos-item-list" role="list">
@@ -3903,29 +4469,73 @@ function PosWorkspace({
                             ))}
                         </div>
                     </footer>
+
+                    {checkoutBlocked ? (
+                        <div className="pos-locked-overlay">
+                            <div className="pos-locked-card">
+                                <StatusBadge label="CAIXA FECHADO" tone="danger" icon="fa-lock" />
+                                <strong>Abra o caixa para liberar o checkout.</strong>
+                                <span>O turno precisa ser iniciado antes de registrar itens, pagamentos e fechamento.</span>
+                                <button
+                                    type="button"
+                                    className="pos-button info"
+                                    onClick={onOpenCashRegister}
+                                    disabled={openingCashRegister}
+                                >
+                                    {openingCashRegister ? 'Abrindo...' : 'Abrir caixa'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
                 </section>
 
-                <aside className="pos-sidebar">
-                    <PosSidebarAction label="Pagamento" icon="card" onClick={openPaymentStep} />
-                    <PosSidebarAction label="Desconto" icon="discount" onClick={() => openDiscountModal()} />
-                    <PosSidebarAction label="Cliente" icon="user" onClick={openCustomerPicker} />
-                    {supportsOrders ? <PosSidebarAction label="Comandas" icon="cart" onClick={openCashierDraftsModal} /> : null}
-                    <div className="pos-sidebar-separator" />
-                    <PosSidebarAction label="Consumidor" icon="receipt" onClick={openConsumerModal} />
-                    <PosSidebarAction label="NF-e" icon="document" onClick={openInvoiceStep} />
-                    <PosSidebarAction label="Cancelar" icon="cancel" tone="danger" onClick={onOpenCancel} />
-                    <div className="pos-sidebar-spacer" />
-                    <button
-                        type="button"
-                        className="pos-sidebar-finalize"
-                        onClick={openFinalizeStep}
-                        disabled={!cartLength || submitting}
-                    >
-                        <PosIcon name="check" />
-                        <span>Finalizar</span>
-                    </button>
-                </aside>
+                {!isMobileCashPanel ? (
+                    <PosCashTurnPanel
+                        cashRegisterState={cashRegisterState}
+                        report={cashRegisterReport}
+                        history={cashRegisterHistory}
+                        collapsed={cashPanelCollapsed}
+                        loadingClosePreview={loadingClosePreview}
+                        openingCashRegister={openingCashRegister}
+                        closingCashRegister={closingCashRegister}
+                        onToggleCollapse={onToggleCashPanel}
+                        onOpenCashRegister={onOpenCashRegister}
+                        onOpenCashMovement={onOpenCashMovement}
+                        onOpenCashHistory={onOpenCashHistory}
+                        onOpenCloseCashRegister={onOpenCloseCashRegister}
+                    />
+                ) : null}
             </div>
+
+            {isMobileCashPanel ? (
+                <>
+                    <button type="button" className="pos-turn-panel-fab" onClick={onOpenMobileCashPanel}>
+                        <i className="fa-solid fa-vault" />
+                        <span>Turno</span>
+                    </button>
+
+                    {mobileCashPanelOpen ? (
+                        <div className="pos-turn-sheet-backdrop" onClick={onCloseMobileCashPanel}>
+                            <PosCashTurnPanel
+                                mobile
+                                cashRegisterState={cashRegisterState}
+                                report={cashRegisterReport}
+                                history={cashRegisterHistory}
+                                collapsed={false}
+                                loadingClosePreview={loadingClosePreview}
+                                openingCashRegister={openingCashRegister}
+                                closingCashRegister={closingCashRegister}
+                                onToggleCollapse={onCloseMobileCashPanel}
+                                onOpenCashRegister={onOpenCashRegister}
+                                onOpenCashMovement={onOpenCashMovement}
+                                onOpenCashHistory={onOpenCashHistory}
+                                onOpenCloseCashRegister={onOpenCloseCashRegister}
+                                onCloseMobilePanel={onCloseMobileCashPanel}
+                            />
+                        </div>
+                    ) : null}
+                </>
+            ) : null}
 
             <CashierDraftPullModal
                 open={cashierDraftsModalOpen}
@@ -4239,6 +4849,289 @@ function PosSidebarAction({ label, icon, tone = 'default', onClick }) {
             <PosIcon name={icon} />
             <span>{label}</span>
         </button>
+    )
+}
+
+function PosCashTurnPanel({
+    cashRegisterState,
+    report,
+    history,
+    collapsed,
+    mobile = false,
+    loadingClosePreview,
+    openingCashRegister,
+    closingCashRegister,
+    onToggleCollapse,
+    onOpenCashRegister,
+    onOpenCashMovement,
+    onOpenCashHistory,
+    onOpenCloseCashRegister,
+    onCloseMobilePanel = null,
+}) {
+    const currentAmount = Number(report?.expected_cash ?? cashRegisterState?.opening_amount ?? 0)
+    const summaryCards = [
+        { key: 'opening', label: 'Abertura', value: formatMoney(report?.cashRegister?.opening_amount ?? 0) },
+        { key: 'sales', label: 'Vendas', value: formatMoney(report?.total_sales ?? 0) },
+        { key: 'expected', label: 'Esperado', value: formatMoney(report?.expected_cash ?? 0) },
+        { key: 'movements', label: 'Movimentos', value: String(report?.movements?.length ?? 0) },
+    ]
+    const quickActions = cashRegisterState
+        ? [
+            {
+                key: 'withdrawal',
+                label: 'Sangria',
+                description: 'Retirar valor',
+                icon: 'fa-arrow-up-right-from-square',
+                tone: 'danger',
+                onClick: () => onOpenCashMovement('withdrawal'),
+            },
+            {
+                key: 'supply',
+                label: 'Suprimento',
+                description: 'Adicionar valor',
+                icon: 'fa-arrow-down-left-and-arrow-up-right-to-center',
+                tone: 'info',
+                onClick: () => onOpenCashMovement('supply'),
+            },
+            {
+                key: 'history',
+                label: 'Historico',
+                description: 'Movimentos do turno',
+                icon: 'fa-clock-rotate-left',
+                onClick: onOpenCashHistory,
+            },
+            {
+                key: 'close',
+                label: 'Fechar Caixa',
+                description: 'Conferencia final',
+                icon: 'fa-lock',
+                tone: 'danger',
+                disabled: loadingClosePreview || closingCashRegister,
+                onClick: onOpenCloseCashRegister,
+            },
+        ]
+        : [
+            {
+                key: 'open',
+                label: 'Abrir Caixa',
+                description: 'Iniciar o turno',
+                icon: 'fa-lock-open',
+                tone: 'info',
+                disabled: openingCashRegister,
+                onClick: onOpenCashRegister,
+            },
+            {
+                key: 'history',
+                label: 'Historico',
+                description: 'Turnos recentes',
+                icon: 'fa-clock-rotate-left',
+                onClick: onOpenCashHistory,
+            },
+        ]
+    const asideClassName = [
+        'pos-turn-panel',
+        collapsed ? 'collapsed' : '',
+        mobile ? 'mobile' : '',
+    ].filter(Boolean).join(' ')
+
+    return (
+        <aside className={asideClassName} onClick={mobile ? (event) => event.stopPropagation() : undefined}>
+            <div className="pos-turn-panel-head">
+                <StatusBadge
+                    label={cashRegisterState ? 'CAIXA ABERTO' : 'CAIXA FECHADO'}
+                    tone={cashRegisterState ? 'success' : 'danger'}
+                    icon={cashRegisterState ? 'fa-lock-open' : 'fa-lock'}
+                    compact={collapsed && !mobile}
+                />
+
+                {mobile ? (
+                    <button type="button" className="pos-turn-panel-toggle ui-tooltip" data-tooltip="Fechar painel" onClick={onCloseMobilePanel}>
+                        <i className="fa-solid fa-xmark" />
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        className="pos-turn-panel-toggle ui-tooltip"
+                        data-tooltip={collapsed ? 'Expandir painel do turno' : 'Recolher painel do turno'}
+                        onClick={onToggleCollapse}
+                    >
+                        <i className={`fa-solid ${collapsed ? 'fa-angles-left' : 'fa-angles-right'}`} />
+                    </button>
+                )}
+            </div>
+
+            {collapsed && !mobile ? (
+                <div className="pos-turn-panel-collapsed-actions">
+                    <strong className="pos-turn-panel-collapsed-amount">{formatMoney(currentAmount)}</strong>
+
+                    {quickActions.map((action) => (
+                        <button
+                            key={action.key}
+                            type="button"
+                            className={`pos-turn-panel-icon-action ${action.tone || 'default'} ui-tooltip`}
+                            data-tooltip={action.label}
+                            onClick={action.onClick}
+                            disabled={action.disabled}
+                        >
+                            <i className={`fa-solid ${action.icon}`} />
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <>
+                    <div className="pos-turn-panel-hero">
+                        <strong>{cashRegisterState ? formatMoney(currentAmount) : 'Turno fechado'}</strong>
+                        <span>
+                            {cashRegisterState
+                                ? `${report?.sales_count ?? 0} vendas | Abertura ${formatShortTime(report?.cashRegister?.opened_at)}`
+                                : 'Abra o caixa para liberar o checkout e as rotinas do turno.'}
+                        </span>
+                    </div>
+
+                    {cashRegisterState ? (
+                        <>
+                            <div className="pos-turn-panel-summary">
+                                {summaryCards.map((card) => (
+                                    <article key={card.key} className="pos-turn-panel-card">
+                                        <span>{card.label}</span>
+                                        <strong>{card.value}</strong>
+                                    </article>
+                                ))}
+                            </div>
+
+                            <section className="pos-turn-panel-section">
+                                <div className="pos-turn-panel-section-head">
+                                    <strong>Formas de pagamento</strong>
+                                    <span>{report?.payments?.length ?? 0} linha(s)</span>
+                                </div>
+
+                                <div className="pos-turn-payment-list">
+                                    {report?.payments?.length ? report.payments.map((payment) => (
+                                        <div key={payment.payment_method} className="pos-turn-payment-row">
+                                            <span>{payment.label}</span>
+                                            <strong>{formatMoney(payment.total)}</strong>
+                                            <small>{payment.qtd} lanc.</small>
+                                        </div>
+                                    )) : (
+                                        <div className="pos-turn-panel-empty">Nenhuma venda registrada neste turno.</div>
+                                    )}
+                                </div>
+                            </section>
+                        </>
+                    ) : (
+                        <section className="pos-turn-panel-section">
+                            <button type="button" className="pos-turn-open-button" onClick={onOpenCashRegister} disabled={openingCashRegister}>
+                                <i className="fa-solid fa-lock-open" />
+                                <span>{openingCashRegister ? 'Abrindo...' : 'Abrir Caixa'}</span>
+                            </button>
+
+                            <div className="pos-turn-panel-empty">
+                                O checkout fica bloqueado ate iniciar o turno com o valor de abertura.
+                            </div>
+                        </section>
+                    )}
+
+                    <QuickActionBar items={quickActions} title="Acoes rapidas" orientation="vertical" className="pos-turn-quick-actions" />
+
+                    {history?.length ? (
+                        <section className="pos-turn-panel-section recent-history">
+                            <div className="pos-turn-panel-section-head">
+                                <strong>Turnos recentes</strong>
+                                <span>{history.length} registro(s)</span>
+                            </div>
+
+                            <div className="pos-turn-recent-list">
+                                {history.slice(0, 3).map((entry) => (
+                                    <div key={entry.id} className="pos-turn-recent-row">
+                                        <div>
+                                            <strong>{formatMoney(entry.total_sales)}</strong>
+                                            <span>{entry.sales_count} vendas</span>
+                                        </div>
+                                        <small>{formatShortDateTime(entry.closed_at || entry.opened_at)}</small>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    ) : null}
+                </>
+            )}
+        </aside>
+    )
+}
+
+function PosCashActivityDrawer({
+    open,
+    cashRegisterState,
+    report,
+    activityRows,
+    history,
+    onClose,
+}) {
+    return (
+        <ActionDrawer
+            open={open}
+            title={cashRegisterState ? 'Historico do turno' : 'Historico de caixas'}
+            description={
+                cashRegisterState
+                    ? 'Vendas, sangrias e suprimentos do caixa atual em ordem cronologica.'
+                    : 'Resumo dos ultimos turnos encerrados pelo operador.'
+            }
+            icon="fa-clock-rotate-left"
+            size="md"
+            onClose={onClose}
+        >
+            {cashRegisterState ? (
+                <div className="pos-turn-drawer-stack">
+                    <div className="pos-turn-drawer-summary">
+                        <div>
+                            <span>Vendas</span>
+                            <strong>{report?.sales_count ?? 0}</strong>
+                        </div>
+                        <div>
+                            <span>Total</span>
+                            <strong>{formatMoney(report?.total_sales ?? 0)}</strong>
+                        </div>
+                        <div>
+                            <span>Abertura</span>
+                            <strong>{formatShortTime(report?.cashRegister?.opened_at)}</strong>
+                        </div>
+                    </div>
+
+                    <div className="pos-turn-drawer-list">
+                        {activityRows.length ? activityRows.map((entry) => (
+                            <div key={entry.id} className="pos-turn-drawer-row">
+                                <div className="pos-turn-drawer-row-main">
+                                    <StatusBadge
+                                        label={entry.label}
+                                        tone={entry.type === 'sale' ? 'info' : entry.type === 'supply' ? 'success' : 'danger'}
+                                        compact
+                                    />
+                                    <span>{entry.detail}</span>
+                                </div>
+                                <strong>{formatMoney(entry.amount)}</strong>
+                                <small>{formatShortTime(entry.created_at)}</small>
+                            </div>
+                        )) : (
+                            <div className="pos-turn-panel-empty">Nenhum movimento registrado neste turno.</div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div className="pos-turn-drawer-list">
+                    {history.length ? history.map((entry) => (
+                        <div key={entry.id} className="pos-turn-drawer-row history">
+                            <div className="pos-turn-drawer-row-main">
+                                <strong>{formatMoney(entry.total_sales)}</strong>
+                                <span>{entry.sales_count} vendas | diferenca {formatMoney(entry.difference || 0)}</span>
+                            </div>
+                            <small>{formatShortDateTime(entry.closed_at || entry.opened_at)}</small>
+                        </div>
+                    )) : (
+                        <div className="pos-turn-panel-empty">Nenhum caixa fechado recentemente.</div>
+                    )}
+                </div>
+            )}
+        </ActionDrawer>
     )
 }
 

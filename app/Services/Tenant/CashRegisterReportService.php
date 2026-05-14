@@ -28,6 +28,12 @@ class CashRegisterReportService
             ->with('payments')
             ->where('status', 'finalized')
             ->get();
+        $salesRows = $sales->map(fn ($sale) => [
+            'id' => $sale->id,
+            'sale_number' => $sale->sale_number,
+            'total' => (float) $sale->total,
+            'created_at' => $sale->created_at?->toIso8601String(),
+        ])->values()->all();
 
         $payments = $sales
             ->flatMap(fn ($sale) => $sale->payments)
@@ -68,6 +74,7 @@ class CashRegisterReportService
                 'opened_at' => $cashRegister->opened_at?->toIso8601String(),
                 'closed_at' => $cashRegister->closed_at?->toIso8601String(),
             ],
+            'sales_rows' => $salesRows,
             'payments' => $payments,
             'movements' => $movements,
             'payment_totals' => $paymentTotals,

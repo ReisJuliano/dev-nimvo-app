@@ -14,10 +14,12 @@ class TenantNavigationServiceTest extends TestCase
         $request = Request::create('/pedidos', 'GET');
         $reportsShortcutRequest = Request::create('/vendas', 'GET');
         $deferredPaymentRequest = Request::create('/a-prazo', 'GET');
+        $legacyCashShortcutRequest = Request::create('/caixa', 'GET');
 
         $item = $service->resolveItem($request);
         $reportsShortcutItem = $service->resolveItem($reportsShortcutRequest);
         $deferredPaymentItem = $service->resolveItem($deferredPaymentRequest);
+        $legacyCashShortcutItem = $service->resolveItem($legacyCashShortcutRequest);
 
         $this->assertNotNull($item);
         $this->assertSame('/pedidos', $item['href']);
@@ -28,6 +30,9 @@ class TenantNavigationServiceTest extends TestCase
         $this->assertNotNull($deferredPaymentItem);
         $this->assertSame('/a-prazo', $deferredPaymentItem['href']);
         $this->assertSame('prazo', $deferredPaymentItem['access_key']);
+        $this->assertNotNull($legacyCashShortcutItem);
+        $this->assertSame('/pdv', $legacyCashShortcutItem['href']);
+        $this->assertSame('pdv', $legacyCashShortcutItem['access_key']);
     }
 
     public function test_it_checks_required_roles_from_the_navigation_catalog(): void

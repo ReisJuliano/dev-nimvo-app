@@ -151,7 +151,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         }
 
         let cancelled = false
-        let unsubscribe = () => {}
+        let unsubscribe = () => { }
 
         const applyWorkspaceState = () => {
             const snapshot = getOfflineWorkspaceSnapshot(tenantId)
@@ -168,12 +168,12 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         }
 
         const handleOnline = () => {
-            syncOfflineWorkspace(tenantId, apiRequest).catch(() => {})
+            syncOfflineWorkspace(tenantId, apiRequest).catch(() => { })
         }
 
         const bootstrap = async () => {
             configureOfflineWorkspaceBridge(tenantId, localAgentBridge)
-            await hydrateOfflineWorkspace(tenantId).catch(() => {})
+            await hydrateOfflineWorkspace(tenantId).catch(() => { })
 
             if (cancelled) {
                 return
@@ -610,59 +610,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                 ))}
                             </section>
 
-                            <div className="cash-compact-columns">
-                                <PaymentSummaryTable report={openRegisterState} />
-
-                                <section className="cash-compact-panel">
-                                    <div className="cash-compact-panel-head">
-                                        <div>
-                                            <span>Operacao</span>
-                                            <strong>Pulso do turno</strong>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="ui-icon-button ui-tooltip"
-                                            data-tooltip="Abrir historico"
-                                            onClick={() => {
-                                                setHistoryDrawerTab('movements')
-                                                setHistoryDrawerOpen(true)
-                                            }}
-                                        >
-                                            <i className="fa-solid fa-clock-rotate-left" />
-                                        </button>
-                                    </div>
-
-                                    <div className="cash-compact-overview-list">
-                                        <div>
-                                            <span>Sangrias</span>
-                                            <strong>{formatMoney(openRegisterState.total_withdrawals)}</strong>
-                                        </div>
-                                        <div>
-                                            <span>Suprimentos</span>
-                                            <strong>{formatMoney(openRegisterState.total_supplies)}</strong>
-                                        </div>
-                                        <div>
-                                            <span>Movimentos manuais</span>
-                                            <strong>{movementRows.length}</strong>
-                                        </div>
-                                        <div>
-                                            <span>Ultimo registro</span>
-                                            <strong>{movementRows[0]?.createdAt || 'Sem lancamentos'}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div className="cash-compact-inline-actions">
-                                        <button type="button" className="ui-button" onClick={() => setMovementModalType('supply')}>
-                                            <i className="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center" />
-                                            <span>Suprimento</span>
-                                        </button>
-                                        <button type="button" className="ui-button-danger" onClick={() => setMovementModalType('withdrawal')}>
-                                            <i className="fa-solid fa-arrow-up-right-from-square" />
-                                            <span>Sangria</span>
-                                        </button>
-                                    </div>
-                                </section>
-                            </div>
+                            <PaymentSummaryTable report={openRegisterState} />
                         </div>
                     ) : (
                         <section className="cash-compact-closed-state">

@@ -259,6 +259,47 @@ class ConditionalSalesFlowTest extends TestCase
         ], $user->id);
     }
 
+    public function test_page_data_keeps_conditional_closed_until_the_user_selects_one(): void
+    {
+        $user = $this->makeUser();
+        $customer = $this->makeCustomer();
+        $product = $this->makeProduct([
+            'code' => 'COND-PRD-006',
+            'name' => 'Jaqueta Jeans',
+            'sale_price' => 159.9,
+            'stock_quantity' => 3,
+        ]);
+
+        $service = app(ConditionalSaleService::class);
+
+        $conditionalSale = $service->create([
+            'customer_id' => $customer->id,
+            'withdrawn_at' => now()->toDateTimeString(),
+            'due_at' => now()->addDays(2)->toDateString(),
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 1,
+                    'unit_price' => 159.9,
+                ],
+            ],
+        ], $user->id);
+
+        $defaultPayload = $service->pageData([
+            'status' => 'open',
+            'search' => '',
+        ]);
+
+        $selectedPayload = $service->pageData([
+            'status' => 'open',
+            'search' => '',
+            'conditional' => $conditionalSale->id,
+        ]);
+
+        $this->assertNull($defaultPayload['selectedConditionalId']);
+        $this->assertSame($conditionalSale->id, $selectedPayload['selectedConditionalId']);
+    }
+
     protected function makeUser(): User
     {
         return User::query()->create([

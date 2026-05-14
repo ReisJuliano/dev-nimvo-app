@@ -25,17 +25,10 @@ class TenantNavigationService
                 'items' => [
                     [
                         'href' => '/pdv',
-                        'label_type' => 'pdv',
+                        'label' => 'Checkout integrado',
                         'icon' => 'fa-cash-register',
                         'access_key' => 'pdv',
-                        'request_patterns' => ['pdv', 'api/pdv*'],
-                    ],
-                    [
-                        'href' => '/caixa',
-                        'label' => 'Caixa',
-                        'icon' => 'fa-vault',
-                        'access_key' => 'caixa',
-                        'request_patterns' => ['caixa', 'api/cash-registers*'],
+                        'request_patterns' => ['pdv', 'caixa', 'api/pdv*'],
                     ],
                     [
                         'href' => '/pedidos',
