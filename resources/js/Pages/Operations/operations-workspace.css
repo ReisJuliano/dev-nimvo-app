@@ -1158,6 +1158,40 @@
     color: #173041;
 }
 
+.ops-delivery-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-height: 0;
+}
+
+.ops-delivery-panel .dense-table-wrap,
+.ops-delivery-panel .dense-table-empty {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.ops-delivery-drawer {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.ops-delivery-drawer-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.ops-delivery-drawer .ops-workspace-form-grid {
+    gap: 0.8rem;
+}
+
+.ops-delivery-drawer .ops-workspace-actions {
+    padding-top: 0.75rem;
+    margin-top: 0.1rem;
+    border-top: 1px solid rgba(27, 71, 96, 0.1);
+}
+
 .ops-compact-panel {
     border-radius: 18px;
     border-color: rgba(15, 23, 42, 0.08);

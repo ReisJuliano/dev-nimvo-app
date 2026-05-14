@@ -6,13 +6,13 @@ import { CENTRAL_ADMIN_NAVIGATION } from '@/Components/CentralAdmin/navigation'
 import { useFlashPopup } from '@/lib/errorPopup'
 import './admin-layout.css'
 
+const SIDEBAR_STORAGE_KEY = 'central-admin-sidebar-collapsed'
+
 export default function AdminLayout({ title = 'Admin', subtitle = '', children }) {
     const { centralAuth, flash } = usePage().props
     const currentUrl = usePage().url
-    const currentPath = currentUrl.split('?')[0]
-    const isDashboardPage = currentPath === '/admin/painel'
     const [mobileOpen, setMobileOpen] = useState(false)
-    const [collapsed, setCollapsed] = useState(!isDashboardPage)
+    const [collapsed, setCollapsed] = useState(false)
     useFlashPopup(flash)
 
     useEffect(() => {
@@ -20,8 +20,23 @@ export default function AdminLayout({ title = 'Admin', subtitle = '', children }
     }, [currentUrl])
 
     useEffect(() => {
-        setCollapsed(!isDashboardPage)
-    }, [isDashboardPage])
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const storedValue = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+        if (storedValue !== null) {
+            setCollapsed(storedValue === 'true')
+        }
+    }, [])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed))
+    }, [collapsed])
 
     useEffect(() => {
         if (typeof document === 'undefined') {

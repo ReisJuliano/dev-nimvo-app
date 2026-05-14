@@ -4,6 +4,7 @@ import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateCondi
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
 import ConditionalSearchPanel from '@/Components/ConditionalSales/ConditionalSearchPanel'
 import ConditionalSalesTableCard from '@/Components/ConditionalSales/ConditionalSalesTableCard'
+import ActionDrawer from '@/Components/UI/ActionDrawer'
 import ModalForm from '@/Components/UI/ModalForm'
 import ActionButton from '@/Components/UI/ActionButton'
 import AppLayout from '@/Layouts/AppLayout'
@@ -89,7 +90,7 @@ function TopProductsCard({ topProducts }) {
             <div className="products-table-header conditional-side-head">
                 <div>
                     <h2>Top saidas</h2>
-                    <p>Itens mais levados</p>
+                    <p>Resumo rapido da carteira</p>
                 </div>
             </div>
             <div className="conditional-table-wrap">
@@ -141,7 +142,7 @@ export default function ConditionalSalesPage({
     })
     const createForm = useForm(buildCreateDefaults())
     const selectedConditional = useMemo(
-        () => conditionals.find((conditionalSale) => conditionalSale.id === selectedConditionalId) || null,
+        () => conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedConditionalId)) || null,
         [conditionals, selectedConditionalId],
     )
     const selectedCustomer = useMemo(
@@ -178,12 +179,22 @@ export default function ConditionalSalesPage({
 
     const hasCashPayment = finalizeForm.data.payments.some((payment) => payment.method === 'cash')
 
+    function buildQueryParams(extra = {}) {
+        const nextStatus = Object.prototype.hasOwnProperty.call(extra, 'status') ? extra.status : filterForm.data.status
+        const nextSearch = Object.prototype.hasOwnProperty.call(extra, 'search') ? extra.search : filterForm.data.search
+        const nextConditional = Object.prototype.hasOwnProperty.call(extra, 'conditional') ? extra.conditional : selectedConditionalId
+
+        return Object.fromEntries(
+            Object.entries({
+                status: nextStatus || 'open',
+                search: nextSearch,
+                conditional: nextConditional,
+            }).filter(([key, value]) => key === 'status' || (value !== undefined && value !== null && String(value).trim() !== '')),
+        )
+    }
+
     function visitWithFilters(extra = {}) {
-        router.get('/venda-condicional', {
-            search: filterForm.data.search,
-            status: filterForm.data.status,
-            ...extra,
-        }, {
+        router.get('/venda-condicional', buildQueryParams(extra), {
             preserveScroll: true,
             preserveState: true,
             replace: true,
@@ -192,9 +203,7 @@ export default function ConditionalSalesPage({
 
     function handleToolbarSubmit(event) {
         event.preventDefault()
-        visitWithFilters({
-            conditional: selectedConditionalId,
-        })
+        visitWithFilters({ conditional: null })
     }
 
     function handleToolbarReset() {
@@ -203,30 +212,30 @@ export default function ConditionalSalesPage({
             status: 'open',
         })
 
-        router.get('/venda-condicional', {
+        visitWithFilters({
+            search: '',
             status: 'open',
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
+            conditional: null,
         })
     }
 
     function handleStatusChange(value) {
         filterForm.setData('status', value)
-        router.get('/venda-condicional', {
-            search: filterForm.data.search,
+        visitWithFilters({
             status: value,
-        }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
+            conditional: null,
         })
     }
 
     function handleSelectConditional(id) {
         visitWithFilters({
             conditional: id,
+        })
+    }
+
+    function handleCloseConditional() {
+        visitWithFilters({
+            conditional: null,
         })
     }
 
@@ -410,32 +419,11 @@ export default function ConditionalSalesPage({
                         <div className="conditional-main-col-list">
                             <ConditionalSalesTableCard
                                 conditionals={conditionals}
-                                filters={filterForm.data}
                                 selectedConditionalId={selectedConditionalId}
-                                statusOptions={statusOptions}
                                 onSelect={handleSelectConditional}
-                                onStatusChange={handleStatusChange}
-                                hideStatusFilter
                             />
                         </div>
                         <aside className="conditional-main-col-side">
-                            <ConditionalSaleDetailCard
-                                conditionalSale={selectedConditional}
-                                finalizeForm={finalizeForm}
-                                finalizePreview={finalizePreview}
-                                hasCashPayment={hasCashPayment}
-                                paymentMethods={paymentMethods}
-                                returnForm={returnForm}
-                                onAddPayment={addPaymentRow}
-                                onFinalizeItemChange={updateFinalizeItem}
-                                onFinalizePreset={applyFinalizePreset}
-                                onFinalizeSubmit={handleFinalizeSubmit}
-                                onPaymentChange={updatePaymentRow}
-                                onRemovePayment={removePaymentRow}
-                                onReturnAll={applyReturnAll}
-                                onReturnItemChange={updateReturnItem}
-                                onReturnSubmit={handleReturnSubmit}
-                            />
                             <TopProductsCard topProducts={topProducts} />
                         </aside>
                     </div>
@@ -463,6 +451,36 @@ export default function ConditionalSalesPage({
                     onSubmit={handleCreateSubmit}
                 />
             </ModalForm>
+
+            <ActionDrawer
+                open={Boolean(selectedConditional)}
+                title={selectedConditional ? selectedConditional.code : 'Condicional'}
+                description={selectedConditional ? selectedConditional.customer.name : 'Detalhes da condicional'}
+                icon="fa-right-left"
+                size="lg"
+                badge={selectedConditional?.status_label}
+                bodyClassName="conditional-detail-drawer-body"
+                onClose={handleCloseConditional}
+            >
+                <ConditionalSaleDetailCard
+                    conditionalSale={selectedConditional}
+                    embedded
+                    finalizeForm={finalizeForm}
+                    finalizePreview={finalizePreview}
+                    hasCashPayment={hasCashPayment}
+                    paymentMethods={paymentMethods}
+                    returnForm={returnForm}
+                    onAddPayment={addPaymentRow}
+                    onFinalizeItemChange={updateFinalizeItem}
+                    onFinalizePreset={applyFinalizePreset}
+                    onFinalizeSubmit={handleFinalizeSubmit}
+                    onPaymentChange={updatePaymentRow}
+                    onRemovePayment={removePaymentRow}
+                    onReturnAll={applyReturnAll}
+                    onReturnItemChange={updateReturnItem}
+                    onReturnSubmit={handleReturnSubmit}
+                />
+            </ActionDrawer>
         </AppLayout>
     )
 }

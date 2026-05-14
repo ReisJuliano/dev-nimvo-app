@@ -440,3 +440,306 @@
     min-height: 0;
     overflow: auto;
 }
+
+.conditional-toolbar {
+    display: grid;
+    gap: 0.7rem;
+    padding: 0.85rem 1rem 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 253, 0.94));
+    box-shadow: var(--app-shadow-sm);
+}
+
+.conditional-toolbar-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.conditional-toolbar-tab,
+.conditional-detail-tab {
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    transition: var(--app-transition, 0.2s ease);
+}
+
+.conditional-toolbar-tab {
+    min-height: 2.2rem;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.conditional-toolbar-tab:hover,
+.conditional-toolbar-tab.active,
+.conditional-detail-tab:hover,
+.conditional-detail-tab.active {
+    border-color: rgba(47, 124, 246, 0.28);
+    background: rgba(47, 124, 246, 0.1);
+    color: var(--app-text-primary);
+}
+
+.conditional-toolbar-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.conditional-toolbar-search {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 2.85rem;
+    padding: 0 0.85rem;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.conditional-toolbar-search i {
+    color: var(--app-text-muted);
+    font-size: 0.82rem;
+}
+
+.conditional-toolbar-search input {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding-inline: 0;
+}
+
+.conditional-toolbar-search input:focus {
+    outline: none;
+}
+
+.conditional-toolbar-actions {
+    display: flex;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.conditional-main-split {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+}
+
+.conditional-main-col-side {
+    gap: 0.85rem;
+}
+
+.conditional-side-card {
+    max-height: min(58vh, 420px);
+}
+
+.conditional-dense-table .dense-table {
+    min-width: 100%;
+}
+
+.conditional-row-title {
+    display: grid;
+    gap: 0.12rem;
+}
+
+.conditional-row-title strong {
+    color: var(--app-text-primary);
+    font-size: 0.88rem;
+}
+
+.conditional-row-title span {
+    color: var(--app-text-muted);
+    font-size: 0.76rem;
+}
+
+.conditional-detail-drawer-body {
+    padding: 0;
+}
+
+.conditional-detail-shell {
+    display: grid;
+    gap: 0.95rem;
+}
+
+.conditional-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.conditional-detail-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+}
+
+.conditional-detail-avatar {
+    width: 2.9rem;
+    height: 2.9rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(47, 124, 246, 0.16), rgba(19, 129, 216, 0.18));
+    color: var(--app-primary-dark);
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.conditional-detail-copy {
+    min-width: 0;
+    display: grid;
+    gap: 0.12rem;
+}
+
+.conditional-detail-copy strong {
+    color: var(--app-text-primary);
+    font-size: 1rem;
+}
+
+.conditional-detail-copy span,
+.conditional-detail-copy small {
+    color: var(--app-text-muted);
+}
+
+.conditional-detail-metrics-grid {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.conditional-detail-metric {
+    padding: 0.75rem 0.8rem;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.conditional-detail-metric span,
+.conditional-note-card span {
+    display: block;
+    color: var(--app-text-muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.conditional-detail-metric strong {
+    display: block;
+    margin-top: 0.22rem;
+    color: var(--app-text-primary);
+    font-size: 0.9rem;
+}
+
+.conditional-detail-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.conditional-detail-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.2rem;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.conditional-detail-panel,
+.conditional-payment-card,
+.conditional-note-card {
+    display: grid;
+    gap: 0.8rem;
+    padding: 0.9rem;
+    border: 1px solid var(--app-border);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+}
+
+.conditional-detail-form {
+    align-content: flex-start;
+}
+
+.conditional-detail-section-head,
+.conditional-item-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.conditional-detail-section-head strong,
+.conditional-item-card-head strong {
+    color: var(--app-text-primary);
+}
+
+.conditional-detail-section-head span,
+.conditional-item-card-head small,
+.conditional-note-card p {
+    color: var(--app-text-muted);
+}
+
+.conditional-note-card p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.conditional-item-card.compact {
+    padding: 0.8rem;
+    gap: 0.75rem;
+    background: rgba(248, 250, 252, 0.94);
+}
+
+.conditional-inline-actions.compact {
+    gap: 0.35rem;
+}
+
+.conditional-detail-submit {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.conditional-payment-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 160px auto;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+@media (max-width: 1099px) {
+    .conditional-main-split {
+        grid-template-columns: 1fr;
+    }
+
+    .conditional-main-col-side {
+        order: -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .conditional-toolbar-form,
+    .conditional-payment-row {
+        grid-template-columns: 1fr;
+    }
+
+    .conditional-detail-submit,
+    .conditional-toolbar-actions {
+        justify-content: stretch;
+    }
+
+    .conditional-detail-submit .action-button,
+    .conditional-toolbar-actions .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+}

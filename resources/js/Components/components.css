@@ -18,12 +18,12 @@
     --app-text-muted: #7e8ba0;
     --app-sidebar-bg: #1b2433;
     --app-sidebar-bg-soft: #222d3f;
-    --app-sidebar-width: 282px;
-    --app-sidebar-width-collapsed: 92px;
-    --app-topbar-height: 88px;
-    --app-radius-sm: 12px;
-    --app-radius: 18px;
-    --app-radius-lg: 26px;
+    --app-sidebar-width: 252px;
+    --app-sidebar-width-collapsed: 78px;
+    --app-topbar-height: 68px;
+    --app-radius-sm: 10px;
+    --app-radius: 16px;
+    --app-radius-lg: 22px;
     --app-shadow-sm: 0 10px 28px rgba(15, 23, 42, 0.06);
     --app-shadow: 0 22px 44px rgba(15, 23, 42, 0.1);
     --app-shadow-lg: 0 28px 60px rgba(15, 23, 42, 0.18);
@@ -540,7 +540,7 @@
 
 .ui-table th,
 .ui-table td {
-    padding: 1rem 0.95rem;
+    padding: 0.72rem 0.78rem;
     border-bottom: 1px solid var(--app-border);
     text-align: left;
     vertical-align: top;
@@ -548,7 +548,7 @@
 
 .ui-table thead th {
     color: var(--app-text-muted);
-    font-size: 0.73rem;
+    font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -584,6 +584,34 @@
     pointer-events: none;
     transition: var(--app-transition);
     box-shadow: var(--app-shadow-sm);
+}
+
+.ui-icon-button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--app-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--app-transition);
+}
+
+.ui-icon-button:hover {
+    color: var(--app-text-primary);
+    transform: translateY(-1px);
+}
+
+.ui-icon-button.tone-danger {
+    color: var(--app-danger);
+}
+
+.ui-icon-button.tone-primary,
+.ui-icon-button.tone-info {
+    color: var(--app-primary-dark);
 }
 
 .ui-tooltip:hover::after {

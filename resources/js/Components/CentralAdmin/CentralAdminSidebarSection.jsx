@@ -28,8 +28,9 @@ export default function CentralAdminSidebarSection({ section, currentUrl, collap
                     <Link
                         key={item.href}
                         href={item.href}
-                        className={`central-admin-nav-item ${isActive(item.href) ? 'is-active' : ''}`}
+                        className={`central-admin-nav-item ${collapsed ? 'ui-tooltip' : ''} ${isActive(item.href) ? 'is-active' : ''}`}
                         onClick={onNavigate}
+                        data-tooltip={collapsed ? item.label : undefined}
                         title={item.label}
                     >
                         <span className="central-admin-nav-icon">

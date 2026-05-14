@@ -57,7 +57,7 @@ class LoginController extends Controller
             return redirect()->route('password.change.show');
         }
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse

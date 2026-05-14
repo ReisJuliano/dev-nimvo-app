@@ -12,9 +12,10 @@ export default function AppSidebarSection({ section, currentUrl, onNavigate, col
                     <Link
                         key={item.href}
                         href={item.href}
-                        className={`app-nav-item ${isActive(item.href) ? 'active' : ''}`}
+                        className={`app-nav-item ${isActive(item.href) ? 'active' : ''} ui-tooltip`}
                         onClick={onNavigate}
                         title={item.label}
+                        data-tooltip={item.label}
                     >
                         <i className={`fas ${item.icon}`} />
                         <span>{item.label}</span>

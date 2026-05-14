@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+import ActionButton from '@/Components/UI/ActionButton'
+import DenseTable from '@/Components/UI/DenseTable'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 
 function initials(name) {
@@ -17,19 +21,87 @@ function FieldError({ message }) {
     return <span className="conditional-error">{message}</span>
 }
 
-function InfoTile({ label, value }) {
+function DetailMetric({ label, value }) {
     return (
-        <div className="products-field-group">
-            <span className="products-summary-kicker">{label}</span>
-            <strong style={{ display: 'block', marginTop: '0.35rem', fontSize: '0.92rem', color: 'var(--app-text-primary)' }}>{value}</strong>
-        </div>
+        <article className="conditional-detail-metric">
+            <span>{label}</span>
+            <strong>{value}</strong>
+        </article>
     )
 }
 
-function StatusBadge({ label, tone }) {
-    const cls = tone === 'danger' ? 'danger' : tone === 'success' ? 'success' : 'warning'
+function ItemResolveCard({ item, formItem, onPreset, onChange }) {
+    return (
+        <article className="conditional-item-card compact">
+            <div className="conditional-item-card-head">
+                <div>
+                    <strong>{item.product_name}</strong>
+                    <small>{item.product_code || 'Sem SKU'} · Aberto {formatNumber(item.remaining_quantity)}</small>
+                </div>
+                <div className="conditional-inline-actions compact">
+                    <button type="button" className="ui-button-ghost" onClick={() => onPreset(item.id, 'returned_quantity', item.remaining_quantity)}>
+                        Volta
+                    </button>
+                    <button type="button" className="ui-button-ghost" onClick={() => onPreset(item.id, 'kept_quantity', item.remaining_quantity)}>
+                        Fica
+                    </button>
+                    <button type="button" className="ui-button-ghost" onClick={() => onPreset(item.id, 'lost_quantity', item.remaining_quantity)}>
+                        Perda
+                    </button>
+                    <button type="button" className="ui-button-ghost" onClick={() => onPreset(item.id, 'damaged_quantity', item.remaining_quantity)}>
+                        Avaria
+                    </button>
+                </div>
+            </div>
 
-    return <span className={`ui-badge ${cls}`}>{label}</span>
+            <div className="conditional-form-grid cols-4">
+                <label className="products-sidebar-field">
+                    <span>Volta</span>
+                    <input
+                        className="products-input"
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={formItem?.returned_quantity || ''}
+                        onChange={(event) => onChange(item.id, 'returned_quantity', event.target.value)}
+                    />
+                </label>
+                <label className="products-sidebar-field">
+                    <span>Fica</span>
+                    <input
+                        className="products-input"
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={formItem?.kept_quantity || ''}
+                        onChange={(event) => onChange(item.id, 'kept_quantity', event.target.value)}
+                    />
+                </label>
+                <label className="products-sidebar-field">
+                    <span>Perda</span>
+                    <input
+                        className="products-input"
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={formItem?.lost_quantity || ''}
+                        onChange={(event) => onChange(item.id, 'lost_quantity', event.target.value)}
+                    />
+                </label>
+                <label className="products-sidebar-field">
+                    <span>Avaria</span>
+                    <input
+                        className="products-input"
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        value={formItem?.damaged_quantity || ''}
+                        onChange={(event) => onChange(item.id, 'damaged_quantity', event.target.value)}
+                    />
+                </label>
+            </div>
+        </article>
+    )
 }
 
 export default function ConditionalSaleDetailCard({
@@ -48,341 +120,338 @@ export default function ConditionalSaleDetailCard({
     onAddPayment,
     onRemovePayment,
     onPaymentChange,
+    embedded = false,
 }) {
+    const [activePanel, setActivePanel] = useState('overview')
+
+    useEffect(() => {
+        setActivePanel('overview')
+    }, [conditionalSale?.id, conditionalSale?.status])
+
     if (!conditionalSale) {
-        return (
-            <section className="products-table-card conditional-detail-card">
-                <div className="conditional-empty" style={{ minHeight: '14rem' }}>
-                    <i className="fa-solid fa-magnifying-glass" />
-                    <strong>Sem selecao</strong>
-                    <span>Escolha uma condicional na lista ao lado.</span>
-                </div>
-            </section>
+        const emptyState = (
+            <div className="conditional-empty" style={{ minHeight: '12rem' }}>
+                <i className="fa-solid fa-magnifying-glass" />
+                <strong>Sem selecao</strong>
+                <span>Escolha uma condicional para abrir o drawer de detalhes.</span>
+            </div>
         )
+
+        return embedded ? emptyState : <section className="products-table-card conditional-detail-card">{emptyState}</section>
     }
 
     const unresolvedItems = conditionalSale.items.filter((item) => Number(item.remaining_quantity) > 0)
+    const isClosed = conditionalSale.status === 'closed'
+    const panelOptions = isClosed
+        ? [{ key: 'overview', label: 'Resumo', icon: 'fa-layer-group' }]
+        : [
+            { key: 'overview', label: 'Resumo', icon: 'fa-layer-group' },
+            { key: 'return', label: 'Devolucao', icon: 'fa-rotate-left' },
+            { key: 'finalize', label: 'Fechamento', icon: 'fa-bag-shopping' },
+        ]
 
-    return (
-        <section className="products-table-card conditional-detail-card">
-            <div className="products-table-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                    <span className="data-list-icon" aria-hidden>{initials(conditionalSale.customer.name)}</span>
-                    <div>
-                        <h2>{conditionalSale.code}</h2>
-                        <p>{conditionalSale.customer.name}</p>
+    const content = (
+        <div className="conditional-detail-shell">
+            <header className="conditional-detail-header">
+                <div className="conditional-detail-identity">
+                    <span className="conditional-detail-avatar">{initials(conditionalSale.customer.name)}</span>
+                    <div className="conditional-detail-copy">
+                        <strong>{conditionalSale.code}</strong>
+                        <span>{conditionalSale.customer.name}</span>
+                        <small>Operador {conditionalSale.operator_name || 'Nao informado'}</small>
                     </div>
                 </div>
+
                 <div className="conditional-inline-actions">
                     <StatusBadge label={conditionalSale.status_label} tone={conditionalSale.status_tone} />
-                    {conditionalSale.sale ? (
-                        <span className="ui-badge success">{conditionalSale.sale.sale_number}</span>
+                    {conditionalSale.sale ? <StatusBadge label={`Venda ${conditionalSale.sale.sale_number}`} tone="success" /> : null}
+                    {conditionalSale.days_overdue > 0 ? <StatusBadge label={`${conditionalSale.days_overdue}d atraso`} tone="danger" /> : null}
+                </div>
+            </header>
+
+            <section className="conditional-detail-metrics-grid">
+                <DetailMetric label="Retirada" value={formatDateTime(conditionalSale.withdrawn_at)} />
+                <DetailMetric label="Prazo" value={formatDate(conditionalSale.due_at)} />
+                <DetailMetric label="Em aberto" value={formatMoney(conditionalSale.outstanding_total)} />
+                <DetailMetric label="Subtotal" value={formatMoney(conditionalSale.subtotal)} />
+                <DetailMetric label="Contato" value={conditionalSale.customer.phone || '-'} />
+                <DetailMetric label="Documento" value={conditionalSale.customer.document || '-'} />
+                {isClosed ? <DetailMetric label="Cobrado" value={formatMoney(conditionalSale.billed_total)} /> : null}
+                {isClosed ? <DetailMetric label="Devolvido" value={formatMoney(conditionalSale.returned_total)} /> : null}
+            </section>
+
+            <div className="conditional-detail-tabs" role="tablist" aria-label="Acoes da condicional">
+                {panelOptions.map((panel) => (
+                    <button
+                        key={panel.key}
+                        type="button"
+                        className={`conditional-detail-tab ${activePanel === panel.key ? 'active' : ''}`}
+                        onClick={() => setActivePanel(panel.key)}
+                    >
+                        <i className={`fa-solid ${panel.icon}`} />
+                        <span>{panel.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {activePanel === 'overview' ? (
+                <div className="conditional-detail-panel">
+                    <div className="conditional-detail-section-head">
+                        <div>
+                            <strong>Itens da condicional</strong>
+                            <span>{conditionalSale.items.length} item(ns)</span>
+                        </div>
+                        {conditionalSale.notes ? <StatusBadge label="Com observacao" tone="info" /> : null}
+                    </div>
+
+                    <DenseTable
+                        columns={[
+                            { key: 'product_code', label: 'SKU', render: (item) => item.product_code || '-' },
+                            {
+                                key: 'product_name',
+                                label: 'Item',
+                                render: (item) => (
+                                    <div className="conditional-row-title">
+                                        <strong>{item.product_name}</strong>
+                                        <span>{formatMoney(item.unit_price)} unit.</span>
+                                    </div>
+                                ),
+                            },
+                            { key: 'quantity_sent', label: 'Saida', render: (item) => formatNumber(item.quantity_sent) },
+                            { key: 'quantity_returned', label: 'Volta', render: (item) => formatNumber(item.quantity_returned) },
+                            { key: 'remaining_quantity', label: 'Aberto', render: (item) => formatNumber(item.remaining_quantity) },
+                        ]}
+                        rows={conditionalSale.items}
+                        rowKey="id"
+                        minWidth={620}
+                    />
+
+                    {conditionalSale.notes ? (
+                        <article className="conditional-note-card">
+                            <span>Observacoes</span>
+                            <p>{conditionalSale.notes}</p>
+                        </article>
                     ) : null}
                 </div>
-            </div>
+            ) : null}
 
-            <div className="products-table-scroll" style={{ padding: '1rem', display: 'grid', gap: '1rem' }}>
-                <div className="conditional-form-grid cols-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-                    <InfoTile label="Retirada" value={formatDateTime(conditionalSale.withdrawn_at)} />
-                    <InfoTile label="Prazo" value={formatDate(conditionalSale.due_at)} />
-                    <InfoTile label="Aberto" value={formatMoney(conditionalSale.outstanding_total)} />
-                    <InfoTile label="Contato" value={conditionalSale.customer.phone || '-'} />
-                </div>
-
-                <div className="conditional-subcard">
-                    <div className="conditional-subcard-header">
-                        <strong>Itens</strong>
-                    </div>
-                    <div className="conditional-subcard-body">
-                        <div className="conditional-table-wrap">
-                            <table className="conditional-table">
-                                <thead>
-                                    <tr>
-                                        <th>SKU</th>
-                                        <th>Item</th>
-                                        <th>Saida</th>
-                                        <th>Volta</th>
-                                        <th>Aberto</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {conditionalSale.items.map((item) => (
-                                        <tr key={item.id}>
-                                            <td>{item.product_code}</td>
-                                            <td>{item.product_name}</td>
-                                            <td>{formatNumber(item.quantity_sent)}</td>
-                                            <td>{formatNumber(item.quantity_returned)}</td>
-                                            <td>{formatNumber(item.remaining_quantity)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+            {activePanel === 'return' ? (
+                <form className="conditional-detail-panel conditional-detail-form" onSubmit={onReturnSubmit}>
+                    <div className="conditional-detail-section-head">
+                        <div>
+                            <strong>Registrar devolucao</strong>
+                            <span>Somente os itens com saldo aparecem abaixo.</span>
                         </div>
+                        <StatusBadge label={`${unresolvedItems.length} item(ns)`} tone="warning" />
                     </div>
-                </div>
 
-                {conditionalSale.status === 'closed' ? (
-                    <div className="conditional-form-grid cols-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                        <InfoTile label="Subtotal" value={formatMoney(conditionalSale.subtotal)} />
-                        <InfoTile label="Cobrado" value={formatMoney(conditionalSale.billed_total)} />
-                        <InfoTile label="Devolvido" value={formatMoney(conditionalSale.returned_total)} />
+                    <div className="conditional-form-grid cols-2">
+                        <label className="products-sidebar-field">
+                            <span>Data e hora</span>
+                            <input
+                                className="products-input"
+                                type="datetime-local"
+                                value={returnForm.data.returned_at}
+                                onChange={(event) => returnForm.setData('returned_at', event.target.value)}
+                            />
+                            <FieldError message={returnForm.errors.returned_at} />
+                        </label>
+                        <label className="products-sidebar-field">
+                            <span>Observacoes</span>
+                            <input
+                                className="products-input"
+                                value={returnForm.data.notes}
+                                onChange={(event) => returnForm.setData('notes', event.target.value)}
+                                placeholder="Motivo ou contexto"
+                            />
+                            <FieldError message={returnForm.errors.notes} />
+                        </label>
                     </div>
-                ) : (
-                    <div className="conditional-form-grid cols-2" style={{ alignItems: 'stretch' }}>
-                        <div className="conditional-subcard">
-                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <strong>
-                                    <i className="fa-solid fa-rotate-left" style={{ marginRight: '0.45rem' }} />
-                                    Devolucao
-                                </strong>
-                                <span className="ui-badge warning">Parcial</span>
-                            </div>
-                            <div className="conditional-subcard-body">
-                                <form className="conditional-form-grid" onSubmit={onReturnSubmit}>
-                                    <input
-                                        className="products-input"
-                                        type="datetime-local"
-                                        value={returnForm.data.returned_at}
-                                        onChange={(event) => returnForm.setData('returned_at', event.target.value)}
-                                    />
-                                    <FieldError message={returnForm.errors.returned_at} />
 
-                                    <div className="conditional-form-grid">
-                                        {unresolvedItems.length ? unresolvedItems.map((item) => {
-                                            const formItem = returnForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
+                    <div className="conditional-form-grid">
+                        {unresolvedItems.length ? unresolvedItems.map((item) => {
+                            const formItem = returnForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
 
-                                            return (
-                                                <div key={`return-${item.id}`} className="conditional-item-card">
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start' }}>
-                                                        <div>
-                                                            <strong style={{ fontSize: '0.9rem' }}>{item.product_name}</strong>
-                                                            <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginTop: '0.2rem' }}>
-                                                                Aberto {formatNumber(item.remaining_quantity)}
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            className="ui-button-ghost"
-                                                            aria-label="Devolver tudo"
-                                                            onClick={() => onReturnAll(item.id, item.remaining_quantity)}
-                                                        >
-                                                            <i className="fa-solid fa-check" />
-                                                        </button>
-                                                    </div>
-                                                    <input
-                                                        className="products-input"
-                                                        style={{ marginTop: '0.65rem' }}
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.001"
-                                                        value={formItem?.returned_quantity || ''}
-                                                        onChange={(event) => onReturnItemChange(item.id, event.target.value)}
-                                                    />
-                                                </div>
-                                            )
-                                        }) : (
-                                            <div className="conditional-empty" style={{ minHeight: '8rem' }}>
-                                                <i className="fa-solid fa-rotate-left" />
-                                                <strong>Sem saldo</strong>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <FieldError message={returnForm.errors.items} />
-                                    <button className="ui-button-secondary" type="submit" disabled={returnForm.processing}>
-                                        {returnForm.processing ? 'Salvando...' : 'Registrar devolucao'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div className="conditional-subcard">
-                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <strong>
-                                    <i className="fa-solid fa-bag-shopping" style={{ marginRight: '0.45rem' }} />
-                                    Fechamento
-                                </strong>
-                                <span className={`ui-badge ${finalizePreview > 0 ? 'success' : 'warning'}`}>{formatMoney(finalizePreview)}</span>
-                            </div>
-                            <div className="conditional-subcard-body">
-                                <form className="conditional-form-grid" onSubmit={onFinalizeSubmit}>
-                                    <div className="conditional-form-grid cols-2">
-                                        <input
-                                            className="products-input"
-                                            type="datetime-local"
-                                            value={finalizeForm.data.resolved_at}
-                                            onChange={(event) => finalizeForm.setData('resolved_at', event.target.value)}
-                                        />
-                                        <input
-                                            className="products-input"
-                                            readOnly
-                                            value={conditionalSale.customer.document || '-'}
-                                            aria-label="Documento do cliente"
-                                        />
-                                    </div>
-                                    <FieldError message={finalizeForm.errors.resolved_at} />
-
-                                    <div className="conditional-form-grid">
-                                        {unresolvedItems.map((item) => {
-                                            const formItem = finalizeForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
-
-                                            return (
-                                                <div key={`finalize-${item.id}`} className="conditional-item-card">
-                                                    <div style={{ marginBottom: '0.65rem' }}>
-                                                        <strong style={{ fontSize: '0.9rem' }}>{item.product_name}</strong>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--app-text-muted)', marginTop: '0.2rem' }}>
-                                                            Aberto {formatNumber(item.remaining_quantity)}
-                                                        </div>
-                                                    </div>
-                                                    <div className="conditional-inline-actions" style={{ marginBottom: '0.65rem' }}>
-                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'returned_quantity', item.remaining_quantity)}>
-                                                            Volta
-                                                        </button>
-                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'kept_quantity', item.remaining_quantity)}>
-                                                            Fica
-                                                        </button>
-                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'lost_quantity', item.remaining_quantity)}>
-                                                            Perda
-                                                        </button>
-                                                        <button type="button" className="ui-button-ghost" onClick={() => onFinalizePreset(item.id, 'damaged_quantity', item.remaining_quantity)}>
-                                                            Avaria
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="conditional-form-grid cols-2">
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.001"
-                                                            placeholder="Volta"
-                                                            value={formItem?.returned_quantity || ''}
-                                                            onChange={(event) => onFinalizeItemChange(item.id, 'returned_quantity', event.target.value)}
-                                                        />
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.001"
-                                                            placeholder="Fica"
-                                                            value={formItem?.kept_quantity || ''}
-                                                            onChange={(event) => onFinalizeItemChange(item.id, 'kept_quantity', event.target.value)}
-                                                        />
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.001"
-                                                            placeholder="Perda"
-                                                            value={formItem?.lost_quantity || ''}
-                                                            onChange={(event) => onFinalizeItemChange(item.id, 'lost_quantity', event.target.value)}
-                                                        />
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.001"
-                                                            placeholder="Avaria"
-                                                            value={formItem?.damaged_quantity || ''}
-                                                            onChange={(event) => onFinalizeItemChange(item.id, 'damaged_quantity', event.target.value)}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-
-                                    <FieldError message={finalizeForm.errors.items} />
-
-                                    {finalizePreview > 0 ? (
-                                        <div className="conditional-subcard">
-                                            <div className="conditional-subcard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <strong>
-                                                    <i className="fa-solid fa-credit-card" style={{ marginRight: '0.45rem' }} />
-                                                    Pagamento
-                                                </strong>
-                                                <button type="button" className="ui-button-ghost" onClick={onAddPayment}>
-                                                    Parcela
-                                                </button>
-                                            </div>
-                                            <div className="conditional-subcard-body">
-                                                {finalizeForm.data.payments.map((payment, index) => (
-                                                    <div
-                                                        key={`payment-${index}`}
-                                                        style={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: '1fr 1fr auto',
-                                                            gap: '0.65rem',
-                                                            marginBottom: '0.65rem',
-                                                            alignItems: 'center',
-                                                        }}
-                                                    >
-                                                        <select
-                                                            className="products-input"
-                                                            value={payment.method}
-                                                            onChange={(event) => onPaymentChange(index, 'method', event.target.value)}
-                                                        >
-                                                            {paymentMethods.map((method) => (
-                                                                <option key={method.value} value={method.value}>
-                                                                    {method.label}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={payment.amount}
-                                                            onChange={(event) => onPaymentChange(index, 'amount', event.target.value)}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            className="ui-button-danger"
-                                                            disabled={finalizeForm.data.payments.length === 1}
-                                                            aria-label="Remover parcela"
-                                                            onClick={() => onRemovePayment(index)}
-                                                        >
-                                                            <i className="fa-solid fa-xmark" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-
-                                                {hasCashPayment ? (
-                                                    <label className="products-sidebar-field">
-                                                        <span>Recebido (dinheiro)</span>
-                                                        <input
-                                                            className="products-input"
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.01"
-                                                            value={finalizeForm.data.cash_received}
-                                                            onChange={(event) => finalizeForm.setData('cash_received', event.target.value)}
-                                                        />
-                                                    </label>
-                                                ) : null}
-                                                <FieldError message={finalizeForm.errors.payments} />
-                                                <FieldError message={finalizeForm.errors.cash_received} />
-                                            </div>
+                            return (
+                                <article key={`return-${item.id}`} className="conditional-item-card compact">
+                                    <div className="conditional-item-card-head">
+                                        <div>
+                                            <strong>{item.product_name}</strong>
+                                            <small>{item.product_code || 'Sem SKU'} · Aberto {formatNumber(item.remaining_quantity)}</small>
                                         </div>
-                                    ) : null}
+                                        <button
+                                            type="button"
+                                            className="ui-button-ghost"
+                                            onClick={() => onReturnAll(item.id, item.remaining_quantity)}
+                                        >
+                                            Tudo
+                                        </button>
+                                    </div>
+                                    <label className="products-sidebar-field">
+                                        <span>Qtd. devolvida</span>
+                                        <input
+                                            className="products-input"
+                                            type="number"
+                                            min="0"
+                                            step="0.001"
+                                            value={formItem?.returned_quantity || ''}
+                                            onChange={(event) => onReturnItemChange(item.id, event.target.value)}
+                                        />
+                                    </label>
+                                </article>
+                            )
+                        }) : (
+                            <div className="conditional-empty conditional-empty-tight">
+                                <i className="fa-solid fa-rotate-left" />
+                                <strong>Sem saldo aberto</strong>
+                            </div>
+                        )}
+                    </div>
 
+                    <FieldError message={returnForm.errors.items} />
+                    <div className="conditional-detail-submit">
+                        <ActionButton icon="fa-rotate-left" type="submit" disabled={returnForm.processing}>
+                            {returnForm.processing ? 'Salvando...' : 'Registrar devolucao'}
+                        </ActionButton>
+                    </div>
+                </form>
+            ) : null}
+
+            {activePanel === 'finalize' ? (
+                <form className="conditional-detail-panel conditional-detail-form" onSubmit={onFinalizeSubmit}>
+                    <div className="conditional-detail-section-head">
+                        <div>
+                            <strong>Fechar condicional</strong>
+                            <span>Resolva 100% do saldo restante antes de confirmar.</span>
+                        </div>
+                        <StatusBadge label={formatMoney(finalizePreview)} tone={finalizePreview > 0 ? 'success' : 'warning'} />
+                    </div>
+
+                    <div className="conditional-form-grid cols-2">
+                        <label className="products-sidebar-field">
+                            <span>Data e hora</span>
+                            <input
+                                className="products-input"
+                                type="datetime-local"
+                                value={finalizeForm.data.resolved_at}
+                                onChange={(event) => finalizeForm.setData('resolved_at', event.target.value)}
+                            />
+                            <FieldError message={finalizeForm.errors.resolved_at} />
+                        </label>
+                        <label className="products-sidebar-field">
+                            <span>Observacoes</span>
+                            <input
+                                className="products-input"
+                                value={finalizeForm.data.notes}
+                                onChange={(event) => finalizeForm.setData('notes', event.target.value)}
+                                placeholder="Resumo do fechamento"
+                            />
+                            <FieldError message={finalizeForm.errors.notes} />
+                        </label>
+                    </div>
+
+                    <div className="conditional-form-grid">
+                        {unresolvedItems.length ? unresolvedItems.map((item) => {
+                            const formItem = finalizeForm.data.items.find((entry) => Number(entry.id) === Number(item.id))
+
+                            return (
+                                <ItemResolveCard
+                                    key={`finalize-${item.id}`}
+                                    item={item}
+                                    formItem={formItem}
+                                    onPreset={onFinalizePreset}
+                                    onChange={onFinalizeItemChange}
+                                />
+                            )
+                        }) : (
+                            <div className="conditional-empty conditional-empty-tight">
+                                <i className="fa-solid fa-bag-shopping" />
+                                <strong>Sem saldo restante</strong>
+                            </div>
+                        )}
+                    </div>
+
+                    <FieldError message={finalizeForm.errors.items} />
+
+                    {finalizePreview > 0 ? (
+                        <section className="conditional-payment-card">
+                            <div className="conditional-detail-section-head">
+                                <div>
+                                    <strong>Pagamento</strong>
+                                    <span>Distribua o total cobrado entre os meios.</span>
+                                </div>
+                                <button type="button" className="ui-button-ghost" onClick={onAddPayment}>
+                                    Parcela
+                                </button>
+                            </div>
+
+                            <div className="conditional-form-grid">
+                                {finalizeForm.data.payments.map((payment, index) => (
+                                    <div key={`payment-${index}`} className="conditional-payment-row">
+                                        <select
+                                            className="products-input"
+                                            value={payment.method}
+                                            onChange={(event) => onPaymentChange(index, 'method', event.target.value)}
+                                        >
+                                            {paymentMethods.map((method) => (
+                                                <option key={method.value} value={method.value}>
+                                                    {method.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            className="products-input"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={payment.amount}
+                                            onChange={(event) => onPaymentChange(index, 'amount', event.target.value)}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="ui-button-danger"
+                                            disabled={finalizeForm.data.payments.length === 1}
+                                            aria-label="Remover parcela"
+                                            onClick={() => onRemovePayment(index)}
+                                        >
+                                            <i className="fa-solid fa-xmark" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {hasCashPayment ? (
+                                <label className="products-sidebar-field">
+                                    <span>Recebido em dinheiro</span>
                                     <input
                                         className="products-input"
-                                        value={finalizeForm.data.notes}
-                                        onChange={(event) => finalizeForm.setData('notes', event.target.value)}
-                                        placeholder="Observacoes"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={finalizeForm.data.cash_received}
+                                        onChange={(event) => finalizeForm.setData('cash_received', event.target.value)}
                                     />
+                                </label>
+                            ) : null}
 
-                                    <button className="ui-button" type="submit" disabled={finalizeForm.processing}>
-                                        {finalizeForm.processing ? 'Salvando...' : 'Encerrar condicional'}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                            <FieldError message={finalizeForm.errors.payments} />
+                            <FieldError message={finalizeForm.errors.cash_received} />
+                        </section>
+                    ) : null}
+
+                    <div className="conditional-detail-submit">
+                        <ActionButton icon="fa-bag-shopping" type="submit" disabled={finalizeForm.processing}>
+                            {finalizeForm.processing ? 'Salvando...' : 'Encerrar condicional'}
+                        </ActionButton>
                     </div>
-                )}
-            </div>
-        </section>
+                </form>
+            ) : null}
+        </div>
     )
+
+    if (embedded) {
+        return content
+    }
+
+    return <section className="products-table-card conditional-detail-card">{content}</section>
 }

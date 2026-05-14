@@ -23,49 +23,46 @@ export default function AppLayout({
 }) {
     const { auth, flash, tenant, tenantNavigationCatalog, license, localAgentBridge } = usePage().props
     const currentUrl = usePage().url
-    const currentPath = currentUrl.split('?')[0]
-    const isPosPage = currentPath === '/pdv' || currentPath.startsWith('/pdv/')
-    const isDashboardPage = currentPath === '/dashboard'
     const isOverlayNavigation = navigationMode === 'overlay'
     const isHiddenNavigation = navigationMode === 'hidden'
-    const shouldAutoCompact = !isHiddenNavigation && !isOverlayNavigation && !isPosPage && !isDashboardPage
-    const shouldStartCollapsed = isPosPage || defaultCollapsed || shouldAutoCompact
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [collapsed, setCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
-            return shouldStartCollapsed || isOverlayNavigation
+            return Boolean(defaultCollapsed)
         }
 
-        if (shouldStartCollapsed || isOverlayNavigation) {
-            return true
+        const storedValue = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
+
+        if (storedValue !== null) {
+            return storedValue === 'true'
         }
 
-        return window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true'
+        return Boolean(defaultCollapsed)
     })
     const moduleState = useModules(settingsOverride)
     const offlineStatus = useOfflineStatus(tenant?.id)
     useFlashPopup(flash)
 
     useEffect(() => {
+        if (typeof window === 'undefined' || isOverlayNavigation || isHiddenNavigation) {
+            return
+        }
+
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
+    }, [collapsed, isHiddenNavigation, isOverlayNavigation])
+
+    useEffect(() => {
         if (typeof window === 'undefined') {
             return
         }
 
-        if (shouldStartCollapsed || isOverlayNavigation) {
-            setCollapsed(true)
-            return
+        const root = document.documentElement
+        root.classList.toggle('app-sidebar-is-collapsed', collapsed)
+
+        return () => {
+            root.classList.remove('app-sidebar-is-collapsed')
         }
-
-        setCollapsed(window.sessionStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true')
-    }, [isOverlayNavigation, shouldStartCollapsed])
-
-    useEffect(() => {
-        if (typeof window === 'undefined' || shouldStartCollapsed || isOverlayNavigation) {
-            return
-        }
-
-        window.sessionStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
-    }, [collapsed, isOverlayNavigation, shouldStartCollapsed])
+    }, [collapsed])
 
     useEffect(() => {
         if (!tenant?.id) {
@@ -86,7 +83,7 @@ export default function AppLayout({
     }
 
     function toggleCollapsed() {
-        if (isHiddenNavigation || isOverlayNavigation) {
+        if (isHiddenNavigation) {
             return
         }
 
@@ -176,6 +173,8 @@ export default function AppLayout({
                         {showTopbar ? (
                             <AppTopbar
                                 title={title}
+                                collapsed={isSidebarCollapsed}
+                                onToggleSidebar={toggleCollapsed}
                                 onToggleMobileSidebar={toggleMobileSidebar}
                             />
                         ) : !isHiddenNavigation ? (

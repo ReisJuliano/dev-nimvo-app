@@ -1,6 +1,11 @@
 import { Link, router, useForm } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import PageContainer from '@/Components/UI/PageContainer'
+import CompactModal from '@/Components/UI/CompactModal'
+import DenseTable from '@/Components/UI/DenseTable'
+import QuickActionBar from '@/Components/UI/QuickActionBar'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import './consultations.css'
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -70,6 +75,44 @@ function buildFileActions(fiscalDocument) {
 
 function eventSourceLabel(source) {
     return source === 'agent' ? 'Agente' : source === 'backend' ? 'Backend' : 'Sistema'
+}
+
+function MiniMetric({ icon, label, value }) {
+    return (
+        <article className="fiscal-detail-metric">
+            <span>
+                <i className={`fa-solid ${icon}`} />
+                {label}
+            </span>
+            <strong>{value}</strong>
+        </article>
+    )
+}
+
+function InfoList({ items }) {
+    return (
+        <div className="fiscal-detail-info-list">
+            {items.map(([label, value]) => (
+                <div key={`${label}-${value}`}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+function InfoGrid({ items }) {
+    return (
+        <div className="fiscal-detail-info-grid">
+            {items.map(([label, value, full]) => (
+                <div key={`${label}-${value}`} className={full ? 'full' : ''}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                </div>
+            ))}
+        </div>
+    )
 }
 
 export default function FiscalConsultationsPage({ filters, periods, summary, range, sales, inutilizations, contingencies }) {
@@ -172,249 +215,176 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
 
     return (
         <AppLayout title="Consultas">
-            <div className="fiscal-consultations-page">
-                <section className="fiscal-consultations-hero">
-                    <div className="fiscal-consultations-heading">
-                        <span className="fiscal-consultations-eyebrow">
-                            <i className="fa-solid fa-wave-square" />
-                            {range.label}
-                        </span>
+            <div className="fiscal-consultations-page fiscal-compact-page">
+                <PageContainer
+                    className="fiscal-page-container"
+                    sidebar={(
+                        <div className="fiscal-sidebar-stack">
+                            <QuickActionBar
+                                items={[
+                                    {
+                                        key: 'retry',
+                                        icon: 'fa-rotate',
+                                        label: 'Reenfileirar',
+                                        description: `${contingencies.length} pendencia(s)`,
+                                        tone: 'primary',
+                                        onClick: retryContingencies,
+                                    },
+                                    {
+                                        key: 'invalidate',
+                                        icon: 'fa-hashtag',
+                                        label: 'Inutilizar',
+                                        description: 'Abrir faixa fiscal',
+                                        tone: 'danger',
+                                        onClick: openInutilizationModal,
+                                    },
+                                ]}
+                                title="Acoes"
+                            />
 
-                        <div>
-                            <h1>Consultas e cancelamentos</h1>
-                            <span>{range.from} - {range.to}</span>
+                            <section className="fiscal-sidebar-card">
+                                <header>
+                                    <strong>Contexto fiscal</strong>
+                                    <span>{range.label}</span>
+                                </header>
+                                <div className="fiscal-sidebar-meta">
+                                    <div>
+                                        <span>Contingencias</span>
+                                        <strong>{contingencies.length}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Inutilizacoes</span>
+                                        <strong>{inutilizations.length}</strong>
+                                    </div>
+                                    <div>
+                                        <span>Registros</span>
+                                        <strong>{sales.total}</strong>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
-                    </div>
-
-                    <div className="fiscal-consultations-periods">
-                        <button className="fiscal-period-pill" onClick={retryContingencies} type="button">
-                            <i className="fa-solid fa-rotate" />
-                            <span>Reenfileirar</span>
-                        </button>
-
-                        <button className="fiscal-period-pill active" onClick={openInutilizationModal} type="button">
-                            <i className="fa-solid fa-hashtag" />
-                            <span>Inutilizar</span>
-                        </button>
-
-                        {periods.map((period) => (
-                            <button
-                                key={period.key}
-                                className={`fiscal-period-pill ${filters.period === period.key ? 'active' : ''}`}
-                                onClick={() => changePeriod(period.key)}
-                                type="button"
-                            >
-                                <i className={`fa-solid ${filters.period === period.key ? 'fa-circle-dot' : 'fa-circle'}`} />
-                                <span>{period.label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="fiscal-consultations-summary">
-                    {summary.map((item) => (
-                        <article key={item.key} className={`fiscal-summary-card ${toneClass(item.tone)}`}>
-                            <div className="fiscal-summary-icon">
-                                <i className={`fa-solid ${item.icon}`} />
+                    )}
+                >
+                    <div className="fiscal-compact-stack">
+                        <section className="fiscal-compact-toolbar">
+                            <div className="fiscal-compact-heading">
+                                <StatusBadge compact icon="fa-wave-square" label={range.label} tone="info" />
+                                <div>
+                                    <strong>Consultas e cancelamentos</strong>
+                                    <span>{range.from} - {range.to}</span>
+                                </div>
                             </div>
 
-                            <div className="fiscal-summary-copy">
-                                <span>{item.label}</span>
-                                <strong>{item.format === 'currency' ? formatCurrency(item.value) : item.value}</strong>
-                            </div>
-                        </article>
-                    ))}
-                </section>
-
-                <section className="fiscal-consultations-list">
-                    <header className="fiscal-consultations-list-header">
-                        <div>
-                            <strong>Contingencia</strong>
-                            <span>{contingencies.length} recentes</span>
-                        </div>
-
-                        <div className="fiscal-list-chip">
-                            <i className="fa-solid fa-triangle-exclamation" />
-                            <span>Pendencias</span>
-                        </div>
-                    </header>
-
-                    {contingencies.length === 0 ? (
-                        <div className="fiscal-consultations-empty fiscal-consultations-empty-sm">
-                            <i className="fa-solid fa-triangle-exclamation" />
-                            <span>Sem contingencia</span>
-                        </div>
-                    ) : (
-                        <div className="fiscal-inutilization-grid">
-                            {contingencies.map((contingency) => (
-                                <article key={contingency.id} className="fiscal-inutilization-card">
-                                    <div className="fiscal-sale-card-top">
-                                        <div className="fiscal-sale-card-title">
-                                            <strong>{contingency.sale_number}</strong>
-                                            <span>{formatDateTime(contingency.contingency_requested_at)}</span>
-                                        </div>
-
-                                        <StatusChip label={contingency.status_label} tone={contingency.status_tone} />
-                                    </div>
-
-                                    <div className="fiscal-sale-card-metrics">
-                                        <div>
-                                            <span>Documento</span>
-                                            <strong>{contingency.document_model} / {contingency.series} / {contingency.number}</strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Tentativas</span>
-                                            <strong>{contingency.contingency_attempts}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div className="fiscal-sale-card-products">
-                                        <span>{contingency.contingency_reason || contingency.last_error || '--'}</span>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
-                <section className="fiscal-consultations-list">
-                    <header className="fiscal-consultations-list-header">
-                        <div>
-                            <strong>Inutilizacoes</strong>
-                            <span>{inutilizations.length} recentes</span>
-                        </div>
-
-                        <div className="fiscal-list-chip">
-                            <i className="fa-solid fa-hashtag" />
-                            <span>Faixas</span>
-                        </div>
-                    </header>
-
-                    {inutilizations.length === 0 ? (
-                        <div className="fiscal-consultations-empty fiscal-consultations-empty-sm">
-                            <i className="fa-solid fa-hashtag" />
-                            <span>Sem inutilizacao</span>
-                        </div>
-                    ) : (
-                        <div className="fiscal-inutilization-grid">
-                            {inutilizations.map((inutilization) => (
-                                <article key={inutilization.id} className="fiscal-inutilization-card">
-                                    <div className="fiscal-sale-card-top">
-                                        <div className="fiscal-sale-card-title">
-                                            <strong>{inutilization.document_model} / {inutilization.series}</strong>
-                                            <span>{formatDateTime(inutilization.created_at)}</span>
-                                        </div>
-
-                                        <StatusChip label={inutilization.status_label} tone={inutilization.status_tone} />
-                                    </div>
-
-                                    <div className="fiscal-sale-card-metrics">
-                                        <div>
-                                            <span>Faixa</span>
-                                            <strong>{inutilization.number_start} - {inutilization.number_end}</strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Protocolo</span>
-                                            <strong>{inutilization.protocol || '--'}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div className="fiscal-sale-card-products">
-                                        <span>{inutilization.justification}</span>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    )}
-                </section>
-
-                <section className="fiscal-consultations-list">
-                    <header className="fiscal-consultations-list-header">
-                        <div>
-                            <strong>Vendas</strong>
-                            <span>{sales.total} registros</span>
-                        </div>
-
-                        <div className="fiscal-list-chip">
-                            <i className="fa-solid fa-bolt" />
-                            <span>{sales.current_page}/{sales.last_page}</span>
-                        </div>
-                    </header>
-
-                    {sales.data.length === 0 ? (
-                        <div className="fiscal-consultations-empty">
-                            <i className="fa-solid fa-receipt" />
-                            <span>Sem vendas</span>
-                        </div>
-                    ) : (
-                        <div className="fiscal-sales-grid">
-                            {sales.data.map((sale) => (
-                                <button
-                                    key={sale.id}
-                                    className={`fiscal-sale-card ${selectedSale?.id === sale.id ? 'selected' : ''}`}
-                                    onClick={() => openSale(sale)}
-                                    type="button"
-                                >
-                                    <div className="fiscal-sale-card-top">
-                                        <div className="fiscal-sale-card-title">
-                                            <strong>{sale.sale_number}</strong>
-                                            <span>{formatDateTime(sale.created_at)}</span>
-                                        </div>
-
-                                        <StatusChip label={sale.status_label} tone={sale.status_tone} />
-                                    </div>
-
-                                    <div className="fiscal-sale-card-metrics">
-                                        <div>
-                                            <span>Total</span>
-                                            <strong>{formatCurrency(sale.total)}</strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Cliente</span>
-                                            <strong>{sale.recipient.label || 'Consumidor final'}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div className="fiscal-sale-card-tags">
-                                        <span><i className="fa-solid fa-boxes-stacked" />{sale.item_count} item(ns)</span>
-                                        <span><i className="fa-solid fa-credit-card" />{sale.payment_method}</span>
-                                        <span><i className="fa-solid fa-file-invoice-dollar" />{sale.fiscal_document?.status_label || 'Sem fiscal'}</span>
-                                    </div>
-
-                                    <div className="fiscal-sale-card-products">
-                                        {sale.products_preview.map((product) => (
-                                            <span key={`${sale.id}-${product}`}>{product}</span>
-                                        ))}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    {sales.last_page > 1 ? (
-                        <footer className="fiscal-pagination">
-                            {sales.links.map((link, index) => (
-                                link.url ? (
-                                    <Link
-                                        key={`${link.label}-${index}`}
-                                        className={`fiscal-pagination-link ${link.active ? 'active' : ''}`}
-                                        href={link.url}
-                                        preserveScroll
+                            <div className="ui-tabs fiscal-period-tabs">
+                                {periods.map((period) => (
+                                    <button
+                                        key={period.key}
+                                        className={`ui-tab ${filters.period === period.key ? 'active' : ''}`}
+                                        onClick={() => changePeriod(period.key)}
+                                        type="button"
                                     >
-                                        {link.label}
-                                    </Link>
-                                ) : (
-                                    <span key={`${link.label}-${index}`} className="fiscal-pagination-link disabled">
-                                        {link.label}
-                                    </span>
-                                )
+                                        <i className={`fa-solid ${filters.period === period.key ? 'fa-circle-dot' : 'fa-circle'}`} />
+                                        <span>{period.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+
+                        <section className="fiscal-compact-summary">
+                            {summary.map((item) => (
+                                <article key={item.key} className={`fiscal-summary-card compact ${toneClass(item.tone)}`}>
+                                    <div className="fiscal-summary-icon">
+                                        <i className={`fa-solid ${item.icon}`} />
+                                    </div>
+                                    <div className="fiscal-summary-copy">
+                                        <span>{item.label}</span>
+                                        <strong>{item.format === 'currency' ? formatCurrency(item.value) : item.value}</strong>
+                                    </div>
+                                </article>
                             ))}
-                        </footer>
-                    ) : null}
-                </section>
+                        </section>
+
+                        <section className="fiscal-sales-panel">
+                            <header className="fiscal-sales-panel-head">
+                                <div>
+                                    <strong>Vendas</strong>
+                                    <span>{sales.total} registro(s)</span>
+                                </div>
+                                <StatusBadge compact icon="fa-receipt" label={`${sales.current_page}/${sales.last_page}`} tone="warning" />
+                            </header>
+
+                            <DenseTable
+                                columns={[
+                                    { key: 'saleNumber', label: 'Venda', render: (sale) => <strong>{sale.sale_number}</strong> },
+                                    { key: 'createdAt', label: 'Data', render: (sale) => formatDateTime(sale.created_at) },
+                                    { key: 'recipient', label: 'Cliente', render: (sale) => sale.recipient.label || 'Consumidor final' },
+                                    { key: 'total', label: 'Valor', render: (sale) => formatCurrency(sale.total) },
+                                    {
+                                        key: 'status',
+                                        label: 'Status',
+                                        render: (sale) => <StatusBadge compact label={sale.status_label} tone={sale.status_tone} />,
+                                    },
+                                    {
+                                        key: 'fiscal',
+                                        label: 'Fiscal',
+                                        render: (sale) => sale.fiscal_document
+                                            ? <StatusBadge compact label={sale.fiscal_document.status_label} tone={sale.fiscal_document.status_tone} />
+                                            : <StatusBadge compact label="Sem fiscal" tone="neutral" />,
+                                    },
+                                ]}
+                                rows={sales.data}
+                                rowKey="id"
+                                selectedRowKey={selectedSale?.id}
+                                onRowClick={openSale}
+                                emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas neste periodo.</span></div>}
+                                getRowActions={(sale) => [
+                                    {
+                                        key: 'view',
+                                        icon: 'fa-eye',
+                                        label: 'Ver',
+                                        tone: 'primary',
+                                        onClick: () => openSale(sale),
+                                    },
+                                    sale.can_cancel ? {
+                                        key: 'cancel',
+                                        icon: 'fa-ban',
+                                        label: 'Cancelar',
+                                        tone: 'danger',
+                                        onClick: () => openSale(sale),
+                                    } : null,
+                                    sale.can_flag_contingency ? {
+                                        key: 'retry',
+                                        icon: 'fa-rotate',
+                                        label: 'Reenfileirar',
+                                        tone: 'info',
+                                        onClick: () => openSale(sale),
+                                    } : null,
+                                ]}
+                            />
+
+                            {sales.last_page > 1 ? (
+                                <footer className="fiscal-pagination compact">
+                                    {sales.links.map((link, index) => (
+                                        link.url ? (
+                                            <Link
+                                                key={`${link.label}-${index}`}
+                                                className={`fiscal-pagination-link ${link.active ? 'active' : ''}`}
+                                                href={link.url}
+                                                preserveScroll
+                                            >
+                                                {link.label}
+                                            </Link>
+                                        ) : (
+                                            <span key={`${link.label}-${index}`} className="fiscal-pagination-link disabled">
+                                                {link.label}
+                                            </span>
+                                        )
+                                    ))}
+                                </footer>
+                            ) : null}
+                        </section>
+                    </div>
+                </PageContainer>
             </div>
 
             <SaleDetailsModal
@@ -444,65 +414,47 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
     const eventCount = fiscalDocument?.events?.length || 0
 
     return (
-        <div className="fiscal-sale-modal-backdrop" onClick={onClose}>
-            <section
-                aria-modal="true"
-                className="fiscal-sale-modal"
-                onClick={(event) => event.stopPropagation()}
-                role="dialog"
-            >
-                <header className="fiscal-sale-modal-header">
-                    <div className="fiscal-sale-modal-title">
-                        <span className="fiscal-sale-modal-badge">
-                            <i className="fa-solid fa-receipt" />
-                            {sale.sale_number}
-                        </span>
+        <CompactModal
+            open={Boolean(sale)}
+            title={sale.sale_number}
+            description={`${formatDateTime(sale.created_at)} • ${formatCurrency(sale.total)}`}
+            icon="fa-receipt"
+            size="lg"
+            onClose={onClose}
+        >
+            <div className="fiscal-detail-stack">
+                <div className="fiscal-detail-top">
+                    <StatusBadge label={sale.status_label} tone={sale.status_tone} />
+                    {fiscalDocument ? <StatusBadge label={fiscalDocument.status_label} tone={fiscalDocument.status_tone} /> : null}
+                </div>
 
-                        <div>
-                            <h2>{formatCurrency(sale.total)}</h2>
-                            <span>{formatDateTime(sale.created_at)}</span>
-                        </div>
-                    </div>
-
-                    <div className="fiscal-sale-modal-header-actions">
-                        <StatusChip label={sale.status_label} tone={sale.status_tone} />
-                        {fiscalDocument ? <StatusChip label={fiscalDocument.status_label} tone={fiscalDocument.status_tone} /> : null}
-                        <button className="fiscal-modal-close" onClick={onClose} type="button">
-                            <i className="fa-solid fa-xmark" />
-                        </button>
-                    </div>
-                </header>
-
-                <div className="fiscal-sale-highlight-strip">
+                <section className="fiscal-detail-metrics">
                     <MiniMetric icon="fa-boxes-stacked" label="Itens" value={sale.item_count} />
                     <MiniMetric icon="fa-sack-dollar" label="Recebido" value={formatCurrency(sale.cash_received)} />
                     <MiniMetric icon="fa-arrow-rotate-left" label="Troco" value={formatCurrency(sale.change_amount)} />
                     <MiniMetric icon="fa-clock-rotate-left" label="Eventos" value={eventCount} />
-                </div>
+                </section>
 
-                <div className="fiscal-sale-modal-grid">
-                    <section className="fiscal-modal-panel fiscal-modal-panel-lg">
-                        <header><strong><i className="fa-solid fa-box-open" />Itens</strong></header>
-
-                        <div className="fiscal-items-list">
-                            {sale.items.map((item) => (
-                                <article key={item.id} className="fiscal-item-row">
-                                    <div>
-                                        <strong>{item.name}</strong>
-                                        <span>{item.quantity} {item.unit_label || 'un'} - {formatCurrency(item.unit_price)}</span>
-                                    </div>
-
-                                    <div className="fiscal-item-row-meta">
-                                        {item.discount_amount > 0 ? <span>- {formatCurrency(item.discount_amount)}</span> : null}
-                                        <strong>{formatCurrency(item.total)}</strong>
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
+                <div className="fiscal-detail-grid">
+                    <section className="fiscal-detail-panel span-2">
+                        <header><strong>Itens</strong></header>
+                        <DenseTable
+                            columns={[
+                                { key: 'name', label: 'Item', render: (item) => item.name },
+                                { key: 'quantity', label: 'Qtd', render: (item) => `${item.quantity} ${item.unit_label || 'un'}` },
+                                { key: 'unitPrice', label: 'Unit.', render: (item) => formatCurrency(item.unit_price) },
+                                { key: 'discount', label: 'Desc.', render: (item) => item.discount_amount > 0 ? formatCurrency(item.discount_amount) : '--' },
+                                { key: 'total', label: 'Total', render: (item) => formatCurrency(item.total) },
+                            ]}
+                            rows={sale.items}
+                            rowKey="id"
+                            emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-box-open" /><span>Sem itens.</span></div>}
+                            minWidth={620}
+                        />
                     </section>
 
-                    <section className="fiscal-modal-panel">
-                        <header><strong><i className="fa-solid fa-id-card" />Cliente</strong></header>
+                    <section className="fiscal-detail-panel">
+                        <header><strong>Cliente</strong></header>
                         <InfoList
                             items={[
                                 ['Nome', sale.recipient.label || 'Consumidor final'],
@@ -513,8 +465,8 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                         />
                     </section>
 
-                    <section className="fiscal-modal-panel">
-                        <header><strong><i className="fa-solid fa-credit-card" />Pagamentos</strong></header>
+                    <section className="fiscal-detail-panel">
+                        <header><strong>Pagamentos</strong></header>
                         <InfoList
                             items={[
                                 ...sale.payments.map((payment) => [payment.label, formatCurrency(payment.amount)]),
@@ -523,8 +475,8 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                         />
                     </section>
 
-                    <section className="fiscal-modal-panel">
-                        <header><strong><i className="fa-solid fa-chart-line" />Totais</strong></header>
+                    <section className="fiscal-detail-panel">
+                        <header><strong>Totais</strong></header>
                         <InfoList
                             items={[
                                 ['Subtotal', formatCurrency(sale.subtotal)],
@@ -535,8 +487,8 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                         />
                     </section>
 
-                    <section className="fiscal-modal-panel fiscal-modal-panel-lg">
-                        <header><strong><i className="fa-solid fa-file-invoice-dollar" />Fiscal</strong></header>
+                    <section className="fiscal-detail-panel span-2">
+                        <header><strong>Fiscal</strong></header>
                         {fiscalDocument ? (
                             <InfoGrid
                                 items={[
@@ -557,17 +509,14 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                                 ]}
                             />
                         ) : (
-                            <div className="fiscal-modal-empty">
-                                <i className="fa-solid fa-file-circle-minus" />
-                                <span>Sem fiscal</span>
-                            </div>
+                            <div className="fiscal-dense-empty"><i className="fa-solid fa-file-circle-minus" /><span>Sem documento fiscal.</span></div>
                         )}
                     </section>
 
-                    <section className="fiscal-modal-panel">
-                        <header><strong><i className="fa-solid fa-folder-tree" />Arquivos</strong></header>
+                    <section className="fiscal-detail-panel">
+                        <header><strong>Arquivos</strong></header>
                         {fileActions.length > 0 ? (
-                            <div className="fiscal-file-grid">
+                            <div className="fiscal-file-grid compact">
                                 {fileActions.map((action) => (
                                     <Link
                                         key={action.key}
@@ -581,23 +530,20 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                                 ))}
                             </div>
                         ) : (
-                            <div className="fiscal-modal-empty fiscal-modal-empty-sm">
-                                <i className="fa-solid fa-folder-open" />
-                                <span>Sem arquivos</span>
-                            </div>
+                            <div className="fiscal-dense-empty"><i className="fa-solid fa-folder-open" /><span>Sem arquivos.</span></div>
                         )}
                     </section>
 
-                    <section className="fiscal-modal-panel">
-                        <header><strong><i className="fa-solid fa-timeline" />Eventos</strong></header>
+                    <section className="fiscal-detail-panel">
+                        <header><strong>Eventos</strong></header>
                         {eventCount > 0 ? (
-                            <div className="fiscal-timeline">
+                            <div className="fiscal-timeline compact">
                                 {fiscalDocument.events.map((event, index) => (
                                     <article key={`${event.status}-${event.created_at || index}`} className="fiscal-timeline-item">
                                         <div className="fiscal-timeline-marker" />
                                         <div className="fiscal-timeline-body">
                                             <div className="fiscal-timeline-head">
-                                                <StatusChip label={eventSourceLabel(event.source)} tone={event.source === 'agent' ? 'info' : 'neutral'} />
+                                                <StatusBadge compact label={eventSourceLabel(event.source)} tone={event.source === 'agent' ? 'info' : 'warning'} />
                                                 <span>{formatDateTime(event.created_at)}</span>
                                             </div>
                                             <strong>{event.message}</strong>
@@ -607,89 +553,45 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                                 ))}
                             </div>
                         ) : (
-                            <div className="fiscal-modal-empty fiscal-modal-empty-sm">
-                                <i className="fa-solid fa-clock-rotate-left" />
-                                <span>Sem eventos</span>
-                            </div>
+                            <div className="fiscal-dense-empty"><i className="fa-solid fa-clock-rotate-left" /><span>Sem eventos.</span></div>
                         )}
                     </section>
                 </div>
 
-                <footer className="fiscal-sale-modal-footer">
-                    <div className="fiscal-cancel-signal fiscal-cancel-signal-stack">
+                <form className="fiscal-detail-actions" onSubmit={onCancelSubmit}>
+                    <div className="fiscal-cancel-signal fiscal-cancel-signal-stack compact">
                         <span><i className="fa-solid fa-circle-info" />{sale.cancel_hint || 'Sem cancelamento disponivel'}</span>
                         <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingencia disponivel'}</span>
                     </div>
 
-                    <form className="fiscal-cancel-form" onSubmit={onCancelSubmit}>
-                        <textarea
-                            name="reason"
-                            onChange={(event) => cancelForm.setData('reason', event.target.value)}
-                            placeholder="Motivo do cancelamento ou da contingencia"
-                            value={cancelForm.data.reason}
-                        />
+                    <textarea
+                        name="reason"
+                        onChange={(event) => cancelForm.setData('reason', event.target.value)}
+                        placeholder="Motivo do cancelamento ou da contingencia"
+                        value={cancelForm.data.reason}
+                    />
 
-                        {cancelForm.errors.reason ? <span className="fiscal-form-error">{cancelForm.errors.reason}</span> : null}
+                    {cancelForm.errors.reason ? <span className="fiscal-form-error">{cancelForm.errors.reason}</span> : null}
 
-                        <div className="fiscal-cancel-actions">
-                            <button className="fiscal-secondary-button" onClick={onClose} type="button">
-                                <i className="fa-solid fa-arrow-left" />
-                                <span>Fechar</span>
-                            </button>
+                    <div className="fiscal-cancel-actions compact">
+                        <button className="fiscal-secondary-button" onClick={onClose} type="button">
+                            <i className="fa-solid fa-arrow-left" />
+                            <span>Fechar</span>
+                        </button>
 
-                            <button className="fiscal-warning-button" disabled={!sale.can_flag_contingency || cancelForm.processing} onClick={onContingencySubmit} type="button">
-                                <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-triangle-exclamation'}`} />
-                                <span>{sale.can_flag_contingency ? 'Contingencia' : 'Sem conting.'}</span>
-                            </button>
+                        <button className="fiscal-warning-button" disabled={!sale.can_flag_contingency || cancelForm.processing} onClick={onContingencySubmit} type="button">
+                            <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-triangle-exclamation'}`} />
+                            <span>{sale.can_flag_contingency ? 'Reenfileirar' : 'Sem conting.'}</span>
+                        </button>
 
-                            <button className="fiscal-danger-button" disabled={!sale.can_cancel || cancelForm.processing} type="submit">
-                                <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-ban'}`} />
-                                <span>{sale.can_cancel ? 'Cancelar' : 'Bloqueado'}</span>
-                            </button>
-                        </div>
-                    </form>
-                </footer>
-            </section>
-        </div>
-    )
-}
-
-function MiniMetric({ icon, label, value }) {
-    return (
-        <div className="fiscal-mini-metric">
-            <span><i className={`fa-solid ${icon}`} />{label}</span>
-            <strong>{value}</strong>
-        </div>
-    )
-}
-
-function StatusChip({ label, tone }) {
-    return <span className={`fiscal-status-chip ${toneClass(tone)}`}>{label}</span>
-}
-
-function InfoList({ items }) {
-    return (
-        <div className="fiscal-stack-list">
-            {items.map(([label, value]) => (
-                <div key={`${label}-${value}`}>
-                    <span>{label}</span>
-                    <strong>{value}</strong>
-                </div>
-            ))}
-        </div>
-    )
-}
-
-function InfoGrid({ items }) {
-    return (
-        <div className="fiscal-stack-list fiscal-stack-grid">
-            {items.map(([label, value, full]) => (
-                <div key={`${label}-${value}`} className={full ? 'full' : ''}>
-                    <span>{label}</span>
-                    <strong>{value}</strong>
-                </div>
-            ))}
-        </div>
+                        <button className="fiscal-danger-button" disabled={!sale.can_cancel || cancelForm.processing} type="submit">
+                            <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-ban'}`} />
+                            <span>{sale.can_cancel ? 'Cancelar venda' : 'Bloqueado'}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </CompactModal>
     )
 }
 
@@ -699,83 +601,70 @@ function InutilizationModal({ visible, onClose, onSubmit, form }) {
     }
 
     return (
-        <div className="fiscal-sale-modal-backdrop" onClick={onClose}>
-            <section className="fiscal-sale-modal fiscal-sale-modal-sm" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true">
-                <header className="fiscal-sale-modal-header">
-                    <div className="fiscal-sale-modal-title">
-                        <span className="fiscal-sale-modal-badge">
-                            <i className="fa-solid fa-hashtag" />
-                            Inutilizacao
-                        </span>
-
-                        <div>
-                            <h2>Nova faixa</h2>
-                            <span>Serie e numeracao</span>
-                        </div>
-                    </div>
-
-                    <button className="fiscal-modal-close" onClick={onClose} type="button">
-                        <i className="fa-solid fa-xmark" />
-                    </button>
-                </header>
-
-                <form className="fiscal-inutilization-form" onSubmit={onSubmit}>
-                    <div className="fiscal-form-grid">
-                        <label>
-                            <span>Modelo</span>
-                            <select name="document_model" value={form.data.document_model} onChange={(event) => form.setData('document_model', event.target.value)}>
-                                <option value="65">NFC-e 65</option>
-                                <option value="55">NF-e 55</option>
-                            </select>
-                        </label>
-
-                        <label>
-                            <span>Serie</span>
-                            <input name="series" type="number" value={form.data.series} onChange={(event) => form.setData('series', event.target.value)} />
-                        </label>
-
-                        <label>
-                            <span>Inicio</span>
-                            <input name="number_start" type="number" value={form.data.number_start} onChange={(event) => form.setData('number_start', event.target.value)} />
-                        </label>
-
-                        <label>
-                            <span>Fim</span>
-                            <input name="number_end" type="number" value={form.data.number_end} onChange={(event) => form.setData('number_end', event.target.value)} />
-                        </label>
-                    </div>
-
+        <CompactModal
+            open={visible}
+            title="Nova inutilizacao"
+            description="Serie e faixa de numeracao."
+            icon="fa-hashtag"
+            size="sm"
+            onClose={onClose}
+        >
+            <form className="fiscal-inutilization-form compact" onSubmit={onSubmit}>
+                <div className="fiscal-form-grid">
                     <label>
-                        <span>Justificativa</span>
-                        <textarea
-                            name="justification"
-                            onChange={(event) => form.setData('justification', event.target.value)}
-                            placeholder="Motivo operacional da inutilizacao"
-                            value={form.data.justification}
-                        />
+                        <span>Modelo</span>
+                        <select name="document_model" value={form.data.document_model} onChange={(event) => form.setData('document_model', event.target.value)}>
+                            <option value="65">NFC-e 65</option>
+                            <option value="55">NF-e 55</option>
+                        </select>
                     </label>
 
-                    {Object.values(form.errors).length > 0 ? (
-                        <div className="fiscal-form-errors">
-                            {Object.entries(form.errors).map(([field, message]) => (
-                                <span key={field} className="fiscal-form-error">{message}</span>
-                            ))}
-                        </div>
-                    ) : null}
+                    <label>
+                        <span>Serie</span>
+                        <input name="series" type="number" value={form.data.series} onChange={(event) => form.setData('series', event.target.value)} />
+                    </label>
 
-                    <div className="fiscal-cancel-actions">
-                        <button className="fiscal-secondary-button" onClick={onClose} type="button">
-                            <i className="fa-solid fa-arrow-left" />
-                            <span>Fechar</span>
-                        </button>
+                    <label>
+                        <span>Inicio</span>
+                        <input name="number_start" type="number" value={form.data.number_start} onChange={(event) => form.setData('number_start', event.target.value)} />
+                    </label>
 
-                        <button className="fiscal-danger-button" disabled={form.processing} type="submit">
-                            <i className={`fa-solid ${form.processing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} />
-                            <span>Enviar</span>
-                        </button>
+                    <label>
+                        <span>Fim</span>
+                        <input name="number_end" type="number" value={form.data.number_end} onChange={(event) => form.setData('number_end', event.target.value)} />
+                    </label>
+                </div>
+
+                <label>
+                    <span>Justificativa</span>
+                    <textarea
+                        name="justification"
+                        onChange={(event) => form.setData('justification', event.target.value)}
+                        placeholder="Motivo operacional da inutilizacao"
+                        value={form.data.justification}
+                    />
+                </label>
+
+                {Object.values(form.errors).length > 0 ? (
+                    <div className="fiscal-form-errors">
+                        {Object.entries(form.errors).map(([field, message]) => (
+                            <span key={field} className="fiscal-form-error">{message}</span>
+                        ))}
                     </div>
-                </form>
-            </section>
-        </div>
+                ) : null}
+
+                <div className="fiscal-cancel-actions compact">
+                    <button className="fiscal-secondary-button" onClick={onClose} type="button">
+                        <i className="fa-solid fa-arrow-left" />
+                        <span>Fechar</span>
+                    </button>
+
+                    <button className="fiscal-danger-button" disabled={form.processing} type="submit">
+                        <i className={`fa-solid ${form.processing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} />
+                        <span>Enviar</span>
+                    </button>
+                </div>
+            </form>
+        </CompactModal>
     )
 }

@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
+import ActionDrawer from '@/Components/UI/ActionDrawer'
+import DenseTable from '@/Components/UI/DenseTable'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import IncomingNfeWorkspace from './IncomingNfeWorkspace'
 import {
     Badge,
@@ -81,10 +84,51 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('pending')
     const [form, setForm] = useState(emptyForm)
+    const [drawerOpen, setDrawerOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
     const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
+    const counts = useMemo(() => ({
+        pending: records.filter((record) => record.status === 'pending').length,
+        dispatched: records.filter((record) => record.status === 'dispatched').length,
+        delivered: records.filter((record) => record.status === 'delivered').length,
+    }), [records])
+
+    function deliveryStatusLabel(status) {
+        if (status === 'dispatched') return 'Em rota'
+        if (status === 'delivered') return 'Entregue'
+        return 'Pendente'
+    }
+
+    function deliveryStatusTone(status) {
+        if (status === 'delivered') return 'success'
+        if (status === 'dispatched') return 'info'
+        return 'warning'
+    }
+
+    function openNewDrawer() {
+        setForm(emptyForm)
+        setDrawerOpen(true)
+    }
+
+    function openRecordDrawer(record) {
+        setForm({
+            ...emptyForm,
+            ...record,
+            customer_id: record.customer_id ? String(record.customer_id) : '',
+            delivery_fee: String(record.delivery_fee || 0),
+            order_total: String(record.order_total || 0),
+            scheduled_for: ensureDateTime(record.scheduled_for),
+        })
+        setDrawerOpen(true)
+    }
+
+    function closeDrawer() {
+        setDrawerOpen(false)
+        setForm(emptyForm)
+    }
+
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -94,6 +138,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
             const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
             setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record, customer_id: response.record.customer_id ? String(response.record.customer_id) : '', delivery_fee: String(response.record.delivery_fee || 0), order_total: String(response.record.order_total || 0), scheduled_for: ensureDateTime(response.record.scheduled_for) })
+            setDrawerOpen(false)
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -117,7 +162,42 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
             setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
+            closeDrawer()
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    async function handleStatusChange(record, status) {
+        try {
+            const payloadData = {
+                customer_id: record.customer_id ?? null,
+                reference: record.reference || '',
+                status,
+                channel: record.channel || 'delivery',
+                recipient_name: record.recipient_name || '',
+                phone: record.phone || '',
+                courier_name: record.courier_name || '',
+                address: record.address || '',
+                neighborhood: record.neighborhood || '',
+                delivery_fee: parseNumber(record.delivery_fee, 0),
+                order_total: parseNumber(record.order_total, 0),
+                scheduled_for: record.scheduled_for || null,
+                notes: record.notes || '',
+            }
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'put', data: payloadData })
+            setRecords((current) => upsertRecord(current, response.record))
+            if (String(form.id) === String(record.id)) {
+                setForm((current) => ({
+                    ...current,
+                    ...response.record,
+                    customer_id: response.record.customer_id ? String(response.record.customer_id) : '',
+                    delivery_fee: String(response.record.delivery_fee || 0),
+                    order_total: String(response.record.order_total || 0),
+                    scheduled_for: ensureDateTime(response.record.scheduled_for),
+                }))
+            }
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -126,27 +206,97 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack">
-            <SectionTabs tabs={[{ key: 'pending', label: 'Pendentes', icon: 'fa-motorcycle' }, { key: 'dispatched', label: 'Em rota', icon: 'fa-route' }, { key: 'delivered', label: 'Entregues', icon: 'fa-house-chimney-check' }]} activeTab={activeTab} onChange={setActiveTab} />
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Fila de entrega" subtitle={`${filteredRecords.length} registro(s)`} />
-                    <Feedback feedback={feedback} />
-                    <div className="ops-workspace-list-stack">
-                        {filteredRecords.length ? filteredRecords.map((record) => (
-                            <ListCard
-                                key={record.id}
-                                active={form.id === record.id}
-                                onClick={() => setForm({ ...emptyForm, ...record, customer_id: record.customer_id ? String(record.customer_id) : '', delivery_fee: String(record.delivery_fee || 0), order_total: String(record.order_total || 0), scheduled_for: ensureDateTime(record.scheduled_for) })}
-                                title={record.reference || record.recipient_name || 'Entrega'}
-                                badge={<Badge tone={record.status === 'delivered' ? 'success' : record.status === 'dispatched' ? 'info' : 'warning'}>{record.status}</Badge>}
-                                description={record.address}
-                                meta={[record.customer_name || 'Sem cliente', formatMoney(parseNumber(record.order_total, 0) + parseNumber(record.delivery_fee, 0))]}
-                            />
-                        )) : <EmptyState title="Sem entregas" text="Nenhum registro nesta etapa." />}
-                    </div>
-                </section>
-                <section className="ops-workspace-panel">
-                    <FeedbackHeader title={form.id ? 'Editar entrega' : 'Nova entrega'} subtitle="Dados e status" />
+            <SectionTabs
+                tabs={[
+                    { key: 'pending', label: `Pendentes ${counts.pending}`, icon: 'fa-clock' },
+                    { key: 'dispatched', label: `Em rota ${counts.dispatched}`, icon: 'fa-route' },
+                    { key: 'delivered', label: `Entregues ${counts.delivered}`, icon: 'fa-house-chimney-check' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+            <section className="ops-workspace-panel ops-delivery-panel">
+                <FeedbackHeader
+                    title="Fila de entregas"
+                    subtitle={`${filteredRecords.length} registro(s) em ${activeTab === 'pending' ? 'pendencia' : activeTab === 'dispatched' ? 'rota' : 'historico'}`}
+                    action={<button type="button" className="ui-button" onClick={openNewDrawer}><i className="fa-solid fa-plus" />+ Nova entrega</button>}
+                />
+                <Feedback feedback={feedback} />
+
+                <DenseTable
+                    columns={[
+                        {
+                            key: 'reference',
+                            label: 'Codigo',
+                            render: (record) => <strong>{record.reference || record.recipient_name || `Entrega #${record.id}`}</strong>,
+                        },
+                        {
+                            key: 'address',
+                            label: 'Endereco',
+                            render: (record) => record.channel === 'retirada' ? 'Retirada no balcao' : (record.address || 'Endereco nao informado'),
+                        },
+                        {
+                            key: 'customer',
+                            label: 'Cliente',
+                            render: (record) => record.customer_name || record.recipient_name || 'Sem cliente',
+                        },
+                        {
+                            key: 'total',
+                            label: 'Valor',
+                            render: (record) => formatMoney(parseNumber(record.order_total, 0) + parseNumber(record.delivery_fee, 0)),
+                        },
+                        {
+                            key: 'status',
+                            label: 'Status',
+                            render: (record) => <StatusBadge compact label={deliveryStatusLabel(record.status)} tone={deliveryStatusTone(record.status)} />,
+                        },
+                    ]}
+                    rows={filteredRecords}
+                    rowKey="id"
+                    onRowClick={openRecordDrawer}
+                    emptyState={<EmptyState title="Sem entregas" text="Nenhum registro nesta etapa." />}
+                    getRowActions={(record) => [
+                        {
+                            key: 'view',
+                            icon: 'fa-eye',
+                            label: 'Ver detalhes',
+                            tone: 'primary',
+                            onClick: () => openRecordDrawer(record),
+                        },
+                        record.status !== 'dispatched' ? {
+                            key: 'dispatch',
+                            icon: 'fa-route',
+                            label: 'Iniciar rota',
+                            tone: 'info',
+                            onClick: () => handleStatusChange(record, 'dispatched'),
+                        } : null,
+                        record.status !== 'delivered' ? {
+                            key: 'deliver',
+                            icon: 'fa-circle-check',
+                            label: 'Marcar entregue',
+                            tone: 'primary',
+                            onClick: () => handleStatusChange(record, 'delivered'),
+                        } : null,
+                    ]}
+                />
+            </section>
+
+            <ActionDrawer
+                open={drawerOpen}
+                title={form.id ? 'Detalhes da entrega' : 'Nova entrega'}
+                description={form.id ? 'Edite dados, status e observacoes.' : 'Preencha os dados basicos para entrar na fila.'}
+                icon="fa-motorcycle"
+                size="lg"
+                onClose={closeDrawer}
+            >
+                <div className="ops-delivery-drawer">
+                    {form.id ? (
+                        <div className="ops-delivery-drawer-top">
+                            <StatusBadge label={deliveryStatusLabel(form.status)} tone={deliveryStatusTone(form.status)} />
+                            <StatusBadge label={form.channel === 'retirada' ? 'Retirada' : 'Delivery'} tone={form.channel === 'retirada' ? 'info' : 'warning'} />
+                        </div>
+                    ) : null}
+
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Nao informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
                         <label><span>Referencia</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
@@ -154,17 +304,31 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         <label><span>Canal</span><select value={form.channel} onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}><option value="delivery">Delivery</option><option value="retirada">Retirada</option></select></label>
                         <label><span>Destinatario</span><input value={form.recipient_name} onChange={(event) => setForm((current) => ({ ...current, recipient_name: event.target.value }))} /></label>
                         <label><span>Telefone</span><input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
-                        <label className="span-2"><span>Endereco</span><input value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} required /></label>
+                        <label className="span-2"><span>Endereco</span><input value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} required={form.channel !== 'retirada'} /></label>
                         <label><span>Bairro</span><input value={form.neighborhood} onChange={(event) => setForm((current) => ({ ...current, neighborhood: event.target.value }))} /></label>
                         <label><span>Entregador</span><input value={form.courier_name} onChange={(event) => setForm((current) => ({ ...current, courier_name: event.target.value }))} /></label>
                         <label><span>Taxa</span><input type="number" min="0" step="0.01" value={form.delivery_fee} onChange={(event) => setForm((current) => ({ ...current, delivery_fee: event.target.value }))} /></label>
                         <label><span>Total do pedido</span><input type="number" min="0" step="0.01" value={form.order_total} onChange={(event) => setForm((current) => ({ ...current, order_total: event.target.value }))} /></label>
                         <label className="span-2"><span>Agendado para</span><input type="datetime-local" value={form.scheduled_for} onChange={(event) => setForm((current) => ({ ...current, scheduled_for: event.target.value }))} /></label>
                         <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
-                        <div className="ops-workspace-actions span-2"><button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>Limpar</button>{form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}<button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar entrega' : 'Salvar entrega'}</button></div>
+                        <div className="ops-workspace-actions span-2">
+                            <button type="button" className="ui-button-ghost" onClick={closeDrawer}>Cancelar</button>
+                            {form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}
+                            {form.id && form.status !== 'dispatched' ? (
+                                <button type="button" className="ui-button-ghost" onClick={() => handleStatusChange(form, 'dispatched')}>
+                                    Iniciar rota
+                                </button>
+                            ) : null}
+                            {form.id && form.status !== 'delivered' ? (
+                                <button type="button" className="ui-button-ghost" onClick={() => handleStatusChange(form, 'delivered')}>
+                                    Marcar entregue
+                                </button>
+                            ) : null}
+                            <button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar entrega' : 'Salvar entrega'}</button>
+                        </div>
                     </form>
-                </section>
-            </div>
+                </div>
+            </ActionDrawer>
         </div>
     )
 }

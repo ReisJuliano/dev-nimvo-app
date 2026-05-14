@@ -14,14 +14,7 @@ export default function AppSidebar({
     onLogout,
 }) {
     const navRef = useRef(null)
-    const [isHovered, setIsHovered] = useState(false)
     const [logoBroken, setLogoBroken] = useState(false)
-
-    useEffect(() => {
-        if (!collapsed || sidebarOpen) {
-            setIsHovered(false)
-        }
-    }, [collapsed, sidebarOpen])
 
     useEffect(() => {
         const nav = navRef.current
@@ -29,13 +22,13 @@ export default function AppSidebar({
             return undefined
         }
 
-        const saved = window.sessionStorage.getItem('app-sidebar-scroll-top')
+        const saved = window.localStorage.getItem('app-sidebar-scroll-top')
         if (saved !== null) {
             nav.scrollTop = Number(saved)
         }
 
         const persistScroll = () => {
-            window.sessionStorage.setItem('app-sidebar-scroll-top', String(nav.scrollTop))
+            window.localStorage.setItem('app-sidebar-scroll-top', String(nav.scrollTop))
         }
 
         nav.addEventListener('scroll', persistScroll, { passive: true })
@@ -52,7 +45,7 @@ export default function AppSidebar({
             return
         }
 
-        const saved = window.sessionStorage.getItem('app-sidebar-scroll-top')
+        const saved = window.localStorage.getItem('app-sidebar-scroll-top')
         if (saved !== null) {
             nav.scrollTop = Number(saved)
         }
@@ -60,7 +53,7 @@ export default function AppSidebar({
 
     function handleNavigate() {
         if (typeof window !== 'undefined' && navRef.current) {
-            window.sessionStorage.setItem('app-sidebar-scroll-top', String(navRef.current.scrollTop))
+            window.localStorage.setItem('app-sidebar-scroll-top', String(navRef.current.scrollTop))
         }
 
         onCloseMobile?.()
@@ -73,26 +66,12 @@ export default function AppSidebar({
             .join('')
             .slice(0, 2)
             .toUpperCase() || 'U'
-    const isCompact = collapsed && !isHovered && !sidebarOpen
-
-    function handleMouseEnter() {
-        if (!collapsed || sidebarOpen || !allowCollapse) {
-            return
-        }
-
-        setIsHovered(true)
-    }
-
-    function handleMouseLeave() {
-        setIsHovered(false)
-    }
+    const isCompact = collapsed
 
     return (
         <CompactSidebar
             collapsed={isCompact}
             sidebarOpen={sidebarOpen}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
         >
             <div className="app-sidebar-header">
                 <div className="app-logo">
@@ -113,7 +92,12 @@ export default function AppSidebar({
                 </div>
 
                 {allowCollapse ? (
-                    <button className="app-sidebar-toggle" onClick={onToggleCollapsed} type="button">
+                    <button
+                        className="app-sidebar-toggle ui-tooltip"
+                        data-tooltip={collapsed ? 'Expandir menu' : 'Recolher menu'}
+                        onClick={onToggleCollapsed}
+                        type="button"
+                    >
                         <i className="fas fa-bars" />
                     </button>
                 ) : null}
@@ -141,7 +125,13 @@ export default function AppSidebar({
             </nav>
 
             <div className="app-sidebar-footer">
-                <button className="app-logout-button" onClick={onLogout} type="button">
+                <button
+                    className={`app-logout-button ${collapsed ? 'ui-tooltip' : ''}`}
+                    data-tooltip={collapsed ? 'Sair' : undefined}
+                    onClick={onLogout}
+                    type="button"
+                    title="Sair"
+                >
                     <i className="fas fa-right-from-bracket" />
                     <span>Sair</span>
                 </button>
