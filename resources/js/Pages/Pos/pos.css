@@ -549,36 +549,40 @@
 }
 
 .pos-checkout-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    width: min(100%, 760px);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+    gap: 0.45rem;
+    justify-self: end;
+    align-self: end;
     padding: 0 16px 10px;
+    margin-left: auto;
 }
 
-.pos-checkout-action-button,
-.pos-checkout-finalize {
-    min-height: 38px;
-    display: inline-flex;
+.pos-checkout-action-button {
+    min-height: 58px;
+    display: inline-grid;
     align-items: center;
-    gap: 0.5rem;
+    justify-items: center;
+    gap: 0.28rem;
     border: 0.5px solid var(--pos-border);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--pos-surface-alt);
     color: var(--pos-text);
-    padding: 0 12px;
-    font-size: 12px;
+    padding: 7px 8px;
+    font-size: 11px;
     font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
     cursor: pointer;
 }
 
-.pos-checkout-action-button svg,
-.pos-checkout-finalize svg {
+.pos-checkout-action-button svg {
     width: 18px;
     height: 18px;
 }
 
-.pos-checkout-action-button:hover,
-.pos-checkout-finalize:hover {
+.pos-checkout-action-button:hover {
     border-color: rgba(24, 95, 165, 0.24);
     background: rgba(24, 95, 165, 0.08);
 }
@@ -587,21 +591,19 @@
     color: var(--pos-danger);
 }
 
-.pos-checkout-action-button:disabled,
-.pos-checkout-finalize:disabled {
+.pos-checkout-action-button.success {
+    border-color: rgba(64, 116, 21, 0.28);
+    color: var(--pos-green);
+}
+
+.pos-checkout-action-button.success:hover {
+    border-color: rgba(64, 116, 21, 0.42);
+    background: rgba(64, 116, 21, 0.08);
+}
+
+.pos-checkout-action-button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
-}
-
-.pos-checkout-finalize {
-    margin-left: auto;
-    border-color: transparent;
-    background: var(--pos-green);
-    color: #fff;
-}
-
-.pos-checkout-finalize:hover {
-    background: #315b0f;
 }
 
 .pos-item-list {
@@ -1125,8 +1127,29 @@
 }
 
 .pos-turn-quick-actions {
-    border-radius: 12px;
+    border-radius: 8px;
     background: rgba(255, 255, 255, 0.78);
+}
+
+.pos-turn-quick-actions .quick-action-bar-grid {
+    gap: 0.45rem;
+}
+
+.pos-turn-quick-actions .quick-action-button {
+    min-height: 44px;
+    align-items: center;
+    border-radius: 8px;
+    padding: 0.52rem 0.62rem;
+}
+
+.pos-turn-quick-actions .quick-action-icon {
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 8px;
+}
+
+.pos-turn-quick-actions .quick-action-copy span {
+    font-size: 0.8rem;
 }
 
 .pos-turn-panel-collapsed-actions {
@@ -2090,12 +2113,6 @@
         display: none;
     }
 
-    .pos-checkout-finalize {
-        width: 100%;
-        justify-content: center;
-        margin-left: 0;
-    }
-
     .pos-turn-drawer-summary {
         grid-template-columns: 1fr;
     }
@@ -2116,10 +2133,14 @@
     .pos-credit-strip,
     .pos-payment-summary-grid,
     .pos-mixed-entry,
-    .pos-mixed-row,
-    .pos-checkout-actions {
+    .pos-mixed-row {
         grid-template-columns: 1fr;
         display: grid;
+    }
+
+    .pos-checkout-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
     }
 
     .pos-toolbar-status {

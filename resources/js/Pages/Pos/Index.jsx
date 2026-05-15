@@ -4238,6 +4238,7 @@ function PosWorkspace({
         { key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting },
         { key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting },
         { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
+        { key: 'finalize', label: submitting ? 'Finalizando...' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
     ]
     const shellClassName = [
         'pos-shell',
@@ -4338,16 +4339,6 @@ function PosWorkspace({
                                 <span>{action.label}</span>
                             </button>
                         ))}
-
-                        <button
-                            type="button"
-                            className="pos-checkout-finalize"
-                            onClick={openFinalizeStep}
-                            disabled={!cartLength || submitting}
-                        >
-                            <PosIcon name="check" />
-                            <span>{submitting ? 'Finalizando...' : 'Finalizar venda'}</span>
-                        </button>
                     </div>
 
                     <div className="pos-item-list" role="list">
@@ -4869,18 +4860,11 @@ function PosCashTurnPanel({
     onCloseMobilePanel = null,
 }) {
     const currentAmount = Number(report?.expected_cash ?? cashRegisterState?.opening_amount ?? 0)
-    const summaryCards = [
-        { key: 'opening', label: 'Abertura', value: formatMoney(report?.cashRegister?.opening_amount ?? 0) },
-        { key: 'sales', label: 'Vendas', value: formatMoney(report?.total_sales ?? 0) },
-        { key: 'expected', label: 'Esperado', value: formatMoney(report?.expected_cash ?? 0) },
-        { key: 'movements', label: 'Movimentos', value: String(report?.movements?.length ?? 0) },
-    ]
     const quickActions = cashRegisterState
         ? [
             {
                 key: 'withdrawal',
                 label: 'Sangria',
-                description: 'Retirar valor',
                 icon: 'fa-arrow-up-right-from-square',
                 tone: 'danger',
                 onClick: () => onOpenCashMovement('withdrawal'),
@@ -4888,7 +4872,6 @@ function PosCashTurnPanel({
             {
                 key: 'supply',
                 label: 'Suprimento',
-                description: 'Adicionar valor',
                 icon: 'fa-arrow-down-left-and-arrow-up-right-to-center',
                 tone: 'info',
                 onClick: () => onOpenCashMovement('supply'),
@@ -4896,14 +4879,12 @@ function PosCashTurnPanel({
             {
                 key: 'history',
                 label: 'Historico',
-                description: 'Movimentos do turno',
                 icon: 'fa-clock-rotate-left',
                 onClick: onOpenCashHistory,
             },
             {
                 key: 'close',
                 label: 'Fechar Caixa',
-                description: 'Conferencia final',
                 icon: 'fa-lock',
                 tone: 'danger',
                 disabled: loadingClosePreview || closingCashRegister,
@@ -4914,7 +4895,6 @@ function PosCashTurnPanel({
             {
                 key: 'open',
                 label: 'Abrir Caixa',
-                description: 'Iniciar o turno',
                 icon: 'fa-lock-open',
                 tone: 'info',
                 disabled: openingCashRegister,
@@ -4923,7 +4903,6 @@ function PosCashTurnPanel({
             {
                 key: 'history',
                 label: 'Historico',
-                description: 'Turnos recentes',
                 icon: 'fa-clock-rotate-left',
                 onClick: onOpenCashHistory,
             },
@@ -4983,42 +4962,12 @@ function PosCashTurnPanel({
                         <strong>{cashRegisterState ? formatMoney(currentAmount) : 'Turno fechado'}</strong>
                         <span>
                             {cashRegisterState
-                                ? `${report?.sales_count ?? 0} vendas | Abertura ${formatShortTime(report?.cashRegister?.opened_at)}`
+                                ? `${report?.sales_count ?? 0} vendas \u00b7 ${formatShortTime(report?.cashRegister?.opened_at)}`
                                 : 'Abra o caixa para liberar o checkout e as rotinas do turno.'}
                         </span>
                     </div>
 
-                    {cashRegisterState ? (
-                        <>
-                            <div className="pos-turn-panel-summary">
-                                {summaryCards.map((card) => (
-                                    <article key={card.key} className="pos-turn-panel-card">
-                                        <span>{card.label}</span>
-                                        <strong>{card.value}</strong>
-                                    </article>
-                                ))}
-                            </div>
-
-                            <section className="pos-turn-panel-section">
-                                <div className="pos-turn-panel-section-head">
-                                    <strong>Formas de pagamento</strong>
-                                    <span>{report?.payments?.length ?? 0} linha(s)</span>
-                                </div>
-
-                                <div className="pos-turn-payment-list">
-                                    {report?.payments?.length ? report.payments.map((payment) => (
-                                        <div key={payment.payment_method} className="pos-turn-payment-row">
-                                            <span>{payment.label}</span>
-                                            <strong>{formatMoney(payment.total)}</strong>
-                                            <small>{payment.qtd} lanc.</small>
-                                        </div>
-                                    )) : (
-                                        <div className="pos-turn-panel-empty">Nenhuma venda registrada neste turno.</div>
-                                    )}
-                                </div>
-                            </section>
-                        </>
-                    ) : (
+                    {!cashRegisterState ? (
                         <section className="pos-turn-panel-section">
                             <button type="button" className="pos-turn-open-button" onClick={onOpenCashRegister} disabled={openingCashRegister}>
                                 <i className="fa-solid fa-lock-open" />
@@ -5029,30 +4978,9 @@ function PosCashTurnPanel({
                                 O checkout fica bloqueado ate iniciar o turno com o valor de abertura.
                             </div>
                         </section>
-                    )}
+                    ) : null}
 
                     <QuickActionBar items={quickActions} title="Acoes rapidas" orientation="vertical" className="pos-turn-quick-actions" />
-
-                    {history?.length ? (
-                        <section className="pos-turn-panel-section recent-history">
-                            <div className="pos-turn-panel-section-head">
-                                <strong>Turnos recentes</strong>
-                                <span>{history.length} registro(s)</span>
-                            </div>
-
-                            <div className="pos-turn-recent-list">
-                                {history.slice(0, 3).map((entry) => (
-                                    <div key={entry.id} className="pos-turn-recent-row">
-                                        <div>
-                                            <strong>{formatMoney(entry.total_sales)}</strong>
-                                            <span>{entry.sales_count} vendas</span>
-                                        </div>
-                                        <small>{formatShortDateTime(entry.closed_at || entry.opened_at)}</small>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    ) : null}
                 </>
             )}
         </aside>
