@@ -6,7 +6,6 @@ import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
 import CompactModal from '@/Components/UI/CompactModal'
-import QuickActionBar from '@/Components/UI/QuickActionBar'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
@@ -4326,21 +4325,6 @@ function PosWorkspace({
                         <span>{paymentReady ? 'Pagamento confirmado. Escolha a emissao para concluir.' : cashRegisterState ? 'Pagamento pendente.' : 'Abra o caixa com Shift + X.'}</span>
                     </div>
 
-                    <div className="pos-checkout-actions">
-                        {checkoutActionItems.map((action) => (
-                            <button
-                                key={action.key}
-                                type="button"
-                                className={`pos-checkout-action-button ${action.tone || 'default'}`}
-                                onClick={action.onClick}
-                                disabled={action.disabled}
-                            >
-                                <PosIcon name={action.icon} />
-                                <span>{action.label}</span>
-                            </button>
-                        ))}
-                    </div>
-
                     <div className="pos-item-list" role="list">
                         {pricing.items.length ? pricing.items.map((item, index) => {
                             const discountPercent = Number(item.lineSubtotal || 0) > 0
@@ -4489,6 +4473,7 @@ function PosWorkspace({
                         loadingClosePreview={loadingClosePreview}
                         openingCashRegister={openingCashRegister}
                         closingCashRegister={closingCashRegister}
+                        checkoutActions={checkoutActionItems}
                         onToggleCollapse={onToggleCashPanel}
                         onOpenCashRegister={onOpenCashRegister}
                         onOpenCashMovement={onOpenCashMovement}
@@ -4516,6 +4501,7 @@ function PosWorkspace({
                                 loadingClosePreview={loadingClosePreview}
                                 openingCashRegister={openingCashRegister}
                                 closingCashRegister={closingCashRegister}
+                                checkoutActions={checkoutActionItems}
                                 onToggleCollapse={onCloseMobileCashPanel}
                                 onOpenCashRegister={onOpenCashRegister}
                                 onOpenCashMovement={onOpenCashMovement}
@@ -4852,6 +4838,7 @@ function PosCashTurnPanel({
     loadingClosePreview,
     openingCashRegister,
     closingCashRegister,
+    checkoutActions = [],
     onToggleCollapse,
     onOpenCashRegister,
     onOpenCashMovement,
@@ -4859,8 +4846,8 @@ function PosCashTurnPanel({
     onOpenCloseCashRegister,
     onCloseMobilePanel = null,
 }) {
-    const currentAmount = Number(report?.expected_cash ?? cashRegisterState?.opening_amount ?? 0)
-    const quickActions = cashRegisterState
+    const [cashOptionsOpen, setCashOptionsOpen] = useState(false)
+    const cashOptionActions = cashRegisterState
         ? [
             {
                 key: 'withdrawal',
@@ -4907,6 +4894,26 @@ function PosCashTurnPanel({
                 onClick: onOpenCashHistory,
             },
         ]
+    const handleCashOptionClick = (action) => {
+        action.onClick?.()
+        setCashOptionsOpen(false)
+    }
+    const cashOptionsMenu = cashOptionsOpen ? (
+        <div className="pos-turn-options-menu">
+            {cashOptionActions.map((action) => (
+                <button
+                    key={action.key}
+                    type="button"
+                    className={`pos-turn-option-action ${action.tone || 'default'}`}
+                    onClick={() => handleCashOptionClick(action)}
+                    disabled={action.disabled}
+                >
+                    <i className={`fa-solid ${action.icon}`} />
+                    <span>{action.label}</span>
+                </button>
+            ))}
+        </div>
+    ) : null
     const asideClassName = [
         'pos-turn-panel',
         collapsed ? 'collapsed' : '',
@@ -4941,30 +4948,45 @@ function PosCashTurnPanel({
 
             {collapsed && !mobile ? (
                 <div className="pos-turn-panel-collapsed-actions">
-                    <strong className="pos-turn-panel-collapsed-amount">{formatMoney(currentAmount)}</strong>
-
-                    {quickActions.map((action) => (
+                    {checkoutActions.map((action) => (
                         <button
                             key={action.key}
                             type="button"
-                            className={`pos-turn-panel-icon-action ${action.tone || 'default'} ui-tooltip`}
+                            className={`pos-turn-panel-icon-action sale ${action.tone || 'default'} ui-tooltip`}
                             data-tooltip={action.label}
                             onClick={action.onClick}
                             disabled={action.disabled}
                         >
-                            <i className={`fa-solid ${action.icon}`} />
+                            <PosIcon name={action.icon} />
                         </button>
                     ))}
+
+                    <button
+                        type="button"
+                        className={`pos-turn-panel-icon-action options ui-tooltip ${cashOptionsOpen ? 'active' : ''}`}
+                        data-tooltip="Opcoes"
+                        onClick={() => setCashOptionsOpen((open) => !open)}
+                    >
+                        <i className="fa-solid fa-ellipsis" />
+                    </button>
+
+                    {cashOptionsMenu}
                 </div>
             ) : (
                 <>
-                    <div className="pos-turn-panel-hero">
-                        <strong>{cashRegisterState ? formatMoney(currentAmount) : 'Turno fechado'}</strong>
-                        <span>
-                            {cashRegisterState
-                                ? `${report?.sales_count ?? 0} vendas \u00b7 ${formatShortTime(report?.cashRegister?.opened_at)}`
-                                : 'Abra o caixa para liberar o checkout e as rotinas do turno.'}
-                        </span>
+                    <div className="pos-sale-action-stack" aria-label="Ferramentas de finalizacao da venda">
+                        {checkoutActions.map((action) => (
+                            <button
+                                key={action.key}
+                                type="button"
+                                className={`pos-sale-sidebar-action ${action.tone || 'default'}`}
+                                onClick={action.onClick}
+                                disabled={action.disabled}
+                            >
+                                <PosIcon name={action.icon} />
+                                <span>{action.label}</span>
+                            </button>
+                        ))}
                     </div>
 
                     {!cashRegisterState ? (
@@ -4980,7 +5002,18 @@ function PosCashTurnPanel({
                         </section>
                     ) : null}
 
-                    <QuickActionBar items={quickActions} title="Acoes rapidas" orientation="vertical" className="pos-turn-quick-actions" />
+                    <div className="pos-turn-options">
+                        <button
+                            type="button"
+                            className={`pos-turn-options-toggle ${cashOptionsOpen ? 'active' : ''}`}
+                            onClick={() => setCashOptionsOpen((open) => !open)}
+                        >
+                            <i className="fa-solid fa-ellipsis" />
+                            <span>Opcoes</span>
+                        </button>
+
+                        {cashOptionsMenu}
+                    </div>
                 </>
             )}
         </aside>
