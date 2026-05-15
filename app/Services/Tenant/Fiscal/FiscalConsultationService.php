@@ -152,6 +152,45 @@ class FiscalConsultationService
         ];
     }
 
+    public function pendingNfces(int $limit = 30): array
+    {
+        return FiscalDocument::query()
+            ->with([
+                'sale:id,sale_number,total,status,created_at,cash_register_id',
+                'sale.payments:id,sale_id,payment_method,amount',
+            ])
+            ->whereIn('status', $this->pendingDocumentStatuses())
+            ->where(function ($query) {
+                $query
+                    ->whereJsonContains('payload->flags->document_model', '65')
+                    ->orWhere('payload->flags->document_model', '65')
+                    ->orWhereNull('payload->flags->document_model');
+            })
+            ->latest('updated_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (FiscalDocument $document) => $this->serializePendingNfce($document))
+            ->values()
+            ->all();
+    }
+
+    protected function pendingDocumentStatuses(): array
+    {
+        return [
+            'awaiting_agent',
+            'queued',
+            'queued_to_agent',
+            'processing',
+            'failed',
+            'rejected',
+            'contingency_pending',
+            'contingency_failed',
+            'contingency_offline_signed',
+            'contingency_offline_printed',
+            'cancellation_failed',
+        ];
+    }
+
     protected function serializeInutilization(FiscalNumberInutilization $inutilization): array
     {
         return [
@@ -291,6 +330,39 @@ class FiscalConsultationService
             'last_error' => $document->last_error,
             'contingency_requested_at' => $document->contingency_requested_at?->toIso8601String(),
             'contingency_attempts' => (int) ($document->contingency_attempts ?? 0),
+        ];
+    }
+
+    protected function serializePendingNfce(FiscalDocument $document): array
+    {
+        $sale = $document->sale;
+        $files = [
+            'preview_url' => route('api.fiscal.documents.preview', $document, false),
+            'signed_xml_url' => filled($document->signed_xml) ? route('api.fiscal.documents.signed-xml', $document, false) : null,
+            'authorized_xml_url' => filled($document->authorized_xml) ? route('api.fiscal.documents.authorized-xml', $document, false) : null,
+            'response_xml_url' => filled($document->response_xml) ? route('api.fiscal.documents.response-xml', $document, false) : null,
+            'cancelled_xml_url' => filled($document->cancelled_xml) ? route('api.fiscal.documents.cancelled-xml', $document, false) : null,
+        ];
+
+        return [
+            'id' => $document->id,
+            'sale_id' => $document->sale_id,
+            'sale_number' => $sale?->sale_number ?? '--',
+            'sale_status' => $sale?->status,
+            'total' => (float) ($sale?->total ?? 0),
+            'created_at' => $sale?->created_at?->toIso8601String(),
+            'status' => $document->status,
+            'status_label' => $this->documentStatusLabel((string) $document->status),
+            'status_tone' => $this->documentStatusTone((string) $document->status),
+            'document_model' => (string) data_get($document->payload, 'flags.document_model', '65'),
+            'series' => $document->series,
+            'number' => $document->number,
+            'access_key' => $document->access_key,
+            'last_error' => $document->last_error,
+            'can_retry' => ! in_array($document->status, ['queued', 'queued_to_agent', 'processing'], true),
+            'can_cancel_sale' => $sale ? $this->saleCanBeCancelled($sale, $document) : false,
+            'cancel_hint' => $sale ? $this->cancelHint($sale, $document) : 'Venda nao encontrada',
+            'files' => $files,
         ];
     }
 

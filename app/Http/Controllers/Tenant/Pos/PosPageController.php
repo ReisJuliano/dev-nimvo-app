@@ -10,6 +10,8 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\User;
 use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\PendingSaleService;
+use App\Services\Tenant\Fiscal\FiscalConsultationService;
+use App\Services\Tenant\Fiscal\FiscalContingencyService;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\ProductService;
@@ -31,10 +33,14 @@ class PosPageController extends Controller
         PosRecommendationService $recommendationService,
         ProductService $productService,
         TenantSettingsService $settingsService,
+        FiscalConsultationService $fiscalConsultationService,
+        FiscalContingencyService $fiscalContingencyService,
     ): Response {
         $userId = auth()->user()?->getKey();
         $requestedOrderDraftId = request()->integer('orderDraft');
         $ordersEnabled = $settingsService->isModuleEnabled('pedidos');
+
+        $fiscalContingencyService->retryPending();
 
         $cashRegister = CashRegister::query()
             ->where('user_id', $userId)
@@ -88,6 +94,7 @@ class PosPageController extends Controller
             'pendingOrderDraftDetails' => $ordersEnabled ? $orderDraftService->pendingCheckoutDraftsDetailed() : [],
             'preloadedOrderDraft' => $preloadedOrderDraft ? $orderDraftService->toDetail($preloadedOrderDraft) : null,
             'pendingSale' => $pendingSaleService->serialize($pendingSale),
+            'pendingNfces' => $fiscalConsultationService->pendingNfces(),
             'recommendations' => $recommendationService->build(),
             'cashRegister' => $openRegister['cashRegister'] ?? null,
             'openRegister' => $openRegister,

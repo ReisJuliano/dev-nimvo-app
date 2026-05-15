@@ -4,7 +4,6 @@ import AppLayout from '@/Layouts/AppLayout'
 import PageContainer from '@/Components/UI/PageContainer'
 import CompactModal from '@/Components/UI/CompactModal'
 import DenseTable from '@/Components/UI/DenseTable'
-import QuickActionBar from '@/Components/UI/QuickActionBar'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import './consultations.css'
 
@@ -115,20 +114,12 @@ function InfoGrid({ items }) {
     )
 }
 
-export default function FiscalConsultationsPage({ filters, periods, summary, range, sales, inutilizations, contingencies }) {
+export default function FiscalConsultationsPage({ filters, periods, summary, range, sales }) {
     const [selectedSaleId, setSelectedSaleId] = useState(null)
-    const [showInutilizationModal, setShowInutilizationModal] = useState(false)
     const cancelForm = useForm({ reason: '' })
     const rangeForm = useForm({
         from: filters.from || range.from || '',
         to: filters.to || range.to || '',
-    })
-    const inutilizationForm = useForm({
-        document_model: '65',
-        series: 1,
-        number_start: '',
-        number_end: '',
-        justification: '',
     })
 
     const selectedSale = useMemo(
@@ -190,17 +181,6 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         cancelForm.clearErrors()
     }
 
-    function openInutilizationModal() {
-        setShowInutilizationModal(true)
-        inutilizationForm.clearErrors()
-    }
-
-    function closeInutilizationModal() {
-        setShowInutilizationModal(false)
-        inutilizationForm.reset()
-        inutilizationForm.clearErrors()
-    }
-
     function submitCancel(event) {
         event.preventDefault()
 
@@ -214,82 +194,10 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
         })
     }
 
-    function submitInutilization(event) {
-        event.preventDefault()
-
-        inutilizationForm.post('/consultas-cancelamentos/inutilizacoes', {
-            preserveScroll: true,
-            onSuccess: () => closeInutilizationModal(),
-        })
-    }
-
-    function submitContingency() {
-        if (!selectedSale) {
-            return
-        }
-
-        cancelForm.post(`/consultas-cancelamentos/vendas/${selectedSale.id}/contingencia`, {
-            preserveScroll: true,
-            onSuccess: () => closeModal(),
-        })
-    }
-
-    function retryContingencies() {
-        router.post('/consultas-cancelamentos/contingencia/retry', {}, { preserveScroll: true })
-    }
-
     return (
         <AppLayout title="Vendas">
             <div className="fiscal-consultations-page fiscal-compact-page">
-                <PageContainer
-                    className="fiscal-page-container"
-                    sidebar={(
-                        <div className="fiscal-sidebar-stack">
-                            <QuickActionBar
-                                items={[
-                                    {
-                                        key: 'retry',
-                                        icon: 'fa-rotate',
-                                        label: 'Reenfileirar',
-                                        description: `${contingencies.length} pendencia(s)`,
-                                        tone: 'primary',
-                                        onClick: retryContingencies,
-                                    },
-                                    {
-                                        key: 'invalidate',
-                                        icon: 'fa-hashtag',
-                                        label: 'Inutilizar',
-                                        description: 'Abrir faixa fiscal',
-                                        tone: 'danger',
-                                        onClick: openInutilizationModal,
-                                    },
-                                ]}
-                                title="Fiscal"
-                            />
-
-                            <section className="fiscal-sidebar-card">
-                                <header>
-                                    <strong>Resumo fiscal</strong>
-                                    <span>{range.label}</span>
-                                </header>
-                                <div className="fiscal-sidebar-meta">
-                                    <div>
-                                        <span>Pendencias</span>
-                                        <strong>{contingencies.length}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Inutilizacoes</span>
-                                        <strong>{inutilizations.length}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Registros</span>
-                                        <strong>{sales.total}</strong>
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                    )}
-                >
+                <PageContainer className="fiscal-page-container">
                     <div className="fiscal-compact-stack">
                         <section className="fiscal-compact-toolbar">
                             <div className="fiscal-compact-heading">
@@ -370,6 +278,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             </header>
 
                             <DenseTable
+                                className="fiscal-sales-table"
                                 columns={[
                                     { key: 'saleNumber', label: 'Venda', render: (sale) => <strong>{sale.sale_number}</strong> },
                                     { key: 'createdAt', label: 'Data', render: (sale) => formatDateTime(sale.created_at) },
@@ -392,6 +301,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                 rowKey="id"
                                 selectedRowKey={selectedSale?.id}
                                 onRowClick={openSale}
+                                showActionLabels
                                 emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas no periodo selecionado.</span></div>}
                                 getRowActions={(sale) => [
                                     {
@@ -409,9 +319,9 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                         onClick: () => openSale(sale),
                                     } : null,
                                     sale.can_flag_contingency ? {
-                                        key: 'retry',
-                                        icon: 'fa-rotate',
-                                        label: 'Reenfileirar',
+                                        key: 'pending',
+                                        icon: 'fa-triangle-exclamation',
+                                        label: 'Pendente',
                                         tone: 'info',
                                         onClick: () => openSale(sale),
                                     } : null,
@@ -446,21 +356,14 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
             <SaleDetailsModal
                 cancelForm={cancelForm}
                 onCancelSubmit={submitCancel}
-                onContingencySubmit={submitContingency}
                 onClose={closeModal}
                 sale={selectedSale}
-            />
-            <InutilizationModal
-                form={inutilizationForm}
-                onClose={closeInutilizationModal}
-                onSubmit={submitInutilization}
-                visible={showInutilizationModal}
             />
         </AppLayout>
     )
 }
 
-function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onContingencySubmit }) {
+function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
     if (!sale) {
         return null
     }
@@ -635,11 +538,6 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                             <span>Fechar</span>
                         </button>
 
-                        <button className="fiscal-warning-button" disabled={!sale.can_flag_contingency || cancelForm.processing} onClick={onContingencySubmit} type="button">
-                            <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-triangle-exclamation'}`} />
-                            <span>{sale.can_flag_contingency ? 'Reenfileirar' : 'Sem conting.'}</span>
-                        </button>
-
                         <button className="fiscal-danger-button" disabled={!sale.can_cancel || cancelForm.processing} type="submit">
                             <i className={`fa-solid ${cancelForm.processing ? 'fa-spinner fa-spin' : 'fa-ban'}`} />
                             <span>{sale.can_cancel ? 'Cancelar venda' : 'Bloqueado'}</span>
@@ -647,80 +545,6 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit, onConting
                     </div>
                 </form>
             </div>
-        </CompactModal>
-    )
-}
-
-function InutilizationModal({ visible, onClose, onSubmit, form }) {
-    if (!visible) {
-        return null
-    }
-
-    return (
-        <CompactModal
-            open={visible}
-            title="Nova inutilizacao"
-            description="Serie e faixa de numeracao."
-            icon="fa-hashtag"
-            size="sm"
-            onClose={onClose}
-        >
-            <form className="fiscal-inutilization-form compact" onSubmit={onSubmit}>
-                <div className="fiscal-form-grid">
-                    <label>
-                        <span>Modelo</span>
-                        <select name="document_model" value={form.data.document_model} onChange={(event) => form.setData('document_model', event.target.value)}>
-                            <option value="65">NFC-e 65</option>
-                            <option value="55">NF-e 55</option>
-                        </select>
-                    </label>
-
-                    <label>
-                        <span>Serie</span>
-                        <input name="series" type="number" value={form.data.series} onChange={(event) => form.setData('series', event.target.value)} />
-                    </label>
-
-                    <label>
-                        <span>Inicio</span>
-                        <input name="number_start" type="number" value={form.data.number_start} onChange={(event) => form.setData('number_start', event.target.value)} />
-                    </label>
-
-                    <label>
-                        <span>Fim</span>
-                        <input name="number_end" type="number" value={form.data.number_end} onChange={(event) => form.setData('number_end', event.target.value)} />
-                    </label>
-                </div>
-
-                <label>
-                    <span>Justificativa</span>
-                    <textarea
-                        name="justification"
-                        onChange={(event) => form.setData('justification', event.target.value)}
-                        placeholder="Motivo operacional da inutilizacao"
-                        value={form.data.justification}
-                    />
-                </label>
-
-                {Object.values(form.errors).length > 0 ? (
-                    <div className="fiscal-form-errors">
-                        {Object.entries(form.errors).map(([field, message]) => (
-                            <span key={field} className="fiscal-form-error">{message}</span>
-                        ))}
-                    </div>
-                ) : null}
-
-                <div className="fiscal-cancel-actions compact">
-                    <button className="fiscal-secondary-button" onClick={onClose} type="button">
-                        <i className="fa-solid fa-arrow-left" />
-                        <span>Fechar</span>
-                    </button>
-
-                    <button className="fiscal-danger-button" disabled={form.processing} type="submit">
-                        <i className={`fa-solid ${form.processing ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} />
-                        <span>Enviar</span>
-                    </button>
-                </div>
-            </form>
         </CompactModal>
     )
 }

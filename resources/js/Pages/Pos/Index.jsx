@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react'
+import { Head, router, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
@@ -361,6 +361,7 @@ export default function PosIndex({
     pendingOrderDraftDetails = [],
     preloadedOrderDraft,
     pendingSale: initialPendingSale,
+    pendingNfces: initialPendingNfces = [],
     recommendations: initialRecommendations,
     posCapabilities = {},
 }) {
@@ -388,6 +389,9 @@ export default function PosIndex({
     const [cashRegisterReport, setCashRegisterReport] = useState(openRegister || null)
     const [cashRegisterHistory, setCashRegisterHistory] = useState(initialCashRegisterHistory || [])
     const [pendingOrderDrafts, setPendingOrderDrafts] = useState(initialPendingOrderDrafts || [])
+    const [pendingNfces, setPendingNfces] = useState(initialPendingNfces || [])
+    const [pendingNfcesModalOpen, setPendingNfcesModalOpen] = useState(false)
+    const [pendingNfceBusyId, setPendingNfceBusyId] = useState(null)
     const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? visibleInitialPendingSale?.order_draft_id ?? null)
     const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
     const [refreshingPendingOrders, setRefreshingPendingOrders] = useState(false)
@@ -473,6 +477,10 @@ export default function PosIndex({
     const recipientSearch = recipientSearchControl.draftValue
     const deferredCustomerSearch = useDeferredValue(customerSearchControl.value)
     const deferredRecipientSearch = useDeferredValue(recipientSearchControl.value)
+
+    useEffect(() => {
+        setPendingNfces(initialPendingNfces || [])
+    }, [initialPendingNfces])
 
     const paymentOptions = useMemo(
         () =>
@@ -2720,6 +2728,59 @@ export default function PosIndex({
         openInvoiceStep()
     }
 
+    async function handleRetryPendingNfce(document) {
+        if (!document?.id || pendingNfceBusyId) {
+            return
+        }
+
+        setPendingNfceBusyId(document.id)
+
+        try {
+            await apiRequest(`/api/fiscal/documents/${document.id}/retry`, { method: 'post' })
+            setPendingNfces((current) => current.filter((entry) => entry.id !== document.id))
+            showFeedback('success', 'NFC-e reenviada para processamento.')
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setPendingNfceBusyId(null)
+        }
+    }
+
+    function handleCancelPendingNfceSale(document) {
+        if (!document?.sale_id || pendingNfceBusyId) {
+            return
+        }
+
+        const reason = window.prompt('Informe o motivo do cancelamento da venda')
+
+        if (!reason) {
+            return
+        }
+
+        setPendingNfceBusyId(document.id)
+
+        router.post(`/consultas-cancelamentos/vendas/${document.sale_id}/cancelar`, { reason }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setPendingNfces((current) => current.filter((entry) => entry.id !== document.id))
+                showFeedback('success', 'Cancelamento solicitado com sucesso.')
+            },
+            onError: (errors) => {
+                showFeedback('error', Object.values(errors || {})[0] || 'Nao foi possivel cancelar a venda.')
+            },
+            onFinish: () => setPendingNfceBusyId(null),
+        })
+    }
+
+    function openPendingNfceFile(url) {
+        if (!url || typeof window === 'undefined') {
+            showFeedback('error', 'Arquivo fiscal indisponivel para esta NFC-e.')
+            return
+        }
+
+        window.open(url, '_blank', 'noopener,noreferrer')
+    }
+
     function buildManualRecipientPayload(source) {
         return {
             type: 'document',
@@ -3460,6 +3521,8 @@ export default function PosIndex({
         onOpenCashMovement: openCashMovementModal,
         onOpenCashHistory: openCashHistoryDrawer,
         onOpenCloseCashRegister: handleOpenCashWorkflow,
+        onOpenPendingNfces: () => setPendingNfcesModalOpen(true),
+        pendingNfceCount: pendingNfces.length,
         loadingClosePreview,
         openingCashRegister,
         closingCashRegister,
@@ -3542,6 +3605,16 @@ export default function PosIndex({
                 busy={pendingSaleActionBusy}
                 onRestore={handleRestorePendingSale}
                 onDiscard={handleDiscardPendingSale}
+            />
+
+            <PendingNfceModal
+                busyId={pendingNfceBusyId}
+                documents={pendingNfces}
+                open={pendingNfcesModalOpen}
+                onCancelSale={handleCancelPendingNfceSale}
+                onClose={() => setPendingNfcesModalOpen(false)}
+                onOpenFile={openPendingNfceFile}
+                onRetry={handleRetryPendingNfce}
             />
 
             <CompactModal
@@ -4165,6 +4238,8 @@ function PosWorkspace({
     onOpenCashMovement,
     onOpenCashHistory,
     onOpenCloseCashRegister,
+    onOpenPendingNfces,
+    pendingNfceCount,
     loadingClosePreview,
     openingCashRegister,
     closingCashRegister,
@@ -4479,6 +4554,8 @@ function PosWorkspace({
                         onOpenCashMovement={onOpenCashMovement}
                         onOpenCashHistory={onOpenCashHistory}
                         onOpenCloseCashRegister={onOpenCloseCashRegister}
+                        onOpenPendingNfces={onOpenPendingNfces}
+                        pendingNfceCount={pendingNfceCount}
                     />
                 ) : null}
             </div>
@@ -4507,6 +4584,8 @@ function PosWorkspace({
                                 onOpenCashMovement={onOpenCashMovement}
                                 onOpenCashHistory={onOpenCashHistory}
                                 onOpenCloseCashRegister={onOpenCloseCashRegister}
+                                onOpenPendingNfces={onOpenPendingNfces}
+                                pendingNfceCount={pendingNfceCount}
                                 onCloseMobilePanel={onCloseMobileCashPanel}
                             />
                         </div>
@@ -4820,6 +4899,88 @@ function PosWorkspace({
     )
 }
 
+function PendingNfceModal({
+    open,
+    documents,
+    busyId,
+    onClose,
+    onRetry,
+    onCancelSale,
+    onOpenFile,
+}) {
+    if (!open) {
+        return null
+    }
+
+    return (
+        <CompactModal
+            open={open}
+            title="NFC-e pendentes"
+            description="Documentos fiscais que ainda precisam de acao ou regularizacao."
+            icon="fa-file-circle-exclamation"
+            size="lg"
+            onClose={onClose}
+        >
+            <div className="pos-pending-nfce-stack">
+                {documents.length ? documents.map((document) => {
+                    const busy = busyId === document.id
+                    const previewUrl = document.files?.preview_url
+                    const xmlUrl = document.files?.authorized_xml_url || document.files?.signed_xml_url || document.files?.response_xml_url
+
+                    return (
+                        <article key={document.id} className="pos-pending-nfce-card">
+                            <div className="pos-pending-nfce-main">
+                                <div>
+                                    <strong>{document.sale_number}</strong>
+                                    <span>{formatShortDateTime(document.created_at)} | {formatMoney(document.total)}</span>
+                                </div>
+                                <StatusBadge compact label={document.status_label} tone={document.status_tone} />
+                            </div>
+
+                            {document.last_error ? (
+                                <div className="pos-pending-nfce-error">{document.last_error}</div>
+                            ) : null}
+
+                            <div className="pos-pending-nfce-actions">
+                                <button type="button" onClick={() => onRetry(document)} disabled={!document.can_retry || busy}>
+                                    <i className={`fa-solid ${busy ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`} />
+                                    <span>Reenviar</span>
+                                </button>
+                                <button type="button" onClick={() => onCancelSale(document)} disabled={!document.can_cancel_sale || busy}>
+                                    <i className="fa-solid fa-ban" />
+                                    <span>Cancelar</span>
+                                </button>
+                                <button type="button" onClick={() => onOpenFile(previewUrl)} disabled={!previewUrl}>
+                                    <i className="fa-solid fa-receipt" />
+                                    <span>Visualizar</span>
+                                </button>
+                                <button type="button" onClick={() => onOpenFile(previewUrl)} disabled={!previewUrl}>
+                                    <i className="fa-solid fa-print" />
+                                    <span>Reimprimir</span>
+                                </button>
+                                <button type="button" onClick={() => onOpenFile(previewUrl)} disabled={!previewUrl}>
+                                    <i className="fa-solid fa-file-pdf" />
+                                    <span>DANFE</span>
+                                </button>
+                                <button type="button" onClick={() => onOpenFile(xmlUrl)} disabled={!xmlUrl}>
+                                    <i className="fa-solid fa-file-code" />
+                                    <span>XML</span>
+                                </button>
+                            </div>
+                        </article>
+                    )
+                }) : (
+                    <div className="pos-pending-nfce-empty">
+                        <i className="fa-solid fa-circle-check" />
+                        <strong>Nenhuma NFC-e pendente</strong>
+                        <span>As pendencias fiscais sao reenviadas automaticamente quando o caixa abre.</span>
+                    </div>
+                )}
+            </div>
+        </CompactModal>
+    )
+}
+
 function PosSidebarAction({ label, icon, tone = 'default', onClick }) {
     return (
         <button type="button" className={`pos-sidebar-action ${tone}`} onClick={onClick}>
@@ -4844,6 +5005,8 @@ function PosCashTurnPanel({
     onOpenCashMovement,
     onOpenCashHistory,
     onOpenCloseCashRegister,
+    onOpenPendingNfces,
+    pendingNfceCount = 0,
     onCloseMobilePanel = null,
 }) {
     const [cashOptionsOpen, setCashOptionsOpen] = useState(false)
@@ -4870,6 +5033,13 @@ function PosCashTurnPanel({
                 onClick: onOpenCashHistory,
             },
             {
+                key: 'pending-nfce',
+                label: pendingNfceCount > 0 ? `NFC-e Pend. (${pendingNfceCount})` : 'NFC-e Pend.',
+                icon: 'fa-file-circle-exclamation',
+                tone: 'info',
+                onClick: onOpenPendingNfces,
+            },
+            {
                 key: 'close',
                 label: 'Fechar Caixa',
                 icon: 'fa-lock',
@@ -4892,6 +5062,13 @@ function PosCashTurnPanel({
                 label: 'Historico',
                 icon: 'fa-clock-rotate-left',
                 onClick: onOpenCashHistory,
+            },
+            {
+                key: 'pending-nfce',
+                label: pendingNfceCount > 0 ? `NFC-e Pend. (${pendingNfceCount})` : 'NFC-e Pend.',
+                icon: 'fa-file-circle-exclamation',
+                tone: 'info',
+                onClick: onOpenPendingNfces,
             },
         ]
     const handleCashOptionClick = (action) => {

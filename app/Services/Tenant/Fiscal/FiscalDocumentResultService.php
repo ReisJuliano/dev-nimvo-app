@@ -3,6 +3,9 @@
 namespace App\Services\Tenant\Fiscal;
 
 use App\Models\Tenant\FiscalDocument;
+use App\Models\Tenant\Product;
+use App\Models\Tenant\Sale;
+use App\Services\Tenant\InventoryMovementService;
 use App\Support\Tenant\TenantContext;
 
 class FiscalDocumentResultService
@@ -10,6 +13,7 @@ class FiscalDocumentResultService
     public function __construct(
         protected TenantContext $tenantContext,
         protected FiscalDocumentXmlStorage $xmlStorage,
+        protected InventoryMovementService $inventoryMovementService,
     ) {
     }
 
@@ -228,7 +232,7 @@ class FiscalDocumentResultService
     public function markCancelled(string $tenantId, int $documentId, array $payload): void
     {
         $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
-            $document = FiscalDocument::query()->with('sale')->findOrFail($documentId);
+            $document = FiscalDocument::query()->with('sale.items.product')->findOrFail($documentId);
             $cancelledAt = $payload['cancelled_at'] ?? now();
 
             $document->forceFillCompatible([
@@ -247,8 +251,9 @@ class FiscalDocumentResultService
 
             $xmlFiles = $this->xmlStorage->persist($tenantId, $document, $payload);
 
-            if ($document->sale) {
+            if ($document->sale && $document->sale->status !== 'cancelled') {
                 $document->sale->forceFill(['status' => 'cancelled'])->save();
+                $this->restoreSaleStock($document->sale, (string) ($payload['cancellation_reason'] ?? $document->cancellation_reason ?? 'Cancelamento fiscal'));
             }
 
             $document->events()->create([
@@ -262,6 +267,29 @@ class FiscalDocumentResultService
                 ],
             ]);
         });
+    }
+
+    protected function restoreSaleStock(Sale $sale, string $reason): void
+    {
+        $sale->loadMissing('items.product');
+
+        foreach ($sale->items as $item) {
+            /** @var Product|null $product */
+            $product = $item->product;
+
+            if (! $product) {
+                continue;
+            }
+
+            $this->inventoryMovementService->apply($product, (float) $item->quantity, 'sale_cancelled', [
+                'user_id' => $sale->user_id,
+                'reference' => $sale,
+                'unit_cost' => $item->unit_cost,
+                'notes' => sprintf('Estorno da venda %s. Motivo: %s', $sale->sale_number, $reason),
+                'occurred_at' => now(),
+                'allow_negative' => true,
+            ]);
+        }
     }
 
     public function markCancellationFailed(string $tenantId, int $documentId, array $payload): void

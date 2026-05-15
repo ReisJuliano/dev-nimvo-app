@@ -16,6 +16,7 @@ export default function DenseTable({
     emptyState = null,
     className = '',
     minWidth = 720,
+    showActionLabels = false,
 }) {
     const hasActions = typeof getRowActions === 'function'
 
@@ -86,6 +87,7 @@ export default function DenseTable({
                                                             {...sharedProps}
                                                         >
                                                             <i className={`fa-solid ${action.icon}`} />
+                                                            {showActionLabels ? <span>{action.label}</span> : null}
                                                         </a>
                                                     )
                                                 }
@@ -98,6 +100,7 @@ export default function DenseTable({
                                                         {...sharedProps}
                                                     >
                                                         <i className={`fa-solid ${action.icon}`} />
+                                                        {showActionLabels ? <span>{action.label}</span> : null}
                                                     </button>
                                                 )
                                             })}

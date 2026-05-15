@@ -4,7 +4,9 @@ namespace App\Services\Tenant\Fiscal;
 
 use App\Models\Central\LocalAgent;
 use App\Models\Tenant\FiscalDocument;
+use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\InventoryMovementService;
 use App\Services\Central\LocalAgentCommandService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,6 +16,7 @@ class FiscalCancellationService
     public function __construct(
         protected LocalAgentCommandService $commandService,
         protected FiscalCancellationRules $rules,
+        protected InventoryMovementService $inventoryMovementService,
     ) {
     }
 
@@ -45,6 +48,7 @@ class FiscalCancellationService
 
             if (! $document) {
                 $sale->forceFill(['status' => 'cancelled'])->save();
+                $this->restoreSaleStock($sale, $reason);
 
                 return [
                     'mode' => 'commercial_cancelled',
@@ -62,6 +66,7 @@ class FiscalCancellationService
 
             if (in_array($decision['mode'], ['commercial_cancelled', 'local_cancelled'], true)) {
                 $sale->forceFill(['status' => 'cancelled'])->save();
+                $this->restoreSaleStock($sale, $reason);
 
                 $document->forceFillCompatible([
                     'status' => $decision['mode'] === 'local_cancelled' ? 'cancelled_local' : 'cancelled',
@@ -164,5 +169,28 @@ class FiscalCancellationService
 
                 return in_array('cancel_fiscal_document', $supportedTypes, true);
             });
+    }
+
+    protected function restoreSaleStock(Sale $sale, string $reason): void
+    {
+        $sale->loadMissing('items.product');
+
+        foreach ($sale->items as $item) {
+            /** @var Product|null $product */
+            $product = $item->product;
+
+            if (! $product) {
+                continue;
+            }
+
+            $this->inventoryMovementService->apply($product, (float) $item->quantity, 'sale_cancelled', [
+                'user_id' => $sale->user_id,
+                'reference' => $sale,
+                'unit_cost' => $item->unit_cost,
+                'notes' => sprintf('Estorno da venda %s. Motivo: %s', $sale->sale_number, $reason),
+                'occurred_at' => now(),
+                'allow_negative' => true,
+            ]);
+        }
     }
 }

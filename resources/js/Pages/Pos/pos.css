@@ -1496,6 +1496,97 @@
     cursor: wait;
 }
 
+.pos-pending-nfce-stack {
+    display: grid;
+    gap: 10px;
+}
+
+.pos-pending-nfce-card {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 10px;
+    background: var(--pos-surface-alt);
+}
+
+.pos-pending-nfce-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.pos-pending-nfce-main div {
+    min-width: 0;
+    display: grid;
+    gap: 0.18rem;
+}
+
+.pos-pending-nfce-main strong {
+    font-size: 13px;
+}
+
+.pos-pending-nfce-main span,
+.pos-pending-nfce-error,
+.pos-pending-nfce-empty span {
+    color: var(--pos-text-muted);
+    font-size: 11px;
+}
+
+.pos-pending-nfce-error {
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--pos-danger-soft);
+    color: var(--pos-danger);
+    line-height: 1.4;
+}
+
+.pos-pending-nfce-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    gap: 6px;
+}
+
+.pos-pending-nfce-actions button {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--pos-text);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pos-pending-nfce-actions button:hover {
+    border-color: rgba(24, 95, 165, 0.24);
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--pos-blue);
+}
+
+.pos-pending-nfce-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pos-pending-nfce-empty {
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    gap: 0.35rem;
+    text-align: center;
+}
+
+.pos-pending-nfce-empty i {
+    color: var(--pos-green);
+    font-size: 1.35rem;
+}
+
 .pos-cashier-drafts-list {
     display: grid;
     gap: 8px;
