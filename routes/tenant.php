@@ -21,11 +21,14 @@ use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
+use App\Http\Controllers\Tenant\Inventory\StockEntryPageController;
+use App\Http\Controllers\Tenant\Payables\PayablesPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
+use App\Http\Controllers\Tenant\Purchases\PurchasesPageController;
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
@@ -66,7 +69,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
         Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
-        Route::get('/compras', OperationsPageController::class)->defaults('module', 'compras')->name('purchases.index');
+        Route::get('/compras', PurchasesPageController::class)->name('purchases.index');
+        Route::get('/contas-a-pagar', PayablesPageController::class)->name('payables.index');
         Route::get('/a-prazo', OperationsPageController::class)->defaults('module', 'a-prazo')->name('credit.index');
         Route::get('/fiado', function (Request $request) {
             return redirect()->route('credit.index', array_filter([
@@ -77,7 +81,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/clientes', OperationsPageController::class)->defaults('module', 'clientes')->name('customers.index');
         Route::get('/fornecedores', OperationsPageController::class)->defaults('module', 'fornecedores')->name('suppliers.index');
         Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');
-        Route::get('/entrada-estoque', OperationsPageController::class)->defaults('module', 'entrada-estoque')->name('stock.inbound');
+        Route::get('/entrada-estoque', StockEntryPageController::class)->name('stock.inbound');
         Route::get('/ajuste-estoque', fn () => redirect()->route('stock.movement'))->name('stock.adjustments');
         Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.movement');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');

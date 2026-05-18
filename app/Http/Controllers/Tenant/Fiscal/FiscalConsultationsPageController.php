@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Tenant\Fiscal;
 
 use App\Http\Controllers\Controller;
-use App\Services\Tenant\Fiscal\FiscalConsultationService;
+use App\Services\Tenant\ConsultationsPageService;
 use App\Services\Tenant\Fiscal\FiscalContingencyService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,12 +13,12 @@ class FiscalConsultationsPageController extends Controller
 {
     public function __invoke(
         Request $request,
-        FiscalConsultationService $service,
+        ConsultationsPageService $service,
         FiscalContingencyService $contingencyService,
     ): Response
     {
         $contingencyService->retryPending();
 
-        return Inertia::render('Fiscal/Consultations', $service->build($request->all()));
+        return Inertia::render('Consultations/Index', $service->build($request->all()));
     }
 }

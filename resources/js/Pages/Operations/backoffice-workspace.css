@@ -1,0 +1,796 @@
+.proc-ui-page {
+    display: grid;
+    gap: 1.25rem;
+    color: #14313c;
+}
+
+.proc-ui-hero,
+.proc-ui-main-card,
+.proc-ui-sidebar,
+.proc-ui-mini-card,
+.proc-ui-summary-card,
+.proc-ui-record-card,
+.proc-ui-origin-card,
+.proc-ui-section-card,
+.proc-ui-kpi-card {
+    border: 1px solid rgba(23, 49, 61, 0.1);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 24px 60px rgba(19, 42, 53, 0.08);
+}
+
+.proc-ui-hero {
+    padding: 1.5rem 1.65rem;
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at top left, rgba(19, 136, 216, 0.14), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(242, 179, 74, 0.16), transparent 28%),
+        linear-gradient(145deg, #f4f8fb 0%, #f7f2e6 100%);
+}
+
+.proc-ui-hero-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.proc-ui-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(20, 83, 119, 0.09);
+    color: #1c5877;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.proc-ui-hero h1 {
+    margin: 0.8rem 0 0.25rem;
+    font-size: clamp(1.8rem, 2.6vw, 2.5rem);
+    line-height: 1.02;
+    color: #132c39;
+}
+
+.proc-ui-hero p {
+    margin: 0;
+    max-width: 52rem;
+    color: #5f7280;
+}
+
+.proc-ui-hero-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.proc-ui-kpi-card {
+    min-width: 10rem;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.95rem 1rem;
+    border-radius: 22px;
+}
+
+.proc-ui-kpi-card span,
+.proc-ui-label,
+.proc-ui-field label span,
+.proc-ui-muted,
+.proc-ui-table caption,
+.proc-ui-empty p,
+.proc-ui-inline-meta span,
+.proc-ui-review-grid small,
+.proc-ui-step-note {
+    color: #627584;
+}
+
+.proc-ui-kpi-card strong {
+    color: #102c3a;
+    font-size: 1.15rem;
+}
+
+.proc-ui-shell {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+}
+
+.proc-ui-main-card,
+.proc-ui-sidebar {
+    border-radius: 30px;
+    overflow: hidden;
+}
+
+.proc-ui-main-card {
+    padding: 1.25rem;
+}
+
+.proc-ui-main-header,
+.proc-ui-sidebar-header,
+.proc-ui-record-card-top,
+.proc-ui-record-card-meta,
+.proc-ui-card-toolbar,
+.proc-ui-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.proc-ui-main-header {
+    margin-bottom: 1rem;
+}
+
+.proc-ui-main-header h2,
+.proc-ui-sidebar-header h2,
+.proc-ui-section-title h3,
+.proc-ui-review-card h3,
+.proc-ui-modal-block h3 {
+    margin: 0;
+    color: #122d39;
+}
+
+.proc-ui-main-header p,
+.proc-ui-sidebar-header p,
+.proc-ui-section-title p,
+.proc-ui-review-card p,
+.proc-ui-modal-block p {
+    margin: 0.2rem 0 0;
+    color: #627584;
+}
+
+.proc-ui-sidebar {
+    width: 100%;
+    position: sticky;
+    top: 1rem;
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    min-height: calc(100vh - 8.5rem);
+}
+
+.proc-ui-sidebar-section {
+    padding: 1rem 1rem 0;
+}
+
+.proc-ui-sidebar-section:last-child {
+    padding-bottom: 1rem;
+}
+
+.proc-ui-sidebar-search,
+.proc-ui-sidebar-filters,
+.proc-ui-top-tabs,
+.proc-ui-chip-row,
+.proc-ui-type-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.proc-ui-searchbox,
+.proc-ui-field input,
+.proc-ui-field select,
+.proc-ui-field textarea,
+.proc-ui-table input,
+.proc-ui-table select,
+.proc-ui-inline-input,
+.proc-ui-date-range input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0.78rem 0.95rem;
+    border: 1px solid rgba(20, 44, 58, 0.12);
+    border-radius: 16px;
+    background: #fff;
+    color: #14313c;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.proc-ui-searchbox:focus,
+.proc-ui-field input:focus,
+.proc-ui-field select:focus,
+.proc-ui-field textarea:focus,
+.proc-ui-table input:focus,
+.proc-ui-table select:focus,
+.proc-ui-inline-input:focus,
+.proc-ui-date-range input:focus {
+    border-color: rgba(29, 123, 189, 0.45);
+    box-shadow: 0 0 0 4px rgba(86, 165, 224, 0.13);
+}
+
+.proc-ui-field textarea {
+    min-height: 88px;
+    resize: vertical;
+}
+
+.proc-ui-field-grid {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.proc-ui-field {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.proc-ui-field.full {
+    grid-column: 1 / -1;
+}
+
+.proc-ui-field label {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.proc-ui-chip,
+.proc-ui-tab-chip {
+    border: 1px solid rgba(20, 44, 58, 0.1);
+    background: rgba(244, 248, 251, 0.9);
+    color: #446073;
+    border-radius: 999px;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: all 150ms ease;
+}
+
+.proc-ui-chip.active,
+.proc-ui-tab-chip.active {
+    border-color: rgba(26, 117, 186, 0.28);
+    background: rgba(37, 141, 214, 0.14);
+    color: #105d8b;
+}
+
+.proc-ui-sidebar-list {
+    min-height: 0;
+    padding: 0 1rem 1rem;
+    overflow-y: auto;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.proc-ui-record-card {
+    width: 100%;
+    display: grid;
+    gap: 0.6rem;
+    padding: 0.95rem;
+    border-radius: 22px;
+    text-align: left;
+    transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.proc-ui-record-card:hover,
+.proc-ui-record-card.active {
+    transform: translateY(-1px);
+    border-color: rgba(24, 108, 171, 0.25);
+    box-shadow: 0 20px 36px rgba(15, 35, 45, 0.08);
+}
+
+.proc-ui-record-card-top strong,
+.proc-ui-record-card-copy strong,
+.proc-ui-table strong,
+.proc-ui-review-grid strong,
+.proc-ui-summary-card strong,
+.proc-ui-origin-card strong,
+.proc-ui-origin-card h3,
+.proc-ui-mini-card strong,
+.proc-ui-empty strong {
+    color: #112e3b;
+}
+
+.proc-ui-record-card-copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.proc-ui-record-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+}
+
+.proc-ui-record-card:hover .proc-ui-record-card-actions,
+.proc-ui-record-card.active .proc-ui-record-card-actions,
+.proc-ui-record-card-actions.always {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.proc-ui-ghost-icon {
+    border: 1px solid rgba(20, 44, 58, 0.1);
+    background: rgba(255, 255, 255, 0.92);
+    color: #365668;
+    border-radius: 999px;
+    min-width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    transition: all 150ms ease;
+}
+
+.proc-ui-ghost-icon:hover {
+    border-color: rgba(25, 111, 176, 0.28);
+    background: rgba(37, 141, 214, 0.12);
+    color: #0e5d8d;
+}
+
+.proc-ui-footer-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+    padding: 0.9rem 1rem 1rem;
+    border-top: 1px solid rgba(20, 44, 58, 0.08);
+    color: #4c6777;
+    font-size: 0.84rem;
+}
+
+.proc-ui-stepper {
+    display: grid;
+    grid-template-columns: repeat(var(--proc-step-count, 3), minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.proc-ui-step {
+    position: relative;
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.95rem 1rem;
+    border-radius: 22px;
+    border: 1px solid rgba(20, 44, 58, 0.1);
+    background: #fff;
+    text-align: left;
+    transition: all 160ms ease;
+}
+
+.proc-ui-step::after {
+    content: '';
+    position: absolute;
+    top: 1.35rem;
+    right: -0.7rem;
+    width: 1.4rem;
+    height: 2px;
+    background: rgba(107, 124, 137, 0.2);
+}
+
+.proc-ui-step:last-child::after {
+    display: none;
+}
+
+.proc-ui-step.active {
+    border-color: rgba(28, 116, 186, 0.3);
+    background: linear-gradient(180deg, rgba(243, 249, 254, 0.95), rgba(255, 255, 255, 0.98));
+    box-shadow: 0 16px 36px rgba(25, 105, 165, 0.08);
+}
+
+.proc-ui-step.complete {
+    border-color: rgba(34, 143, 95, 0.22);
+    background: rgba(242, 251, 246, 0.95);
+}
+
+.proc-ui-step.disabled {
+    opacity: 0.65;
+}
+
+.proc-ui-step-index {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: #edf2f6;
+    color: #365668;
+    font-weight: 800;
+}
+
+.proc-ui-step.active .proc-ui-step-index {
+    background: linear-gradient(135deg, #2f90dc, #4aa6eb);
+    color: #fff;
+}
+
+.proc-ui-step.complete .proc-ui-step-index {
+    background: linear-gradient(135deg, #2ba86d, #5edb93);
+    color: #fff;
+}
+
+.proc-ui-stage {
+    min-height: 31rem;
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    animation: procUiStageIn 220ms ease;
+}
+
+@keyframes procUiStageIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.proc-ui-summary-grid,
+.proc-ui-review-grid,
+.proc-ui-origin-grid,
+.proc-ui-two-grid,
+.proc-ui-financial-grid {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.proc-ui-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.proc-ui-review-grid,
+.proc-ui-two-grid,
+.proc-ui-financial-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.proc-ui-summary-card,
+.proc-ui-mini-card,
+.proc-ui-review-card,
+.proc-ui-origin-card,
+.proc-ui-section-card {
+    border-radius: 24px;
+    padding: 1rem;
+}
+
+.proc-ui-review-card,
+.proc-ui-section-card {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.proc-ui-origin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.proc-ui-origin-card {
+    text-align: left;
+    display: grid;
+    gap: 0.55rem;
+    padding: 1.15rem;
+    transition: all 160ms ease;
+}
+
+.proc-ui-origin-card.active {
+    border-color: rgba(30, 117, 185, 0.28);
+    background: linear-gradient(180deg, rgba(241, 248, 253, 0.98), rgba(255, 255, 255, 0.98));
+}
+
+.proc-ui-origin-card i {
+    font-size: 1.35rem;
+    color: #1b80bd;
+}
+
+.proc-ui-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.9rem 1rem;
+    border-radius: 18px;
+    border: 1px solid transparent;
+}
+
+.proc-ui-banner.warning {
+    background: rgba(249, 189, 62, 0.13);
+    border-color: rgba(217, 152, 40, 0.2);
+    color: #8f6214;
+}
+
+.proc-ui-banner.critical {
+    background: rgba(230, 90, 68, 0.12);
+    border-color: rgba(200, 73, 48, 0.18);
+    color: #8f2f1c;
+}
+
+.proc-ui-banner.info {
+    background: rgba(52, 149, 224, 0.12);
+    border-color: rgba(41, 126, 193, 0.18);
+    color: #135d8d;
+}
+
+.proc-ui-flash {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 18px;
+    font-weight: 700;
+}
+
+.proc-ui-flash.success {
+    background: rgba(48, 152, 98, 0.12);
+    color: #1f6f49;
+}
+
+.proc-ui-flash.error {
+    background: rgba(207, 75, 52, 0.12);
+    color: #952d1f;
+}
+
+.proc-ui-inline-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+}
+
+.proc-ui-autocomplete {
+    position: relative;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.proc-ui-autocomplete-list {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 15rem;
+    overflow-y: auto;
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.45rem;
+    border: 1px solid rgba(20, 44, 58, 0.1);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 42px rgba(15, 35, 45, 0.12);
+}
+
+.proc-ui-autocomplete-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border-radius: 14px;
+    text-align: left;
+    color: #173a4c;
+}
+
+.proc-ui-autocomplete-item:hover {
+    background: rgba(37, 141, 214, 0.08);
+}
+
+.proc-ui-table-wrap {
+    overflow: auto;
+    border-radius: 22px;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    background: rgba(250, 252, 253, 0.9);
+}
+
+.proc-ui-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+}
+
+.proc-ui-table thead th {
+    padding: 0.85rem 0.9rem;
+    text-align: left;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5b6f7d;
+    background: rgba(242, 247, 250, 0.92);
+}
+
+.proc-ui-table tbody td {
+    padding: 0.8rem 0.9rem;
+    border-top: 1px solid rgba(20, 44, 58, 0.06);
+    vertical-align: top;
+}
+
+.proc-ui-table tbody tr.warning-row {
+    background: rgba(252, 237, 204, 0.72);
+}
+
+.proc-ui-table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.proc-ui-table-totalbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem 1.2rem;
+    padding: 0.95rem 1rem;
+    border-top: 1px solid rgba(20, 44, 58, 0.08);
+    background: rgba(246, 249, 251, 0.9);
+}
+
+.proc-ui-step-actions,
+.proc-ui-between-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.proc-ui-step-actions .ui-button,
+.proc-ui-step-actions .ui-button-ghost,
+.proc-ui-between-actions .ui-button,
+.proc-ui-between-actions .ui-button-ghost {
+    min-height: 44px;
+}
+
+.proc-ui-empty {
+    min-height: 10rem;
+    display: grid;
+    place-items: center;
+    gap: 0.35rem;
+    text-align: center;
+    border: 1px dashed rgba(20, 44, 58, 0.14);
+    border-radius: 22px;
+    background: rgba(247, 250, 252, 0.72);
+    padding: 1.15rem;
+}
+
+.proc-ui-section-stack,
+.proc-ui-modal-stack,
+.proc-ui-list-stack {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.proc-ui-modal-stack {
+    padding-right: 0.1rem;
+}
+
+.proc-ui-modal-block {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.95rem;
+    border-radius: 20px;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    background: rgba(248, 251, 253, 0.94);
+}
+
+.proc-ui-date-range {
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.proc-ui-footer-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    align-items: center;
+}
+
+.proc-ui-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.48rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(20, 44, 58, 0.06);
+    color: #425e70;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.proc-ui-surface-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.proc-ui-surface-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 16px;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.proc-ui-surface-item small {
+    color: #627584;
+}
+
+.proc-ui-divider {
+    height: 1px;
+    background: rgba(20, 44, 58, 0.08);
+}
+
+.proc-ui-link-button {
+    border: none;
+    background: none;
+    color: #0f6699;
+    font-weight: 700;
+    padding: 0;
+}
+
+.proc-ui-modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.proc-ui-statusline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.proc-ui-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+    .proc-ui-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .proc-ui-sidebar {
+        position: static;
+        min-height: auto;
+    }
+
+    .proc-ui-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .proc-ui-stepper,
+    .proc-ui-field-grid,
+    .proc-ui-review-grid,
+    .proc-ui-two-grid,
+    .proc-ui-financial-grid,
+    .proc-ui-origin-grid,
+    .proc-ui-date-range {
+        grid-template-columns: 1fr;
+    }
+
+    .proc-ui-step::after {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .proc-ui-hero-top,
+    .proc-ui-main-header,
+    .proc-ui-sidebar-header,
+    .proc-ui-step-actions,
+    .proc-ui-between-actions,
+    .proc-ui-modal-footer,
+    .proc-ui-card-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .proc-ui-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .proc-ui-record-card-actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}

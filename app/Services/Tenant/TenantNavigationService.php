@@ -76,6 +76,13 @@ class TenantNavigationService
                         'access_key' => 'compras',
                         'request_patterns' => ['compras', 'api/operations/compras*'],
                     ],
+                    [
+                        'href' => '/contas-a-pagar',
+                        'label' => 'Contas a pagar',
+                        'icon' => 'fa-file-invoice-dollar',
+                        'access_key' => 'compras',
+                        'request_patterns' => ['contas-a-pagar', 'api/operations/contas-a-pagar*'],
+                    ],
                 ],
             ],
             [

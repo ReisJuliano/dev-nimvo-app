@@ -8,6 +8,7 @@ use App\Models\Tenant\DeliveryOrder;
 use App\Models\Tenant\IncomingNfeDocument;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\OrderDraft;
+use App\Models\Tenant\Payable;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
@@ -42,6 +43,7 @@ class OperationsWorkspaceService
             'categorias',
             'delivery',
             'compras',
+            'contas-a-pagar',
             'entrada-estoque',
             'movimentacao-estoque',
             'usuarios',
@@ -88,6 +90,12 @@ class OperationsWorkspaceService
                 'moduleDescription' => 'Pedido de compra, itens recebidos e entrada automatica no estoque.',
                 'payload' => $this->purchasesPayload(),
             ],
+            'contas-a-pagar' => [
+                'moduleKey' => 'contas-a-pagar',
+                'moduleTitle' => 'Contas a pagar',
+                'moduleDescription' => 'Compromissos gerados por notas de entrada e lancamentos financeiros avulsos.',
+                'payload' => $this->payablesPayload(),
+            ],
             'entrada-estoque' => [
                 'moduleKey' => 'entrada-estoque',
                 'moduleTitle' => 'Entrada de estoque',
@@ -118,6 +126,7 @@ class OperationsWorkspaceService
             'categorias' => ['message' => 'Categoria cadastrada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory(null, $input))],
             'delivery' => ['message' => 'Entrega salva com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder(null, $input))],
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
+            'contas-a-pagar' => ['message' => 'Conta a pagar salva com sucesso.', 'record' => $this->serializePayable($this->savePayable(null, $input, $userId))],
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
             'movimentacao-estoque' => ['message' => 'Estoque atualizado com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockLevelUpdate($input, $userId))],
             'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
@@ -143,6 +152,7 @@ class OperationsWorkspaceService
             'categorias' => ['message' => 'Categoria atualizada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory($this->findRecord(Category::class, $recordId), $input))],
             'delivery' => ['message' => 'Entrega atualizada com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder($this->findRecord(DeliveryOrder::class, $recordId), $input))],
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
+            'contas-a-pagar' => ['message' => 'Conta a pagar atualizada com sucesso.', 'record' => $this->serializePayable($this->savePayable($this->findRecord(Payable::class, $recordId), $input, $userId))],
             'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser alterados. Crie um novo lancamento.',
             ]),
@@ -159,6 +169,7 @@ class OperationsWorkspaceService
             'categorias' => tap($this->findRecord(Category::class, $recordId))->delete() ? 'Categoria removida com sucesso.' : 'Categoria removida com sucesso.',
             'delivery' => tap($this->findRecord(DeliveryOrder::class, $recordId))->delete() ? 'Entrega removida com sucesso.' : 'Entrega removida com sucesso.',
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
+            'contas-a-pagar' => tap($this->findRecord(Payable::class, $recordId))->delete() ? 'Conta a pagar removida com sucesso.' : 'Conta a pagar removida com sucesso.',
             'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
             'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque nao podem ser excluidos para preservar a rastreabilidade.',
@@ -226,6 +237,39 @@ class OperationsWorkspaceService
             'cost_methods' => [
                 ['value' => 'last_cost', 'label' => 'Ultima compra'],
                 ['value' => 'average_cost', 'label' => 'Custo medio'],
+            ],
+        ];
+    }
+
+    protected function payablesPayload(): array
+    {
+        return [
+            'records' => Payable::query()
+                ->with(['supplier:id,name', 'purchase:id,code'])
+                ->orderByRaw("CASE WHEN status = 'paid' THEN 2 WHEN due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 0 ELSE 1 END")
+                ->orderBy('due_date')
+                ->orderByDesc('id')
+                ->get()
+                ->map(fn (Payable $payable) => $this->serializePayable($payable))
+                ->values()
+                ->all(),
+            'suppliers' => $this->supplierOptions(),
+            'categories' => [
+                ['value' => 'supplier', 'label' => 'Fornecedor'],
+                ['value' => 'rent', 'label' => 'Aluguel'],
+                ['value' => 'utilities', 'label' => 'Utilities'],
+                ['value' => 'other', 'label' => 'Outros'],
+            ],
+            'payment_methods' => [
+                ['value' => 'cash', 'label' => 'Dinheiro'],
+                ['value' => 'pix', 'label' => 'PIX'],
+                ['value' => 'transfer', 'label' => 'Transferencia'],
+                ['value' => 'boleto', 'label' => 'Boleto'],
+            ],
+            'recurrences' => [
+                ['value' => 'once', 'label' => 'Unica'],
+                ['value' => 'monthly', 'label' => 'Mensal'],
+                ['value' => 'weekly', 'label' => 'Semanal'],
             ],
         ];
     }
@@ -719,6 +763,106 @@ class OperationsWorkspaceService
         return $order->fresh(['customer:id,name,phone']);
     }
 
+    protected function savePayable(?Payable $payable, array $input, int $userId): Payable
+    {
+        if (($input['action'] ?? null) === 'register_payment') {
+            if (!$payable) {
+                throw ValidationException::withMessages([
+                    'record' => 'Selecione uma conta para registrar o pagamento.',
+                ]);
+            }
+
+            $validated = Validator::make($input, [
+                'payment_amount' => ['required', 'numeric', 'gt:0'],
+                'payment_date' => ['required', 'date'],
+                'payment_method' => ['required', 'string', 'max:40'],
+                'payment_account' => ['nullable', 'string', 'max:120'],
+                'payment_notes' => ['nullable', 'string'],
+            ])->validate();
+
+            $currentPaid = round((float) $payable->amount_paid, 2);
+            $paymentAmount = round((float) $validated['payment_amount'], 2);
+            $nextPaid = round(min((float) $payable->amount, $currentPaid + $paymentAmount), 2);
+            $metadata = is_array($payable->metadata) ? $payable->metadata : [];
+            $payments = is_array($metadata['payments'] ?? null) ? $metadata['payments'] : [];
+            $payments[] = [
+                'amount' => $paymentAmount,
+                'paid_at' => $validated['payment_date'],
+                'method' => $validated['payment_method'],
+                'account' => $validated['payment_account'] ?? null,
+                'notes' => $validated['payment_notes'] ?? null,
+                'user_id' => $userId,
+            ];
+
+            $payable->forceFill([
+                'amount_paid' => $nextPaid,
+                'paid_at' => $nextPaid >= (float) $payable->amount ? ($validated['payment_date'] ?? $payable->paid_at) : $payable->paid_at,
+                'payment_method' => $validated['payment_method'],
+                'bank_name' => $validated['payment_account'] ?? $payable->bank_name,
+                'notes' => $validated['payment_notes'] ?? $payable->notes,
+                'status' => $nextPaid >= (float) $payable->amount ? 'paid' : 'open',
+                'metadata' => array_merge($metadata, [
+                    'payments' => $payments,
+                ]),
+            ])->save();
+
+            return $payable->fresh(['supplier:id,name', 'purchase:id,code', 'user:id,name']);
+        }
+
+        $validated = Validator::make($input, [
+            'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'description' => ['required', 'string', 'max:255'],
+            'category' => ['required', Rule::in(['supplier', 'rent', 'utilities', 'other'])],
+            'payment_method' => ['nullable', 'string', 'max:40'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount_paid' => ['nullable', 'numeric', 'gte:0'],
+            'due_date' => ['nullable', 'date'],
+            'paid_at' => ['nullable', 'date'],
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'barcode' => ['nullable', 'string', 'max:255'],
+            'installment_label' => ['nullable', 'string', 'max:60'],
+            'installment_number' => ['nullable', 'integer', 'min:1'],
+            'installment_total' => ['nullable', 'integer', 'min:1'],
+            'recurrence' => ['nullable', Rule::in(['once', 'monthly', 'weekly'])],
+            'notes' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::in(['open', 'paid', 'cancelled'])],
+        ])->validate();
+
+        $payable ??= new Payable;
+        $amount = round((float) $validated['amount'], 2);
+        $amountPaid = round(min($amount, (float) ($validated['amount_paid'] ?? 0)), 2);
+        $status = $validated['status'] ?? ($amountPaid >= $amount ? 'paid' : 'open');
+        $metadata = is_array($payable->metadata) ? $payable->metadata : [];
+
+        $payable->fill([
+            'purchase_id' => $validated['purchase_id'] ?? null,
+            'supplier_id' => $validated['supplier_id'] ?? null,
+            'user_id' => $payable->user_id ?: $userId,
+            'code' => $payable->code ?: $this->nextCode(Payable::class, 'PAG'),
+            'description' => $validated['description'],
+            'category' => $validated['category'],
+            'status' => $status,
+            'payment_method' => $validated['payment_method'] ?? null,
+            'amount' => $amount,
+            'amount_paid' => $amountPaid,
+            'due_date' => $validated['due_date'] ?? null,
+            'paid_at' => $status === 'paid'
+                ? ($validated['paid_at'] ?? $payable->paid_at ?? now())
+                : null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'barcode' => $validated['barcode'] ?? null,
+            'installment_label' => $validated['installment_label'] ?? null,
+            'installment_number' => $validated['installment_number'] ?? null,
+            'installment_total' => $validated['installment_total'] ?? null,
+            'recurrence' => $validated['recurrence'] ?? 'once',
+            'notes' => $validated['notes'] ?? null,
+            'metadata' => $metadata,
+        ])->save();
+
+        return $payable->fresh(['supplier:id,name', 'purchase:id,code', 'user:id,name']);
+    }
+
     protected function savePurchase(?Purchase $purchase, array $input, int $userId): Purchase
     {
         $validated = Validator::make($input, [
@@ -735,10 +879,27 @@ class OperationsWorkspaceService
             'billing_barcode' => ['nullable', 'string', 'max:255'],
             'billing_amount' => ['nullable', 'numeric', 'gte:0'],
             'billing_due_date' => ['nullable', 'date'],
+            'payables' => ['nullable', 'array'],
+            'payables.*.description' => ['nullable', 'string', 'max:255'],
+            'payables.*.amount' => ['required_with:payables', 'numeric', 'gt:0'],
+            'payables.*.due_date' => ['nullable', 'date'],
+            'payables.*.payment_method' => ['nullable', 'string', 'max:40'],
+            'payables.*.bank_name' => ['nullable', 'string', 'max:120'],
+            'payables.*.barcode' => ['nullable', 'string', 'max:255'],
+            'payables.*.installment_label' => ['nullable', 'string', 'max:60'],
+            'payables.*.installment_number' => ['nullable', 'integer', 'min:1'],
+            'payables.*.installment_total' => ['nullable', 'integer', 'min:1'],
+            'payables.*.recurrence' => ['nullable', Rule::in(['once', 'monthly', 'weekly'])],
+            'payables.*.mark_paid' => ['nullable', 'boolean'],
+            'payables.*.paid_at' => ['nullable', 'date'],
+            'payables.*.notes' => ['nullable', 'string'],
+            'auto_update_sale_price' => ['nullable', 'boolean'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_cost' => ['required', 'numeric', 'gte:0'],
+            'items.*.sale_price' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.apply_sale_price' => ['nullable', 'boolean'],
         ])->validate();
 
         return DB::transaction(function () use ($purchase, $validated, $userId) {
@@ -859,11 +1020,154 @@ class OperationsWorkspaceService
                     ]);
                 }
 
+                if ((bool) ($validated['auto_update_sale_price'] ?? false)) {
+                    foreach ($validated['items'] as $entry) {
+                        if (!($entry['apply_sale_price'] ?? false) || !array_key_exists('sale_price', $entry) || $entry['sale_price'] === null) {
+                            continue;
+                        }
+
+                        $product = $products->get($entry['product_id']);
+
+                        if (!$product) {
+                            continue;
+                        }
+
+                        $product->forceFill([
+                            'sale_price' => round((float) $entry['sale_price'], 2),
+                        ])->save();
+                    }
+                }
+
                 $purchase->forceFill(['stock_applied_at' => now()])->save();
+            }
+
+            if ($purchase->status === 'received') {
+                $payableSchedule = $this->resolvePurchasePayableSchedule(
+                    $validated,
+                    $purchase,
+                    $invoiceNumber,
+                    $billingAmount,
+                    $billingDueDate,
+                    $billingBarcode,
+                );
+
+                $this->syncPurchasePayables($purchase, $payableSchedule, $userId);
             }
 
             return $purchase->fresh(['supplier:id,name', 'producer:id,name', 'items.product:id,name,code,unit']);
         });
+    }
+
+    protected function resolvePurchasePayableSchedule(
+        array $validated,
+        Purchase $purchase,
+        ?string $invoiceNumber,
+        ?float $billingAmount,
+        mixed $billingDueDate,
+        ?string $billingBarcode,
+    ): array {
+        $payables = collect($validated['payables'] ?? [])
+            ->filter(fn ($entry) => round((float) ($entry['amount'] ?? 0), 2) > 0)
+            ->map(function (array $entry, int $index) use ($purchase, $invoiceNumber) {
+                $amount = round((float) $entry['amount'], 2);
+                $markPaid = (bool) ($entry['mark_paid'] ?? false);
+
+                return [
+                    'description' => $entry['description']
+                        ?? sprintf('%s%s', $invoiceNumber ?: ($purchase->code ?: 'Conta a pagar'), !empty($entry['installment_label']) ? " - {$entry['installment_label']}" : ''),
+                    'amount' => $amount,
+                    'due_date' => $entry['due_date'] ?? null,
+                    'payment_method' => $entry['payment_method'] ?? null,
+                    'bank_name' => $entry['bank_name'] ?? null,
+                    'barcode' => $entry['barcode'] ?? null,
+                    'installment_label' => $entry['installment_label'] ?? sprintf('Parcela %d', $index + 1),
+                    'installment_number' => $entry['installment_number'] ?? null,
+                    'installment_total' => $entry['installment_total'] ?? null,
+                    'recurrence' => $entry['recurrence'] ?? 'once',
+                    'notes' => $entry['notes'] ?? null,
+                    'amount_paid' => $markPaid ? $amount : round((float) ($entry['amount_paid'] ?? 0), 2),
+                    'paid_at' => $markPaid ? ($entry['paid_at'] ?? now()->toDateString()) : ($entry['paid_at'] ?? null),
+                    'status' => $markPaid ? 'paid' : 'open',
+                ];
+            })
+            ->values()
+            ->all();
+
+        if ($payables !== []) {
+            return $payables;
+        }
+
+        if (($billingAmount ?? 0) <= 0 && blank($billingDueDate) && blank($billingBarcode)) {
+            return [];
+        }
+
+        return [[
+            'description' => $invoiceNumber ?: $purchase->code,
+            'amount' => round((float) ($billingAmount ?? $purchase->total), 2),
+            'due_date' => $billingDueDate,
+            'payment_method' => filled($billingBarcode) ? 'boleto' : 'cash',
+            'bank_name' => null,
+            'barcode' => $billingBarcode,
+            'installment_label' => 'Parcela unica',
+            'installment_number' => 1,
+            'installment_total' => 1,
+            'recurrence' => 'once',
+            'notes' => null,
+            'amount_paid' => 0,
+            'paid_at' => null,
+            'status' => 'open',
+        ]];
+    }
+
+    protected function syncPurchasePayables(Purchase $purchase, array $schedule, int $userId): void
+    {
+        Payable::query()->where('purchase_id', $purchase->id)->delete();
+
+        if ($schedule === []) {
+            return;
+        }
+
+        $purchase->loadMissing('supplier:id,name');
+
+        foreach ($schedule as $index => $entry) {
+            $amount = round((float) ($entry['amount'] ?? 0), 2);
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $amountPaid = round(min($amount, (float) ($entry['amount_paid'] ?? 0)), 2);
+            $status = ($entry['status'] ?? null) === 'cancelled'
+                ? 'cancelled'
+                : ($amountPaid >= $amount ? 'paid' : 'open');
+
+            Payable::query()->create([
+                'purchase_id' => $purchase->id,
+                'supplier_id' => $purchase->supplier_id,
+                'user_id' => $userId,
+                'code' => $this->nextCode(Payable::class, 'PAG'),
+                'description' => $entry['description'] ?? ($purchase->code ?: 'Conta a pagar'),
+                'category' => 'supplier',
+                'status' => $status,
+                'payment_method' => $entry['payment_method'] ?? null,
+                'amount' => $amount,
+                'amount_paid' => $amountPaid,
+                'due_date' => $entry['due_date'] ?? null,
+                'paid_at' => $status === 'paid' ? ($entry['paid_at'] ?? now()) : null,
+                'bank_name' => $entry['bank_name'] ?? null,
+                'barcode' => $entry['barcode'] ?? null,
+                'installment_label' => $entry['installment_label'] ?? sprintf('Parcela %d', $index + 1),
+                'installment_number' => $entry['installment_number'] ?? ($index + 1),
+                'installment_total' => $entry['installment_total'] ?? count($schedule),
+                'recurrence' => $entry['recurrence'] ?? 'once',
+                'notes' => $entry['notes'] ?? null,
+                'metadata' => [
+                    'generated_from' => 'purchase',
+                    'purchase_code' => $purchase->code,
+                    'supplier_name' => $purchase->supplier?->name,
+                ],
+            ]);
+        }
     }
 
     protected function stockInboundRecords(int $limit = 80): array
@@ -1351,6 +1655,67 @@ class OperationsWorkspaceService
             'dispatched_at' => $order->dispatched_at?->toIso8601String(),
             'delivered_at' => $order->delivered_at?->toIso8601String(),
             'notes' => $order->notes,
+        ];
+    }
+
+    protected function serializePayable(Payable $payable): array
+    {
+        $payable->loadMissing(['supplier:id,name', 'purchase:id,code']);
+        $amount = round((float) $payable->amount, 2);
+        $amountPaid = round((float) $payable->amount_paid, 2);
+        $remaining = round(max(0, $amount - $amountPaid), 2);
+        $baseStatus = (string) ($payable->status ?: 'open');
+        $resolvedStatus = $baseStatus;
+
+        if ($baseStatus !== 'cancelled') {
+            if ($remaining <= 0.009) {
+                $resolvedStatus = 'paid';
+            } elseif ($payable->due_date && $payable->due_date->lt(today())) {
+                $resolvedStatus = 'overdue';
+            } else {
+                $resolvedStatus = 'open';
+            }
+        }
+
+        return [
+            'id' => $payable->id,
+            'purchase_id' => $payable->purchase_id,
+            'purchase_code' => $payable->purchase?->code,
+            'supplier_id' => $payable->supplier_id,
+            'supplier_name' => $payable->supplier?->name,
+            'code' => $payable->code,
+            'description' => $payable->description,
+            'category' => $payable->category,
+            'status' => $resolvedStatus,
+            'base_status' => $baseStatus,
+            'status_label' => match ($resolvedStatus) {
+                'paid' => 'Pago',
+                'overdue' => 'Vencido',
+                'cancelled' => 'Cancelado',
+                default => 'Em aberto',
+            },
+            'status_tone' => match ($resolvedStatus) {
+                'paid' => 'success',
+                'overdue' => 'danger',
+                'cancelled' => 'neutral',
+                default => 'warning',
+            },
+            'payment_method' => $payable->payment_method,
+            'amount' => $amount,
+            'amount_paid' => $amountPaid,
+            'remaining_amount' => $remaining,
+            'due_date' => $payable->due_date?->toDateString(),
+            'paid_at' => $payable->paid_at?->toIso8601String(),
+            'bank_name' => $payable->bank_name,
+            'barcode' => $payable->barcode,
+            'installment_label' => $payable->installment_label,
+            'installment_number' => $payable->installment_number,
+            'installment_total' => $payable->installment_total,
+            'recurrence' => $payable->recurrence,
+            'notes' => $payable->notes,
+            'metadata' => $payable->metadata ?? [],
+            'created_at' => $payable->created_at?->toIso8601String(),
+            'updated_at' => $payable->updated_at?->toIso8601String(),
         ];
     }
 
