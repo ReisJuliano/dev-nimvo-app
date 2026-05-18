@@ -21,6 +21,7 @@ use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
+use App\Http\Controllers\Tenant\Inventory\StockEntryMaintenancePageController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryPageController;
 use App\Http\Controllers\Tenant\Payables\PayablesPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
@@ -81,6 +82,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/clientes', OperationsPageController::class)->defaults('module', 'clientes')->name('customers.index');
         Route::get('/fornecedores', OperationsPageController::class)->defaults('module', 'fornecedores')->name('suppliers.index');
         Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');
+        Route::get('/entrada-estoque/manutencao', StockEntryMaintenancePageController::class)->name('stock.inbound.maintenance');
         Route::get('/entrada-estoque', StockEntryPageController::class)->name('stock.inbound');
         Route::get('/ajuste-estoque', fn () => redirect()->route('stock.movement'))->name('stock.adjustments');
         Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.movement');

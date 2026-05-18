@@ -169,33 +169,10 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
     return (
         <AppLayout title="Consultas">
             <div className="proc-ui-page">
-                <section className="proc-ui-hero">
-                    <div className="proc-ui-hero-top">
-                        <div>
-                            <span className="proc-ui-eyebrow">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                Hub unificado
-                            </span>
-                            <h1>Consultas operacionais</h1>
-                            <p>Vendas, entradas, entregas, registros a prazo e documentos fiscais agora compartilham a mesma fila com detalhe completo no modal do item.</p>
-                        </div>
-
-                        <div className="proc-ui-hero-stats">
-                            {summary.map((item) => (
-                                <article key={item.key} className="proc-ui-kpi-card">
-                                    <span>{item.label}</span>
-                                    <strong>{formatNumber(item.value)}</strong>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
                 <section className="proc-ui-main-card">
                     <div className="proc-ui-main-header">
                         <div>
                             <h2>{range.label}</h2>
-                            <p>Filtre por tipo de documento e abra cada registro para agir no contexto certo.</p>
                         </div>
                     </div>
 
@@ -264,7 +241,6 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                         )) : (
                             <div className="proc-ui-empty">
                                 <strong>Sem registros nesse recorte</strong>
-                                <p>Troque o tipo, o periodo ou a busca para encontrar outro documento.</p>
                             </div>
                         )}
                     </div>
@@ -368,10 +344,6 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                                     <article className="proc-ui-summary-card"><span>Documento</span><strong>{selectedRecord.details.document || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Operador</span><strong>{selectedRecord.details.operator || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Total</span><strong>{formatMoney(selectedRecord.amount)}</strong></article>
-                                </div>
-                                <div className="proc-ui-banner warning">
-                                    <i className="fa-solid fa-circle-info" />
-                                    <div>O recebimento do a prazo continua centralizado no modulo financeiro especifico. Aqui a consulta fica unificada para navegacao e auditoria.</div>
                                 </div>
                             </section>
                         ) : null}

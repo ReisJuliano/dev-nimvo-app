@@ -4,7 +4,7 @@ import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
-import { formatDate, formatMoney, formatNumber } from '@/lib/format'
+import { formatDate, formatMoney } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import { buildRecordsUrl, upsertRecord } from '@/Pages/Operations/workspaces/shared'
 import '../Operations/backoffice-workspace.css'
@@ -244,40 +244,11 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     return (
         <AppLayout title={moduleTitle}>
             <div className="proc-ui-page">
-                <section className="proc-ui-hero">
-                    <div className="proc-ui-hero-top">
-                        <div>
-                            <span className="proc-ui-eyebrow">
-                                <i className="fa-solid fa-file-invoice-dollar" />
-                                Financeiro de entrada
-                            </span>
-                            <h1>{moduleTitle}</h1>
-                            <p>Controle vencimentos, pagamentos parciais e lancamentos avulsos sem sair do fluxo operacional das compras.</p>
-                        </div>
-
-                        <div className="proc-ui-hero-stats">
-                            <article className="proc-ui-kpi-card">
-                                <span>Em aberto</span>
-                                <strong>{formatMoney(totals.open)}</strong>
-                            </article>
-                            <article className="proc-ui-kpi-card">
-                                <span>Vencidos</span>
-                                <strong>{formatMoney(totals.overdue)}</strong>
-                            </article>
-                            <article className="proc-ui-kpi-card">
-                                <span>Registros</span>
-                                <strong>{formatNumber(records.length)}</strong>
-                            </article>
-                        </div>
-                    </div>
-                </section>
-
                 <div className="proc-ui-shell">
                     <section className="proc-ui-main-card">
                         <div className="proc-ui-main-header">
                             <div>
-                                <h2>{selectedRecord ? 'Conta selecionada' : 'Painel financeiro'}</h2>
-                                <p>{selectedRecord ? 'Use a area central para revisar detalhes e agir rapidamente.' : 'Selecione um registro na lateral para revisar vencimentos e pagamentos.'}</p>
+                                <h2>{selectedRecord ? selectedRecord.description : moduleTitle}</h2>
                             </div>
 
                             <button type="button" className="ui-button" onClick={openCreateModal}>
@@ -516,7 +487,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             <CompactModal
                 open={launchModalOpen}
                 title={launchModalMode === 'edit' ? 'Editar lancamento' : 'Novo lancamento avulso'}
-                description="Use para despesas sem entrada de NF ou para ajustes pontuais do financeiro."
+                description=""
                 icon="fa-file-invoice-dollar"
                 size="lg"
                 onClose={() => setLaunchModalOpen(false)}

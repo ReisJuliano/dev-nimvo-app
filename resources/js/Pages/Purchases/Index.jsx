@@ -358,39 +358,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     return (
         <AppLayout title={moduleTitle}>
             <div className="proc-ui-page">
-                <section className="proc-ui-hero">
-                    <div className="proc-ui-hero-top">
-                        <div>
-                            <span className="proc-ui-eyebrow">
-                                <i className="fa-solid fa-cart-shopping" />
-                                Funil de compras
-                            </span>
-                            <h1>{moduleTitle}</h1>
-                            <p>Planeje, revise e envie pedidos sem perder a visao historica. O pedido em andamento fica sempre a esquerda e a fila de trabalho fica sempre ao lado.</p>
-                        </div>
-
-                        <div className="proc-ui-hero-stats">
-                            <article className="proc-ui-kpi-card">
-                                <span>Rascunhos</span>
-                                <strong>{records.filter((record) => record.status === 'draft').length}</strong>
-                            </article>
-                            <article className="proc-ui-kpi-card">
-                                <span>Solicitadas</span>
-                                <strong>{records.filter((record) => record.status === 'ordered').length}</strong>
-                            </article>
-                            <article className="proc-ui-kpi-card">
-                                <span>Recebidas</span>
-                                <strong>{records.filter((record) => record.status === 'received').length}</strong>
-                            </article>
-                        </div>
-                    </div>
-                </section>
-
                 <div className="proc-ui-shell">
                     <section className="proc-ui-main-card">
                         <div className="proc-ui-main-header">
                             <div>
-                                <h2>{form.id ? (editorMode === 'view' ? 'Visualizacao do pedido' : 'Edicao do pedido') : 'Novo pedido'}</h2>
+                                <h2>{form.id ? (form.code || `Pedido #${form.id}`) : 'Novo pedido'}</h2>
                                 <p>{form.code ? `${form.code} · ${selectedSupplierName || 'Sem fornecedor'}` : 'Fluxo progressivo para criar e revisar o pedido.'}</p>
                             </div>
 
@@ -418,8 +390,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     }}
                                 >
                                     <span className="proc-ui-step-index">{stepReady[index] && step > index ? <i className="fa-solid fa-check" /> : index + 1}</span>
-                                    <strong>{entry.label}</strong>
-                                    <span className="proc-ui-step-note"><i className={`fa-solid ${entry.icon}`} /> {index === 0 ? 'Base do pedido' : index === 1 ? 'Itens e custos' : 'Resumo e envio'}</span>
+                                    <strong><i className={`fa-solid ${entry.icon}`} /> {entry.label}</strong>
                                 </button>
                             ))}
                         </div>
@@ -428,26 +399,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
                                 <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
                                 <span>{feedback.text}</span>
-                            </div>
-                        ) : null}
-
-                        {isLocked ? (
-                            <div className="proc-ui-banner info">
-                                <i className="fa-solid fa-lock" />
-                                <div>
-                                    <strong>Pedido consolidado</strong>
-                                    <div>Este pedido ja foi recebido no estoque. O painel segue disponivel para consulta, mas sem edicao.</div>
-                                </div>
-                            </div>
-                        ) : null}
-
-                        {editorMode === 'view' && !isLocked ? (
-                            <div className="proc-ui-banner warning">
-                                <i className="fa-solid fa-eye" />
-                                <div>
-                                    <strong>Modo visualizacao</strong>
-                                    <div>Abra a edicao para alterar fornecedor, itens ou previsao.</div>
-                                </div>
                             </div>
                         ) : null}
 
@@ -598,7 +549,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                     <td colSpan="5">
                                                         <div className="proc-ui-empty">
                                                             <strong>Nenhum item no pedido</strong>
-                                                            <p>Busque um produto acima para compor a compra.</p>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -655,8 +605,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
                                 <section className="proc-ui-review-card">
                                     <div className="proc-ui-section-title">
-                                        <h3>Resumo do pedido</h3>
-                                        <p>Confira rapidamente antes de salvar ou enviar.</p>
+                                        <h3>Resumo</h3>
                                     </div>
 
                                     <div className="proc-ui-surface-list">

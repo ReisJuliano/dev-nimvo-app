@@ -129,6 +129,13 @@ class TenantNavigationService
                         'request_patterns' => ['entrada-estoque'],
                     ],
                     [
+                        'href' => '/entrada-estoque/manutencao',
+                        'label' => 'Manutencao NF',
+                        'icon' => 'fa-clipboard-check',
+                        'access_key' => 'entrada_estoque',
+                        'request_patterns' => ['entrada-estoque/manutencao*'],
+                    ],
+                    [
                         'href' => '/movimentacao-estoque',
                         'label' => 'Ajuste estoque',
                         'icon' => 'fa-arrows-rotate',

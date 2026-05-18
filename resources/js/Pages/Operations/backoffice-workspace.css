@@ -4,6 +4,11 @@
     color: #14313c;
 }
 
+.proc-ui-page.compact {
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
 .proc-ui-hero,
 .proc-ui-main-card,
 .proc-ui-sidebar,
@@ -107,6 +112,10 @@
 
 .proc-ui-main-card {
     padding: 1.25rem;
+}
+
+.proc-ui-main-card-compact {
+    width: 100%;
 }
 
 .proc-ui-main-header,
@@ -740,6 +749,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.proc-ui-main-header p,
+.proc-ui-section-title p,
+.proc-ui-sidebar-header p,
+.proc-ui-origin-card p,
+.proc-ui-empty p,
+.proc-ui-step-note {
+    display: none;
 }
 
 @media (max-width: 1180px) {
