@@ -118,6 +118,11 @@
     width: 100%;
 }
 
+.proc-ui-filter-panel {
+    border-radius: 30px;
+    padding: 1.1rem 1.25rem 1.25rem;
+}
+
 .proc-ui-main-header,
 .proc-ui-sidebar-header,
 .proc-ui-record-card-top,
@@ -228,6 +233,21 @@
 
 .proc-ui-field.full {
     grid-column: 1 / -1;
+}
+
+.proc-ui-maintenance-grid {
+    align-items: end;
+}
+
+.proc-ui-filter-row {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.proc-ui-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
 }
 
 .proc-ui-field label {
