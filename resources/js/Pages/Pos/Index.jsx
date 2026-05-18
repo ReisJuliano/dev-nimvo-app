@@ -49,6 +49,8 @@ const shortcutHints = [
     { key: 'discount', keys: ['Shift', 'D'], label: 'Abrir desconto' },
     { key: 'payment', keys: ['Shift', 'F'], label: 'Abrir pagamento' },
     { key: 'cash', keys: ['Shift', 'X'], label: 'Abrir ou fechar caixa' },
+    { key: 'withdrawal', keys: ['Shift', 'S'], label: 'Abrir sangria' },
+    { key: 'supply', keys: ['Shift', 'U'], label: 'Abrir suprimento' },
     { key: 'finalize', keys: ['Shift', 'V'], label: 'Finalizar venda' },
     { key: 'escape', keys: ['Esc'], label: 'Fechar popup ativo' },
 ]
@@ -59,6 +61,8 @@ const footerShortcutHints = [
     { key: 'discount', keys: ['Shift', 'D'], label: 'Desconto' },
     { key: 'payment', keys: ['Shift', 'F'], label: 'Pagamento' },
     { key: 'cash', keys: ['Shift', 'X'], label: 'Caixa' },
+    { key: 'withdrawal', keys: ['Shift', 'S'], label: 'Sangria', icon: 'fa-circle-minus' },
+    { key: 'supply', keys: ['Shift', 'U'], label: 'Suprimento', icon: 'fa-circle-plus' },
     { key: 'finalize', keys: ['Shift', 'V'], label: 'Finalizar' },
 ]
 
@@ -68,6 +72,8 @@ const shortcutActionByCode = {
     KeyD: 'discount',
     KeyF: 'payment',
     KeyX: 'cash',
+    KeyS: 'withdrawal',
+    KeyU: 'supply',
     KeyV: 'finalize',
 }
 
@@ -1026,7 +1032,7 @@ export default function PosIndex({
     const cashMovementModalConfig = cashMovementModalType === 'withdrawal'
         ? {
             title: 'Sangria',
-            icon: 'fa-arrow-up-right-from-square',
+            icon: 'fa-circle-minus',
             badge: 'Saida manual',
             confirmLabel: 'Confirmar retirada',
             description: 'Retire um valor do turno atual e registre o motivo para auditoria.',
@@ -1034,7 +1040,7 @@ export default function PosIndex({
         : cashMovementModalType === 'supply'
             ? {
                 title: 'Suprimento',
-                icon: 'fa-arrow-down-left-and-arrow-up-right-to-center',
+                icon: 'fa-circle-plus',
                 badge: 'Entrada manual',
                 confirmLabel: 'Confirmar entrada',
                 description: 'Adicione dinheiro ao caixa e descreva rapidamente o motivo.',
@@ -3337,6 +3343,22 @@ export default function PosIndex({
         }
     }
 
+    function openCashMovementShortcut(type) {
+        closeShortcutDrivenPanels()
+
+        if (!submittingCashMovement && !closingCashRegister && !openingCashRegister) {
+            openCashMovementModal(type)
+        }
+    }
+
+    function openWithdrawalShortcut() {
+        openCashMovementShortcut('withdrawal')
+    }
+
+    function openSupplyShortcut() {
+        openCashMovementShortcut('supply')
+    }
+
     function openCustomerShortcut() {
         closeShortcutDrivenPanels()
         openCustomerPicker()
@@ -3433,6 +3455,20 @@ export default function PosIndex({
                 return
             }
 
+            if (shortcutAction === 'withdrawal') {
+                if (!submittingCashMovement && !closingCashRegister && !openingCashRegister) {
+                    openWithdrawalShortcut()
+                }
+                return
+            }
+
+            if (shortcutAction === 'supply') {
+                if (!submittingCashMovement && !closingCashRegister && !openingCashRegister) {
+                    openSupplyShortcut()
+                }
+                return
+            }
+
             if (shortcutAction === 'finalize' && !submitting) {
                 openFinalizeShortcut()
             }
@@ -3465,6 +3501,7 @@ export default function PosIndex({
         manualRecipient,
         paymentReady,
         submitting,
+        submittingCashMovement,
         loadingClosePreview,
         closingCashRegister,
         openingCashRegister,
@@ -3504,9 +3541,12 @@ export default function PosIndex({
         onDiscountShortcut: openDiscountShortcut,
         onPaymentShortcut: openPaymentShortcut,
         onCashShortcut: openCashShortcut,
+        onWithdrawalShortcut: openWithdrawalShortcut,
+        onSupplyShortcut: openSupplyShortcut,
         onFinalizeShortcut: openFinalizeShortcut,
         cartLength: cart.length,
         submitting,
+        submittingCashMovement,
         openPaymentStep,
         openDiscountModal,
         openCustomerPicker,
@@ -4221,9 +4261,12 @@ function PosWorkspace({
     onDiscountShortcut,
     onPaymentShortcut,
     onCashShortcut,
+    onWithdrawalShortcut,
+    onSupplyShortcut,
     onFinalizeShortcut,
     cartLength,
     submitting,
+    submittingCashMovement,
     openPaymentStep,
     openDiscountModal,
     openCustomerPicker,
@@ -4314,6 +4357,27 @@ function PosWorkspace({
         { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
         { key: 'finalize', label: submitting ? 'Finalizando...' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
     ]
+    const shortcutHandlers = {
+        products: onProductsShortcut,
+        customer: onCustomerShortcut,
+        discount: onDiscountShortcut,
+        payment: onPaymentShortcut,
+        cash: onCashShortcut,
+        withdrawal: onWithdrawalShortcut,
+        supply: onSupplyShortcut,
+        finalize: onFinalizeShortcut,
+    }
+    const resolveShortcutDisabled = (shortcutKey) => {
+        if (shortcutKey === 'cash') {
+            return loadingClosePreview || openingCashRegister || closingCashRegister
+        }
+
+        if (shortcutKey === 'withdrawal' || shortcutKey === 'supply') {
+            return !cashRegisterState || submittingCashMovement || openingCashRegister || closingCashRegister
+        }
+
+        return false
+    }
     const shellClassName = [
         'pos-shell',
         isMobileCashPanel ? 'panel-mobile' : 'panel-visible',
@@ -4504,16 +4568,13 @@ function PosWorkspace({
                                     key={shortcut.key}
                                     type="button"
                                     className="pos-shortcut-button"
-                                    onClick={() => {
-                                        if (shortcut.key === 'products') return onProductsShortcut()
-                                        if (shortcut.key === 'customer') return onCustomerShortcut()
-                                        if (shortcut.key === 'discount') return onDiscountShortcut()
-                                        if (shortcut.key === 'payment') return onPaymentShortcut()
-                                        if (shortcut.key === 'cash') return onCashShortcut()
-                                        if (shortcut.key === 'finalize') return onFinalizeShortcut()
-                                    }}
+                                    onClick={shortcutHandlers[shortcut.key]}
+                                    disabled={resolveShortcutDisabled(shortcut.key)}
                                 >
-                                    <span>{shortcut.label}</span>
+                                    <span className="pos-shortcut-button-label">
+                                        {shortcut.icon ? <i className={`fa-solid ${shortcut.icon}`} /> : null}
+                                        <span>{shortcut.label}</span>
+                                    </span>
                                     <strong>{shortcut.keys.join(' + ')}</strong>
                                 </button>
                             ))}
@@ -5015,14 +5076,14 @@ function PosCashTurnPanel({
             {
                 key: 'withdrawal',
                 label: 'Sangria',
-                icon: 'fa-arrow-up-right-from-square',
+                icon: 'fa-circle-minus',
                 tone: 'danger',
                 onClick: () => onOpenCashMovement('withdrawal'),
             },
             {
                 key: 'supply',
                 label: 'Suprimento',
-                icon: 'fa-arrow-down-left-and-arrow-up-right-to-center',
+                icon: 'fa-circle-plus',
                 tone: 'info',
                 onClick: () => onOpenCashMovement('supply'),
             },

@@ -768,14 +768,23 @@
     padding: 6px 9px;
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.5rem;
     font: inherit;
     cursor: pointer;
 }
 
-.pos-shortcut-button span {
+.pos-shortcut-button-label {
     font-size: 10px;
     color: var(--pos-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pos-shortcut-button-label i {
+    color: var(--pos-text);
+    font-size: 11px;
 }
 
 .pos-shortcut-button strong {
@@ -787,6 +796,16 @@
 .pos-shortcut-button:hover {
     border-color: rgba(24, 95, 165, 0.22);
     background: rgba(24, 95, 165, 0.06);
+}
+
+.pos-shortcut-button:disabled {
+    opacity: 0.58;
+    cursor: not-allowed;
+}
+
+.pos-shortcut-button:disabled:hover {
+    border-color: var(--pos-border);
+    background: var(--pos-surface-alt);
 }
 
 .pos-sidebar {
