@@ -580,6 +580,11 @@
     font-size: 1.4rem;
 }
 
+.credit-empty-state small {
+    max-width: 28rem;
+    line-height: 1.45;
+}
+
 .credit-modal-backdrop {
     position: fixed;
     inset: 0;

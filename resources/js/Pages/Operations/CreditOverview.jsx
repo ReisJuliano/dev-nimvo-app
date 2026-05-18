@@ -487,6 +487,7 @@ export default function CreditOverview({ module }) {
                         <div className="credit-empty-state search">
                             <i className="fa-solid fa-user-slash" />
                             <span>Sem resultado</span>
+                            <small>Dica: use % antes do nome, como %Maria, para encontrar clientes com outro nome antes.</small>
                         </div>
                     )}
                 </section>
