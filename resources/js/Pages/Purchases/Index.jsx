@@ -19,9 +19,8 @@ const STATUS_TABS = [
 ]
 
 const STEPS = [
-    { key: 'supplier', label: 'Fornecedor e nome', icon: 'fa-building' },
     { key: 'items', label: 'Itens do pedido', icon: 'fa-boxes-stacked' },
-    { key: 'review', label: 'Revisao final', icon: 'fa-circle-check' },
+    { key: 'review', label: 'Relatorio final', icon: 'fa-circle-check' },
 ]
 
 function resolveInitialTab(records) {
@@ -96,10 +95,6 @@ function PurchaseStatusBadge({ status, compact = false }) {
     )
 }
 
-function findLabel(options, id) {
-    return options.find((entry) => String(entry.id) === String(id))?.name || ''
-}
-
 function summarizeItems(items) {
     return items.reduce((total, item) => total + (parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0)), 0)
 }
@@ -160,7 +155,7 @@ function matchesPurchaseFilters(record, filters, status) {
 
 function buildPurchasePayload(recordLike, status) {
     return {
-        supplier_id: recordLike.supplier_id ? Number(recordLike.supplier_id) : null,
+        supplier_id: null,
         custom_name: recordLike.custom_name || null,
         status,
         expected_at: null,
@@ -260,12 +255,12 @@ function PurchaseDetailsModal({
     return (
         <CompactModal
             open
-            badge="Detalhes"
+            badge="Relatorio"
             className="purchases-details-modal"
-            description={`${record.code || `Pedido #${record.id}`} - ${record.supplier_name || 'Sem fornecedor'}`}
+            description={record.code || `Pedido #${record.id}`}
             icon="fa-receipt"
             size="lg"
-            title="Pedido de compra"
+            title="Relatorio do pedido"
             onClose={onClose}
         >
             <div className="proc-ui-modal-stack">
@@ -273,7 +268,7 @@ function PurchaseDetailsModal({
                     <div className="purchases-details-headline">
                         <div>
                             <h3>{getPurchaseDisplayName(record)}</h3>
-                            <p>{record.code || `Pedido #${record.id}`} - {record.supplier_name || 'Sem fornecedor'} - {getRecordDateLabel(record)}</p>
+                            <p>{record.code || `Pedido #${record.id}`} - {getRecordDateLabel(record)}</p>
                         </div>
                         <PurchaseStatusBadge status={record.status} />
                     </div>
@@ -283,13 +278,19 @@ function PurchaseDetailsModal({
                             <span>Pedido</span>
                             <strong>{getPurchaseDisplayName(record)}</strong>
                         </article>
-                        <article className="proc-ui-summary-card">
-                            <span>Fornecedor</span>
-                            <strong>{record.supplier_name || 'Sem fornecedor'}</strong>
-                        </article>
+                        {record.supplier_name ? (
+                            <article className="proc-ui-summary-card">
+                                <span>Fornecedor</span>
+                                <strong>{record.supplier_name}</strong>
+                            </article>
+                        ) : null}
                         <article className="proc-ui-summary-card">
                             <span>Itens</span>
                             <strong>{formatNumber(record.items_count || record.items?.length || 0)}</strong>
+                        </article>
+                        <article className="proc-ui-summary-card">
+                            <span>Unidades</span>
+                            <strong>{formatNumber(record.quantity_total || 0)}</strong>
                         </article>
                         {record.expected_at ? (
                             <article className="proc-ui-summary-card">
@@ -417,7 +418,6 @@ function PurchaseDetailsModal({
 }
 
 export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
-    const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const products = Array.isArray(payload?.products) ? payload.products : []
     const initialRecords = Array.isArray(payload?.records) ? payload.records : []
     const initialTab = resolveInitialTab(initialRecords)
@@ -432,13 +432,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [editorSession, setEditorSession] = useState({ type: 'create', recordId: null })
     const [step, setStep] = useState(0)
     const [form, setForm] = useState(createEmptyForm())
-    const [supplierQuery, setSupplierQuery] = useState('')
     const [productQuery, setProductQuery] = useState('')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
     const [recordsLoading, setRecordsLoading] = useState(false)
-
-    const selectedSupplierName = findLabel(suppliers, form.supplier_id)
     const productsById = useMemo(
         () => new Map(products.map((product) => [String(product.id), product])),
         [products],
@@ -449,20 +446,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             ? records.filter((record) => matchesPurchaseFilters(record, appliedFilters, selectedTab))
             : []
     ), [appliedFilters, hasAppliedSearch, records, selectedTab])
-
-    const supplierOptions = useMemo(() => {
-        const normalized = normalizeTextSearch(supplierQuery)
-
-        if (!normalized) {
-            return suppliers.slice(0, 8)
-        }
-
-        return suppliers.filter((supplier) => matchesTextSearchAny([
-            supplier.name,
-            supplier.document,
-            supplier.city_name,
-        ], normalized)).slice(0, 8)
-    }, [supplierQuery, suppliers])
 
     const productOptions = useMemo(() => {
         const normalized = normalizeTextSearch(productQuery)
@@ -514,18 +497,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
     const total = subtotal
     const stepReady = [
-        Boolean(form.supplier_id),
         form.items.length > 0,
-        form.items.length > 0 && Boolean(form.supplier_id),
+        form.items.length > 0,
     ]
     const isLocked = isLockedRecord(form)
     const canEdit = !isLocked
     const pageFeedbackVisible = Boolean(feedback) && !editorOpen && !selectedDetailRecord
-    const nextDisabledReason = step === 0 && !form.supplier_id
-        ? 'Selecione um fornecedor para continuar.'
-        : step === 1 && !form.items.length
-            ? 'Adicione pelo menos um item ao pedido.'
-            : ''
+    const nextDisabledReason = step === 0 && !form.items.length
+        ? 'Adicione pelo menos um item ao pedido.'
+        : ''
 
     const columns = useMemo(() => ([
         {
@@ -539,9 +519,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             ),
         },
         {
-            key: 'supplier_name',
-            label: 'Fornecedor',
-            render: (record) => <span className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</span>,
+            key: 'quantity_total',
+            label: 'Qtd total',
+            className: 'purchases-cell-items',
+            render: (record) => formatNumber(record.quantity_total || 0),
         },
         {
             key: 'items',
@@ -556,15 +537,9 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             render: (record) => <strong>{formatMoney(record.total || 0)}</strong>,
         },
         {
-            key: 'freight',
-            label: 'Frete',
-            className: 'purchases-cell-money',
-            render: (record) => formatMoney(record.freight || 0),
-        },
-        {
-            key: 'expected_at',
-            label: 'Previsao',
-            render: (record) => record.expected_at ? formatDate(record.expected_at) : 'Sem previsao',
+            key: 'created_at',
+            label: 'Criado em',
+            render: (record) => record.created_at ? formatDate(record.created_at) : 'Sem data',
         },
         {
             key: 'status',
@@ -613,7 +588,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setEditorSession({ type: 'create', recordId: null })
         setStep(0)
         setForm(createEmptyForm())
-        setSupplierQuery('')
         setProductQuery('')
     }
 
@@ -622,7 +596,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setEditorSession({ type: sessionType, recordId: normalized.id })
         setStep(0)
         setForm(normalized)
-        setSupplierQuery(findLabel(suppliers, normalized.supplier_id))
         setProductQuery('')
     }
 
@@ -671,11 +644,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     function closeDetailsModal() {
         setDetailRecordId(null)
         setFeedback(null)
-    }
-
-    function handleSupplierSelect(option) {
-        setForm((current) => ({ ...current, supplier_id: String(option.id) }))
-        setSupplierQuery(option.name)
     }
 
     function addProduct(option, quantity = 1) {
@@ -767,20 +735,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             return null
         }
 
-        if (!sourceForm.supplier_id) {
-            setFeedback({ type: 'error', text: 'Selecione o fornecedor antes de salvar.' })
-            if (options.openEditor !== false) {
-                setEditorOpen(true)
-                setStep(0)
-            }
-            return null
-        }
-
         if (!(sourceForm.items || []).length) {
             setFeedback({ type: 'error', text: 'Adicione pelo menos um item ao pedido.' })
             if (options.openEditor !== false) {
                 setEditorOpen(true)
-                setStep(1)
+                setStep(0)
             }
             return null
         }
@@ -866,7 +825,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         const confirmed = await confirmPopup({
             type: 'info',
             title: 'Enviar pedido',
-            message: `Deseja enviar o pedido ${record.code || `#${record.id}`} para o fornecedor?`,
+            message: `Deseja finalizar o pedido ${record.code || `#${record.id}`} com os itens definidos?`,
             confirmLabel: 'Enviar pedido',
             cancelLabel: 'Voltar',
         })
@@ -928,7 +887,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     className="proc-ui-searchbox"
-                                    placeholder="Buscar por numero, nome, fornecedor..."
+                                    placeholder="Buscar por numero, nome ou produto..."
                                     type="search"
                                     value={listFilters.search}
                                     onChange={(event) => handleListFilterChange('search', event.target.value)}
@@ -1044,7 +1003,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 badge={editorSession.type === 'edit' ? 'Editar pedido' : 'Novo pedido'}
                 bodyClassName="purchases-editor-modal-body"
                 className="purchases-editor-modal"
-                description={form.id ? `${getPurchaseDisplayName(form)} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Selecione o fornecedor e monte os itens do pedido.'}
+                description={form.id ? `${getPurchaseDisplayName(form)} - ${formatNumber(form.items.length)} item(ns)` : 'Monte os produtos e confira o relatorio antes de salvar.'}
                 icon={editorSession.type === 'edit' ? 'fa-pen-to-square' : 'fa-cart-plus'}
                 size="lg"
                 title={editorSession.type === 'edit' ? 'Editar pedido' : 'Criar pedido'}
@@ -1079,54 +1038,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     ) : null}
 
                     {step === 0 ? (
-                        <div className="proc-ui-stage purchases-editor-setup">
-                            <AutocompleteField
-                                emptyLabel="Nenhum fornecedor encontrado"
-                                icon="fa-building"
-                                label="Fornecedor"
-                                options={supplierOptions}
-                                placeholder="Buscar fornecedor por nome, documento ou cidade"
-                                query={supplierQuery}
-                                selectedLabel={selectedSupplierName}
-                                value={form.supplier_id}
-                                disabled={!canEdit}
-                                onQueryChange={setSupplierQuery}
-                                onSelect={handleSupplierSelect}
-                            />
-
-                            <div className="proc-ui-field full">
-                                <label>
-                                    <span>Nome da compra</span>
-                                    <input
-                                        disabled={!canEdit}
-                                        maxLength="160"
-                                        placeholder="Ex.: Reposicao feira de sabado"
-                                        type="text"
-                                        value={form.custom_name}
-                                        onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="proc-ui-step-actions">
-                                <button type="button" className="ui-button-ghost" onClick={closeEditorModal}>
-                                    Fechar
-                                </button>
-                                <button
-                                    type="button"
-                                    className="ui-button"
-                                    disabled={!canEdit || !form.supplier_id}
-                                    title={!form.supplier_id ? 'Selecione um fornecedor para continuar.' : undefined}
-                                    onClick={() => setStep(1)}
-                                >
-                                    <span>Proximo</span>
-                                    <i className="fa-solid fa-arrow-right" />
-                                </button>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {step === 1 ? (
                         <div className="proc-ui-stage purchases-items-stage">
                             <section className="proc-ui-modal-block purchases-items-search-panel">
                                 <div className="purchases-items-search-head">
@@ -1136,9 +1047,23 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     </div>
 
                                     <div className="purchases-items-meta">
-                                        <span>Fornecedor <strong>{selectedSupplierName || 'Nao selecionado'}</strong></span>
-                                        <span>Compra <strong>{form.custom_name || 'Sem nome definido'}</strong></span>
+                                        <span>Status <strong>{resolveStatusMeta(form.status).label}</strong></span>
+                                        <span>Codigo <strong>{form.code || 'Novo pedido'}</strong></span>
                                     </div>
+                                </div>
+
+                                <div className="proc-ui-field full">
+                                    <label>
+                                        <span>Nome da compra</span>
+                                        <input
+                                            disabled={!canEdit}
+                                            maxLength="160"
+                                            placeholder="Ex.: Reposicao feira de sabado"
+                                            type="text"
+                                            value={form.custom_name}
+                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
+                                        />
+                                    </label>
                                 </div>
 
                                 <label className="purchases-items-searchbox">
@@ -1326,25 +1251,24 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             </section>
 
                             <div className="proc-ui-step-actions">
-                                <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
-                                    <i className="fa-solid fa-arrow-left" />
-                                    <span>Voltar</span>
+                                <button type="button" className="ui-button-ghost" onClick={closeEditorModal}>
+                                    Fechar
                                 </button>
                                 <button
                                     type="button"
                                     className="ui-button"
                                     disabled={!canEdit || !form.items.length}
                                     title={!form.items.length ? 'Adicione itens para revisar o pedido.' : undefined}
-                                    onClick={() => setStep(2)}
+                                    onClick={() => setStep(1)}
                                 >
-                                    <span>Proximo</span>
+                                    <span>Ver relatorio</span>
                                     <i className="fa-solid fa-arrow-right" />
                                 </button>
                             </div>
                         </div>
                     ) : null}
 
-                    {step === 2 ? (
+                    {step === 1 ? (
                         <div className="proc-ui-stage">
                             <div className="proc-ui-summary-grid purchases-review-summary">
                                 <article className="proc-ui-summary-card">
@@ -1352,12 +1276,16 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     <strong>{getPurchaseDisplayName(form)}</strong>
                                 </article>
                                 <article className="proc-ui-summary-card">
-                                    <span>Fornecedor</span>
-                                    <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
+                                    <span>Codigo</span>
+                                    <strong>{form.code || 'Novo pedido'}</strong>
                                 </article>
                                 <article className="proc-ui-summary-card">
                                     <span>Itens</span>
                                     <strong>{formatNumber(form.items.length)}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Unidades</span>
+                                    <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
                                 </article>
                                 <article className="proc-ui-summary-card">
                                     <span>Total</span>
@@ -1403,16 +1331,16 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         <strong>{formatMoney(total)}</strong>
                                     </div>
                                     <div>
-                                        <small>Fornecedor confirmado</small>
-                                        <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
+                                        <small>Nome da compra</small>
+                                        <strong>{form.custom_name || 'Sem nome personalizado'}</strong>
                                     </div>
                                 </div>
                             </section>
 
                             <div className="proc-ui-step-actions">
-                                <button type="button" className="ui-button-ghost" onClick={() => setStep(1)}>
+                                <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
                                     <i className="fa-solid fa-arrow-left" />
-                                    <span>Voltar</span>
+                                    <span>Voltar aos itens</span>
                                 </button>
 
                                 <div className="proc-ui-card-toolbar purchases-editor-submitbar">
@@ -1437,7 +1365,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         </div>
                     ) : null}
 
-                    {nextDisabledReason && step < 2 ? (
+                    {nextDisabledReason && step < 1 ? (
                         <span className="proc-ui-step-note">{nextDisabledReason}</span>
                     ) : null}
                 </div>
