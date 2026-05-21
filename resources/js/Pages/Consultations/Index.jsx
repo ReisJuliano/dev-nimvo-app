@@ -407,7 +407,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                             ))}
                         </div>
 
-                        <form className="proc-ui-date-range" onSubmit={applyCustomRange}>
+                        <form className="proc-ui-date-range proc-ui-date-range-with-action" onSubmit={applyCustomRange}>
                             <input defaultValue={filters.from} name="from" type="date" />
                             <input defaultValue={filters.to} name="to" type="date" />
                             <button type="submit" className="ui-button">

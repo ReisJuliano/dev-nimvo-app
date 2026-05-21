@@ -878,6 +878,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.proc-ui-date-range-with-action {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    align-items: end;
+}
+
+.proc-ui-date-range-with-action .ui-button {
+    min-height: 46px;
+    white-space: nowrap;
+}
+
 .proc-ui-footer-strip {
     display: flex;
     flex-wrap: wrap;
