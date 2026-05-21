@@ -12,8 +12,14 @@
     gap: 0.85rem;
 }
 
+.purchases-toolbar-main {
+    align-items: center;
+    gap: 0.85rem;
+}
+
 .purchases-toolbar-search {
     position: relative;
+    flex: 1 1 22rem;
     min-width: 0;
 }
 
@@ -30,8 +36,28 @@
 }
 
 .purchases-toolbar-tabs {
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     align-items: center;
+    min-width: 0;
+}
+
+.purchases-toolbar-status {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    border-radius: 20px;
+    background: rgba(247, 250, 252, 0.7);
+}
+
+.purchases-toolbar-label {
+    flex-shrink: 0;
+    color: #516878;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .purchases-toolbar-tabs .proc-ui-tab-chip {
@@ -47,11 +73,14 @@
 
 .purchases-new-button {
     flex-shrink: 0;
+    min-width: 11.5rem;
     justify-content: center;
 }
 
 .purchases-range-form {
-    max-width: 36rem;
+    flex: 0 1 31rem;
+    margin: 0;
+    max-width: 31rem;
 }
 
 .purchases-records-table .dense-table th,
@@ -178,8 +207,24 @@
         display: grid;
     }
 
+    .purchases-toolbar-main {
+        flex-wrap: wrap;
+    }
+
+    .purchases-toolbar-search,
+    .purchases-range-form {
+        flex-basis: calc(50% - 0.425rem);
+        max-width: none;
+    }
+
     .purchases-new-button {
+        width: 100%;
         justify-content: center;
+    }
+
+    .purchases-toolbar-status {
+        align-items: stretch;
+        flex-direction: column;
     }
 }
 
@@ -188,11 +233,20 @@
     .purchases-details-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .purchases-toolbar-search,
+    .purchases-range-form {
+        flex-basis: 100%;
+    }
 }
 
 @media (max-width: 640px) {
     .purchases-list-card {
         padding: 0.85rem;
+    }
+
+    .purchases-toolbar-main {
+        align-items: stretch;
     }
 
     .purchases-toolbar-tabs {
@@ -206,6 +260,10 @@
 
     .purchases-range-form {
         max-width: none;
+    }
+
+    .purchases-toolbar-status {
+        padding: 0.8rem 0.85rem;
     }
 
     .purchases-review-summary,

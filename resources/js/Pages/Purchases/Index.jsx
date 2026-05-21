@@ -873,62 +873,67 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         <AppLayout title={moduleTitle}>
             <div className="proc-ui-page purchases-page">
                 <section className="proc-ui-section-card purchases-list-card">
-                    <div className="proc-ui-card-toolbar purchases-toolbar">
-                        <label className="purchases-toolbar-search">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <input
-                                className="proc-ui-searchbox"
-                                placeholder="Buscar por numero, nome, fornecedor..."
-                                type="search"
-                                value={listFilters.search}
-                                onChange={(event) => handleListFilterChange('search', event.target.value)}
-                            />
-                        </label>
+                    <div className="purchases-toolbar">
+                        <div className="proc-ui-card-toolbar purchases-toolbar-main">
+                            <label className="purchases-toolbar-search">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    className="proc-ui-searchbox"
+                                    placeholder="Buscar por numero, nome, fornecedor..."
+                                    type="search"
+                                    value={listFilters.search}
+                                    onChange={(event) => handleListFilterChange('search', event.target.value)}
+                                />
+                            </label>
 
-                        <div className="proc-ui-top-tabs purchases-toolbar-tabs">
-                            {STATUS_TABS.map((tab) => (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
-                                    onClick={() => setSelectedTab(tab.key)}
-                                >
-                                    <span>{tab.label}</span>
-                                    <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
+                            <form
+                                className="proc-ui-date-range proc-ui-date-range-with-action purchases-range-form"
+                                onSubmit={(event) => {
+                                    event.preventDefault()
+                                    handleApplyFilters()
+                                }}
+                            >
+                                <input
+                                    aria-label="Data inicial"
+                                    type="date"
+                                    value={listFilters.from}
+                                    onChange={(event) => handleListFilterChange('from', event.target.value)}
+                                />
+                                <input
+                                    aria-label="Data final"
+                                    type="date"
+                                    value={listFilters.to}
+                                    onChange={(event) => handleListFilterChange('to', event.target.value)}
+                                />
+                                <button type="submit" className="ui-button" disabled={recordsLoading}>
+                                    <i className="fa-solid fa-calendar-check" />
+                                    <span>{recordsLoading ? 'Buscando...' : 'Buscar'}</span>
                                 </button>
-                            ))}
+                            </form>
+
+                            <button type="button" className="ui-button purchases-new-button" onClick={openCreateModal}>
+                                <i className="fa-solid fa-plus" />
+                                <span>Novo pedido</span>
+                            </button>
                         </div>
 
-                        <button type="button" className="ui-button purchases-new-button" onClick={openCreateModal}>
-                            <i className="fa-solid fa-plus" />
-                            <span>Novo pedido</span>
-                        </button>
+                        <div className="purchases-toolbar-status">
+                            <span className="purchases-toolbar-label">Status</span>
+                            <div className="proc-ui-top-tabs purchases-toolbar-tabs">
+                                {STATUS_TABS.map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
+                                        onClick={() => setSelectedTab(tab.key)}
+                                    >
+                                        <span>{tab.label}</span>
+                                        <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-
-                    <form
-                        className="proc-ui-date-range proc-ui-date-range-with-action purchases-range-form"
-                        onSubmit={(event) => {
-                            event.preventDefault()
-                            handleApplyFilters()
-                        }}
-                    >
-                        <input
-                            aria-label="Data inicial"
-                            type="date"
-                            value={listFilters.from}
-                            onChange={(event) => handleListFilterChange('from', event.target.value)}
-                        />
-                        <input
-                            aria-label="Data final"
-                            type="date"
-                            value={listFilters.to}
-                            onChange={(event) => handleListFilterChange('to', event.target.value)}
-                        />
-                        <button type="submit" className="ui-button" disabled={recordsLoading}>
-                            <i className="fa-solid fa-calendar-check" />
-                            <span>{recordsLoading ? 'Buscando...' : 'Buscar'}</span>
-                        </button>
-                    </form>
 
                     {pageFeedbackVisible ? (
                         <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
@@ -943,7 +948,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         emptyState={(
                             <div className="proc-ui-empty">
                                 <strong>{recordsLoading ? 'Buscando pedidos...' : hasAppliedSearch ? 'Nenhum pedido encontrado' : 'Use os filtros para buscar pedidos'}</strong>
-                                <p>{recordsLoading ? 'Estamos carregando os pedidos para aplicar os filtros.' : hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo, data, horario ou busca textual e clique em Buscar.'}</p>
+                                <p>{recordsLoading ? 'Estamos carregando os pedidos para aplicar os filtros.' : hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo ou use a busca textual e clique em Buscar.'}</p>
                             </div>
                         )}
                         getRowActions={(record) => [
