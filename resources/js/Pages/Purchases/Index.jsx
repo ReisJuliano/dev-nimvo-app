@@ -23,6 +23,21 @@ const STEPS = [
     { key: 'review', label: 'Revisao final', icon: 'fa-circle-check' },
 ]
 
+const MONTH_OPTIONS = [
+    { value: '01', label: 'Janeiro' },
+    { value: '02', label: 'Fevereiro' },
+    { value: '03', label: 'Marco' },
+    { value: '04', label: 'Abril' },
+    { value: '05', label: 'Maio' },
+    { value: '06', label: 'Junho' },
+    { value: '07', label: 'Julho' },
+    { value: '08', label: 'Agosto' },
+    { value: '09', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' },
+]
+
 function resolveInitialTab(records) {
     const priority = STATUS_TABS.map((tab) => tab.key)
 
@@ -42,6 +57,18 @@ function createEmptyForm() {
         items: [],
         stock_applied_at: null,
         received_at: null,
+    }
+}
+
+function createListFilters() {
+    return {
+        search: '',
+        date: '',
+        month: '',
+        year: '',
+        time: '',
+        period_from: '',
+        period_to: '',
     }
 }
 
@@ -113,6 +140,61 @@ function getProductLabel(item, products) {
 
 function getPurchaseDisplayName(record) {
     return record?.custom_name || record?.code || `Pedido #${record?.id}`
+}
+
+function getPurchaseFilterDateTime(record) {
+    return String(record?.created_at || record?.received_at || record?.expected_at || '')
+}
+
+function matchesPurchaseFilters(record, filters, status) {
+    if (status && record.status !== status) {
+        return false
+    }
+
+    const normalizedSearch = normalizeTextSearch(filters?.search)
+
+    if (normalizedSearch && !matchesTextSearchAny([
+        record.code,
+        record.custom_name,
+        record.supplier_name,
+        record.document,
+        record.notes,
+        ...(record.items || []).map((item) => item.product_name),
+    ], normalizedSearch)) {
+        return false
+    }
+
+    const dateTimeValue = getPurchaseFilterDateTime(record)
+    const recordDate = dateTimeValue.slice(0, 10)
+    const recordMonth = dateTimeValue.slice(5, 7)
+    const recordYear = dateTimeValue.slice(0, 4)
+    const recordTime = dateTimeValue.slice(11, 16)
+
+    if (filters?.date && recordDate !== filters.date) {
+        return false
+    }
+
+    if (filters?.month && recordMonth !== filters.month) {
+        return false
+    }
+
+    if (filters?.year && recordYear !== filters.year) {
+        return false
+    }
+
+    if (filters?.time && recordTime !== filters.time) {
+        return false
+    }
+
+    if (filters?.period_from && (!recordDate || recordDate < filters.period_from)) {
+        return false
+    }
+
+    if (filters?.period_to && (!recordDate || recordDate > filters.period_to)) {
+        return false
+    }
+
+    return true
 }
 
 function buildPurchasePayload(recordLike, status) {
@@ -375,10 +457,14 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const products = Array.isArray(payload?.products) ? payload.products : []
     const initialRecords = Array.isArray(payload?.records) ? payload.records : []
+    const initialTab = resolveInitialTab(initialRecords)
 
     const [records, setRecords] = useState(initialRecords)
-    const [activeTab, setActiveTab] = useState(() => resolveInitialTab(initialRecords))
-    const [listSearch, setListSearch] = useState('')
+    const [selectedTab, setSelectedTab] = useState(initialTab)
+    const [appliedTab, setAppliedTab] = useState(initialTab)
+    const [listFilters, setListFilters] = useState(createListFilters())
+    const [appliedFilters, setAppliedFilters] = useState(createListFilters())
+    const [hasAppliedSearch, setHasAppliedSearch] = useState(false)
     const [detailRecordId, setDetailRecordId] = useState(null)
     const [editorOpen, setEditorOpen] = useState(false)
     const [editorSession, setEditorSession] = useState({ type: 'create', recordId: null })
@@ -390,28 +476,12 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [savingAction, setSavingAction] = useState(null)
 
     const selectedSupplierName = findLabel(suppliers, form.supplier_id)
-    const normalizedListSearch = normalizeTextSearch(listSearch)
 
     const filteredRecords = useMemo(() => (
-        records.filter((record) => {
-            if (record.status !== activeTab) {
-                return false
-            }
-
-            if (!normalizedListSearch) {
-                return true
-            }
-
-            return matchesTextSearchAny([
-                record.code,
-                record.custom_name,
-                record.supplier_name,
-                record.document,
-                record.notes,
-                ...(record.items || []).map((item) => item.product_name),
-            ], normalizedListSearch)
-        })
-    ), [activeTab, normalizedListSearch, records])
+        hasAppliedSearch
+            ? records.filter((record) => matchesPurchaseFilters(record, appliedFilters, appliedTab))
+            : []
+    ), [appliedFilters, appliedTab, hasAppliedSearch, records])
 
     const supplierOptions = useMemo(() => {
         const normalized = normalizeTextSearch(supplierQuery)
@@ -525,6 +595,36 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             setDetailRecordId(null)
         }
     }, [detailRecordId, selectedDetailRecord])
+
+    function handleListFilterChange(field, value) {
+        setListFilters((current) => ({
+            ...current,
+            [field]: field === 'year' ? value.replace(/\D/g, '').slice(0, 4) : value,
+        }))
+    }
+
+    function handleApplyFilters() {
+        if (listFilters.period_from && listFilters.period_to && listFilters.period_from > listFilters.period_to) {
+            setFeedback({ type: 'error', text: 'O periodo final precisa ser maior ou igual ao periodo inicial.' })
+            return
+        }
+
+        setAppliedFilters({ ...listFilters })
+        setAppliedTab(selectedTab)
+        setHasAppliedSearch(true)
+        setFeedback(null)
+        setDetailRecordId(null)
+    }
+
+    function handleClearFilters() {
+        const emptyFilters = createListFilters()
+
+        setListFilters(emptyFilters)
+        setAppliedFilters(emptyFilters)
+        setHasAppliedSearch(false)
+        setFeedback(null)
+        setDetailRecordId(null)
+    }
 
     function resetEditorSession() {
         setEditorSession({ type: 'create', recordId: null })
@@ -678,7 +778,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 : await apiRequest(buildRecordsUrl('compras'), { method: 'post', data: payloadData })
 
             setRecords((current) => upsertRecord(current, response.record))
-            setActiveTab(response.record.status || activeTab)
+            setSelectedTab(response.record.status || selectedTab)
+            setAppliedTab(response.record.status || selectedTab)
+            setAppliedFilters((current) => (hasAppliedSearch ? current : createListFilters()))
+            setHasAppliedSearch(true)
             hydrateEditor(response.record, 'edit')
             setFeedback({ type: 'success', text: response.message })
 
@@ -808,8 +911,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 className="proc-ui-searchbox"
                                 placeholder="Buscar por numero, nome, fornecedor..."
                                 type="search"
-                                value={listSearch}
-                                onChange={(event) => setListSearch(event.target.value)}
+                                value={listFilters.search}
+                                onChange={(event) => handleListFilterChange('search', event.target.value)}
                             />
                         </label>
 
@@ -818,8 +921,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 <button
                                     key={tab.key}
                                     type="button"
-                                    className={`proc-ui-tab-chip ${activeTab === tab.key ? 'active' : ''}`}
-                                    onClick={() => setActiveTab(tab.key)}
+                                    className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
+                                    onClick={() => setSelectedTab(tab.key)}
                                 >
                                     <span>{tab.label}</span>
                                     <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
@@ -831,6 +934,77 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             <i className="fa-solid fa-plus" />
                             <span>Novo pedido</span>
                         </button>
+                    </div>
+
+                    <div className="purchases-filters-grid">
+                        <label className="purchases-filter-field">
+                            <span>Data</span>
+                            <input
+                                type="date"
+                                value={listFilters.date}
+                                onChange={(event) => handleListFilterChange('date', event.target.value)}
+                            />
+                        </label>
+
+                        <label className="purchases-filter-field">
+                            <span>Mes</span>
+                            <select
+                                value={listFilters.month}
+                                onChange={(event) => handleListFilterChange('month', event.target.value)}
+                            >
+                                <option value="">Todos</option>
+                                {MONTH_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className="purchases-filter-field">
+                            <span>Ano</span>
+                            <input
+                                inputMode="numeric"
+                                maxLength="4"
+                                placeholder="2026"
+                                type="text"
+                                value={listFilters.year}
+                                onChange={(event) => handleListFilterChange('year', event.target.value)}
+                            />
+                        </label>
+
+                        <label className="purchases-filter-field">
+                            <span>Horario</span>
+                            <input
+                                type="time"
+                                value={listFilters.time}
+                                onChange={(event) => handleListFilterChange('time', event.target.value)}
+                            />
+                        </label>
+
+                        <div className="purchases-filter-field purchases-period-field">
+                            <span>Periodo</span>
+                            <div className="purchases-period-range">
+                                <input
+                                    type="date"
+                                    value={listFilters.period_from}
+                                    onChange={(event) => handleListFilterChange('period_from', event.target.value)}
+                                />
+                                <span>ate</span>
+                                <input
+                                    type="date"
+                                    value={listFilters.period_to}
+                                    onChange={(event) => handleListFilterChange('period_to', event.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="purchases-filter-actions">
+                            <button type="button" className="ui-button-ghost" onClick={handleClearFilters}>
+                                Limpar
+                            </button>
+                            <button type="button" className="ui-button" onClick={handleApplyFilters}>
+                                Buscar
+                            </button>
+                        </div>
                     </div>
 
                     {pageFeedbackVisible ? (
@@ -845,8 +1019,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         columns={columns}
                         emptyState={(
                             <div className="proc-ui-empty">
-                                <strong>Sem pedidos nesta etapa</strong>
-                                <p>Troque o status, ajuste a busca ou crie um novo pedido.</p>
+                                <strong>{hasAppliedSearch ? 'Nenhum pedido encontrado' : 'Use os filtros para buscar pedidos'}</strong>
+                                <p>{hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo, data, horario ou busca textual e clique em Buscar.'}</p>
                             </div>
                         )}
                         getRowActions={(record) => [
@@ -879,10 +1053,12 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         onRowClick={openDetailsModal}
                     />
 
-                    <footer className="purchases-table-footer">
-                        <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
-                        <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
-                    </footer>
+                    {hasAppliedSearch ? (
+                        <footer className="purchases-table-footer">
+                            <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
+                            <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
+                        </footer>
+                    ) : null}
                 </section>
             </div>
 
