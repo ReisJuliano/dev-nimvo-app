@@ -88,7 +88,7 @@ class OperationsWorkspaceService
                 'moduleKey' => 'compras',
                 'moduleTitle' => 'Compras',
                 'moduleDescription' => 'Pedido de compra, itens recebidos e entrada automatica no estoque.',
-                'payload' => $this->purchasesPayload(),
+                'payload' => $this->purchasesPayload(false),
             ],
             'contas-a-pagar' => [
                 'moduleKey' => 'contas-a-pagar',
@@ -138,6 +138,9 @@ class OperationsWorkspaceService
     {
         return match ($module) {
             'clientes' => $this->customersPayload($filters),
+            'compras' => [
+                'records' => $this->purchaseRecords(),
+            ],
             default => [
                 'records' => data_get($this->build($module), 'payload.records', []),
             ],
@@ -205,16 +208,10 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function purchasesPayload(): array
+    protected function purchasesPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => Purchase::query()
-                ->with(['supplier:id,name', 'items.product:id,name,code,unit'])
-                ->latest()
-                ->get()
-                ->map(fn (Purchase $purchase) => $this->serializePurchase($purchase))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->purchaseRecords() : [],
             'suppliers' => $this->supplierOptions(),
             'products' => $this->productOptions(),
             'incoming_nfe_documents' => IncomingNfeDocument::query()
@@ -239,6 +236,17 @@ class OperationsWorkspaceService
                 ['value' => 'average_cost', 'label' => 'Custo medio'],
             ],
         ];
+    }
+
+    protected function purchaseRecords(): array
+    {
+        return Purchase::query()
+            ->with(['supplier:id,name', 'items.product:id,name,code,unit'])
+            ->latest()
+            ->get()
+            ->map(fn (Purchase $purchase) => $this->serializePurchase($purchase))
+            ->values()
+            ->all();
     }
 
     protected function payablesPayload(): array

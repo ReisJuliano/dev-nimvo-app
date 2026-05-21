@@ -12,6 +12,7 @@ import '../Operations/backoffice-workspace.css'
 import './purchases.css'
 
 const STATUS_TABS = [
+    { key: 'all', label: 'Todos', icon: 'fa-layer-group' },
     { key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' },
     { key: 'ordered', label: 'Solicitadas', icon: 'fa-paper-plane' },
     { key: 'received', label: 'Recebidas', icon: 'fa-box-open' },
@@ -39,9 +40,7 @@ const MONTH_OPTIONS = [
 ]
 
 function resolveInitialTab(records) {
-    const priority = STATUS_TABS.map((tab) => tab.key)
-
-    return priority.find((status) => records.some((record) => record.status === status)) || 'draft'
+    return 'all'
 }
 
 function createEmptyForm() {
@@ -147,7 +146,7 @@ function getPurchaseFilterDateTime(record) {
 }
 
 function matchesPurchaseFilters(record, filters, status) {
-    if (status && record.status !== status) {
+    if (status && status !== 'all' && record.status !== status) {
         return false
     }
 
@@ -461,7 +460,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
     const [records, setRecords] = useState(initialRecords)
     const [selectedTab, setSelectedTab] = useState(initialTab)
-    const [appliedTab, setAppliedTab] = useState(initialTab)
     const [listFilters, setListFilters] = useState(createListFilters())
     const [appliedFilters, setAppliedFilters] = useState(createListFilters())
     const [hasAppliedSearch, setHasAppliedSearch] = useState(false)
@@ -474,14 +472,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [productQuery, setProductQuery] = useState('')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
+    const [recordsLoading, setRecordsLoading] = useState(false)
 
     const selectedSupplierName = findLabel(suppliers, form.supplier_id)
 
     const filteredRecords = useMemo(() => (
         hasAppliedSearch
-            ? records.filter((record) => matchesPurchaseFilters(record, appliedFilters, appliedTab))
+            ? records.filter((record) => matchesPurchaseFilters(record, appliedFilters, selectedTab))
             : []
-    ), [appliedFilters, appliedTab, hasAppliedSearch, records])
+    ), [appliedFilters, hasAppliedSearch, records, selectedTab])
 
     const supplierOptions = useMemo(() => {
         const normalized = normalizeTextSearch(supplierQuery)
@@ -512,10 +511,19 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     }, [productQuery, products])
 
     const statusCounts = useMemo(() => (
-        STATUS_TABS.reduce((carry, tab) => ({
-            ...carry,
-            [tab.key]: records.filter((record) => record.status === tab.key).length,
-        }), {})
+        STATUS_TABS.reduce((carry, tab) => {
+            if (tab.key === 'all') {
+                return {
+                    ...carry,
+                    [tab.key]: records.length,
+                }
+            }
+
+            return {
+                ...carry,
+                [tab.key]: records.filter((record) => record.status === tab.key).length,
+            }
+        }, {})
     ), [records])
 
     const filteredTotal = useMemo(
@@ -603,24 +611,36 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }))
     }
 
-    function handleApplyFilters() {
+    async function handleApplyFilters() {
         if (listFilters.period_from && listFilters.period_to && listFilters.period_from > listFilters.period_to) {
             setFeedback({ type: 'error', text: 'O periodo final precisa ser maior ou igual ao periodo inicial.' })
             return
         }
 
-        setAppliedFilters({ ...listFilters })
-        setAppliedTab(selectedTab)
-        setHasAppliedSearch(true)
         setFeedback(null)
         setDetailRecordId(null)
+
+        setRecordsLoading(true)
+
+        try {
+            const response = await apiRequest(buildRecordsUrl('compras'))
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setAppliedFilters({ ...listFilters })
+            setHasAppliedSearch(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setRecordsLoading(false)
+        }
     }
 
     function handleClearFilters() {
         const emptyFilters = createListFilters()
 
+        setRecords([])
         setListFilters(emptyFilters)
         setAppliedFilters(emptyFilters)
+        setSelectedTab('all')
         setHasAppliedSearch(false)
         setFeedback(null)
         setDetailRecordId(null)
@@ -779,7 +799,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
             setRecords((current) => upsertRecord(current, response.record))
             setSelectedTab(response.record.status || selectedTab)
-            setAppliedTab(response.record.status || selectedTab)
             setAppliedFilters((current) => (hasAppliedSearch ? current : createListFilters()))
             setHasAppliedSearch(true)
             hydrateEditor(response.record, 'edit')
@@ -1019,8 +1038,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         columns={columns}
                         emptyState={(
                             <div className="proc-ui-empty">
-                                <strong>{hasAppliedSearch ? 'Nenhum pedido encontrado' : 'Use os filtros para buscar pedidos'}</strong>
-                                <p>{hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo, data, horario ou busca textual e clique em Buscar.'}</p>
+                                <strong>{recordsLoading ? 'Buscando pedidos...' : hasAppliedSearch ? 'Nenhum pedido encontrado' : 'Use os filtros para buscar pedidos'}</strong>
+                                <p>{recordsLoading ? 'Estamos carregando os pedidos para aplicar os filtros.' : hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo, data, horario ou busca textual e clique em Buscar.'}</p>
                             </div>
                         )}
                         getRowActions={(record) => [
@@ -1053,7 +1072,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         onRowClick={openDetailsModal}
                     />
 
-                    {hasAppliedSearch ? (
+                    {hasAppliedSearch && !recordsLoading ? (
                         <footer className="purchases-table-footer">
                             <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
                             <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
