@@ -19,7 +19,7 @@ const STATUS_TABS = [
 ]
 
 const STEPS = [
-    { key: 'supplier', label: 'Fornecedor e dados', icon: 'fa-building' },
+    { key: 'supplier', label: 'Fornecedor e nome', icon: 'fa-building' },
     { key: 'items', label: 'Itens do pedido', icon: 'fa-boxes-stacked' },
     { key: 'review', label: 'Revisao final', icon: 'fa-circle-check' },
 ]
@@ -163,8 +163,8 @@ function buildPurchasePayload(recordLike, status) {
         supplier_id: recordLike.supplier_id ? Number(recordLike.supplier_id) : null,
         custom_name: recordLike.custom_name || null,
         status,
-        expected_at: recordLike.expected_at || null,
-        freight: parseNumber(recordLike.freight, 0),
+        expected_at: null,
+        freight: 0,
         notes: recordLike.notes || null,
         items: (recordLike.items || []).map((item) => ({
             product_id: Number(item.product_id),
@@ -291,10 +291,12 @@ function PurchaseDetailsModal({
                             <span>Itens</span>
                             <strong>{formatNumber(record.items_count || record.items?.length || 0)}</strong>
                         </article>
-                        <article className="proc-ui-summary-card">
-                            <span>Previsao</span>
-                            <strong>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</strong>
-                        </article>
+                        {record.expected_at ? (
+                            <article className="proc-ui-summary-card">
+                                <span>Previsao</span>
+                                <strong>{formatDate(record.expected_at)}</strong>
+                            </article>
+                        ) : null}
                         <article className="proc-ui-summary-card">
                             <span>Total</span>
                             <strong>{formatMoney(record.total || 0)}</strong>
@@ -344,7 +346,7 @@ function PurchaseDetailsModal({
 
                     <div className="proc-ui-table-totalbar">
                         <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
-                        <span>Frete: <strong>{formatMoney(record.freight || 0)}</strong></span>
+                        {Number(record.freight || 0) > 0 ? <span>Frete: <strong>{formatMoney(record.freight || 0)}</strong></span> : null}
                         <span>Total: <strong>{formatMoney(record.total || 0)}</strong></span>
                     </div>
                 </section>
@@ -437,6 +439,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [recordsLoading, setRecordsLoading] = useState(false)
 
     const selectedSupplierName = findLabel(suppliers, form.supplier_id)
+    const productsById = useMemo(
+        () => new Map(products.map((product) => [String(product.id), product])),
+        [products],
+    )
 
     const filteredRecords = useMemo(() => (
         hasAppliedSearch
@@ -498,8 +504,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         [detailRecordId, records],
     )
 
+    const itemsByProductId = useMemo(
+        () => form.items.reduce((carry, item) => {
+            carry[String(item.product_id)] = item
+            return carry
+        }, {}),
+        [form.items],
+    )
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
-    const total = subtotal + parseNumber(form.freight, 0)
+    const total = subtotal
     const stepReady = [
         Boolean(form.supplier_id),
         form.items.length > 0,
@@ -665,7 +678,9 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setSupplierQuery(option.name)
     }
 
-    function addProduct(option) {
+    function addProduct(option, quantity = 1) {
+        const parsedQuantity = Math.max(1, parseNumber(quantity, 1))
+
         setForm((current) => {
             const existingIndex = current.items.findIndex((item) => String(item.product_id) === String(option.id))
 
@@ -674,7 +689,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     ...current,
                     items: current.items.map((item, index) => (
                         index === existingIndex
-                            ? { ...item, quantity: String(parseNumber(item.quantity, 0) + 1) }
+                            ? { ...item, quantity: String(parseNumber(item.quantity, 0) + parsedQuantity) }
                             : item
                     )),
                 }
@@ -687,7 +702,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     {
                         product_id: String(option.id),
                         product_name: option.name,
-                        quantity: '1',
+                        quantity: String(parsedQuantity),
                         unit_cost: String(option.cost_price || 0),
                     },
                 ],
@@ -697,12 +712,46 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setProductQuery('')
     }
 
+    function handleProductSearchKeyDown(event) {
+        if (event.key !== 'Enter') {
+            return
+        }
+
+        const firstProduct = productOptions[0]
+
+        if (!firstProduct || !canEdit) {
+            return
+        }
+
+        event.preventDefault()
+        addProduct(firstProduct, 1)
+    }
+
     function handleItemChange(index, field, value) {
         setForm((current) => ({
             ...current,
             items: current.items.map((item, itemIndex) => (
                 itemIndex === index ? { ...item, [field]: value } : item
             )),
+        }))
+    }
+
+    function handleItemQuantityShortcut(index, delta) {
+        setForm((current) => ({
+            ...current,
+            items: current.items.flatMap((item, itemIndex) => {
+                if (itemIndex !== index) {
+                    return [item]
+                }
+
+                const nextQuantity = parseNumber(item.quantity, 0) + delta
+
+                if (nextQuantity <= 0) {
+                    return []
+                }
+
+                return [{ ...item, quantity: String(nextQuantity) }]
+            }),
         }))
     }
 
@@ -995,7 +1044,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 badge={editorSession.type === 'edit' ? 'Editar pedido' : 'Novo pedido'}
                 bodyClassName="purchases-editor-modal-body"
                 className="purchases-editor-modal"
-                description={form.id ? `${getPurchaseDisplayName(form)} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Preencha os dados e avance pelos passos do pedido.'}
+                description={form.id ? `${getPurchaseDisplayName(form)} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Selecione o fornecedor e monte os itens do pedido.'}
                 icon={editorSession.type === 'edit' ? 'fa-pen-to-square' : 'fa-cart-plus'}
                 size="lg"
                 title={editorSession.type === 'edit' ? 'Editar pedido' : 'Criar pedido'}
@@ -1030,7 +1079,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     ) : null}
 
                     {step === 0 ? (
-                        <div className="proc-ui-stage">
+                        <div className="proc-ui-stage purchases-editor-setup">
                             <AutocompleteField
                                 emptyLabel="Nenhum fornecedor encontrado"
                                 icon="fa-building"
@@ -1045,59 +1094,18 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 onSelect={handleSupplierSelect}
                             />
 
-                            <div className="proc-ui-field-grid">
-                                <div className="proc-ui-field full">
-                                    <label>
-                                        <span>Nome do pedido</span>
-                                        <input
-                                            disabled={!canEdit}
-                                            maxLength="160"
-                                            placeholder="Ex.: Reposicao feira de sabado"
-                                            type="text"
-                                            value={form.custom_name}
-                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
-
-                                <div className="proc-ui-field">
-                                    <label>
-                                        <span>Previsao de entrega</span>
-                                        <input
-                                            disabled={!canEdit}
-                                            type="date"
-                                            value={form.expected_at}
-                                            onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
-
-                                <div className="proc-ui-field">
-                                    <label>
-                                        <span>Frete previsto</span>
-                                        <input
-                                            disabled={!canEdit}
-                                            min="0"
-                                            step="0.01"
-                                            type="number"
-                                            value={form.freight}
-                                            onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
-
-                                <div className="proc-ui-field full">
-                                    <label>
-                                        <span>Observacoes</span>
-                                        <textarea
-                                            className="purchases-editor-notes"
-                                            disabled={!canEdit}
-                                            rows="2"
-                                            value={form.notes}
-                                            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
+                            <div className="proc-ui-field full">
+                                <label>
+                                    <span>Nome da compra</span>
+                                    <input
+                                        disabled={!canEdit}
+                                        maxLength="160"
+                                        placeholder="Ex.: Reposicao feira de sabado"
+                                        type="text"
+                                        value={form.custom_name}
+                                        onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
+                                    />
+                                </label>
                             </div>
 
                             <div className="proc-ui-step-actions">
@@ -1119,23 +1127,100 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     ) : null}
 
                     {step === 1 ? (
-                        <div className="proc-ui-stage">
-                            <AutocompleteField
-                                emptyLabel="Nenhum produto encontrado"
-                                icon="fa-box"
-                                label="Produto"
-                                options={productOptions}
-                                placeholder="Buscar produto por nome ou codigo"
-                                query={productQuery}
-                                selectedLabel=""
-                                value=""
-                                disabled={!canEdit}
-                                onQueryChange={setProductQuery}
-                                onSelect={addProduct}
-                            />
+                        <div className="proc-ui-stage purchases-items-stage">
+                            <section className="proc-ui-modal-block purchases-items-search-panel">
+                                <div className="purchases-items-search-head">
+                                    <div className="purchases-items-search-copy">
+                                        <h3>Monte os itens do pedido</h3>
+                                        <p>Digite nome ou codigo e pressione Enter para adicionar o primeiro resultado rapidamente.</p>
+                                    </div>
 
-                            <div className="proc-ui-table-wrap">
-                                <table className="proc-ui-table">
+                                    <div className="purchases-items-meta">
+                                        <span>Fornecedor <strong>{selectedSupplierName || 'Nao selecionado'}</strong></span>
+                                        <span>Compra <strong>{form.custom_name || 'Sem nome definido'}</strong></span>
+                                    </div>
+                                </div>
+
+                                <label className="purchases-items-searchbox">
+                                    <span className="proc-ui-label">
+                                        <i className="fa-solid fa-box" /> Buscar produto
+                                    </span>
+                                    <div className="purchases-items-search-input">
+                                        <i className="fa-solid fa-magnifying-glass" />
+                                        <input
+                                            className="proc-ui-searchbox"
+                                            disabled={!canEdit}
+                                            placeholder="Buscar produto por nome, codigo ou codigo de barras"
+                                            type="search"
+                                            value={productQuery}
+                                            onChange={(event) => setProductQuery(event.target.value)}
+                                            onKeyDown={handleProductSearchKeyDown}
+                                        />
+                                    </div>
+                                </label>
+
+                                {productQuery.trim().length > 0 ? (
+                                    <div className="purchases-product-results">
+                                        {productOptions.length ? productOptions.map((option) => {
+                                            const queuedItem = itemsByProductId[String(option.id)]
+                                            const queuedQuantity = queuedItem ? formatNumber(queuedItem.quantity) : null
+
+                                            return (
+                                                <article key={option.id} className="purchases-product-result">
+                                                    <div className="purchases-product-result-copy">
+                                                        <strong>{option.name}</strong>
+                                                        <span>{option.code || option.barcode || 'Sem codigo'}</span>
+                                                        <small>Custo atual: {formatMoney(option.cost_price || 0)}</small>
+                                                    </div>
+
+                                                    <div className="purchases-product-result-actions">
+                                                        {queuedQuantity ? <span className="proc-ui-pill">No pedido: {queuedQuantity}</span> : null}
+                                                        <button type="button" className="ui-button-ghost" disabled={!canEdit} onClick={() => addProduct(option, 1)}>
+                                                            +1
+                                                        </button>
+                                                        <button type="button" className="ui-button" disabled={!canEdit} onClick={() => addProduct(option, 5)}>
+                                                            +5
+                                                        </button>
+                                                    </div>
+                                                </article>
+                                            )
+                                        }) : (
+                                            <div className="proc-ui-empty purchases-product-results-empty">
+                                                <strong>Nenhum produto encontrado</strong>
+                                                <p>Tente outro termo, codigo ou codigo de barras.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="proc-ui-empty purchases-product-results-empty">
+                                        <strong>Busque um produto para comecar</strong>
+                                        <p>Os atalhos de inclusao rapida aparecem assim que voce digita.</p>
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className="proc-ui-modal-block purchases-items-board">
+                                <div className="proc-ui-summary-grid purchases-review-summary">
+                                    <article className="proc-ui-summary-card">
+                                        <span>Itens</span>
+                                        <strong>{formatNumber(form.items.length)}</strong>
+                                    </article>
+                                    <article className="proc-ui-summary-card">
+                                        <span>Unidades</span>
+                                        <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
+                                    </article>
+                                    <article className="proc-ui-summary-card">
+                                        <span>Subtotal</span>
+                                        <strong>{formatMoney(subtotal)}</strong>
+                                    </article>
+                                    <article className="proc-ui-summary-card">
+                                        <span>Total</span>
+                                        <strong>{formatMoney(total)}</strong>
+                                    </article>
+                                </div>
+
+                                <div className="proc-ui-table-wrap purchases-items-table-wrap">
+                                    <table className="proc-ui-table purchases-items-table">
                                     <thead>
                                         <tr>
                                             <th>Produto</th>
@@ -1146,18 +1231,54 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {form.items.length ? form.items.map((item, index) => (
+                                        {form.items.length ? form.items.map((item, index) => {
+                                            const productMeta = productsById.get(String(item.product_id))
+
+                                            return (
                                             <tr key={`${item.product_id}-${index}`}>
-                                                <td>{getProductLabel(item, products)}</td>
                                                 <td>
-                                                    <input
-                                                        disabled={!canEdit}
-                                                        min="0"
-                                                        step="0.001"
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
-                                                    />
+                                                    <div className="purchases-item-identity">
+                                                        <strong>{getProductLabel(item, products)}</strong>
+                                                        <span>{productMeta?.code || productMeta?.barcode || 'Sem codigo'}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="purchases-qty-control">
+                                                        <button
+                                                            type="button"
+                                                            className="proc-ui-ghost-icon"
+                                                            disabled={!canEdit}
+                                                            title="Diminuir 1"
+                                                            onClick={() => handleItemQuantityShortcut(index, -1)}
+                                                        >
+                                                            <i className="fa-solid fa-minus" />
+                                                        </button>
+                                                        <input
+                                                            disabled={!canEdit}
+                                                            min="0"
+                                                            step="0.001"
+                                                            type="number"
+                                                            value={item.quantity}
+                                                            onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="proc-ui-ghost-icon"
+                                                            disabled={!canEdit}
+                                                            title="Aumentar 1"
+                                                            onClick={() => handleItemQuantityShortcut(index, 1)}
+                                                        >
+                                                            <i className="fa-solid fa-plus" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="ui-button-ghost purchases-qty-burst"
+                                                            disabled={!canEdit}
+                                                            onClick={() => handleItemQuantityShortcut(index, 5)}
+                                                        >
+                                                            +5
+                                                        </button>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <input
@@ -1182,24 +1303,27 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                     </button>
                                                 </td>
                                             </tr>
-                                        )) : (
+                                            )
+                                        }) : (
                                             <tr>
                                                 <td colSpan="5">
                                                     <div className="proc-ui-empty">
                                                         <strong>Nenhum item no pedido</strong>
+                                                        <p>Use a busca acima para adicionar os primeiros produtos.</p>
                                                     </div>
                                                 </td>
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
-                            </div>
+                                </div>
 
-                            <div className="proc-ui-table-totalbar">
-                                <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
-                                <span>Frete: <strong>{formatMoney(parseNumber(form.freight, 0))}</strong></span>
-                                <span>Total: <strong>{formatMoney(total)}</strong></span>
-                            </div>
+                                <div className="proc-ui-table-totalbar purchases-items-totalbar">
+                                    <span>Itens diferentes: <strong>{formatNumber(form.items.length)}</strong></span>
+                                    <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
+                                    <span>Total do pedido: <strong>{formatMoney(total)}</strong></span>
+                                </div>
+                            </section>
 
                             <div className="proc-ui-step-actions">
                                 <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
@@ -1236,10 +1360,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     <strong>{formatNumber(form.items.length)}</strong>
                                 </article>
                                 <article className="proc-ui-summary-card">
-                                    <span>Previsao</span>
-                                    <strong>{form.expected_at ? formatDate(form.expected_at) : 'Sem data'}</strong>
-                                </article>
-                                <article className="proc-ui-summary-card">
                                     <span>Total</span>
                                     <strong>{formatMoney(total)}</strong>
                                 </article>
@@ -1264,14 +1384,27 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
                                 <div className="proc-ui-divider" />
 
+                                <div className="proc-ui-field full purchases-review-notes">
+                                    <label>
+                                        <span>Observacoes</span>
+                                        <textarea
+                                            className="purchases-editor-notes"
+                                            disabled={!canEdit}
+                                            rows="2"
+                                            value={form.notes}
+                                            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                                        />
+                                    </label>
+                                </div>
+
                                 <div className="proc-ui-review-grid">
                                     <div>
-                                        <small>Observacoes</small>
-                                        <strong>{form.notes || 'Sem observacoes registradas.'}</strong>
+                                        <small>Resumo financeiro</small>
+                                        <strong>{formatMoney(total)}</strong>
                                     </div>
                                     <div>
-                                        <small>Subtotal + frete</small>
-                                        <strong>{`${formatMoney(subtotal)} + ${formatMoney(parseNumber(form.freight, 0))}`}</strong>
+                                        <small>Fornecedor confirmado</small>
+                                        <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
                                     </div>
                                 </div>
                             </section>

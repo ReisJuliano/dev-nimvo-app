@@ -158,11 +158,17 @@
 }
 
 .purchases-editor-modal {
-    width: min(100%, 860px);
+    width: min(100%, 1180px);
 }
 
 .purchases-editor-modal-body {
     padding-bottom: 1rem;
+}
+
+.purchases-editor-setup,
+.purchases-items-stage {
+    display: grid;
+    gap: 1rem;
 }
 
 .purchases-editor-modal .proc-ui-stage {
@@ -175,6 +181,167 @@
 
 .purchases-editor-notes {
     min-height: 4.5rem;
+}
+
+.purchases-items-search-panel,
+.purchases-items-board {
+    gap: 1rem;
+}
+
+.purchases-items-search-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.85rem 1rem;
+}
+
+.purchases-items-search-copy {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.purchases-items-search-copy h3 {
+    margin: 0;
+}
+
+.purchases-items-search-copy p {
+    margin: 0;
+    color: #5f7383;
+    font-size: 0.86rem;
+}
+
+.purchases-items-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.purchases-items-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    background: #f5f8fa;
+    color: #567080;
+    font-size: 0.82rem;
+}
+
+.purchases-items-searchbox {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.purchases-items-search-input {
+    position: relative;
+}
+
+.purchases-items-search-input > i {
+    position: absolute;
+    top: 50%;
+    left: 0.95rem;
+    color: #607686;
+    transform: translateY(-50%);
+}
+
+.purchases-items-search-input .proc-ui-searchbox {
+    padding-left: 2.65rem;
+}
+
+.purchases-product-results {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.purchases-product-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem 1rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+}
+
+.purchases-product-result-copy {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.purchases-product-result-copy span,
+.purchases-product-result-copy small {
+    color: #5e7281;
+}
+
+.purchases-product-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.purchases-product-results-empty {
+    min-height: 8rem;
+}
+
+.purchases-items-table-wrap {
+    overflow-x: auto;
+}
+
+.purchases-items-table {
+    min-width: 100%;
+}
+
+.purchases-items-table th:nth-child(1) {
+    min-width: 18rem;
+}
+
+.purchases-items-table th:nth-child(2) {
+    min-width: 15rem;
+}
+
+.purchases-items-table th:nth-child(3) {
+    min-width: 10rem;
+}
+
+.purchases-item-identity {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.purchases-item-identity span {
+    color: #647b8b;
+    font-size: 0.78rem;
+}
+
+.purchases-qty-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.purchases-qty-control input {
+    width: 5.25rem;
+    min-width: 0;
+}
+
+.purchases-qty-burst {
+    min-width: 3.65rem;
+    justify-content: center;
+}
+
+.purchases-items-totalbar {
+    margin-top: 0.25rem;
+}
+
+.purchases-review-notes {
+    margin-top: 0.5rem;
 }
 
 .purchases-editor-submitbar {
@@ -238,6 +405,16 @@
     .purchases-range-form {
         flex-basis: 100%;
     }
+
+    .purchases-items-search-head,
+    .purchases-product-result {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .purchases-product-result-actions {
+        justify-content: flex-start;
+    }
 }
 
 @media (max-width: 640px) {
@@ -281,6 +458,18 @@
 
     .purchases-editor-submitbar .ui-button,
     .purchases-editor-submitbar .ui-button-ghost {
+        width: 100%;
+    }
+
+    .purchases-items-meta,
+    .purchases-qty-control {
+        width: 100%;
+    }
+
+    .purchases-qty-control input,
+    .purchases-qty-burst,
+    .purchases-product-result-actions .ui-button,
+    .purchases-product-result-actions .ui-button-ghost {
         width: 100%;
     }
 }
