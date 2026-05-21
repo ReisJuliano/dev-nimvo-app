@@ -107,6 +107,20 @@
     padding-bottom: 0.65rem;
 }
 
+.purchases-records-table.dense-table-empty {
+    width: 100%;
+    min-height: 24rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.purchases-records-table.dense-table-empty .proc-ui-empty {
+    width: 100%;
+    min-height: 100%;
+    padding: 1.5rem;
+}
+
 .purchases-records-table .dense-table-actions {
     opacity: 0;
 }
