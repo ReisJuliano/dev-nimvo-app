@@ -33,6 +33,25 @@ function createDraftFilters() {
     }
 }
 
+function readInitialFilters() {
+    const filters = createDraftFilters()
+
+    if (typeof window === 'undefined') {
+        return filters
+    }
+
+    const params = new URLSearchParams(window.location.search)
+
+    return {
+        ...filters,
+        nf: params.get('nf') || '',
+        supplier: params.get('supplier') || '',
+        product: params.get('product') || '',
+        exactDate: params.get('date') || '',
+        month: params.get('month') || '',
+    }
+}
+
 function matchesPeriod(record, periodKey) {
     if (!periodKey) {
         return true
@@ -152,8 +171,8 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
     const records = Array.isArray(payload?.records) ? payload.records : []
     const importedDocuments = Array.isArray(payload?.incoming_nfe_documents) ? payload.incoming_nfe_documents : []
 
-    const [draftFilters, setDraftFilters] = useState(createDraftFilters())
-    const [appliedFilters, setAppliedFilters] = useState(createDraftFilters())
+    const [draftFilters, setDraftFilters] = useState(() => readInitialFilters())
+    const [appliedFilters, setAppliedFilters] = useState(() => readInitialFilters())
     const [selectedId, setSelectedId] = useState(null)
 
     const filtersActive = hasActiveFilters(appliedFilters)

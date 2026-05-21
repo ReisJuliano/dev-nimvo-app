@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import CompactModal from '@/Components/UI/CompactModal'
+import DenseTable from '@/Components/UI/DenseTable'
 import StatusBadge from '@/Components/UI/StatusBadge'
-import { formatDate, formatMoney, formatNumber } from '@/lib/format'
+import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { buildRecordsUrl, ensureDate, parseNumber, upsertRecord } from '@/Pages/Operations/workspaces/shared'
 import '../Operations/backoffice-workspace.css'
+import './purchases.css'
 
 const STATUS_TABS = [
     { key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' },
@@ -19,6 +22,12 @@ const STEPS = [
     { key: 'items', label: 'Itens do pedido', icon: 'fa-boxes-stacked' },
     { key: 'review', label: 'Revisao final', icon: 'fa-circle-check' },
 ]
+
+function resolveInitialTab(records) {
+    const priority = STATUS_TABS.map((tab) => tab.key)
+
+    return priority.find((status) => records.some((record) => record.status === status)) || 'draft'
+}
 
 function createEmptyForm() {
     return {
@@ -55,14 +64,27 @@ function normalizeRecord(record) {
 
 function resolveStatusMeta(status) {
     if (status === 'received') {
-        return { label: 'Recebida', tone: 'success' }
+        return { label: 'RECEBIDA', tone: 'success', className: 'received' }
     }
 
     if (status === 'ordered') {
-        return { label: 'Solicitada', tone: 'info' }
+        return { label: 'SOLICITADA', tone: 'info', className: 'ordered' }
     }
 
-    return { label: 'Rascunho', tone: 'warning' }
+    return { label: 'RASCUNHO', tone: 'warning', className: 'draft' }
+}
+
+function PurchaseStatusBadge({ status, compact = false }) {
+    const meta = resolveStatusMeta(status)
+
+    return (
+        <StatusBadge
+            compact={compact}
+            className={`purchases-status-badge ${meta.className}`}
+            label={meta.label}
+            tone={meta.tone}
+        />
+    )
 }
 
 function findLabel(options, id) {
@@ -71,6 +93,35 @@ function findLabel(options, id) {
 
 function summarizeItems(items) {
     return items.reduce((total, item) => total + (parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0)), 0)
+}
+
+function isLockedRecord(record) {
+    return Boolean(record?.stock_applied_at) || record?.status === 'received'
+}
+
+function getRecordDateLabel(record) {
+    const value = record?.created_at || record?.received_at || record?.expected_at
+
+    return value ? formatDateTime(value) : 'Sem data registrada'
+}
+
+function getProductLabel(item, products) {
+    return item.product_name || products.find((product) => String(product.id) === String(item.product_id))?.name || 'Produto'
+}
+
+function buildPurchasePayload(recordLike, status) {
+    return {
+        supplier_id: recordLike.supplier_id ? Number(recordLike.supplier_id) : null,
+        status,
+        expected_at: recordLike.expected_at || null,
+        freight: parseNumber(recordLike.freight, 0),
+        notes: recordLike.notes || null,
+        items: (recordLike.items || []).map((item) => ({
+            product_id: Number(item.product_id),
+            quantity: parseNumber(item.quantity, 0),
+            unit_cost: parseNumber(item.unit_cost, 0),
+        })),
+    }
 }
 
 function AutocompleteField({
@@ -124,7 +175,11 @@ function AutocompleteField({
                                     </div>
                                     {String(value || '') === String(option.id) ? <i className="fa-solid fa-circle-check" /> : null}
                                 </button>
-                            )) : <div className="proc-ui-empty"><strong>{emptyLabel}</strong></div>}
+                            )) : (
+                                <div className="proc-ui-empty">
+                                    <strong>{emptyLabel}</strong>
+                                </div>
+                            )}
                         </div>
                     ) : null}
                 </div>
@@ -133,23 +188,199 @@ function AutocompleteField({
     )
 }
 
+function PurchaseDetailsModal({
+    record,
+    products,
+    feedback,
+    busyAction,
+    onClose,
+    onEdit,
+    onDelete,
+    onSend,
+    onReceive,
+    onCancel,
+    onViewStockEntry,
+}) {
+    if (!record) {
+        return null
+    }
+
+    const subtotal = Number(record.subtotal || summarizeItems(record.items || []))
+
+    return (
+        <CompactModal
+            open
+            badge="Detalhes"
+            className="purchases-details-modal"
+            description={`${record.code || `Pedido #${record.id}`} - ${record.supplier_name || 'Sem fornecedor'}`}
+            icon="fa-receipt"
+            size="lg"
+            title="Pedido de compra"
+            onClose={onClose}
+        >
+            <div className="proc-ui-modal-stack">
+                <section className="proc-ui-modal-block purchases-details-header">
+                    <div className="purchases-details-headline">
+                        <div>
+                            <h3>{record.code || `Pedido #${record.id}`}</h3>
+                            <p>{record.supplier_name || 'Sem fornecedor'} - {getRecordDateLabel(record)}</p>
+                        </div>
+                        <PurchaseStatusBadge status={record.status} />
+                    </div>
+
+                    <div className="proc-ui-summary-grid purchases-details-summary">
+                        <article className="proc-ui-summary-card">
+                            <span>Fornecedor</span>
+                            <strong>{record.supplier_name || 'Sem fornecedor'}</strong>
+                        </article>
+                        <article className="proc-ui-summary-card">
+                            <span>Itens</span>
+                            <strong>{formatNumber(record.items_count || record.items?.length || 0)}</strong>
+                        </article>
+                        <article className="proc-ui-summary-card">
+                            <span>Previsao</span>
+                            <strong>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</strong>
+                        </article>
+                        <article className="proc-ui-summary-card">
+                            <span>Total</span>
+                            <strong>{formatMoney(record.total || 0)}</strong>
+                        </article>
+                    </div>
+                </section>
+
+                {feedback ? (
+                    <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                        <span>{feedback.text}</span>
+                    </div>
+                ) : null}
+
+                <section className="proc-ui-modal-block">
+                    <h3>Itens do pedido</h3>
+                    <div className="proc-ui-table-wrap">
+                        <table className="proc-ui-table">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Qtd</th>
+                                    <th>Custo unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {record.items?.length ? record.items.map((item, index) => (
+                                    <tr key={`${record.id}-${item.product_id}-${index}`}>
+                                        <td>{getProductLabel(item, products)}</td>
+                                        <td>{formatNumber(item.quantity)}</td>
+                                        <td>{formatMoney(item.unit_cost)}</td>
+                                        <td><strong>{formatMoney(item.total)}</strong></td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="4">
+                                            <div className="proc-ui-empty">
+                                                <strong>Nenhum item registrado</strong>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="proc-ui-table-totalbar">
+                        <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
+                        <span>Frete: <strong>{formatMoney(record.freight || 0)}</strong></span>
+                        <span>Total: <strong>{formatMoney(record.total || 0)}</strong></span>
+                    </div>
+                </section>
+
+                <section className="proc-ui-modal-block">
+                    <h3>Observacoes</h3>
+                    <div className="proc-ui-banner info">
+                        <i className="fa-solid fa-note-sticky" />
+                        <div>{record.notes || 'Sem observacoes registradas para este pedido.'}</div>
+                    </div>
+                </section>
+
+                <div className="proc-ui-modal-footer">
+                    {record.status === 'draft' ? (
+                        <>
+                            <button type="button" className="ui-button-ghost" onClick={() => onEdit(record)}>
+                                Editar
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button"
+                                disabled={busyAction === `send-${record.id}`}
+                                onClick={() => onSend(record)}
+                            >
+                                {busyAction === `send-${record.id}` ? 'Enviando...' : 'Enviar pedido'}
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button-ghost danger"
+                                disabled={busyAction === `delete-${record.id}`}
+                                onClick={() => onDelete(record)}
+                            >
+                                Excluir
+                            </button>
+                        </>
+                    ) : null}
+
+                    {record.status === 'ordered' ? (
+                        <>
+                            <button
+                                type="button"
+                                className="ui-button"
+                                disabled={busyAction === `receive-${record.id}`}
+                                onClick={() => onReceive(record)}
+                            >
+                                {busyAction === `receive-${record.id}` ? 'Registrando...' : 'Registrar recebimento'}
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button-ghost danger"
+                                disabled={busyAction === `delete-${record.id}`}
+                                onClick={() => onCancel(record)}
+                            >
+                                Cancelar
+                            </button>
+                        </>
+                    ) : null}
+
+                    {record.status === 'received' ? (
+                        <button type="button" className="ui-button" onClick={() => onViewStockEntry(record)}>
+                            Ver entrada de estoque
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+        </CompactModal>
+    )
+}
+
 export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const products = Array.isArray(payload?.products) ? payload.products : []
-    const [records, setRecords] = useState(Array.isArray(payload?.records) ? payload.records : [])
-    const [activeTab, setActiveTab] = useState('draft')
+    const initialRecords = Array.isArray(payload?.records) ? payload.records : []
+
+    const [records, setRecords] = useState(initialRecords)
+    const [activeTab, setActiveTab] = useState(() => resolveInitialTab(initialRecords))
+    const [listSearch, setListSearch] = useState('')
+    const [detailRecordId, setDetailRecordId] = useState(null)
+    const [editorOpen, setEditorOpen] = useState(false)
+    const [editorSession, setEditorSession] = useState({ type: 'create', recordId: null })
     const [step, setStep] = useState(0)
     const [form, setForm] = useState(createEmptyForm())
-    const [editorMode, setEditorMode] = useState('edit')
     const [supplierQuery, setSupplierQuery] = useState('')
     const [productQuery, setProductQuery] = useState('')
-    const [listSearch, setListSearch] = useState('')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
-    const [showAllSidebarRecords, setShowAllSidebarRecords] = useState(false)
 
     const selectedSupplierName = findLabel(suppliers, form.supplier_id)
     const normalizedListSearch = normalizeTextSearch(listSearch)
+
     const filteredRecords = useMemo(() => (
         records.filter((record) => {
             if (record.status !== activeTab) {
@@ -165,6 +396,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 record.supplier_name,
                 record.document,
                 record.notes,
+                ...(record.items || []).map((item) => item.product_name),
             ], normalizedListSearch)
         })
     ), [activeTab, normalizedListSearch, records])
@@ -197,23 +429,21 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         ], normalized)).slice(0, 8)
     }, [productQuery, products])
 
-    const shouldCondenseSidebar = activeTab === 'draft' && !normalizedListSearch
-    const visibleSidebarRecords = useMemo(() => {
-        if (!shouldCondenseSidebar || showAllSidebarRecords) {
-            return filteredRecords
-        }
+    const statusCounts = useMemo(() => (
+        STATUS_TABS.reduce((carry, tab) => ({
+            ...carry,
+            [tab.key]: records.filter((record) => record.status === tab.key).length,
+        }), {})
+    ), [records])
 
-        return filteredRecords.slice(0, 4)
-    }, [filteredRecords, shouldCondenseSidebar, showAllSidebarRecords])
-    const hiddenSidebarRecords = Math.max(0, filteredRecords.length - visibleSidebarRecords.length)
-    const activeTabMeta = STATUS_TABS.find((tab) => tab.key === activeTab) || STATUS_TABS[0]
-    const filteredStageTotal = useMemo(
+    const filteredTotal = useMemo(
         () => filteredRecords.reduce((totalAmount, record) => totalAmount + Number(record.total || 0), 0),
-        [filteredRecords]
+        [filteredRecords],
     )
-    const filteredStageItems = useMemo(
-        () => filteredRecords.reduce((count, record) => count + Number(record.items_count || 0), 0),
-        [filteredRecords]
+
+    const selectedDetailRecord = useMemo(
+        () => records.find((record) => String(record.id) === String(detailRecordId)) || null,
+        [detailRecordId, records],
     )
 
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
@@ -223,35 +453,124 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         form.items.length > 0,
         form.items.length > 0 && Boolean(form.supplier_id),
     ]
-    const isLocked = Boolean(form.stock_applied_at) || form.status === 'received'
-    const canEdit = !isLocked && editorMode === 'edit'
+    const isLocked = isLockedRecord(form)
+    const canEdit = !isLocked
+    const pageFeedbackVisible = Boolean(feedback) && !editorOpen && !selectedDetailRecord
     const nextDisabledReason = step === 0 && !form.supplier_id
         ? 'Selecione um fornecedor para continuar.'
-            : step === 1 && !form.items.length
+        : step === 1 && !form.items.length
             ? 'Adicione pelo menos um item ao pedido.'
             : ''
 
-    useEffect(() => {
-        setShowAllSidebarRecords(false)
-    }, [activeTab, normalizedListSearch])
+    const columns = useMemo(() => ([
+        {
+            key: 'code',
+            label: 'Numero',
+            render: (record) => <strong>{record.code || `#${record.id}`}</strong>,
+        },
+        {
+            key: 'supplier_name',
+            label: 'Fornecedor',
+            render: (record) => <span className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</span>,
+        },
+        {
+            key: 'items',
+            label: 'Itens',
+            className: 'purchases-cell-items',
+            render: (record) => formatNumber(record.items_count || record.items?.length || 0),
+        },
+        {
+            key: 'total',
+            label: 'Total',
+            className: 'purchases-cell-money',
+            render: (record) => <strong>{formatMoney(record.total || 0)}</strong>,
+        },
+        {
+            key: 'freight',
+            label: 'Frete',
+            className: 'purchases-cell-money',
+            render: (record) => formatMoney(record.freight || 0),
+        },
+        {
+            key: 'expected_at',
+            label: 'Previsao',
+            render: (record) => record.expected_at ? formatDate(record.expected_at) : 'Sem previsao',
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (record) => <PurchaseStatusBadge compact status={record.status} />,
+        },
+    ]), [])
 
-    function resetEditor(nextTab = 'draft') {
-        setActiveTab(nextTab)
+    useEffect(() => {
+        if (detailRecordId && !selectedDetailRecord) {
+            setDetailRecordId(null)
+        }
+    }, [detailRecordId, selectedDetailRecord])
+
+    function resetEditorSession() {
+        setEditorSession({ type: 'create', recordId: null })
         setStep(0)
-        setEditorMode('edit')
         setForm(createEmptyForm())
         setSupplierQuery('')
         setProductQuery('')
     }
 
-    function loadRecord(record, mode = 'view') {
+    function hydrateEditor(record, sessionType = 'edit') {
         const normalized = normalizeRecord(record)
-        setActiveTab(record.status || 'draft')
+        setEditorSession({ type: sessionType, recordId: normalized.id })
+        setStep(0)
         setForm(normalized)
-        setEditorMode(mode)
-        setStep(mode === 'view' ? 2 : 0)
         setSupplierQuery(findLabel(suppliers, normalized.supplier_id))
         setProductQuery('')
+    }
+
+    function openCreateModal() {
+        setDetailRecordId(null)
+        setFeedback(null)
+
+        if (editorSession.type === 'create' && editorSession.recordId === null) {
+            setEditorOpen(true)
+            return
+        }
+
+        resetEditorSession()
+        setEditorOpen(true)
+    }
+
+    function openEditModal(record) {
+        if (isLockedRecord(record)) {
+            setDetailRecordId(record.id)
+            return
+        }
+
+        setDetailRecordId(null)
+        setFeedback(null)
+
+        if (editorSession.type === 'edit' && String(editorSession.recordId || '') === String(record.id || '')) {
+            setEditorOpen(true)
+            return
+        }
+
+        hydrateEditor(record, 'edit')
+        setEditorOpen(true)
+    }
+
+    function closeEditorModal() {
+        setEditorOpen(false)
+        setFeedback(null)
+    }
+
+    function openDetailsModal(record) {
+        setEditorOpen(false)
+        setFeedback(null)
+        setDetailRecordId(record.id)
+    }
+
+    function closeDetailsModal() {
+        setDetailRecordId(null)
+        setFeedback(null)
     }
 
     function handleSupplierSelect(option) {
@@ -287,6 +606,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 ],
             }
         })
+
         setProductQuery('')
     }
 
@@ -306,12 +626,73 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }))
     }
 
-    async function handleDelete(record) {
+    async function persistPurchase(status, sourceForm = form, options = {}) {
+        if (isLockedRecord(sourceForm) && status !== 'received') {
+            return null
+        }
+
+        if (!sourceForm.supplier_id) {
+            setFeedback({ type: 'error', text: 'Selecione o fornecedor antes de salvar.' })
+            if (options.openEditor !== false) {
+                setEditorOpen(true)
+                setStep(0)
+            }
+            return null
+        }
+
+        if (!(sourceForm.items || []).length) {
+            setFeedback({ type: 'error', text: 'Adicione pelo menos um item ao pedido.' })
+            if (options.openEditor !== false) {
+                setEditorOpen(true)
+                setStep(1)
+            }
+            return null
+        }
+
+        const requestKey = options.requestKey || status
+
+        setSavingAction(requestKey)
+        setFeedback(null)
+
+        try {
+            const payloadData = buildPurchasePayload(sourceForm, status)
+            const response = sourceForm.id
+                ? await apiRequest(buildRecordsUrl('compras', sourceForm.id), { method: 'put', data: payloadData })
+                : await apiRequest(buildRecordsUrl('compras'), { method: 'post', data: payloadData })
+
+            setRecords((current) => upsertRecord(current, response.record))
+            setActiveTab(response.record.status || activeTab)
+            hydrateEditor(response.record, 'edit')
+            setFeedback({ type: 'success', text: response.message })
+
+            if (options.keepDetailsOpen) {
+                setDetailRecordId(response.record.id)
+            } else {
+                setDetailRecordId(null)
+            }
+
+            if (options.closeEditor !== false) {
+                setEditorOpen(false)
+            }
+
+            return response.record
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+            if (options.openEditor !== false) {
+                setEditorOpen(true)
+            }
+            return null
+        } finally {
+            setSavingAction(null)
+        }
+    }
+
+    async function handleDelete(record, override = {}) {
         const confirmed = await confirmPopup({
-            type: 'warning',
-            title: 'Excluir pedido',
-            message: `Deseja excluir o pedido ${record.code || `#${record.id}`}?`,
-            confirmLabel: 'Excluir',
+            type: override.type || 'warning',
+            title: override.title || 'Excluir pedido',
+            message: override.message || `Deseja excluir o pedido ${record.code || `#${record.id}`}?`,
+            confirmLabel: override.confirmLabel || 'Excluir',
             cancelLabel: 'Cancelar',
         })
 
@@ -319,58 +700,22 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             return
         }
 
-        try {
-            const response = await apiRequest(buildRecordsUrl('compras', record.id), { method: 'delete' })
-            setRecords((current) => current.filter((entry) => entry.id !== record.id))
-            if (String(form.id || '') === String(record.id)) {
-                resetEditor(activeTab)
-            }
-            setFeedback({ type: 'success', text: response.message })
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        }
-    }
-
-    async function submitPurchase(status) {
-        if (isLocked) {
-            return
-        }
-
-        if (!form.supplier_id) {
-            setFeedback({ type: 'error', text: 'Selecione o fornecedor antes de salvar.' })
-            setStep(0)
-            return
-        }
-
-        if (!form.items.length) {
-            setFeedback({ type: 'error', text: 'Adicione pelo menos um item ao pedido.' })
-            setStep(1)
-            return
-        }
-
-        setSavingAction(status)
+        setSavingAction(`delete-${record.id}`)
         setFeedback(null)
 
         try {
-            const payloadData = {
-                supplier_id: Number(form.supplier_id),
-                status,
-                expected_at: form.expected_at || null,
-                freight: parseNumber(form.freight, 0),
-                notes: form.notes || null,
-                items: form.items.map((item) => ({
-                    product_id: Number(item.product_id),
-                    quantity: parseNumber(item.quantity, 0),
-                    unit_cost: parseNumber(item.unit_cost, 0),
-                })),
+            const response = await apiRequest(buildRecordsUrl('compras', record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+
+            if (String(editorSession.recordId || '') === String(record.id || '')) {
+                resetEditorSession()
+                setEditorOpen(false)
             }
 
-            const response = form.id
-                ? await apiRequest(buildRecordsUrl('compras', form.id), { method: 'put', data: payloadData })
-                : await apiRequest(buildRecordsUrl('compras'), { method: 'post', data: payloadData })
+            if (String(detailRecordId || '') === String(record.id || '')) {
+                setDetailRecordId(null)
+            }
 
-            setRecords((current) => upsertRecord(current, response.record))
-            loadRecord(response.record, response.record.status === 'received' ? 'view' : 'edit')
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -379,461 +724,466 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
     }
 
+    async function handleSendFromDetails(record) {
+        const confirmed = await confirmPopup({
+            type: 'info',
+            title: 'Enviar pedido',
+            message: `Deseja enviar o pedido ${record.code || `#${record.id}`} para o fornecedor?`,
+            confirmLabel: 'Enviar pedido',
+            cancelLabel: 'Voltar',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        await persistPurchase('ordered', normalizeRecord(record), {
+            closeEditor: false,
+            keepDetailsOpen: true,
+            openEditor: false,
+            requestKey: `send-${record.id}`,
+        })
+    }
+
+    async function handleReceiveFromDetails(record) {
+        const confirmed = await confirmPopup({
+            type: 'info',
+            title: 'Registrar recebimento',
+            message: `Ao confirmar, o pedido ${record.code || `#${record.id}`} sera recebido e a entrada em estoque sera aplicada.`,
+            confirmLabel: 'Registrar recebimento',
+            cancelLabel: 'Voltar',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        await persistPurchase('received', normalizeRecord(record), {
+            closeEditor: false,
+            keepDetailsOpen: true,
+            openEditor: false,
+            requestKey: `receive-${record.id}`,
+        })
+    }
+
+    async function handleCancelOrdered(record) {
+        await handleDelete(record, {
+            title: 'Cancelar pedido',
+            message: `O cancelamento deste pedido sera tratado como exclusao, porque o backend ainda nao possui um status cancelado para compras. Deseja continuar com ${record.code || `#${record.id}`}?`,
+            confirmLabel: 'Cancelar pedido',
+            type: 'warning',
+        })
+    }
+
+    function handleViewStockEntry(record) {
+        const reference = encodeURIComponent(record.code || record.document || '')
+        window.location.assign(reference ? `/entrada-estoque/manutencao?nf=${reference}` : '/entrada-estoque/manutencao')
+    }
+
     return (
         <AppLayout title={moduleTitle}>
-            <div className="proc-ui-page">
-                <div className="proc-ui-shell">
-                    <section className="proc-ui-main-card">
-                        <div className="proc-ui-main-header">
-                            <div>
-                                <h2>{form.id ? (form.code || `Pedido #${form.id}`) : 'Novo pedido'}</h2>
-                                <p>{form.code ? `${form.code} · ${selectedSupplierName || 'Sem fornecedor'}` : 'Fluxo progressivo para criar e revisar o pedido.'}</p>
-                            </div>
+            <div className="proc-ui-page purchases-page">
+                <section className="proc-ui-section-card purchases-list-card">
+                    <div className="proc-ui-card-toolbar purchases-toolbar">
+                        <label className="purchases-toolbar-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                className="proc-ui-searchbox"
+                                placeholder="Buscar por numero, fornecedor..."
+                                type="search"
+                                value={listSearch}
+                                onChange={(event) => setListSearch(event.target.value)}
+                            />
+                        </label>
 
-                            <div className="proc-ui-statusline">
-                                {form.id ? <StatusBadge compact {...resolveStatusMeta(form.status)} /> : null}
-                                {form.id && !isLocked && editorMode === 'view' ? (
-                                    <button type="button" className="ui-button-ghost" onClick={() => setEditorMode('edit')}>
-                                        <i className="fa-solid fa-pen" />
-                                        <span>Editar pedido</span>
-                                    </button>
-                                ) : null}
-                            </div>
-                        </div>
-
-                        <div className="proc-ui-stepper" style={{ '--proc-step-count': STEPS.length }}>
-                            {STEPS.map((entry, index) => (
+                        <div className="proc-ui-top-tabs purchases-toolbar-tabs">
+                            {STATUS_TABS.map((tab) => (
                                 <button
-                                    key={entry.key}
+                                    key={tab.key}
                                     type="button"
-                                    className={`proc-ui-step ${step === index ? 'active' : ''} ${stepReady[index] && step > index ? 'complete' : ''} ${index > step && !stepReady[index - 1] ? 'disabled' : ''}`}
-                                    onClick={() => {
-                                        if (index <= step || stepReady[index - 1]) {
-                                            setStep(index)
-                                        }
-                                    }}
+                                    className={`proc-ui-tab-chip ${activeTab === tab.key ? 'active' : ''}`}
+                                    onClick={() => setActiveTab(tab.key)}
                                 >
-                                    <span className="proc-ui-step-index">{stepReady[index] && step > index ? <i className="fa-solid fa-check" /> : index + 1}</span>
-                                    <strong><i className={`fa-solid ${entry.icon}`} /> {entry.label}</strong>
+                                    <span>{tab.label}</span>
+                                    <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
                                 </button>
                             ))}
                         </div>
 
-                        {feedback ? (
-                            <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                                <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                <span>{feedback.text}</span>
+                        <button type="button" className="ui-button purchases-new-button" onClick={openCreateModal}>
+                            <i className="fa-solid fa-plus" />
+                            <span>Novo pedido</span>
+                        </button>
+                    </div>
+
+                    {pageFeedbackVisible ? (
+                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                            <span>{feedback.text}</span>
+                        </div>
+                    ) : null}
+
+                    <DenseTable
+                        className="purchases-records-table"
+                        columns={columns}
+                        emptyState={(
+                            <div className="proc-ui-empty">
+                                <strong>Sem pedidos nesta etapa</strong>
+                                <p>Troque o status, ajuste a busca ou crie um novo pedido.</p>
                             </div>
-                        ) : null}
+                        )}
+                        getRowActions={(record) => [
+                            {
+                                key: 'view',
+                                icon: 'fa-eye',
+                                label: 'Ver',
+                                onClick: () => openDetailsModal(record),
+                            },
+                            {
+                                key: 'edit',
+                                disabled: isLockedRecord(record),
+                                icon: 'fa-pen',
+                                label: 'Editar',
+                                onClick: () => openEditModal(record),
+                                tone: 'info',
+                            },
+                            {
+                                key: 'delete',
+                                disabled: isLockedRecord(record),
+                                icon: 'fa-trash',
+                                label: 'Excluir',
+                                onClick: () => handleDelete(record),
+                                tone: 'danger',
+                            },
+                        ]}
+                        minWidth={980}
+                        rows={filteredRecords}
+                        showActionLabels
+                        onRowClick={openDetailsModal}
+                    />
 
-                        {step === 0 ? (
-                            <div key="purchase-step-1" className="proc-ui-stage">
-                                <AutocompleteField
-                                    icon="fa-building"
-                                    label="Fornecedor"
-                                    query={supplierQuery}
-                                    value={form.supplier_id}
-                                    selectedLabel={selectedSupplierName}
-                                    placeholder="Buscar fornecedor por nome, documento ou cidade"
-                                    emptyLabel="Nenhum fornecedor encontrado"
-                                    options={supplierOptions}
-                                    disabled={!canEdit}
-                                    onQueryChange={setSupplierQuery}
-                                    onSelect={handleSupplierSelect}
-                                />
+                    <footer className="purchases-table-footer">
+                        <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
+                        <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
+                    </footer>
+                </section>
+            </div>
 
-                                <div className="proc-ui-field-grid">
-                                    <div className="proc-ui-field">
-                                        <label>
-                                            <span>Previsao de entrega</span>
-                                            <input
-                                                disabled={!canEdit}
-                                                type="date"
-                                                value={form.expected_at}
-                                                onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))}
-                                            />
-                                        </label>
-                                    </div>
+            <CompactModal
+                open={editorOpen}
+                badge={editorSession.type === 'edit' ? 'Editar pedido' : 'Novo pedido'}
+                bodyClassName="purchases-editor-modal-body"
+                className="purchases-editor-modal"
+                description={form.id ? `${form.code || `Pedido #${form.id}`} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Preencha os dados e avance pelos passos do pedido.'}
+                icon={editorSession.type === 'edit' ? 'fa-pen-to-square' : 'fa-cart-plus'}
+                size="lg"
+                title={editorSession.type === 'edit' ? 'Editar pedido' : 'Criar pedido'}
+                onClose={closeEditorModal}
+            >
+                <div className="proc-ui-modal-stack">
+                    <div className="proc-ui-stepper purchases-editor-stepper" style={{ '--proc-step-count': STEPS.length }}>
+                        {STEPS.map((entry, index) => (
+                            <button
+                                key={entry.key}
+                                type="button"
+                                className={`proc-ui-step ${step === index ? 'active' : ''} ${stepReady[index] && step > index ? 'complete' : ''} ${index > step && !stepReady[index - 1] ? 'disabled' : ''}`}
+                                onClick={() => {
+                                    if (index <= step || stepReady[index - 1]) {
+                                        setStep(index)
+                                    }
+                                }}
+                            >
+                                <span className="proc-ui-step-index">
+                                    {stepReady[index] && step > index ? <i className="fa-solid fa-check" /> : index + 1}
+                                </span>
+                                <strong><i className={`fa-solid ${entry.icon}`} /> {entry.label}</strong>
+                            </button>
+                        ))}
+                    </div>
 
-                                    <div className="proc-ui-field">
-                                        <label>
-                                            <span>Frete previsto</span>
-                                            <input
-                                                disabled={!canEdit}
-                                                min="0"
-                                                step="0.01"
-                                                type="number"
-                                                value={form.freight}
-                                                onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))}
-                                            />
-                                        </label>
-                                    </div>
+                    {feedback ? (
+                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                            <span>{feedback.text}</span>
+                        </div>
+                    ) : null}
 
-                                    <div className="proc-ui-field full">
-                                        <label>
-                                            <span>Observacoes</span>
-                                            <textarea
-                                                disabled={!canEdit}
-                                                rows="4"
-                                                value={form.notes}
-                                                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                                            />
-                                        </label>
-                                    </div>
+                    {step === 0 ? (
+                        <div className="proc-ui-stage">
+                            <AutocompleteField
+                                emptyLabel="Nenhum fornecedor encontrado"
+                                icon="fa-building"
+                                label="Fornecedor"
+                                options={supplierOptions}
+                                placeholder="Buscar fornecedor por nome, documento ou cidade"
+                                query={supplierQuery}
+                                selectedLabel={selectedSupplierName}
+                                value={form.supplier_id}
+                                disabled={!canEdit}
+                                onQueryChange={setSupplierQuery}
+                                onSelect={handleSupplierSelect}
+                            />
+
+                            <div className="proc-ui-field-grid">
+                                <div className="proc-ui-field">
+                                    <label>
+                                        <span>Previsao de entrega</span>
+                                        <input
+                                            disabled={!canEdit}
+                                            type="date"
+                                            value={form.expected_at}
+                                            onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))}
+                                        />
+                                    </label>
                                 </div>
 
-                                <div className="proc-ui-step-actions">
-                                    <div className="proc-ui-inline-meta">
-                                        <span>Fornecedor: {selectedSupplierName || 'Nao selecionado'}</span>
-                                        <span>Entrega: {form.expected_at ? formatDate(form.expected_at) : 'Sem previsao'}</span>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="ui-button"
-                                        disabled={!canEdit || Boolean(nextDisabledReason)}
-                                        title={nextDisabledReason || undefined}
-                                        onClick={() => setStep(1)}
-                                    >
-                                        <span>Proximo</span>
-                                        <i className="fa-solid fa-arrow-right" />
-                                    </button>
-                                </div>
-                            </div>
-                        ) : null}
-
-                        {step === 1 ? (
-                            <div key="purchase-step-2" className="proc-ui-stage">
-                                <AutocompleteField
-                                    icon="fa-magnifying-glass"
-                                    label="Buscar produto"
-                                    query={productQuery}
-                                    value=""
-                                    selectedLabel={null}
-                                    placeholder="Digite nome, codigo ou codigo de barras"
-                                    emptyLabel="Nenhum produto encontrado"
-                                    options={productOptions}
-                                    disabled={!canEdit}
-                                    onQueryChange={setProductQuery}
-                                    onSelect={addProduct}
-                                />
-
-                                <div className="proc-ui-table-wrap">
-                                    <table className="proc-ui-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Produto</th>
-                                                <th>Qtd</th>
-                                                <th>Custo unit.</th>
-                                                <th>Total</th>
-                                                <th>Acoes</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {form.items.length ? form.items.map((item, index) => (
-                                                <tr key={`${item.product_id}-${index}`}>
-                                                    <td>
-                                                        <div className="proc-ui-record-card-copy">
-                                                            <strong>{item.product_name || products.find((product) => String(product.id) === String(item.product_id))?.name || 'Produto'}</strong>
-                                                            <span>{products.find((product) => String(product.id) === String(item.product_id))?.code || 'Sem codigo'}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            disabled={!canEdit}
-                                                            min="0.001"
-                                                            step="0.001"
-                                                            type="number"
-                                                            value={item.quantity}
-                                                            onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        <input
-                                                            disabled={!canEdit}
-                                                            min="0"
-                                                            step="0.01"
-                                                            type="number"
-                                                            value={item.unit_cost}
-                                                            onChange={(event) => handleItemChange(index, 'unit_cost', event.target.value)}
-                                                        />
-                                                    </td>
-                                                    <td><strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong></td>
-                                                    <td>
-                                                        <div className="proc-ui-table-actions">
-                                                            <button type="button" className="ui-button-ghost danger" disabled={!canEdit} onClick={() => handleItemRemove(index)}>
-                                                                <i className="fa-solid fa-trash" />
-                                                                <span>Remover</span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )) : (
-                                                <tr>
-                                                    <td colSpan="5">
-                                                        <div className="proc-ui-empty">
-                                                            <strong>Nenhum item no pedido</strong>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                    <div className="proc-ui-table-totalbar">
-                                        <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
-                                        <span>Frete: <strong>{formatMoney(form.freight)}</strong></span>
-                                        <span>Total: <strong>{formatMoney(total)}</strong></span>
-                                    </div>
+                                <div className="proc-ui-field">
+                                    <label>
+                                        <span>Frete previsto</span>
+                                        <input
+                                            disabled={!canEdit}
+                                            min="0"
+                                            step="0.01"
+                                            type="number"
+                                            value={form.freight}
+                                            onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))}
+                                        />
+                                    </label>
                                 </div>
 
-                                <div className="proc-ui-step-actions">
-                                    <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
-                                        <i className="fa-solid fa-arrow-left" />
-                                        <span>Voltar</span>
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="ui-button"
-                                        disabled={!canEdit || !form.items.length}
-                                        title={!form.items.length ? 'Adicione itens para revisar o pedido.' : undefined}
-                                        onClick={() => setStep(2)}
-                                    >
-                                        <span>Proximo</span>
-                                        <i className="fa-solid fa-arrow-right" />
-                                    </button>
+                                <div className="proc-ui-field full">
+                                    <label>
+                                        <span>Observacoes</span>
+                                        <textarea
+                                            className="purchases-editor-notes"
+                                            disabled={!canEdit}
+                                            rows="2"
+                                            value={form.notes}
+                                            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                                        />
+                                    </label>
                                 </div>
                             </div>
-                        ) : null}
 
-                        {step === 2 ? (
-                            <div key="purchase-step-3" className="proc-ui-stage">
-                                <div className="proc-ui-summary-grid">
-                                    <article className="proc-ui-summary-card">
-                                        <span>Fornecedor</span>
-                                        <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Itens</span>
-                                        <strong>{form.items.length}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Previsao</span>
-                                        <strong>{form.expected_at ? formatDate(form.expected_at) : 'Sem data'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Total</span>
-                                        <strong>{formatMoney(total)}</strong>
-                                    </article>
-                                </div>
-
-                                <section className="proc-ui-review-card">
-                                    <div className="proc-ui-section-title">
-                                        <h3>Resumo</h3>
-                                    </div>
-
-                                    <div className="proc-ui-surface-list">
-                                        {form.items.map((item, index) => (
-                                            <div key={`${item.product_id}-${index}`} className="proc-ui-surface-item">
-                                                <div>
-                                                    <strong>{item.product_name || products.find((product) => String(product.id) === String(item.product_id))?.name || 'Produto'}</strong>
-                                                    <small>{formatNumber(item.quantity)} un · {formatMoney(item.unit_cost)} cada</small>
-                                                </div>
-                                                <strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="proc-ui-divider" />
-
-                                    <div className="proc-ui-review-grid">
-                                        <div>
-                                            <small>Observacoes</small>
-                                            <strong>{form.notes || 'Sem observacoes registradas.'}</strong>
-                                        </div>
-                                        <div>
-                                            <small>Subtotal + frete</small>
-                                            <strong>{`${formatMoney(subtotal)} + ${formatMoney(form.freight)}`}</strong>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <div className="proc-ui-step-actions">
-                                    <button type="button" className="ui-button-ghost" onClick={() => setStep(1)}>
-                                        <i className="fa-solid fa-arrow-left" />
-                                        <span>Voltar</span>
-                                    </button>
-
-                                    <div className="proc-ui-card-toolbar">
-                                        <button
-                                            type="button"
-                                            className="ui-button-ghost"
-                                            disabled={!canEdit || savingAction !== null}
-                                            onClick={() => submitPurchase('draft')}
-                                        >
-                                            {savingAction === 'draft' ? 'Salvando...' : 'Salvar como rascunho'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="ui-button"
-                                            disabled={!canEdit || savingAction !== null}
-                                            onClick={() => submitPurchase('ordered')}
-                                        >
-                                            {savingAction === 'ordered' ? 'Enviando...' : 'Enviar pedido'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : null}
-                    </section>
-
-                    <aside className="proc-ui-sidebar purchases-history-sidebar">
-                        <div className="proc-ui-sidebar-section purchases-history-sidebar-hero">
-                            <div className="proc-ui-sidebar-header purchases-history-header">
-                                <div className="purchases-history-header-copy">
-                                    <span className="purchases-history-kicker">Painel lateral</span>
-                                    <h2>Historico</h2>
-                                    <p>{formatNumber(filteredRecords.length)} pedido(s) em {activeTabMeta.label.toLowerCase()}.</p>
-                                </div>
-                                <button type="button" className="ui-button-ghost purchases-history-new-button" onClick={() => resetEditor(activeTab)}>
-                                    <i className="fa-solid fa-plus" />
-                                    <span>Novo pedido</span>
+                            <div className="proc-ui-step-actions">
+                                <button type="button" className="ui-button-ghost" onClick={closeEditorModal}>
+                                    Fechar
                                 </button>
-                            </div>
-
-                            <div className="purchases-history-overview">
-                                <article className="purchases-history-stat">
-                                    <span>Etapa</span>
-                                    <strong>{activeTabMeta.label}</strong>
-                                </article>
-                                <article className="purchases-history-stat">
-                                    <span>Total</span>
-                                    <strong>{formatMoney(filteredStageTotal)}</strong>
-                                </article>
-                            </div>
-                        </div>
-
-                        <div className="proc-ui-sidebar-section purchases-history-toolbar-panel">
-                            <div className="proc-ui-top-tabs purchases-history-tabs">
-                                {STATUS_TABS.map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        type="button"
-                                        className={`proc-ui-tab-chip purchases-history-tab ${activeTab === tab.key ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setActiveTab(tab.key)
-                                            if (!form.id) {
-                                                setForm((current) => ({ ...current, status: tab.key }))
-                                            }
-                                        }}
-                                    >
-                                        <i className={`fa-solid ${tab.icon}`} />
-                                        <span>{tab.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-
-                            <label className="purchases-history-search">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    className="proc-ui-searchbox"
-                                    type="search"
-                                    placeholder="Buscar por numero, fornecedor ou nota"
-                                    value={listSearch}
-                                    onChange={(event) => setListSearch(event.target.value)}
-                                />
-                            </label>
-                        </div>
-
-                        <div className={`proc-ui-sidebar-list ${shouldCondenseSidebar ? 'compact' : ''}`}>
-                            {visibleSidebarRecords.length ? visibleSidebarRecords.map((record) => {
-                                const statusMeta = resolveStatusMeta(record.status)
-                                const itemCount = Number(record.items_count || record.items?.length || 0)
-                                const isActiveRecord = String(form.id || '') === String(record.id)
-
-                                return (
-                                    <button
-                                        key={record.id}
-                                        type="button"
-                                        className={`proc-ui-record-card purchases-history-card ${shouldCondenseSidebar ? 'compact' : ''} ${isActiveRecord ? 'active' : ''}`}
-                                        data-tone={statusMeta.tone}
-                                        onClick={() => loadRecord(record, 'view')}
-                                    >
-                                        <div className="proc-ui-record-card-top">
-                                            <div className="purchases-history-card-heading">
-                                                <div className="proc-ui-record-card-inline">
-                                                    <strong>{record.code}</strong>
-                                                    {!shouldCondenseSidebar ? <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} /> : null}
-                                                </div>
-                                                <strong className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</strong>
-                                            </div>
-
-                                            <div className="purchases-history-card-side">
-                                                <strong className="proc-ui-record-card-amount">{formatMoney(record.total || 0)}</strong>
-                                                {shouldCondenseSidebar ? <span className="purchases-history-card-status">{statusMeta.label}</span> : null}
-                                            </div>
-                                        </div>
-
-                                        <div className="proc-ui-record-card-copy">
-                                            {shouldCondenseSidebar ? (
-                                                <div className="proc-ui-record-card-subline purchases-history-card-meta-line">
-                                                    <span><i className="fa-solid fa-boxes-stacked" /> {formatNumber(itemCount)} item(ns)</span>
-                                                    <span><i className="fa-solid fa-calendar-day" /> {record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
-                                                    {record.document ? <span className="proc-ui-truncate"><i className="fa-solid fa-file-lines" /> {record.document}</span> : null}
-                                                </div>
-                                            ) : (
-                                                <span>{record.document || record.notes || 'Sem observacoes'}</span>
-                                            )}
-                                        </div>
-
-                                        {!shouldCondenseSidebar ? (
-                                            <div className="proc-ui-record-card-meta purchases-history-card-meta-line">
-                                                <span><i className="fa-solid fa-boxes-stacked" /> {formatNumber(itemCount)} item(ns)</span>
-                                                <span><i className="fa-solid fa-calendar-day" /> {record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
-                                            </div>
-                                        ) : null}
-
-                                        <div className="proc-ui-record-card-actions">
-                                            <button type="button" className="proc-ui-ghost-icon" title="Ver" onClick={(event) => { event.stopPropagation(); loadRecord(record, 'view') }}>
-                                                <i className="fa-solid fa-eye" />
-                                            </button>
-                                            <button type="button" className="proc-ui-ghost-icon" title="Editar" onClick={(event) => { event.stopPropagation(); loadRecord(record, 'edit') }}>
-                                                <i className="fa-solid fa-pen" />
-                                            </button>
-                                            <button type="button" className="proc-ui-ghost-icon" title="Excluir" onClick={(event) => { event.stopPropagation(); handleDelete(record) }}>
-                                                <i className="fa-solid fa-trash" />
-                                            </button>
-                                        </div>
-                                    </button>
-                                )
-                            }) : (
-                                <div className="proc-ui-empty">
-                                    <strong>Sem pedidos nesta fila</strong>
-                                    <p>Troque a etapa ou crie um novo pedido.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {shouldCondenseSidebar && (hiddenSidebarRecords > 0 || showAllSidebarRecords) ? (
-                            <div className="proc-ui-sidebar-section proc-ui-sidebar-section-compact-toggle">
                                 <button
                                     type="button"
-                                    className="ui-button-ghost proc-ui-sidebar-toggle"
-                                    onClick={() => setShowAllSidebarRecords((current) => !current)}
+                                    className="ui-button"
+                                    disabled={!canEdit || !form.supplier_id}
+                                    title={!form.supplier_id ? 'Selecione um fornecedor para continuar.' : undefined}
+                                    onClick={() => setStep(1)}
                                 >
-                                    <i className={`fa-solid ${showAllSidebarRecords ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                    <span>{showAllSidebarRecords ? 'Recolher rascunhos' : `Mostrar mais ${hiddenSidebarRecords}`}</span>
+                                    <span>Proximo</span>
+                                    <i className="fa-solid fa-arrow-right" />
                                 </button>
                             </div>
-                        ) : null}
-
-                        <div className="proc-ui-footer-totals">
-                            <span>Total da etapa: <strong>{formatMoney(filteredStageTotal)}</strong></span>
-                            <span>Itens: <strong>{formatNumber(filteredStageItems)}</strong></span>
                         </div>
-                    </aside>
+                    ) : null}
+
+                    {step === 1 ? (
+                        <div className="proc-ui-stage">
+                            <AutocompleteField
+                                emptyLabel="Nenhum produto encontrado"
+                                icon="fa-box"
+                                label="Produto"
+                                options={productOptions}
+                                placeholder="Buscar produto por nome ou codigo"
+                                query={productQuery}
+                                selectedLabel=""
+                                value=""
+                                disabled={!canEdit}
+                                onQueryChange={setProductQuery}
+                                onSelect={addProduct}
+                            />
+
+                            <div className="proc-ui-table-wrap">
+                                <table className="proc-ui-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th>Qtd</th>
+                                            <th>Custo unit.</th>
+                                            <th>Total</th>
+                                            <th />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {form.items.length ? form.items.map((item, index) => (
+                                            <tr key={`${item.product_id}-${index}`}>
+                                                <td>{getProductLabel(item, products)}</td>
+                                                <td>
+                                                    <input
+                                                        disabled={!canEdit}
+                                                        min="0"
+                                                        step="0.001"
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        disabled={!canEdit}
+                                                        min="0"
+                                                        step="0.01"
+                                                        type="number"
+                                                        value={item.unit_cost}
+                                                        onChange={(event) => handleItemChange(index, 'unit_cost', event.target.value)}
+                                                    />
+                                                </td>
+                                                <td><strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong></td>
+                                                <td>
+                                                    <button
+                                                        type="button"
+                                                        className="proc-ui-ghost-icon"
+                                                        disabled={!canEdit}
+                                                        title="Remover item"
+                                                        onClick={() => handleItemRemove(index)}
+                                                    >
+                                                        <i className="fa-solid fa-xmark" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan="5">
+                                                    <div className="proc-ui-empty">
+                                                        <strong>Nenhum item no pedido</strong>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="proc-ui-table-totalbar">
+                                <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
+                                <span>Frete: <strong>{formatMoney(parseNumber(form.freight, 0))}</strong></span>
+                                <span>Total: <strong>{formatMoney(total)}</strong></span>
+                            </div>
+
+                            <div className="proc-ui-step-actions">
+                                <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
+                                    <i className="fa-solid fa-arrow-left" />
+                                    <span>Voltar</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ui-button"
+                                    disabled={!canEdit || !form.items.length}
+                                    title={!form.items.length ? 'Adicione itens para revisar o pedido.' : undefined}
+                                    onClick={() => setStep(2)}
+                                >
+                                    <span>Proximo</span>
+                                    <i className="fa-solid fa-arrow-right" />
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {step === 2 ? (
+                        <div className="proc-ui-stage">
+                            <div className="proc-ui-summary-grid purchases-review-summary">
+                                <article className="proc-ui-summary-card">
+                                    <span>Fornecedor</span>
+                                    <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Itens</span>
+                                    <strong>{formatNumber(form.items.length)}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Previsao</span>
+                                    <strong>{form.expected_at ? formatDate(form.expected_at) : 'Sem data'}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Total</span>
+                                    <strong>{formatMoney(total)}</strong>
+                                </article>
+                            </div>
+
+                            <section className="proc-ui-review-card">
+                                <div className="proc-ui-section-title">
+                                    <h3>Resumo compacto</h3>
+                                </div>
+
+                                <div className="proc-ui-surface-list">
+                                    {form.items.map((item, index) => (
+                                        <div key={`${item.product_id}-${index}`} className="proc-ui-surface-item">
+                                            <div>
+                                                <strong>{getProductLabel(item, products)}</strong>
+                                                <small>{formatNumber(item.quantity)} un - {formatMoney(item.unit_cost)} cada</small>
+                                            </div>
+                                            <strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="proc-ui-divider" />
+
+                                <div className="proc-ui-review-grid">
+                                    <div>
+                                        <small>Observacoes</small>
+                                        <strong>{form.notes || 'Sem observacoes registradas.'}</strong>
+                                    </div>
+                                    <div>
+                                        <small>Subtotal + frete</small>
+                                        <strong>{`${formatMoney(subtotal)} + ${formatMoney(parseNumber(form.freight, 0))}`}</strong>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div className="proc-ui-step-actions">
+                                <button type="button" className="ui-button-ghost" onClick={() => setStep(1)}>
+                                    <i className="fa-solid fa-arrow-left" />
+                                    <span>Voltar</span>
+                                </button>
+
+                                <div className="proc-ui-card-toolbar purchases-editor-submitbar">
+                                    <button
+                                        type="button"
+                                        className="ui-button-ghost"
+                                        disabled={!canEdit || savingAction !== null}
+                                        onClick={() => persistPurchase('draft', form, { requestKey: 'editor-draft' })}
+                                    >
+                                        {savingAction === 'editor-draft' ? 'Salvando...' : 'Salvar rascunho'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="ui-button"
+                                        disabled={!canEdit || savingAction !== null}
+                                        onClick={() => persistPurchase('ordered', form, { requestKey: 'editor-ordered' })}
+                                    >
+                                        {savingAction === 'editor-ordered' ? 'Enviando...' : 'Enviar pedido'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {nextDisabledReason && step < 2 ? (
+                        <span className="proc-ui-step-note">{nextDisabledReason}</span>
+                    ) : null}
                 </div>
-            </div>
+            </CompactModal>
+
+            <PurchaseDetailsModal
+                busyAction={savingAction}
+                feedback={selectedDetailRecord ? feedback : null}
+                products={products}
+                record={selectedDetailRecord}
+                onCancel={handleCancelOrdered}
+                onClose={closeDetailsModal}
+                onDelete={handleDelete}
+                onEdit={openEditModal}
+                onReceive={handleReceiveFromDetails}
+                onSend={handleSendFromDetails}
+                onViewStockEntry={handleViewStockEntry}
+            />
         </AppLayout>
     )
 }

@@ -1740,6 +1740,7 @@ class OperationsWorkspaceService
             'supplier_id' => $purchase->supplier_id,
             'supplier_name' => $purchase->supplier?->name,
             'status' => $purchase->status,
+            'created_at' => $purchase->created_at?->toIso8601String(),
             'expected_at' => $purchase->expected_at?->format('Y-m-d'),
             'received_at' => $purchase->received_at?->toIso8601String(),
             'subtotal' => (float) $purchase->subtotal,
