@@ -166,6 +166,14 @@
     min-height: calc(100vh - 8.5rem);
 }
 
+.purchases-history-sidebar {
+    border-color: rgba(21, 48, 60, 0.08);
+    background:
+        radial-gradient(circle at top right, rgba(41, 151, 219, 0.11), transparent 30%),
+        linear-gradient(180deg, rgba(248, 251, 253, 0.98) 0%, rgba(241, 246, 249, 0.98) 100%);
+    box-shadow: 0 28px 54px rgba(18, 42, 53, 0.08);
+}
+
 .proc-ui-sidebar-section {
     padding: 1rem 1rem 0;
 }
@@ -213,6 +221,122 @@
 .proc-ui-date-range input:focus {
     border-color: rgba(29, 123, 189, 0.45);
     box-shadow: 0 0 0 4px rgba(86, 165, 224, 0.13);
+}
+
+.purchases-history-sidebar-hero {
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(20, 44, 58, 0.08);
+}
+
+.purchases-history-header {
+    align-items: flex-start;
+}
+
+.purchases-history-header-copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.purchases-history-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(16, 93, 139, 0.08);
+    color: #0f5c89;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.purchases-history-new-button {
+    white-space: nowrap;
+}
+
+.purchases-history-overview {
+    margin-top: 0.9rem;
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.purchases-history-stat {
+    display: grid;
+    gap: 0.12rem;
+    padding: 0.78rem 0.82rem;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.purchases-history-stat span {
+    color: #657986;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.purchases-history-stat strong {
+    color: #112e3b;
+    font-size: 0.92rem;
+}
+
+.purchases-history-toolbar-panel {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0 1rem;
+    padding: 0.95rem;
+    border: 1px solid rgba(20, 44, 58, 0.08);
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.purchases-history-sidebar .proc-ui-sidebar-section.purchases-history-toolbar-panel {
+    padding: 0.95rem;
+}
+
+.purchases-history-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.purchases-history-tab {
+    min-height: 3rem;
+    justify-content: center;
+    text-align: center;
+    padding: 0.7rem 0.6rem;
+}
+
+.purchases-history-tab span {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.purchases-history-search {
+    position: relative;
+    display: block;
+}
+
+.purchases-history-search > i {
+    position: absolute;
+    top: 50%;
+    left: 0.95rem;
+    transform: translateY(-50%);
+    color: #69808e;
+    font-size: 0.84rem;
+    pointer-events: none;
+}
+
+.purchases-history-search .proc-ui-searchbox {
+    padding-left: 2.5rem;
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .proc-ui-field textarea {
@@ -367,6 +491,68 @@
     font-size: 0.76rem;
 }
 
+.purchases-history-card {
+    position: relative;
+    padding-left: 1rem;
+    background: rgba(255, 255, 255, 0.76);
+}
+
+.purchases-history-card::before {
+    content: '';
+    position: absolute;
+    top: 0.8rem;
+    bottom: 0.8rem;
+    left: 0.4rem;
+    width: 3px;
+    border-radius: 999px;
+    background: rgba(124, 142, 152, 0.28);
+}
+
+.purchases-history-card[data-tone="warning"]::before {
+    background: rgba(209, 143, 37, 0.85);
+}
+
+.purchases-history-card[data-tone="info"]::before {
+    background: rgba(25, 111, 176, 0.85);
+}
+
+.purchases-history-card[data-tone="success"]::before {
+    background: rgba(44, 132, 86, 0.85);
+}
+
+.purchases-history-card-heading,
+.purchases-history-card-side {
+    display: grid;
+    gap: 0.16rem;
+    min-width: 0;
+}
+
+.purchases-history-card-side {
+    justify-items: end;
+}
+
+.purchases-history-card-status {
+    color: #617887;
+    font-size: 0.73rem;
+    font-weight: 700;
+}
+
+.purchases-history-card-meta-line {
+    align-items: center;
+}
+
+.purchases-history-card-meta-line span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    min-width: 0;
+}
+
+.purchases-history-card-meta-line i {
+    color: #7b919e;
+    font-size: 0.72rem;
+}
+
 .proc-ui-record-card-actions {
     display: flex;
     flex-wrap: wrap;
@@ -420,6 +606,7 @@
 .proc-ui-sidebar-toggle {
     width: 100%;
     justify-content: center;
+    background: rgba(255, 255, 255, 0.7);
 }
 
 .proc-ui-stepper {

@@ -206,6 +206,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return filteredRecords.slice(0, 4)
     }, [filteredRecords, shouldCondenseSidebar, showAllSidebarRecords])
     const hiddenSidebarRecords = Math.max(0, filteredRecords.length - visibleSidebarRecords.length)
+    const activeTabMeta = STATUS_TABS.find((tab) => tab.key === activeTab) || STATUS_TABS[0]
+    const filteredStageTotal = useMemo(
+        () => filteredRecords.reduce((totalAmount, record) => totalAmount + Number(record.total || 0), 0),
+        [filteredRecords]
+    )
+    const filteredStageItems = useMemo(
+        () => filteredRecords.reduce((count, record) => count + Number(record.items_count || 0), 0),
+        [filteredRecords]
+    )
 
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
     const total = subtotal + parseNumber(form.freight, 0)
@@ -678,27 +687,39 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         ) : null}
                     </section>
 
-                    <aside className="proc-ui-sidebar">
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-sidebar-header">
-                                <div>
+                    <aside className="proc-ui-sidebar purchases-history-sidebar">
+                        <div className="proc-ui-sidebar-section purchases-history-sidebar-hero">
+                            <div className="proc-ui-sidebar-header purchases-history-header">
+                                <div className="purchases-history-header-copy">
+                                    <span className="purchases-history-kicker">Painel lateral</span>
                                     <h2>Historico</h2>
-                                    <p>{filteredRecords.length} pedido(s) na etapa atual.</p>
+                                    <p>{formatNumber(filteredRecords.length)} pedido(s) em {activeTabMeta.label.toLowerCase()}.</p>
                                 </div>
-                                <button type="button" className="ui-button" onClick={() => resetEditor(activeTab)}>
+                                <button type="button" className="ui-button-ghost purchases-history-new-button" onClick={() => resetEditor(activeTab)}>
                                     <i className="fa-solid fa-plus" />
                                     <span>Novo pedido</span>
                                 </button>
                             </div>
+
+                            <div className="purchases-history-overview">
+                                <article className="purchases-history-stat">
+                                    <span>Etapa</span>
+                                    <strong>{activeTabMeta.label}</strong>
+                                </article>
+                                <article className="purchases-history-stat">
+                                    <span>Total</span>
+                                    <strong>{formatMoney(filteredStageTotal)}</strong>
+                                </article>
+                            </div>
                         </div>
 
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-top-tabs">
+                        <div className="proc-ui-sidebar-section purchases-history-toolbar-panel">
+                            <div className="proc-ui-top-tabs purchases-history-tabs">
                                 {STATUS_TABS.map((tab) => (
                                     <button
                                         key={tab.key}
                                         type="button"
-                                        className={`proc-ui-tab-chip ${activeTab === tab.key ? 'active' : ''}`}
+                                        className={`proc-ui-tab-chip purchases-history-tab ${activeTab === tab.key ? 'active' : ''}`}
                                         onClick={() => {
                                             setActiveTab(tab.key)
                                             if (!form.id) {
@@ -711,16 +732,17 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     </button>
                                 ))}
                             </div>
-                        </div>
 
-                        <div className="proc-ui-sidebar-section">
-                            <input
-                                className="proc-ui-searchbox"
-                                type="search"
-                                placeholder="Buscar por numero, fornecedor ou nota"
-                                value={listSearch}
-                                onChange={(event) => setListSearch(event.target.value)}
-                            />
+                            <label className="purchases-history-search">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    className="proc-ui-searchbox"
+                                    type="search"
+                                    placeholder="Buscar por numero, fornecedor ou nota"
+                                    value={listSearch}
+                                    onChange={(event) => setListSearch(event.target.value)}
+                                />
+                            </label>
                         </div>
 
                         <div className={`proc-ui-sidebar-list ${shouldCondenseSidebar ? 'compact' : ''}`}>
@@ -733,24 +755,31 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     <button
                                         key={record.id}
                                         type="button"
-                                        className={`proc-ui-record-card ${shouldCondenseSidebar ? 'compact' : ''} ${isActiveRecord ? 'active' : ''}`}
+                                        className={`proc-ui-record-card purchases-history-card ${shouldCondenseSidebar ? 'compact' : ''} ${isActiveRecord ? 'active' : ''}`}
+                                        data-tone={statusMeta.tone}
                                         onClick={() => loadRecord(record, 'view')}
                                     >
                                         <div className="proc-ui-record-card-top">
-                                            <div className="proc-ui-record-card-inline">
-                                                <strong>{record.code}</strong>
-                                                {!shouldCondenseSidebar ? <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} /> : null}
+                                            <div className="purchases-history-card-heading">
+                                                <div className="proc-ui-record-card-inline">
+                                                    <strong>{record.code}</strong>
+                                                    {!shouldCondenseSidebar ? <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} /> : null}
+                                                </div>
+                                                <strong className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</strong>
                                             </div>
-                                            <strong className="proc-ui-record-card-amount">{formatMoney(record.total || 0)}</strong>
+
+                                            <div className="purchases-history-card-side">
+                                                <strong className="proc-ui-record-card-amount">{formatMoney(record.total || 0)}</strong>
+                                                {shouldCondenseSidebar ? <span className="purchases-history-card-status">{statusMeta.label}</span> : null}
+                                            </div>
                                         </div>
 
                                         <div className="proc-ui-record-card-copy">
-                                            <strong className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</strong>
                                             {shouldCondenseSidebar ? (
-                                                <div className="proc-ui-record-card-subline">
-                                                    <span>{formatNumber(itemCount)} item(ns)</span>
-                                                    <span>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
-                                                    {record.document ? <span className="proc-ui-truncate">{record.document}</span> : null}
+                                                <div className="proc-ui-record-card-subline purchases-history-card-meta-line">
+                                                    <span><i className="fa-solid fa-boxes-stacked" /> {formatNumber(itemCount)} item(ns)</span>
+                                                    <span><i className="fa-solid fa-calendar-day" /> {record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
+                                                    {record.document ? <span className="proc-ui-truncate"><i className="fa-solid fa-file-lines" /> {record.document}</span> : null}
                                                 </div>
                                             ) : (
                                                 <span>{record.document || record.notes || 'Sem observacoes'}</span>
@@ -758,9 +787,9 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         </div>
 
                                         {!shouldCondenseSidebar ? (
-                                            <div className="proc-ui-record-card-meta">
-                                                <span>{formatMoney(record.total || 0)}</span>
-                                                <span>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
+                                            <div className="proc-ui-record-card-meta purchases-history-card-meta-line">
+                                                <span><i className="fa-solid fa-boxes-stacked" /> {formatNumber(itemCount)} item(ns)</span>
+                                                <span><i className="fa-solid fa-calendar-day" /> {record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
                                             </div>
                                         ) : null}
 
@@ -799,8 +828,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         ) : null}
 
                         <div className="proc-ui-footer-totals">
-                            <span>Total da etapa: <strong>{formatMoney(filteredRecords.reduce((totalAmount, record) => totalAmount + Number(record.total || 0), 0))}</strong></span>
-                            <span>Itens: <strong>{formatNumber(filteredRecords.reduce((count, record) => count + Number(record.items_count || 0), 0))}</strong></span>
+                            <span>Total da etapa: <strong>{formatMoney(filteredStageTotal)}</strong></span>
+                            <span>Itens: <strong>{formatNumber(filteredStageItems)}</strong></span>
                         </div>
                     </aside>
                 </div>
