@@ -867,6 +867,7 @@ class OperationsWorkspaceService
     {
         $validated = Validator::make($input, [
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'custom_name' => ['nullable', 'string', 'max:160'],
             'status' => ['required', Rule::in(['draft', 'ordered', 'received'])],
             'expected_at' => ['nullable', 'date'],
             'received_at' => ['nullable', 'date'],
@@ -932,6 +933,9 @@ class OperationsWorkspaceService
             $subtotal = round($items->sum('total'), 2);
             $freight = round((float) ($validated['freight'] ?? 0), 2);
             $purchaseMetadata = $this->decodePurchaseNotes($purchase->notes);
+            $customName = array_key_exists('custom_name', $validated)
+                ? ($validated['custom_name'] ?? null)
+                : ($purchaseMetadata['custom_name'] ?? null);
             $plainNotes = array_key_exists('notes', $validated)
                 ? ($validated['notes'] ?? null)
                 : ($purchaseMetadata['notes'] ?? null);
@@ -963,6 +967,7 @@ class OperationsWorkspaceService
                 ? ($validated['billing_due_date'] ?? null)
                 : ($purchaseMetadata['billing_due_date'] ?? null);
             $shouldEncodeNotes = $this->hasStructuredPurchaseNotes($purchase->notes)
+                || filled($customName)
                 || filled($invoiceNumber)
                 || filled($invoiceDate)
                 || filled($invoiceSeries)
@@ -985,6 +990,7 @@ class OperationsWorkspaceService
                 'total' => round($subtotal + $freight, 2),
                 'notes' => $shouldEncodeNotes
                     ? $this->encodePurchaseNotes([
+                        'custom_name' => $customName,
                         'notes' => $plainNotes,
                         'invoice_number' => $invoiceNumber,
                         'invoice_date' => $invoiceDate,
@@ -1746,6 +1752,7 @@ class OperationsWorkspaceService
             'subtotal' => (float) $purchase->subtotal,
             'freight' => (float) $purchase->freight,
             'total' => (float) $purchase->total,
+            'custom_name' => $metadata['custom_name'] ?? null,
             'notes' => $metadata['notes'] ?? null,
             'invoice_number' => $metadata['invoice_number'] ?? null,
             'invoice_date' => $metadata['invoice_date'] ?? null,

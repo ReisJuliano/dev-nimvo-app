@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatMoney, formatNumber } from '@/lib/format'
@@ -163,10 +163,6 @@ function matchesTimeSlot(record, timeSlot) {
     return true
 }
 
-function hasActiveFilters(filters) {
-    return Object.values(filters).some((value) => String(value || '').trim() !== '')
-}
-
 export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de entradas', payload }) {
     const records = Array.isArray(payload?.records) ? payload.records : []
     const importedDocuments = Array.isArray(payload?.incoming_nfe_documents) ? payload.incoming_nfe_documents : []
@@ -175,16 +171,11 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
     const [appliedFilters, setAppliedFilters] = useState(() => readInitialFilters())
     const [selectedId, setSelectedId] = useState(null)
 
-    const filtersActive = hasActiveFilters(appliedFilters)
     const normalizedSupplier = normalizeTextSearch(appliedFilters.supplier)
     const normalizedProduct = normalizeTextSearch(appliedFilters.product)
     const normalizedNf = normalizeTextSearch(appliedFilters.nf)
 
     const filteredRecords = useMemo(() => {
-        if (!filtersActive) {
-            return []
-        }
-
         return records.filter((record) => {
             if (!matchesPeriod(record, appliedFilters.period)) {
                 return false
@@ -210,7 +201,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                 return false
             }
 
-            if (normalizedNf && !matchesTextSearchAny([record.invoice_number, record.document, record.code], normalizedNf)) {
+            if (normalizedNf && !matchesTextSearchAny([record.custom_name, record.invoice_number, record.document, record.code], normalizedNf)) {
                 return false
             }
 
@@ -224,7 +215,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
 
             return true
         })
-    }, [appliedFilters, filtersActive, normalizedNf, normalizedProduct, normalizedSupplier, records])
+    }, [appliedFilters, normalizedNf, normalizedProduct, normalizedSupplier, records])
 
     const selectedRecord = useMemo(
         () => filteredRecords.find((record) => record.id === selectedId) || null,
@@ -257,6 +248,15 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
         setAppliedFilters(empty)
         setSelectedId(null)
     }
+
+    useEffect(() => {
+        const hasSelectedRecord = filteredRecords.some((record) => record.id === selectedId)
+        const nextSelectedId = hasSelectedRecord ? selectedId : (filteredRecords[0]?.id ?? null)
+
+        if (String(nextSelectedId || '') !== String(selectedId || '')) {
+            setSelectedId(nextSelectedId)
+        }
+    }, [filteredRecords, selectedId])
 
     return (
         <AppLayout title={moduleTitle}>
@@ -357,16 +357,14 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                     <section className="proc-ui-main-card">
                         <div className="proc-ui-main-header">
                             <div>
-                                <h2>{selectedRecord ? `NF ${selectedRecord.invoice_number || selectedRecord.code}` : 'Detalhes'}</h2>
+                                <h2>{selectedRecord ? (selectedRecord.custom_name || `NF ${selectedRecord.invoice_number || selectedRecord.code}`) : 'Detalhes'}</h2>
                                 {selectedRecord?.supplier_name ? <span className="proc-ui-muted">{selectedRecord.supplier_name}</span> : null}
                             </div>
 
-                            {filtersActive ? (
-                                <div className="proc-ui-inline-meta">
-                                    <span>{filteredRecords.length} notas</span>
-                                    <span>{formatMoney(filteredRecords.reduce((carry, record) => carry + Number(record.total || 0), 0))}</span>
-                                </div>
-                            ) : null}
+                            <div className="proc-ui-inline-meta">
+                                <span>{filteredRecords.length} notas</span>
+                                <span>{formatMoney(filteredRecords.reduce((carry, record) => carry + Number(record.total || 0), 0))}</span>
+                            </div>
                         </div>
 
                         {selectedRecord ? (
@@ -479,7 +477,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                             </div>
                         ) : (
                             <div className="proc-ui-empty">
-                                <strong>{filtersActive ? 'Selecione uma nota' : 'Aplique filtros'}</strong>
+                                <strong>{filteredRecords.length ? 'Selecione uma nota' : 'Sem entradas registradas'}</strong>
                             </div>
                         )}
                     </section>
@@ -488,7 +486,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                         <div className="proc-ui-sidebar-section">
                             <div className="proc-ui-card-toolbar">
                                 <strong>Resultados</strong>
-                                <span className="proc-ui-muted">{filtersActive ? filteredRecords.length : 0}</span>
+                                <span className="proc-ui-muted">{filteredRecords.length}</span>
                             </div>
                         </div>
 
@@ -496,13 +494,13 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                             {filteredRecords.length ? filteredRecords.map((record) => (
                                 <button key={record.id} type="button" className={`proc-ui-record-card ${record.id === selectedId ? 'active' : ''}`} onClick={() => setSelectedId(record.id)}>
                                     <div className="proc-ui-record-card-top">
-                                        <strong>{record.invoice_number || record.code}</strong>
+                                        <strong>{record.custom_name || record.invoice_number || record.code}</strong>
                                         <StatusBadge compact label={record.supplier_name || 'Entrada'} tone="info" />
                                     </div>
 
                                     <div className="proc-ui-record-card-copy">
                                         <strong>{formatMoney(record.total || 0)}</strong>
-                                        <span>{record.received_at ? formatDate(record.received_at) : 'Sem data'}</span>
+                                        <span>{record.code || 'Sem codigo'} - {record.received_at ? formatDate(record.received_at) : 'Sem data'}</span>
                                     </div>
 
                                     <div className="proc-ui-inline-meta">
@@ -512,7 +510,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                                 </button>
                             )) : (
                                 <div className="proc-ui-empty">
-                                    <strong>{filtersActive ? 'Sem notas' : 'Sem busca'}</strong>
+                                    <strong>Sem notas</strong>
                                 </div>
                             )}
                         </div>

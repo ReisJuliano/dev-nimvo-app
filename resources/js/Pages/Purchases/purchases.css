@@ -85,6 +85,15 @@
     white-space: nowrap;
 }
 
+.purchases-code-cell {
+    min-width: 0;
+}
+
+.purchases-code-cell span {
+    color: #637888;
+    font-size: 0.76rem;
+}
+
 .purchases-table-footer {
     display: flex;
     flex-wrap: wrap;
@@ -127,7 +136,7 @@
 
 .purchases-review-summary,
 .purchases-details-summary {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .purchases-details-modal {

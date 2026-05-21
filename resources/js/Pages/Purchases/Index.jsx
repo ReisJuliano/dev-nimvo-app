@@ -33,6 +33,7 @@ function createEmptyForm() {
     return {
         id: null,
         code: null,
+        custom_name: '',
         supplier_id: '',
         status: 'draft',
         expected_at: '',
@@ -48,6 +49,7 @@ function normalizeRecord(record) {
     return {
         ...createEmptyForm(),
         ...record,
+        custom_name: record?.custom_name || '',
         supplier_id: record?.supplier_id ? String(record.supplier_id) : '',
         expected_at: ensureDate(record?.expected_at),
         freight: String(record?.freight ?? 0),
@@ -109,9 +111,14 @@ function getProductLabel(item, products) {
     return item.product_name || products.find((product) => String(product.id) === String(item.product_id))?.name || 'Produto'
 }
 
+function getPurchaseDisplayName(record) {
+    return record?.custom_name || record?.code || `Pedido #${record?.id}`
+}
+
 function buildPurchasePayload(recordLike, status) {
     return {
         supplier_id: recordLike.supplier_id ? Number(recordLike.supplier_id) : null,
+        custom_name: recordLike.custom_name || null,
         status,
         expected_at: recordLike.expected_at || null,
         freight: parseNumber(recordLike.freight, 0),
@@ -222,13 +229,17 @@ function PurchaseDetailsModal({
                 <section className="proc-ui-modal-block purchases-details-header">
                     <div className="purchases-details-headline">
                         <div>
-                            <h3>{record.code || `Pedido #${record.id}`}</h3>
-                            <p>{record.supplier_name || 'Sem fornecedor'} - {getRecordDateLabel(record)}</p>
+                            <h3>{getPurchaseDisplayName(record)}</h3>
+                            <p>{record.code || `Pedido #${record.id}`} - {record.supplier_name || 'Sem fornecedor'} - {getRecordDateLabel(record)}</p>
                         </div>
                         <PurchaseStatusBadge status={record.status} />
                     </div>
 
                     <div className="proc-ui-summary-grid purchases-details-summary">
+                        <article className="proc-ui-summary-card">
+                            <span>Pedido</span>
+                            <strong>{getPurchaseDisplayName(record)}</strong>
+                        </article>
                         <article className="proc-ui-summary-card">
                             <span>Fornecedor</span>
                             <strong>{record.supplier_name || 'Sem fornecedor'}</strong>
@@ -393,6 +404,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
             return matchesTextSearchAny([
                 record.code,
+                record.custom_name,
                 record.supplier_name,
                 record.document,
                 record.notes,
@@ -466,7 +478,12 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         {
             key: 'code',
             label: 'Numero',
-            render: (record) => <strong>{record.code || `#${record.id}`}</strong>,
+            render: (record) => (
+                <div className="proc-ui-record-card-copy purchases-code-cell">
+                    <strong>{record.code || `#${record.id}`}</strong>
+                    <span>{record.custom_name || 'Sem nome personalizado'}</span>
+                </div>
+            ),
         },
         {
             key: 'supplier_name',
@@ -789,7 +806,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             <i className="fa-solid fa-magnifying-glass" />
                             <input
                                 className="proc-ui-searchbox"
-                                placeholder="Buscar por numero, fornecedor..."
+                                placeholder="Buscar por numero, nome, fornecedor..."
                                 type="search"
                                 value={listSearch}
                                 onChange={(event) => setListSearch(event.target.value)}
@@ -874,7 +891,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 badge={editorSession.type === 'edit' ? 'Editar pedido' : 'Novo pedido'}
                 bodyClassName="purchases-editor-modal-body"
                 className="purchases-editor-modal"
-                description={form.id ? `${form.code || `Pedido #${form.id}`} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Preencha os dados e avance pelos passos do pedido.'}
+                description={form.id ? `${getPurchaseDisplayName(form)} - ${selectedSupplierName || 'Sem fornecedor'}` : 'Preencha os dados e avance pelos passos do pedido.'}
                 icon={editorSession.type === 'edit' ? 'fa-pen-to-square' : 'fa-cart-plus'}
                 size="lg"
                 title={editorSession.type === 'edit' ? 'Editar pedido' : 'Criar pedido'}
@@ -925,6 +942,20 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             />
 
                             <div className="proc-ui-field-grid">
+                                <div className="proc-ui-field full">
+                                    <label>
+                                        <span>Nome do pedido</span>
+                                        <input
+                                            disabled={!canEdit}
+                                            maxLength="160"
+                                            placeholder="Ex.: Reposicao feira de sabado"
+                                            type="text"
+                                            value={form.custom_name}
+                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
+                                        />
+                                    </label>
+                                </div>
+
                                 <div className="proc-ui-field">
                                     <label>
                                         <span>Previsao de entrega</span>
@@ -1088,6 +1119,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     {step === 2 ? (
                         <div className="proc-ui-stage">
                             <div className="proc-ui-summary-grid purchases-review-summary">
+                                <article className="proc-ui-summary-card">
+                                    <span>Pedido</span>
+                                    <strong>{getPurchaseDisplayName(form)}</strong>
+                                </article>
                                 <article className="proc-ui-summary-card">
                                     <span>Fornecedor</span>
                                     <strong>{selectedSupplierName || 'Nao selecionado'}</strong>
