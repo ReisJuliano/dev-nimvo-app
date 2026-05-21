@@ -50,55 +50,8 @@
     justify-content: center;
 }
 
-.purchases-filters-grid {
-    display: grid;
-    grid-template-columns: minmax(15rem, 1.5fr) repeat(3, minmax(8.5rem, 0.8fr)) minmax(18rem, 1.5fr) auto;
-    gap: 0.85rem;
-    align-items: end;
-}
-
-.purchases-filter-field {
-    display: grid;
-    gap: 0.4rem;
-    min-width: 0;
-}
-
-.purchases-filter-field span {
-    color: #516878;
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.purchases-filter-field input,
-.purchases-filter-field select {
-    width: 100%;
-}
-
-.purchases-period-field {
-    min-width: 0;
-}
-
-.purchases-period-range {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.55rem;
-    align-items: center;
-}
-
-.purchases-period-range span {
-    color: #607686;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-align: center;
-}
-
-.purchases-filter-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.6rem;
+.purchases-range-form {
+    max-width: 36rem;
 }
 
 .purchases-records-table .dense-table th,
@@ -225,10 +178,6 @@
         display: grid;
     }
 
-    .purchases-filters-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .purchases-new-button {
         justify-content: center;
     }
@@ -246,10 +195,6 @@
         padding: 0.85rem;
     }
 
-    .purchases-filters-grid {
-        grid-template-columns: 1fr;
-    }
-
     .purchases-toolbar-tabs {
         width: 100%;
     }
@@ -259,22 +204,8 @@
         width: 100%;
     }
 
-    .purchases-period-range {
-        grid-template-columns: 1fr;
-    }
-
-    .purchases-period-range span {
-        text-align: left;
-    }
-
-    .purchases-filter-actions {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .purchases-filter-actions .ui-button,
-    .purchases-filter-actions .ui-button-ghost {
-        width: 100%;
+    .purchases-range-form {
+        max-width: none;
     }
 
     .purchases-review-summary,

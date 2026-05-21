@@ -24,21 +24,6 @@ const STEPS = [
     { key: 'review', label: 'Revisao final', icon: 'fa-circle-check' },
 ]
 
-const MONTH_OPTIONS = [
-    { value: '01', label: 'Janeiro' },
-    { value: '02', label: 'Fevereiro' },
-    { value: '03', label: 'Marco' },
-    { value: '04', label: 'Abril' },
-    { value: '05', label: 'Maio' },
-    { value: '06', label: 'Junho' },
-    { value: '07', label: 'Julho' },
-    { value: '08', label: 'Agosto' },
-    { value: '09', label: 'Setembro' },
-    { value: '10', label: 'Outubro' },
-    { value: '11', label: 'Novembro' },
-    { value: '12', label: 'Dezembro' },
-]
-
 function resolveInitialTab(records) {
     return 'all'
 }
@@ -62,12 +47,8 @@ function createEmptyForm() {
 function createListFilters() {
     return {
         search: '',
-        date: '',
-        month: '',
-        year: '',
-        time: '',
-        period_from: '',
-        period_to: '',
+        from: '',
+        to: '',
     }
 }
 
@@ -165,31 +146,12 @@ function matchesPurchaseFilters(record, filters, status) {
 
     const dateTimeValue = getPurchaseFilterDateTime(record)
     const recordDate = dateTimeValue.slice(0, 10)
-    const recordMonth = dateTimeValue.slice(5, 7)
-    const recordYear = dateTimeValue.slice(0, 4)
-    const recordTime = dateTimeValue.slice(11, 16)
 
-    if (filters?.date && recordDate !== filters.date) {
+    if (filters?.from && (!recordDate || recordDate < filters.from)) {
         return false
     }
 
-    if (filters?.month && recordMonth !== filters.month) {
-        return false
-    }
-
-    if (filters?.year && recordYear !== filters.year) {
-        return false
-    }
-
-    if (filters?.time && recordTime !== filters.time) {
-        return false
-    }
-
-    if (filters?.period_from && (!recordDate || recordDate < filters.period_from)) {
-        return false
-    }
-
-    if (filters?.period_to && (!recordDate || recordDate > filters.period_to)) {
+    if (filters?.to && (!recordDate || recordDate > filters.to)) {
         return false
     }
 
@@ -612,7 +574,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     }
 
     async function handleApplyFilters() {
-        if (listFilters.period_from && listFilters.period_to && listFilters.period_from > listFilters.period_to) {
+        if (listFilters.from && listFilters.to && listFilters.from > listFilters.to) {
             setFeedback({ type: 'error', text: 'O periodo final precisa ser maior ou igual ao periodo inicial.' })
             return
         }
@@ -632,18 +594,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         } finally {
             setRecordsLoading(false)
         }
-    }
-
-    function handleClearFilters() {
-        const emptyFilters = createListFilters()
-
-        setRecords([])
-        setListFilters(emptyFilters)
-        setAppliedFilters(emptyFilters)
-        setSelectedTab('all')
-        setHasAppliedSearch(false)
-        setFeedback(null)
-        setDetailRecordId(null)
     }
 
     function resetEditorSession() {
@@ -955,76 +905,30 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         </button>
                     </div>
 
-                    <div className="purchases-filters-grid">
-                        <label className="purchases-filter-field">
-                            <span>Data</span>
-                            <input
-                                type="date"
-                                value={listFilters.date}
-                                onChange={(event) => handleListFilterChange('date', event.target.value)}
-                            />
-                        </label>
-
-                        <label className="purchases-filter-field">
-                            <span>Mes</span>
-                            <select
-                                value={listFilters.month}
-                                onChange={(event) => handleListFilterChange('month', event.target.value)}
-                            >
-                                <option value="">Todos</option>
-                                {MONTH_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </label>
-
-                        <label className="purchases-filter-field">
-                            <span>Ano</span>
-                            <input
-                                inputMode="numeric"
-                                maxLength="4"
-                                placeholder="2026"
-                                type="text"
-                                value={listFilters.year}
-                                onChange={(event) => handleListFilterChange('year', event.target.value)}
-                            />
-                        </label>
-
-                        <label className="purchases-filter-field">
-                            <span>Horario</span>
-                            <input
-                                type="time"
-                                value={listFilters.time}
-                                onChange={(event) => handleListFilterChange('time', event.target.value)}
-                            />
-                        </label>
-
-                        <div className="purchases-filter-field purchases-period-field">
-                            <span>Periodo</span>
-                            <div className="purchases-period-range">
-                                <input
-                                    type="date"
-                                    value={listFilters.period_from}
-                                    onChange={(event) => handleListFilterChange('period_from', event.target.value)}
-                                />
-                                <span>ate</span>
-                                <input
-                                    type="date"
-                                    value={listFilters.period_to}
-                                    onChange={(event) => handleListFilterChange('period_to', event.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="purchases-filter-actions">
-                            <button type="button" className="ui-button-ghost" onClick={handleClearFilters}>
-                                Limpar
-                            </button>
-                            <button type="button" className="ui-button" onClick={handleApplyFilters}>
-                                Buscar
-                            </button>
-                        </div>
-                    </div>
+                    <form
+                        className="proc-ui-date-range proc-ui-date-range-with-action purchases-range-form"
+                        onSubmit={(event) => {
+                            event.preventDefault()
+                            handleApplyFilters()
+                        }}
+                    >
+                        <input
+                            aria-label="Data inicial"
+                            type="date"
+                            value={listFilters.from}
+                            onChange={(event) => handleListFilterChange('from', event.target.value)}
+                        />
+                        <input
+                            aria-label="Data final"
+                            type="date"
+                            value={listFilters.to}
+                            onChange={(event) => handleListFilterChange('to', event.target.value)}
+                        />
+                        <button type="submit" className="ui-button" disabled={recordsLoading}>
+                            <i className="fa-solid fa-calendar-check" />
+                            <span>{recordsLoading ? 'Buscando...' : 'Buscar'}</span>
+                        </button>
+                    </form>
 
                     {pageFeedbackVisible ? (
                         <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
