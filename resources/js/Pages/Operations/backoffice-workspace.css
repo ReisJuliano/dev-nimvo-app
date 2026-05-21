@@ -282,6 +282,10 @@
     gap: 0.75rem;
 }
 
+.proc-ui-sidebar-list.compact {
+    gap: 0.5rem;
+}
+
 .proc-ui-record-card {
     width: 100%;
     display: grid;
@@ -314,6 +318,53 @@
 .proc-ui-record-card-copy {
     display: grid;
     gap: 0.18rem;
+}
+
+.proc-ui-record-card-inline,
+.proc-ui-record-card-subline {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.proc-ui-record-card-subline {
+    flex-wrap: wrap;
+    color: #627584;
+    font-size: 0.75rem;
+}
+
+.proc-ui-record-card-amount {
+    color: #10384f;
+    font-size: 0.88rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.proc-ui-record-card.compact {
+    gap: 0.42rem;
+    padding: 0.78rem 0.82rem;
+    border-radius: 18px;
+    background: rgba(248, 251, 253, 0.95);
+    box-shadow: 0 10px 28px rgba(15, 35, 45, 0.05);
+}
+
+.proc-ui-record-card.compact .proc-ui-record-card-copy {
+    gap: 0.1rem;
+}
+
+.proc-ui-record-card.compact .proc-ui-record-card-top {
+    gap: 0.5rem;
+}
+
+.proc-ui-record-card.compact .proc-ui-record-card-actions {
+    gap: 0.3rem;
+}
+
+.proc-ui-record-card.compact .proc-ui-ghost-icon {
+    min-width: 1.85rem;
+    height: 1.85rem;
+    font-size: 0.76rem;
 }
 
 .proc-ui-record-card-actions {
@@ -360,6 +411,15 @@
     border-top: 1px solid rgba(20, 44, 58, 0.08);
     color: #4c6777;
     font-size: 0.84rem;
+}
+
+.proc-ui-sidebar-section-compact-toggle {
+    padding-top: 0;
+}
+
+.proc-ui-sidebar-toggle {
+    width: 100%;
+    justify-content: center;
 }
 
 .proc-ui-stepper {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatMoney, formatNumber } from '@/lib/format'
@@ -146,6 +146,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [listSearch, setListSearch] = useState('')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
+    const [showAllSidebarRecords, setShowAllSidebarRecords] = useState(false)
 
     const selectedSupplierName = findLabel(suppliers, form.supplier_id)
     const normalizedListSearch = normalizeTextSearch(listSearch)
@@ -196,6 +197,16 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         ], normalized)).slice(0, 8)
     }, [productQuery, products])
 
+    const shouldCondenseSidebar = activeTab === 'draft' && !normalizedListSearch
+    const visibleSidebarRecords = useMemo(() => {
+        if (!shouldCondenseSidebar || showAllSidebarRecords) {
+            return filteredRecords
+        }
+
+        return filteredRecords.slice(0, 4)
+    }, [filteredRecords, shouldCondenseSidebar, showAllSidebarRecords])
+    const hiddenSidebarRecords = Math.max(0, filteredRecords.length - visibleSidebarRecords.length)
+
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
     const total = subtotal + parseNumber(form.freight, 0)
     const stepReady = [
@@ -207,9 +218,13 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const canEdit = !isLocked && editorMode === 'edit'
     const nextDisabledReason = step === 0 && !form.supplier_id
         ? 'Selecione um fornecedor para continuar.'
-        : step === 1 && !form.items.length
+            : step === 1 && !form.items.length
             ? 'Adicione pelo menos um item ao pedido.'
             : ''
+
+    useEffect(() => {
+        setShowAllSidebarRecords(false)
+    }, [activeTab, normalizedListSearch])
 
     function resetEditor(nextTab = 'draft') {
         setActiveTab(nextTab)
@@ -708,31 +723,46 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             />
                         </div>
 
-                        <div className="proc-ui-sidebar-list">
-                            {filteredRecords.length ? filteredRecords.map((record) => {
+                        <div className={`proc-ui-sidebar-list ${shouldCondenseSidebar ? 'compact' : ''}`}>
+                            {visibleSidebarRecords.length ? visibleSidebarRecords.map((record) => {
                                 const statusMeta = resolveStatusMeta(record.status)
+                                const itemCount = Number(record.items_count || record.items?.length || 0)
+                                const isActiveRecord = String(form.id || '') === String(record.id)
 
                                 return (
                                     <button
                                         key={record.id}
                                         type="button"
-                                        className={`proc-ui-record-card ${String(form.id || '') === String(record.id) ? 'active' : ''}`}
+                                        className={`proc-ui-record-card ${shouldCondenseSidebar ? 'compact' : ''} ${isActiveRecord ? 'active' : ''}`}
                                         onClick={() => loadRecord(record, 'view')}
                                     >
                                         <div className="proc-ui-record-card-top">
-                                            <strong>{record.code}</strong>
-                                            <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                            <div className="proc-ui-record-card-inline">
+                                                <strong>{record.code}</strong>
+                                                {!shouldCondenseSidebar ? <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} /> : null}
+                                            </div>
+                                            <strong className="proc-ui-record-card-amount">{formatMoney(record.total || 0)}</strong>
                                         </div>
 
                                         <div className="proc-ui-record-card-copy">
                                             <strong className="proc-ui-truncate">{record.supplier_name || 'Sem fornecedor'}</strong>
-                                            <span>{record.document || record.notes || 'Sem observacoes'}</span>
+                                            {shouldCondenseSidebar ? (
+                                                <div className="proc-ui-record-card-subline">
+                                                    <span>{formatNumber(itemCount)} item(ns)</span>
+                                                    <span>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
+                                                    {record.document ? <span className="proc-ui-truncate">{record.document}</span> : null}
+                                                </div>
+                                            ) : (
+                                                <span>{record.document || record.notes || 'Sem observacoes'}</span>
+                                            )}
                                         </div>
 
-                                        <div className="proc-ui-record-card-meta">
-                                            <span>{formatMoney(record.total || 0)}</span>
-                                            <span>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
-                                        </div>
+                                        {!shouldCondenseSidebar ? (
+                                            <div className="proc-ui-record-card-meta">
+                                                <span>{formatMoney(record.total || 0)}</span>
+                                                <span>{record.expected_at ? formatDate(record.expected_at) : 'Sem previsao'}</span>
+                                            </div>
+                                        ) : null}
 
                                         <div className="proc-ui-record-card-actions">
                                             <button type="button" className="proc-ui-ghost-icon" title="Ver" onClick={(event) => { event.stopPropagation(); loadRecord(record, 'view') }}>
@@ -754,6 +784,19 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 </div>
                             )}
                         </div>
+
+                        {shouldCondenseSidebar && (hiddenSidebarRecords > 0 || showAllSidebarRecords) ? (
+                            <div className="proc-ui-sidebar-section proc-ui-sidebar-section-compact-toggle">
+                                <button
+                                    type="button"
+                                    className="ui-button-ghost proc-ui-sidebar-toggle"
+                                    onClick={() => setShowAllSidebarRecords((current) => !current)}
+                                >
+                                    <i className={`fa-solid ${showAllSidebarRecords ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                                    <span>{showAllSidebarRecords ? 'Recolher rascunhos' : `Mostrar mais ${hiddenSidebarRecords}`}</span>
+                                </button>
+                            </div>
+                        ) : null}
 
                         <div className="proc-ui-footer-totals">
                             <span>Total da etapa: <strong>{formatMoney(filteredRecords.reduce((totalAmount, record) => totalAmount + Number(record.total || 0), 0))}</strong></span>
