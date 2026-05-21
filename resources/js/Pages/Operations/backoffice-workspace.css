@@ -627,6 +627,184 @@
     vertical-align: top;
 }
 
+.proc-ui-consultations-toolbar,
+.proc-ui-consultations-toolbar-actions,
+.proc-ui-record-table-heading,
+.proc-ui-record-sort-button,
+.proc-ui-record-status-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.proc-ui-consultations-toolbar {
+    justify-content: space-between;
+    gap: 0.85rem;
+}
+
+.proc-ui-consultations-toolbar-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.proc-ui-records-table-wrap {
+    border-radius: 24px;
+}
+
+.proc-ui-records-table {
+    min-width: 940px;
+}
+
+.proc-ui-records-table thead th {
+    padding: 0.75rem 0.8rem;
+    white-space: nowrap;
+}
+
+.proc-ui-record-table-heading {
+    justify-content: space-between;
+}
+
+.proc-ui-record-sort-button,
+.proc-ui-record-filter-trigger {
+    border: 0;
+    background: transparent;
+    color: inherit;
+}
+
+.proc-ui-record-sort-button {
+    flex: 1;
+    justify-content: space-between;
+    padding: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.proc-ui-record-sort-button i,
+.proc-ui-record-filter-trigger i {
+    color: #6b7f8d;
+}
+
+.proc-ui-record-filter-trigger {
+    width: 1.95rem;
+    height: 1.95rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.proc-ui-record-sort-button:hover,
+.proc-ui-record-filter-trigger:hover {
+    color: #105d8b;
+}
+
+.proc-ui-record-filter-trigger:hover {
+    background: rgba(37, 141, 214, 0.12);
+    transform: translateY(-1px);
+}
+
+.proc-ui-record-filter-trigger.active {
+    background: rgba(37, 141, 214, 0.14);
+    color: #0f5c89;
+}
+
+.proc-ui-record-filter-row th {
+    padding: 0.55rem 0.75rem 0.8rem;
+    background: rgba(248, 251, 253, 0.98);
+}
+
+.proc-ui-record-filter-row input,
+.proc-ui-record-filter-row select {
+    min-height: 2.55rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.82rem;
+}
+
+.proc-ui-record-filter-actions {
+    text-align: right;
+}
+
+.proc-ui-record-open-column {
+    width: 4.1rem;
+    text-align: center;
+}
+
+.proc-ui-record-row {
+    cursor: pointer;
+    transition: background 150ms ease, box-shadow 150ms ease;
+    outline: none;
+}
+
+.proc-ui-record-row:hover,
+.proc-ui-record-row:focus-visible,
+.proc-ui-record-row.active {
+    background: linear-gradient(90deg, rgba(242, 248, 252, 0.96), rgba(255, 255, 255, 0.98));
+    box-shadow: inset 3px 0 0 rgba(29, 123, 189, 0.28);
+}
+
+.proc-ui-record-row td {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+.proc-ui-record-primary {
+    display: grid;
+    gap: 0.15rem;
+}
+
+.proc-ui-record-primary small {
+    color: #657986;
+    line-height: 1.25;
+}
+
+.proc-ui-record-value-cell {
+    text-align: right;
+}
+
+.proc-ui-record-value-cell .proc-ui-record-primary {
+    justify-items: end;
+}
+
+.proc-ui-record-status-cell {
+    justify-content: flex-start;
+}
+
+.proc-ui-record-open-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.proc-ui-record-open-indicator {
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(37, 141, 214, 0.1);
+    color: #0f5c89;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.proc-ui-record-row:hover .proc-ui-record-open-indicator,
+.proc-ui-record-row:focus-visible .proc-ui-record-open-indicator,
+.proc-ui-record-row.active .proc-ui-record-open-indicator {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.proc-ui-consultations-toolbar .ui-button-ghost.active {
+    border-color: rgba(26, 117, 186, 0.24);
+    background: rgba(37, 141, 214, 0.12);
+    color: #105d8b;
+}
+
 .proc-ui-table tbody tr.warning-row {
     background: rgba(252, 237, 204, 0.72);
 }
@@ -808,6 +986,15 @@
 
     .proc-ui-step::after {
         display: none;
+    }
+
+    .proc-ui-consultations-toolbar {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .proc-ui-consultations-toolbar-actions {
+        justify-content: flex-start;
     }
 }
 

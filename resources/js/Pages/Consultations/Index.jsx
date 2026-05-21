@@ -5,9 +5,26 @@ import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
-import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
+import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import '../Operations/backoffice-workspace.css'
+
+const DEFAULT_SORT = { key: 'date', direction: 'desc' }
+const DEFAULT_COLUMN_FILTERS = {
+    date: '',
+    customer: '',
+    amount: '',
+    payment: '',
+    status: '',
+}
+
+const SORTABLE_COLUMNS = {
+    date: 'Data',
+    customer: 'Cliente',
+    amount: 'Valor',
+    payment: 'Forma pagamento',
+    status: 'Status',
+}
 
 function summaryIcon(type) {
     switch (type) {
@@ -26,17 +43,127 @@ function summaryIcon(type) {
     }
 }
 
+function recordCounterparty(record) {
+    return record.details?.recipient
+        || record.details?.supplier
+        || record.subtitle
+        || '-'
+}
+
+function recordPaymentSummary(record) {
+    const labels = Array.from(new Set((record.details?.payments || []).map((payment) => payment.label).filter(Boolean)))
+
+    if (labels.length) {
+        return labels.join(', ')
+    }
+
+    return {
+        sale: 'Sem pagamento informado',
+        entry: 'Entrada de estoque',
+        delivery: 'Delivery',
+        credit: 'A prazo',
+        fiscal: 'Documento fiscal',
+    }[record.type] || 'Nao informado'
+}
+
+function recordTypeLabel(recordType, recordTypes) {
+    return recordTypes.find((entry) => entry.key === recordType)?.label || 'Registro'
+}
+
+function recordDateInputValue(value) {
+    if (!value) {
+        return ''
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function includesNormalizedText(values, term) {
+    const normalizedTerm = normalizeTextSearch(term)
+
+    if (!normalizedTerm) {
+        return true
+    }
+
+    return (values || []).some((value) => normalizeTextSearch(value).includes(normalizedTerm))
+}
+
+function compareValues(left, right) {
+    if (typeof left === 'number' && typeof right === 'number') {
+        return left - right
+    }
+
+    return String(left || '').localeCompare(String(right || ''), 'pt-BR', {
+        numeric: true,
+        sensitivity: 'base',
+    })
+}
+
 export default function ConsultationsIndex({ filters, range, recordTypes, summary, records }) {
     const [activeType, setActiveType] = useState('all')
     const [search, setSearch] = useState('')
     const [selectedUid, setSelectedUid] = useState(null)
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
+    const [sortConfig, setSortConfig] = useState(DEFAULT_SORT)
+    const [columnFilters, setColumnFilters] = useState(DEFAULT_COLUMN_FILTERS)
+    const [columnFiltersExpanded, setColumnFiltersExpanded] = useState(false)
+    const [highlightedColumnFilter, setHighlightedColumnFilter] = useState(null)
     const normalizedSearch = normalizeTextSearch(search)
+
+    const statusOptions = useMemo(() => (
+        Array.from(new Set((records || []).map((record) => record.status_label).filter(Boolean)))
+            .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+    ), [records])
+
+    const hasActiveColumnFilters = useMemo(() => (
+        Object.values(columnFilters).some((value) => String(value || '').trim() !== '')
+    ), [columnFilters])
 
     const filteredRecords = useMemo(() => (
         (records || []).filter((record) => {
             if (activeType !== 'all' && record.type !== activeType) {
+                return false
+            }
+
+            if (columnFilters.date && recordDateInputValue(record.date) !== columnFilters.date) {
+                return false
+            }
+
+            if (!includesNormalizedText([
+                recordCounterparty(record),
+                record.subtitle,
+                record.title,
+                record.details?.document,
+            ], columnFilters.customer)) {
+                return false
+            }
+
+            if (!includesNormalizedText([
+                formatMoney(record.amount),
+                String(record.amount ?? ''),
+            ], columnFilters.amount)) {
+                return false
+            }
+
+            if (!includesNormalizedText([
+                recordPaymentSummary(record),
+                ...(record.tags || []),
+            ], columnFilters.payment)) {
+                return false
+            }
+
+            if (columnFilters.status && record.status_label !== columnFilters.status) {
                 return false
             }
 
@@ -54,13 +181,32 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                 record.details?.address,
                 record.details?.notes,
             ], normalizedSearch)
+        }).sort((left, right) => {
+            const direction = sortConfig.direction === 'asc' ? 1 : -1
+
+            return compareValues(sortValue(left, sortConfig.key), sortValue(right, sortConfig.key)) * direction
         })
-    ), [activeType, normalizedSearch, records])
+    ), [activeType, columnFilters, normalizedSearch, records, sortConfig])
 
     const selectedRecord = useMemo(
         () => (records || []).find((record) => record.uid === selectedUid) || null,
         [records, selectedUid],
     )
+
+    function sortValue(record, key) {
+        switch (key) {
+            case 'customer':
+                return recordCounterparty(record)
+            case 'amount':
+                return Number(record.amount || 0)
+            case 'payment':
+                return recordPaymentSummary(record)
+            case 'status':
+                return record.status_label
+            default:
+                return record.date ? new Date(record.date).getTime() : 0
+        }
+    }
 
     function changePeriod(period) {
         router.get('/consultas-cancelamentos', { period }, { preserveScroll: true, replace: true })
@@ -166,6 +312,63 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
         }
     }
 
+    function toggleSort(key) {
+        setSortConfig((current) => {
+            if (current.key === key) {
+                return {
+                    key,
+                    direction: current.direction === 'asc' ? 'desc' : 'asc',
+                }
+            }
+
+            return {
+                key,
+                direction: key === 'amount' ? 'desc' : 'asc',
+            }
+        })
+    }
+
+    function sortIcon(columnKey) {
+        if (sortConfig.key !== columnKey) {
+            return 'fa-arrows-up-down'
+        }
+
+        return sortConfig.direction === 'asc'
+            ? 'fa-arrow-up-short-wide'
+            : 'fa-arrow-down-wide-short'
+    }
+
+    function handleColumnFilterChange(key, value) {
+        setColumnFilters((current) => ({
+            ...current,
+            [key]: value,
+        }))
+    }
+
+    function toggleColumnFilters(columnKey) {
+        setColumnFiltersExpanded((current) => (highlightedColumnFilter === columnKey ? !current : true))
+        setHighlightedColumnFilter(columnKey)
+    }
+
+    function clearColumnFilters() {
+        setColumnFilters(DEFAULT_COLUMN_FILTERS)
+        setColumnFiltersExpanded(false)
+        setHighlightedColumnFilter(null)
+    }
+
+    function openRecord(uid) {
+        setSelectedUid(uid)
+    }
+
+    function handleRowKeyDown(event, uid) {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return
+        }
+
+        event.preventDefault()
+        openRecord(uid)
+    }
+
     return (
         <AppLayout title="Consultas">
             <div className="proc-ui-page">
@@ -214,31 +417,170 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                         </form>
                     </div>
 
-                    <input className="proc-ui-searchbox" type="search" placeholder="Buscar por numero, cliente, fornecedor, endereco ou status" value={search} onChange={(event) => setSearch(event.target.value)} />
+                    <div className="proc-ui-consultations-toolbar">
+                        <input
+                            className="proc-ui-searchbox"
+                            type="search"
+                            placeholder="Buscar por numero, cliente, fornecedor, endereco ou status"
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                        />
+                        <div className="proc-ui-consultations-toolbar-actions">
+                            <button
+                                type="button"
+                                className={`ui-button-ghost ${columnFiltersExpanded || hasActiveColumnFilters ? 'active' : ''}`}
+                                onClick={() => setColumnFiltersExpanded((current) => !current)}
+                            >
+                                <i className="fa-solid fa-filter" />
+                                <span>Filtros por coluna</span>
+                            </button>
+                            {hasActiveColumnFilters ? (
+                                <button type="button" className="ui-button-ghost" onClick={clearColumnFilters}>
+                                    <i className="fa-solid fa-rotate-left" />
+                                    <span>Limpar filtros</span>
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
 
                     <div className="proc-ui-list-stack">
-                        {filteredRecords.length ? filteredRecords.map((record) => (
-                            <button key={record.uid} type="button" className="proc-ui-record-card" onClick={() => setSelectedUid(record.uid)}>
-                                <div className="proc-ui-record-card-top">
-                                    <div className="proc-ui-record-card-copy">
-                                        <strong>{record.title}</strong>
-                                        <span>{record.subtitle}</span>
-                                    </div>
-                                    <StatusBadge compact icon={summaryIcon(record.type)} label={record.status_label} tone={record.status_tone} />
-                                </div>
+                        {filteredRecords.length ? (
+                            <div className="proc-ui-table-wrap proc-ui-records-table-wrap">
+                                <table className="proc-ui-table proc-ui-records-table">
+                                    <thead>
+                                        <tr>
+                                            {Object.entries(SORTABLE_COLUMNS).map(([key, label]) => (
+                                                <th key={key}>
+                                                    <div className="proc-ui-record-table-heading">
+                                                        <button type="button" className="proc-ui-record-sort-button" onClick={() => toggleSort(key)}>
+                                                            <span>{label}</span>
+                                                            <i className={`fa-solid ${sortIcon(key)}`} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={`proc-ui-record-filter-trigger ${(columnFilters[key] || '') !== '' || highlightedColumnFilter === key ? 'active' : ''}`}
+                                                            onClick={() => toggleColumnFilters(key)}
+                                                            aria-label={`Filtrar coluna ${label}`}
+                                                        >
+                                                            <i className="fa-solid fa-filter" />
+                                                        </button>
+                                                    </div>
+                                                </th>
+                                            ))}
+                                            <th className="proc-ui-record-open-column">Abrir</th>
+                                        </tr>
+                                        {columnFiltersExpanded || hasActiveColumnFilters ? (
+                                            <tr className="proc-ui-record-filter-row">
+                                                <th>
+                                                    <input
+                                                        type="date"
+                                                        value={columnFilters.date}
+                                                        onChange={(event) => handleColumnFilterChange('date', event.target.value)}
+                                                        autoFocus={highlightedColumnFilter === 'date'}
+                                                    />
+                                                </th>
+                                                <th>
+                                                    <input
+                                                        type="search"
+                                                        value={columnFilters.customer}
+                                                        onChange={(event) => handleColumnFilterChange('customer', event.target.value)}
+                                                        placeholder="Nome, doc. ou venda"
+                                                        autoFocus={highlightedColumnFilter === 'customer'}
+                                                    />
+                                                </th>
+                                                <th>
+                                                    <input
+                                                        type="search"
+                                                        value={columnFilters.amount}
+                                                        onChange={(event) => handleColumnFilterChange('amount', event.target.value)}
+                                                        placeholder="Ex.: 50,00"
+                                                        autoFocus={highlightedColumnFilter === 'amount'}
+                                                    />
+                                                </th>
+                                                <th>
+                                                    <input
+                                                        type="search"
+                                                        value={columnFilters.payment}
+                                                        onChange={(event) => handleColumnFilterChange('payment', event.target.value)}
+                                                        placeholder="Pix, credito, entrega..."
+                                                        autoFocus={highlightedColumnFilter === 'payment'}
+                                                    />
+                                                </th>
+                                                <th>
+                                                    <select
+                                                        value={columnFilters.status}
+                                                        onChange={(event) => handleColumnFilterChange('status', event.target.value)}
+                                                        autoFocus={highlightedColumnFilter === 'status'}
+                                                    >
+                                                        <option value="">Todos</option>
+                                                        {statusOptions.map((status) => (
+                                                            <option key={status} value={status}>{status}</option>
+                                                        ))}
+                                                    </select>
+                                                </th>
+                                                <th className="proc-ui-record-filter-actions">
+                                                    <button type="button" className="proc-ui-ghost-icon" onClick={clearColumnFilters} aria-label="Limpar filtros">
+                                                        <i className="fa-solid fa-xmark" />
+                                                    </button>
+                                                </th>
+                                            </tr>
+                                        ) : null}
+                                    </thead>
+                                    <tbody>
+                                        {filteredRecords.map((record) => (
+                                            <tr
+                                                key={record.uid}
+                                                className={`proc-ui-record-row ${selectedUid === record.uid ? 'active' : ''}`}
+                                                tabIndex={0}
+                                                onClick={() => openRecord(record.uid)}
+                                                onKeyDown={(event) => handleRowKeyDown(event, record.uid)}
+                                            >
+                                                <td>
+                                                    <div className="proc-ui-record-primary">
+                                                        <strong>{record.date ? formatDate(record.date) : 'Sem data'}</strong>
+                                                        <small>{record.date ? formatTime(record.date) : 'Horario indisponivel'}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="proc-ui-record-primary">
+                                                        <strong>{recordCounterparty(record)}</strong>
+                                                        <small>{record.title}</small>
+                                                    </div>
+                                                </td>
+                                                <td className="proc-ui-record-value-cell">
+                                                    <div className="proc-ui-record-primary">
+                                                        <strong>{formatMoney(record.amount)}</strong>
+                                                        <small>{recordTypeLabel(record.type, recordTypes)}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="proc-ui-record-primary">
+                                                        <strong>{recordPaymentSummary(record)}</strong>
+                                                        <small>{(record.tags || [])[0] || 'Sem marcador adicional'}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="proc-ui-record-status-cell">
+                                                        <StatusBadge compact icon={summaryIcon(record.type)} label={record.status_label} tone={record.status_tone} />
+                                                    </div>
+                                                </td>
+                                                <td className="proc-ui-record-open-cell">
+                                                    <span className="proc-ui-record-open-indicator" aria-hidden="true">
+                                                        <i className="fa-solid fa-arrow-up-right-from-square" />
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
 
-                                <div className="proc-ui-record-card-meta">
-                                    <span>{formatMoney(record.amount)}</span>
-                                    <span>{record.date ? formatDateTime(record.date) : 'Sem data'}</span>
+                                <div className="proc-ui-table-totalbar">
+                                    <span>{filteredRecords.length} registro(s)</span>
+                                    <span>Ordenado por {SORTABLE_COLUMNS[sortConfig.key]} ({sortConfig.direction === 'asc' ? 'crescente' : 'decrescente'})</span>
+                                    <span>{summary.length} indicador(es) no topo</span>
                                 </div>
-
-                                {(record.tags || []).length ? (
-                                    <div className="proc-ui-inline-meta">
-                                        {record.tags.map((tag) => <span key={`${record.uid}-${tag}`}>{tag}</span>)}
-                                    </div>
-                                ) : null}
-                            </button>
-                        )) : (
+                            </div>
+                        ) : (
                             <div className="proc-ui-empty">
                                 <strong>Sem registros nesse recorte</strong>
                             </div>
@@ -250,7 +592,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
             <CompactModal
                 open={Boolean(selectedRecord)}
                 title={selectedRecord?.title || 'Detalhes'}
-                description={selectedRecord ? `${selectedRecord.subtitle} · ${formatMoney(selectedRecord.amount)}` : ''}
+                description={selectedRecord ? `${selectedRecord.subtitle} - ${formatMoney(selectedRecord.amount)}` : ''}
                 icon={selectedRecord ? summaryIcon(selectedRecord.type) : 'fa-circle-info'}
                 size="lg"
                 onClose={() => setSelectedUid(null)}
@@ -281,7 +623,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                                             <div key={`${selectedRecord.uid}-item-${index}`} className="proc-ui-surface-item">
                                                 <div>
                                                     <strong>{item.name}</strong>
-                                                    <small>{formatNumber(item.quantity)} un · {formatMoney(item.unit_price)}</small>
+                                                    <small>{formatNumber(item.quantity)} un - {formatMoney(item.unit_price)}</small>
                                                 </div>
                                                 <strong>{formatMoney(item.total)}</strong>
                                             </div>
@@ -310,7 +652,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                                             <div key={`${selectedRecord.uid}-item-${index}`} className="proc-ui-surface-item">
                                                 <div>
                                                     <strong>{item.name}</strong>
-                                                    <small>{formatNumber(item.quantity)} un · {formatMoney(item.unit_cost)}</small>
+                                                    <small>{formatNumber(item.quantity)} un - {formatMoney(item.unit_cost)}</small>
                                                 </div>
                                                 <strong>{formatMoney(item.total)}</strong>
                                             </div>
@@ -331,7 +673,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                                 </div>
                                 <div className="proc-ui-banner info">
                                     <i className="fa-solid fa-location-dot" />
-                                    <div>{selectedRecord.details.address || 'Sem endereco'} {selectedRecord.details.neighborhood ? `· ${selectedRecord.details.neighborhood}` : ''}</div>
+                                    <div>{selectedRecord.details.address || 'Sem endereco'} {selectedRecord.details.neighborhood ? ` - ${selectedRecord.details.neighborhood}` : ''}</div>
                                 </div>
                             </section>
                         ) : null}
