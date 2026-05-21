@@ -425,22 +425,14 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
                         />
-                        <div className="proc-ui-consultations-toolbar-actions">
-                            <button
-                                type="button"
-                                className={`ui-button-ghost ${columnFiltersExpanded || hasActiveColumnFilters ? 'active' : ''}`}
-                                onClick={() => setColumnFiltersExpanded((current) => !current)}
-                            >
-                                <i className="fa-solid fa-filter" />
-                                <span>Filtros por coluna</span>
-                            </button>
-                            {hasActiveColumnFilters ? (
+                        {hasActiveColumnFilters ? (
+                            <div className="proc-ui-consultations-toolbar-actions">
                                 <button type="button" className="ui-button-ghost" onClick={clearColumnFilters}>
                                     <i className="fa-solid fa-rotate-left" />
                                     <span>Limpar filtros</span>
                                 </button>
-                            ) : null}
-                        </div>
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="proc-ui-list-stack">
