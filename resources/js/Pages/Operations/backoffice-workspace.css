@@ -642,6 +642,10 @@
     gap: 0.85rem;
 }
 
+.proc-ui-card-toolbar + .proc-ui-consultations-toolbar {
+    margin-top: 0.45rem;
+}
+
 .proc-ui-consultations-toolbar-actions {
     justify-content: flex-end;
     flex-wrap: wrap;

@@ -109,6 +109,61 @@ function compareValues(left, right) {
     })
 }
 
+function recordSearchValues(record, recordTypes) {
+    const payments = record.details?.payments || []
+    const items = record.details?.items || []
+    const fiscal = record.details?.fiscal || {}
+
+    return [
+        record.title,
+        record.subtitle,
+        record.status_label,
+        recordTypeLabel(record.type, recordTypes),
+        recordCounterparty(record),
+        recordPaymentSummary(record),
+        formatMoney(record.amount),
+        String(record.amount ?? ''),
+        record.date ? formatDate(record.date) : null,
+        record.date ? formatDateTime(record.date) : null,
+        ...(record.tags || []),
+        record.details?.recipient,
+        record.details?.supplier,
+        record.details?.address,
+        record.details?.notes,
+        record.details?.document,
+        record.details?.operator,
+        record.details?.phone,
+        record.details?.courier,
+        record.details?.sale_number,
+        record.details?.status,
+        record.details?.number,
+        record.details?.series,
+        record.details?.access_key,
+        record.details?.code,
+        fiscal.status,
+        fiscal.number,
+        fiscal.series,
+        fiscal.access_key,
+        fiscal.last_error,
+        ...payments.flatMap((payment) => [
+            payment.label,
+            formatMoney(payment.amount),
+            String(payment.amount ?? ''),
+        ]),
+        ...items.flatMap((item) => [
+            item.name,
+            item.code,
+            formatMoney(item.total),
+            formatMoney(item.unit_price),
+            formatMoney(item.unit_cost),
+            String(item.quantity ?? ''),
+            String(item.total ?? ''),
+            String(item.unit_price ?? ''),
+            String(item.unit_cost ?? ''),
+        ]),
+    ]
+}
+
 export default function ConsultationsIndex({ filters, range, recordTypes, summary, records }) {
     const [activeType, setActiveType] = useState('all')
     const [search, setSearch] = useState('')
@@ -171,22 +226,13 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                 return true
             }
 
-            return matchesTextSearchAny([
-                record.title,
-                record.subtitle,
-                ...(record.tags || []),
-                record.status_label,
-                record.details?.recipient,
-                record.details?.supplier,
-                record.details?.address,
-                record.details?.notes,
-            ], normalizedSearch)
+            return matchesTextSearchAny(recordSearchValues(record, recordTypes), normalizedSearch)
         }).sort((left, right) => {
             const direction = sortConfig.direction === 'asc' ? 1 : -1
 
             return compareValues(sortValue(left, sortConfig.key), sortValue(right, sortConfig.key)) * direction
         })
-    ), [activeType, columnFilters, normalizedSearch, records, sortConfig])
+    ), [activeType, columnFilters, normalizedSearch, records, recordTypes, sortConfig])
 
     const selectedRecord = useMemo(
         () => (records || []).find((record) => record.uid === selectedUid) || null,
