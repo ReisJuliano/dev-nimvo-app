@@ -400,6 +400,33 @@
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
+.purchases-review-summary .proc-ui-summary-card,
+.purchases-details-summary .proc-ui-summary-card {
+    display: grid;
+    align-content: start;
+    gap: 0.38rem;
+    min-height: 5.85rem;
+    padding: 1rem 1.05rem;
+}
+
+.purchases-review-summary .proc-ui-summary-card span,
+.purchases-details-summary .proc-ui-summary-card span {
+    display: block;
+    color: #607484;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    text-transform: uppercase;
+}
+
+.purchases-review-summary .proc-ui-summary-card strong,
+.purchases-details-summary .proc-ui-summary-card strong {
+    display: block;
+    font-size: 1.05rem;
+    line-height: 1.2;
+}
+
 .purchases-details-modal {
     width: min(100%, 920px);
 }
