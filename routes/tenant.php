@@ -30,6 +30,7 @@ use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
 use App\Http\Controllers\Tenant\Purchases\PurchasesPageController;
+use App\Http\Controllers\Tenant\Purchases\PurchaseReportController;
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
@@ -212,6 +213,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/purchases/incoming-nfe/{document}/reprocess', [IncomingNfeApiController::class, 'reprocess'])->name('api.purchases.incoming-nfe.reprocess');
             Route::get('/purchases/incoming-nfe/{document}/xml', [IncomingNfeApiController::class, 'xml'])->name('api.purchases.incoming-nfe.xml');
             Route::get('/purchases/incoming-nfe/{document}/danfe', [IncomingNfeApiController::class, 'danfe'])->name('api.purchases.incoming-nfe.danfe');
+            Route::get('/purchases/{purchase}/report', PurchaseReportController::class)->whereNumber('purchase')->name('api.purchases.report');
             Route::get('/operations/{module}/records', [OperationsApiController::class, 'index'])->name('api.operations.index');
             Route::post('/operations/{module}/records', [OperationsApiController::class, 'store'])->name('api.operations.store');
             Route::put('/operations/{module}/records/{record}', [OperationsApiController::class, 'update'])->whereNumber('record')->name('api.operations.update');

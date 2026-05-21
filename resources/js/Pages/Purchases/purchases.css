@@ -158,7 +158,7 @@
 }
 
 .purchases-editor-modal {
-    width: min(100%, 1180px);
+    width: min(100%, 1320px);
 }
 
 .purchases-editor-modal-body {
@@ -167,6 +167,13 @@
 
 .purchases-editor-setup,
 .purchases-items-stage {
+    display: grid;
+    gap: 1rem;
+}
+
+.purchases-name-stage,
+.purchases-items-search-panel,
+.purchases-items-board {
     display: grid;
     gap: 1rem;
 }
@@ -183,9 +190,19 @@
     min-height: 4.5rem;
 }
 
-.purchases-items-search-panel,
-.purchases-items-board {
-    gap: 1rem;
+.purchases-name-copy {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.purchases-name-copy h3,
+.purchases-name-copy p {
+    margin: 0;
+}
+
+.purchases-name-copy p {
+    color: #5f7383;
+    font-size: 0.86rem;
 }
 
 .purchases-items-search-head {
@@ -233,6 +250,17 @@
     gap: 0.45rem;
 }
 
+.purchases-items-entrybar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 9rem auto;
+    align-items: end;
+    gap: 0.85rem;
+}
+
+.purchases-items-searchbox-wide {
+    min-width: 0;
+}
+
 .purchases-items-search-input {
     position: relative;
 }
@@ -247,6 +275,19 @@
 
 .purchases-items-search-input .proc-ui-searchbox {
     padding-left: 2.65rem;
+}
+
+.purchases-quick-qty {
+    margin: 0;
+}
+
+.purchases-quick-add-button {
+    min-width: 12rem;
+    justify-content: center;
+}
+
+.purchases-quick-match {
+    margin-top: -0.2rem;
 }
 
 .purchases-product-results {
@@ -285,6 +326,11 @@
     gap: 0.5rem;
 }
 
+.purchases-product-result-actions .ui-button {
+    min-width: 10.5rem;
+    justify-content: center;
+}
+
 .purchases-product-results-empty {
     min-height: 8rem;
 }
@@ -302,7 +348,7 @@
 }
 
 .purchases-items-table th:nth-child(2) {
-    min-width: 15rem;
+    min-width: 12rem;
 }
 
 .purchases-items-table th:nth-child(3) {
@@ -345,6 +391,7 @@
 }
 
 .purchases-editor-submitbar {
+    gap: 0.75rem;
     justify-content: flex-end;
 }
 
@@ -412,6 +459,10 @@
         flex-direction: column;
     }
 
+    .purchases-items-entrybar {
+        grid-template-columns: 1fr;
+    }
+
     .purchases-product-result-actions {
         justify-content: flex-start;
     }
@@ -463,6 +514,11 @@
 
     .purchases-items-meta,
     .purchases-qty-control {
+        width: 100%;
+    }
+
+    .purchases-quick-add-button,
+    .purchases-quick-qty {
         width: 100%;
     }
 
