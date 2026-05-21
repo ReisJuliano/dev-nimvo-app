@@ -72,11 +72,13 @@ class FiscalConsultationsPageTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('Fiscal/Consultations')
+            ->component('Consultations/Index')
             ->where('filters.period', 'day')
-            ->where('sales.data.0.sale_number', $sale->sale_number)
-            ->where('sales.data.0.total', 50)
-            ->where('sales.data.0.recipient.label', 'Consumidor final')
+            ->where('range.from', now()->toDateString())
+            ->where('range.to', now()->toDateString())
+            ->where('records.0.title', $sale->sale_number)
+            ->where('records.0.amount', 50)
+            ->where('records.0.subtitle', 'Consumidor final')
         );
     }
 
@@ -93,14 +95,14 @@ class FiscalConsultationsPageTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
-            ->component('Fiscal/Consultations')
+            ->component('Consultations/Index')
             ->where('filters.period', 'custom')
             ->where('filters.from', $from)
             ->where('filters.to', $to)
             ->where('range.from', $from)
             ->where('range.to', $to)
-            ->has('sales.data', 1)
-            ->where('sales.data.0.sale_number', $insideSale->sale_number)
+            ->has('records', 1)
+            ->where('records.0.title', $insideSale->sale_number)
         );
 
         $this->assertNotSame($outsideSale->sale_number, $insideSale->sale_number);

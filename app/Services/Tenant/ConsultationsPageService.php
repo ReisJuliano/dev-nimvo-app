@@ -24,7 +24,22 @@ class ConsultationsPageService
                 'items:id,sale_id,product_id,quantity,unit_price,total',
                 'items.product:id,name,code',
                 'payments:id,sale_id,payment_method,amount',
-                'latestFiscalDocument:id,sale_id,status,number,series,access_key,signed_xml,authorized_xml,response_xml,cancelled_xml,printed_at,authorized_at,cancelled_at,last_error',
+                'latestFiscalDocument' => fn ($query) => $query->select([
+                    'fiscal_documents.id',
+                    'fiscal_documents.sale_id',
+                    'fiscal_documents.status',
+                    'fiscal_documents.number',
+                    'fiscal_documents.series',
+                    'fiscal_documents.access_key',
+                    'fiscal_documents.signed_xml',
+                    'fiscal_documents.authorized_xml',
+                    'fiscal_documents.response_xml',
+                    'fiscal_documents.cancelled_xml',
+                    'fiscal_documents.printed_at',
+                    'fiscal_documents.authorized_at',
+                    'fiscal_documents.cancelled_at',
+                    'fiscal_documents.last_error',
+                ]),
             ])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->latest('created_at')
