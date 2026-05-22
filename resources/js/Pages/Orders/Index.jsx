@@ -1,14 +1,16 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
 import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
+import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import { formatMoney } from '@/lib/format'
 import { hasTextSearchWildcard, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
@@ -202,6 +204,31 @@ export default function OrdersIndex({
     const quantityInputRef = useRef(null)
     const lastSavedSignatureRef = useRef(initialDraftState ? JSON.stringify(buildDraftPayload(initialDraftState)) : null)
     const deletedDraftIdsRef = useRef(new Set())
+
+    const visibleListDrafts = useMemo(
+        () => (hasLoadedList ? drafts : []),
+        [drafts, hasLoadedList],
+    )
+
+    const resetHistoryEntry = useCallback(() => {
+        replaceCurrentInertiaHistoryPage((page) => ({
+            ...page,
+            url: '/pedidos',
+            props: {
+                ...page.props,
+                initialDraft: null,
+                filters: {
+                    applied: false,
+                    search: '',
+                    status: 'open',
+                    from: '',
+                    to: '',
+                },
+            },
+        }), '/pedidos')
+    }, [])
+
+    useResetPageHistoryOnLeave(resetHistoryEntry)
 
     useEffect(() => {
         setDrafts(sortDrafts(initialDrafts))
@@ -488,9 +515,9 @@ export default function OrdersIndex({
     const filterCounts = useMemo(
         () => ORDER_LIST_FILTERS.reduce((carry, filter) => ({
             ...carry,
-            [filter.key]: drafts.filter((draft) => resolveOrdersFilter(draft.status) === filter.key).length,
+            [filter.key]: visibleListDrafts.filter((draft) => resolveOrdersFilter(draft.status) === filter.key).length,
         }), {}),
-        [drafts],
+        [visibleListDrafts],
     )
     const filteredDrafts = useMemo(() => drafts.filter((draft) => {
         if (!hasLoadedList) {

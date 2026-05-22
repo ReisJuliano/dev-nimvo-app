@@ -1,5 +1,5 @@
 import { router, useForm } from '@inertiajs/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateConditionalSaleCard'
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
@@ -8,8 +8,10 @@ import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
+import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import '@/Pages/Products/products.css'
 import './conditional-sales.css'
 
@@ -146,6 +148,10 @@ export default function ConditionalSalesPage({
     const [openedRecordId, setOpenedRecordId] = useState(null)
     const [detailPanel, setDetailPanel] = useState('overview')
     const createForm = useForm(buildCreateDefaults())
+    const visibleConditionals = useMemo(
+        () => (hasAppliedFilters ? conditionals : []),
+        [conditionals, hasAppliedFilters],
+    )
     const customerMetaById = useMemo(
         () => new Map(customers.map((customer) => [String(customer.id), customer])),
         [customers],
@@ -166,6 +172,26 @@ export default function ConditionalSalesPage({
         finalizeForm.setData(buildFinalizeDefaults(openedConditional))
         finalizeForm.clearErrors()
     }, [finalizeForm, openedConditional, returnForm])
+
+    const resetHistoryEntry = useCallback(() => {
+        replaceCurrentInertiaHistoryPage((page) => ({
+            ...page,
+            url: '/venda-condicional',
+            props: {
+                ...page.props,
+                filters: {
+                    applied: false,
+                    status: 'open',
+                    search: '',
+                    from: '',
+                    to: '',
+                    conditional: null,
+                },
+            },
+        }), '/venda-condicional')
+    }, [])
+
+    useResetPageHistoryOnLeave(resetHistoryEntry)
 
     const createPreview = useMemo(
         () => createForm.data.items.reduce((total, item) => total + (parseNumber(item.quantity) * parseNumber(item.unit_price)), 0),
@@ -192,7 +218,7 @@ export default function ConditionalSalesPage({
             return []
         }
 
-        return conditionals.filter((conditionalSale) => {
+        return visibleConditionals.filter((conditionalSale) => {
             const customerMeta = customerMetaById.get(String(conditionalSale.customer?.id || '')) || {}
             const referenceDate = String(conditionalSale.withdrawn_at || conditionalSale.due_at || '').slice(0, 10)
 
@@ -231,7 +257,7 @@ export default function ConditionalSalesPage({
                 conditionalSale.operator_name || '',
             ].join(' ')).toLowerCase().includes(appliedSearch.trim().toLowerCase())
         })
-    }, [appliedFilter, appliedRange.from, appliedRange.to, appliedSearch, conditionals, customerMetaById, hasAppliedFilters])
+    }, [appliedFilter, appliedRange.from, appliedRange.to, appliedSearch, customerMetaById, hasAppliedFilters, visibleConditionals])
 
     const selectedRow = useMemo(
         () => filteredRows.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))
@@ -430,14 +456,14 @@ export default function ConditionalSalesPage({
                             onChange: setSearch,
                         }}
                         filters={[
-                            { key: 'all', value: 'all', label: 'Todos', count: conditionals.length },
-                            { key: 'owing', value: 'owing', label: 'Devendo', count: conditionals.filter((entry) => Number(entry.outstanding_total || 0) > 0).length },
-                            { key: 'alert', value: 'alert', label: 'Em alerta', count: conditionals.filter((entry) => Number(entry.days_overdue || 0) > 0).length },
+                            { key: 'all', value: 'all', label: 'Todos', count: visibleConditionals.length },
+                            { key: 'owing', value: 'owing', label: 'Devendo', count: visibleConditionals.filter((entry) => Number(entry.outstanding_total || 0) > 0).length },
+                            { key: 'alert', value: 'alert', label: 'Em alerta', count: visibleConditionals.filter((entry) => Number(entry.days_overdue || 0) > 0).length },
                             {
                                 key: 'over_limit',
                                 value: 'over_limit',
                                 label: 'Acima do limite',
-                                count: conditionals.filter((entry) => {
+                                count: visibleConditionals.filter((entry) => {
                                     const customerMeta = customerMetaById.get(String(entry.customer?.id || '')) || {}
                                     return Number(customerMeta.credit_limit || 0) > 0 && Number(entry.outstanding_total || 0) > Number(customerMeta.credit_limit || 0)
                                 }).length,

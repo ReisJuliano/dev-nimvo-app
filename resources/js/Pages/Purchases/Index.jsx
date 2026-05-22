@@ -1475,7 +1475,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         recordsLoading
                                             ? 'Carregando pedidos...'
                                             : !hasLoadedRecords
-                                                ? 'Clique em Atualizar para carregar'
+                                                ? 'Que tal filtrar algo?'
                                                 : periodDirty
                                                     ? 'Periodo alterado'
                                                     : 'Nenhum pedido encontrado'

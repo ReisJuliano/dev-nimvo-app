@@ -1,8 +1,10 @@
 import { Link, router, useForm, usePage } from '@inertiajs/react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import DashboardChartTooltip from '@/Components/Dashboard/DashboardChartTooltip'
 import AppLayout from '@/Layouts/AppLayout'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
+import { invalidateCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import {
     Area,
     AreaChart,
@@ -498,6 +500,10 @@ export default function Show({
 }) {
     const { url } = usePage()
     const reportPath = url.split('?')[0]
+    const resetHistoryEntry = useCallback(() => {
+        invalidateCurrentInertiaHistoryPage(reportPath)
+    }, [reportPath])
+    useResetPageHistoryOnLeave(resetHistoryEntry)
     const visibleFields = filterSchema?.fields || []
     const form = useForm(buildFormState(filters, filterSchema))
     const [advancedOpen, setAdvancedOpen] = useState(

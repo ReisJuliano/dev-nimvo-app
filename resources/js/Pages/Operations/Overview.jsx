@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import PageContainer from '@/Components/UI/PageContainer'
 import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
@@ -9,6 +9,8 @@ import FilterBar from '@/Components/Operations/FilterBar'
 import InfoPanels from '@/Components/Operations/InfoPanels'
 import ReportsShowcase from '@/Components/Operations/ReportsShowcase'
 import AppLayout from '@/Layouts/AppLayout'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
+import { invalidateCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import CreditOverview from './CreditOverview'
 import './operations.css'
 
@@ -45,6 +47,11 @@ export default function OperationsOverview({ module }) {
     const [activeTab, setActiveTab] = useState('overview')
     const isCreditOverview = module.view === 'credit_overview'
     const isReportsCatalog = module.view === 'reports_catalog'
+    const resetHistoryEntry = useCallback(() => {
+        invalidateCurrentInertiaHistoryPage(window.location.pathname)
+    }, [])
+
+    useResetPageHistoryOnLeave(resetHistoryEntry)
 
     if (isCreditOverview) {
         return <CreditOverview module={module} />

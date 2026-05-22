@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
@@ -6,9 +6,11 @@ import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
@@ -93,6 +95,7 @@ function getProductStatusMeta(product) {
 export default function ProductsIndex({ products, categories, suppliers, filters = {} }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
+    const hasAppliedFilters = Boolean(filters?.applied)
     const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
@@ -104,6 +107,27 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     const [saving, setSaving] = useState(false)
     const deferredSearch = useDeferredValue(searchControl.value)
     const normalizedSearch = normalizeTextSearch(deferredSearch)
+
+    const visibleCollectionItems = useMemo(
+        () => (hasAppliedFilters ? collectionItems : []),
+        [collectionItems, hasAppliedFilters],
+    )
+
+    const resetHistoryEntry = useCallback(() => {
+        replaceCurrentInertiaHistoryPage((page) => ({
+            ...page,
+            url: '/produtos',
+            props: {
+                ...page.props,
+                filters: {
+                    applied: false,
+                    search: '',
+                },
+            },
+        }), '/produtos')
+    }, [])
+
+    useResetPageHistoryOnLeave(resetHistoryEntry)
 
     useEffect(() => {
         if (!tenantId) {
@@ -183,7 +207,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     }, [collectionItems])
 
     const filteredProducts = useMemo(() => {
-        return collectionItems
+        return visibleCollectionItems
             .filter((product) => {
                 const matchesSearch = normalizedSearch === '' || matchesTextSearchAny(getSearchableValues(product), normalizedSearch)
                 const matchesStatus = activeFilter === 'all'
@@ -203,21 +227,21 @@ export default function ProductsIndex({ products, categories, suppliers, filters
 
                 return String(left.name || '').localeCompare(String(right.name || ''))
             })
-    }, [activeFilter, collectionItems, normalizedSearch])
+    }, [activeFilter, normalizedSearch, visibleCollectionItems])
 
     const selectedRow = useMemo(
         () => filteredProducts.find((product) => String(product.id) === String(selectedProductId))
-            || collectionItems.find((product) => String(product.id) === String(selectedProductId))
+            || visibleCollectionItems.find((product) => String(product.id) === String(selectedProductId))
             || null,
-        [collectionItems, filteredProducts, selectedProductId],
+        [filteredProducts, selectedProductId, visibleCollectionItems],
     )
 
     const filterCounts = useMemo(() => ({
-        all: collectionItems.length,
-        active: collectionItems.filter((product) => product.active).length,
-        low_stock: collectionItems.filter((product) => isLowStock(product)).length,
-        inactive: collectionItems.filter((product) => !product.active).length,
-    }), [collectionItems])
+        all: visibleCollectionItems.length,
+        active: visibleCollectionItems.filter((product) => product.active).length,
+        low_stock: visibleCollectionItems.filter((product) => isLowStock(product)).length,
+        inactive: visibleCollectionItems.filter((product) => !product.active).length,
+    }), [visibleCollectionItems])
 
     function handleCreate() {
         setSelectedProductId(null)
@@ -551,7 +575,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                             rowKey="id"
                             selectedRowKey={selectedProductId}
                             onRowClick={(product) => setSelectedProductId(product.id)}
-                            emptyMessage={filters?.applied ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
+                            emptyMessage={hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon="fa-box-open"
                             actions={(product) => [
                                 {

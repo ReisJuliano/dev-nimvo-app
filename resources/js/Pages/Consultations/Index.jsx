@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { router } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
@@ -6,10 +6,12 @@ import CompactModal from '@/Components/UI/CompactModal'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
+import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import '../Operations/backoffice-workspace.css'
 
@@ -189,6 +191,7 @@ function resolvePrintUrl(record) {
 }
 
 export default function ConsultationsIndex({ recordTypes, records, filters = {} }) {
+    const hasAppliedFilters = Boolean(filters?.applied)
     const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeType, setActiveType] = useState('all')
     const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
@@ -197,9 +200,32 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = normalizeTextSearch(searchControl.value)
+    const visibleRecords = useMemo(
+        () => (hasAppliedFilters ? (records || []) : []),
+        [hasAppliedFilters, records],
+    )
+
+    const resetHistoryEntry = useCallback(() => {
+        replaceCurrentInertiaHistoryPage((page) => ({
+            ...page,
+            url: '/consultas-cancelamentos',
+            props: {
+                ...page.props,
+                filters: {
+                    applied: false,
+                    period: 'custom',
+                    from: '',
+                    to: '',
+                    search: '',
+                },
+            },
+        }), '/consultas-cancelamentos')
+    }, [])
+
+    useResetPageHistoryOnLeave(resetHistoryEntry)
 
     const filteredRecords = useMemo(() => (
-        (records || []).filter((record) => {
+        visibleRecords.filter((record) => {
             if (activeType !== 'all' && record.type !== activeType) {
                 return false
             }
@@ -225,13 +251,13 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                 record.details?.number,
             ], normalizedSearch)
         })
-    ), [activeType, appliedRange, normalizedSearch, records])
+    ), [activeType, appliedRange, normalizedSearch, visibleRecords])
 
     const selectedRecord = useMemo(
         () => filteredRecords.find((record) => record.uid === selectedUid)
-            || (records || []).find((record) => record.uid === selectedUid)
+            || visibleRecords.find((record) => record.uid === selectedUid)
             || null,
-        [filteredRecords, records, selectedUid],
+        [filteredRecords, selectedUid, visibleRecords],
     )
 
     const columns = useMemo(
@@ -383,8 +409,8 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             value: type.key,
                             label: type.label,
                             count: type.key === 'all'
-                                ? (records || []).length
-                                : (records || []).filter((record) => record.type === type.key).length,
+                                ? visibleRecords.length
+                                : visibleRecords.filter((record) => record.type === type.key).length,
                         }))}
                         activeFilter={activeType}
                         onFilterChange={setActiveType}
@@ -412,7 +438,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             rowKey="uid"
                             selectedRowKey={selectedUid}
                             onRowClick={(record) => setSelectedUid(record.uid)}
-                            emptyMessage={filters?.applied ? 'Sem registros nesse recorte' : 'Clique em Filtrar para buscar'}
+                            emptyMessage={hasAppliedFilters ? 'Sem registros nesse recorte' : 'Clique em Filtrar para buscar'}
                             actions={(record) => [
                                 {
                                     key: 'view',
