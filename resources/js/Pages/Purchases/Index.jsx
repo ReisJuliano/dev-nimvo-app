@@ -386,6 +386,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [form, setForm] = useState(createEmptyForm())
     const [savedDraftSnapshot, setSavedDraftSnapshot] = useState('')
     const [nameEditing, setNameEditing] = useState(false)
+    const [notesExpanded, setNotesExpanded] = useState(false)
     const [productQuery, setProductQuery] = useState('')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
@@ -479,6 +480,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const selectedRowKey = listViewTab === 'in_progress' ? activeDraftRecordId : detailRecordId
     const itemsChipLabel = `${formatNumber(form.items.length)} ${form.items.length === 1 ? 'item' : 'itens'}`
     const unitsChipLabel = `${formatNumber(itemUnitsTotal)} un`
+    const hasNotes = form.notes.trim().length > 0
     const workspaceTabs = useMemo(() => (
         activeDraftRecord
             ? [
@@ -580,6 +582,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setForm(createEmptyForm())
         setSavedDraftSnapshot('')
         setNameEditing(false)
+        setNotesExpanded(false)
         setProductQuery('')
 
         if (options.nextTab) {
@@ -593,6 +596,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setForm(normalized)
         setSavedDraftSnapshot(buildDraftSnapshot(normalized))
         setNameEditing(false)
+        setNotesExpanded(false)
         setProductQuery('')
     }
 
@@ -1377,20 +1381,30 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         <span>Unidades: <strong>{unitsChipLabel}</strong></span>
                                         <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
                                         <span>Total do pedido: <strong>{formatMoney(total)}</strong></span>
+                                        <button
+                                            type="button"
+                                            className={`ui-button-ghost purchases-notes-toggle ${notesExpanded ? 'is-active' : ''} ${hasNotes ? 'has-content' : ''}`}
+                                            disabled={!canEdit && !hasNotes}
+                                            onClick={() => setNotesExpanded((current) => !current)}
+                                        >
+                                            <i className="fa-regular fa-note-sticky" />
+                                            <span>Observacoes</span>
+                                        </button>
                                     </div>
 
-                                    <div className="proc-ui-field full purchases-review-notes">
-                                        <label>
-                                            <span>Observacoes</span>
+                                    {notesExpanded ? (
+                                        <div className="purchases-review-notes is-open">
                                             <textarea
                                                 className="purchases-editor-notes"
+                                                aria-label="Observacoes"
                                                 disabled={!canEdit}
+                                                placeholder="Adicionar observacoes..."
                                                 rows="3"
                                                 value={form.notes}
                                                 onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                                             />
-                                        </label>
-                                    </div>
+                                        </div>
+                                    ) : null}
                                 </section>
                             </div>
 
