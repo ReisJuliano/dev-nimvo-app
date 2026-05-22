@@ -112,6 +112,28 @@ class OperationsModulesFlowTest extends TestCase
         ]);
     }
 
+    public function test_draft_purchase_can_be_created_without_items(): void
+    {
+        $user = $this->makeUser();
+        $service = app(OperationsWorkspaceService::class);
+
+        $response = $service->store('compras', [
+            'custom_name' => 'Reposicao de sabado',
+            'status' => 'draft',
+            'items' => [],
+        ], $user->id);
+
+        $this->assertSame('draft', $response['record']['status']);
+        $this->assertSame('Reposicao de sabado', $response['record']['custom_name']);
+        $this->assertSame(0, $response['record']['items_count']);
+        $this->assertSame(0.0, (float) $response['record']['total']);
+        $this->assertDatabaseHas('purchases', [
+            'status' => 'draft',
+            'subtotal' => 0,
+            'total' => 0,
+        ]);
+    }
+
     public function test_stock_movement_workspace_updates_product_to_informed_balance(): void
     {
         $user = $this->makeUser();

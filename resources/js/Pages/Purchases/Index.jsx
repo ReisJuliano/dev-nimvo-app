@@ -12,19 +12,12 @@ import '../Operations/backoffice-workspace.css'
 import './purchases.css'
 
 const STATUS_TABS = [
-    { key: 'all', label: 'Todos', icon: 'fa-layer-group' },
-    { key: 'draft', label: 'Rascunhos', icon: 'fa-file-lines' },
-    { key: 'ordered', label: 'Solicitadas', icon: 'fa-paper-plane' },
-    { key: 'received', label: 'Recebidas', icon: 'fa-box-open' },
-]
-
-const STEPS = [
-    { key: 'setup', label: 'Pedido', icon: 'fa-signature' },
-    { key: 'items', label: 'Itens', icon: 'fa-boxes-stacked' },
+    { key: 'in_progress', label: 'Em andamento', icon: 'fa-clock-rotate-left' },
+    { key: 'finalized', label: 'Finalizadas', icon: 'fa-circle-check' },
 ]
 
 function resolveInitialTab(records) {
-    return 'all'
+    return records.length === 0 || records.some((record) => record.status === 'draft') ? 'in_progress' : 'finalized'
 }
 
 function createEmptyForm() {
@@ -70,16 +63,20 @@ function normalizeRecord(record) {
     }
 }
 
+function resolveWorkspaceTab(status) {
+    return status === 'draft' ? 'in_progress' : 'finalized'
+}
+
 function resolveStatusMeta(status) {
     if (status === 'received') {
         return { label: 'RECEBIDA', tone: 'success', className: 'received' }
     }
 
     if (status === 'ordered') {
-        return { label: 'SOLICITADA', tone: 'info', className: 'ordered' }
+        return { label: 'FINALIZADA', tone: 'info', className: 'ordered' }
     }
 
-    return { label: 'RASCUNHO', tone: 'warning', className: 'draft' }
+    return { label: 'EM ANDAMENTO', tone: 'warning', className: 'draft' }
 }
 
 function PurchaseStatusBadge({ status, compact = false }) {
@@ -121,8 +118,8 @@ function getPurchaseFilterDateTime(record) {
     return String(record?.created_at || record?.received_at || record?.expected_at || '')
 }
 
-function matchesPurchaseFilters(record, filters, status) {
-    if (status && status !== 'all' && record.status !== status) {
+function matchesPurchaseFilters(record, filters, tab) {
+    if (tab && resolveWorkspaceTab(record.status) !== tab) {
         return false
     }
 
@@ -155,11 +152,11 @@ function matchesPurchaseFilters(record, filters, status) {
 
 function buildPurchasePayload(recordLike, status) {
     return {
-        supplier_id: null,
+        supplier_id: recordLike.supplier_id ? Number(recordLike.supplier_id) : null,
         custom_name: recordLike.custom_name || null,
         status,
-        expected_at: null,
-        freight: 0,
+        expected_at: recordLike.expected_at || null,
+        freight: parseNumber(recordLike.freight, 0),
         notes: recordLike.notes || null,
         items: (recordLike.items || []).map((item) => ({
             product_id: Number(item.product_id),
@@ -169,72 +166,20 @@ function buildPurchasePayload(recordLike, status) {
     }
 }
 
-function buildPurchaseReportUrl(recordId) {
-    return `/api/purchases/${recordId}/report`
+function buildDraftSnapshot(recordLike) {
+    return JSON.stringify({
+        custom_name: String(recordLike?.custom_name || ''),
+        notes: String(recordLike?.notes || ''),
+        items: (recordLike?.items || []).map((item) => ({
+            product_id: String(item.product_id || ''),
+            quantity: Number(parseNumber(item.quantity, 0).toFixed(3)),
+            unit_cost: Number(parseNumber(item.unit_cost, 0).toFixed(2)),
+        })),
+    })
 }
 
-function AutocompleteField({
-    label,
-    icon,
-    query,
-    value,
-    selectedLabel,
-    placeholder,
-    emptyLabel,
-    options,
-    onQueryChange,
-    onSelect,
-    disabled = false,
-}) {
-    const shouldShow = !disabled && query.trim().length > 0
-
-    return (
-        <div className="proc-ui-field full">
-            <label>
-                <span className="proc-ui-label">
-                    <i className={`fa-solid ${icon}`} /> {label}
-                </span>
-                <div className="proc-ui-autocomplete">
-                    <input
-                        className="proc-ui-searchbox"
-                        disabled={disabled}
-                        placeholder={placeholder}
-                        type="search"
-                        value={query}
-                        onChange={(event) => onQueryChange(event.target.value)}
-                    />
-                    {selectedLabel ? (
-                        <div className="proc-ui-pill">
-                            <i className="fa-solid fa-check" />
-                            <span className="proc-ui-truncate">{selectedLabel}</span>
-                        </div>
-                    ) : null}
-                    {shouldShow ? (
-                        <div className="proc-ui-autocomplete-list">
-                            {options.length ? options.map((option) => (
-                                <button
-                                    key={option.id}
-                                    className="proc-ui-autocomplete-item"
-                                    type="button"
-                                    onClick={() => onSelect(option)}
-                                >
-                                    <div className="proc-ui-record-card-copy">
-                                        <strong>{option.name}</strong>
-                                        <span>{option.document || option.code || option.barcode || option.city_name || 'Sem complemento'}</span>
-                                    </div>
-                                    {String(value || '') === String(option.id) ? <i className="fa-solid fa-circle-check" /> : null}
-                                </button>
-                            )) : (
-                                <div className="proc-ui-empty">
-                                    <strong>{emptyLabel}</strong>
-                                </div>
-                            )}
-                        </div>
-                    ) : null}
-                </div>
-            </label>
-        </div>
-    )
+function buildPurchaseReportUrl(recordId) {
+    return `/api/purchases/${recordId}/report`
 }
 
 function PurchaseDetailsModal({
@@ -368,7 +313,7 @@ function PurchaseDetailsModal({
                     {record.status === 'draft' ? (
                         <>
                             <button type="button" className="ui-button-ghost" onClick={() => onEdit(record)}>
-                                Editar
+                                Abrir pedido
                             </button>
                             <button
                                 type="button"
@@ -429,29 +374,28 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [records, setRecords] = useState(initialRecords)
     const [selectedTab, setSelectedTab] = useState(initialTab)
     const [listFilters, setListFilters] = useState(createListFilters())
-    const [appliedFilters, setAppliedFilters] = useState(createListFilters())
-    const [hasAppliedSearch, setHasAppliedSearch] = useState(false)
     const [detailRecordId, setDetailRecordId] = useState(null)
-    const [editorOpen, setEditorOpen] = useState(false)
-    const [editorSession, setEditorSession] = useState({ type: 'create', recordId: null })
-    const [step, setStep] = useState(0)
+    const [createModalOpen, setCreateModalOpen] = useState(false)
+    const [createDraftName, setCreateDraftName] = useState('')
+    const [activeDraftRecordId, setActiveDraftRecordId] = useState(null)
     const [form, setForm] = useState(createEmptyForm())
+    const [savedDraftSnapshot, setSavedDraftSnapshot] = useState('')
     const [productQuery, setProductQuery] = useState('')
     const [quickQuantity, setQuickQuantity] = useState('1')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
     const [recordsLoading, setRecordsLoading] = useState(false)
     const productSearchRef = useRef(null)
+
     const productsById = useMemo(
         () => new Map(products.map((product) => [String(product.id), product])),
         [products],
     )
 
-    const filteredRecords = useMemo(() => (
-        hasAppliedSearch
-            ? records.filter((record) => matchesPurchaseFilters(record, appliedFilters, selectedTab))
-            : []
-    ), [appliedFilters, hasAppliedSearch, records, selectedTab])
+    const filteredRecords = useMemo(
+        () => records.filter((record) => matchesPurchaseFilters(record, listFilters, selectedTab)),
+        [listFilters, records, selectedTab],
+    )
 
     const productOptions = useMemo(() => {
         const normalized = normalizeTextSearch(productQuery)
@@ -466,6 +410,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             product.barcode,
         ], normalized)).slice(0, 8)
     }, [productQuery, products])
+
     const highlightedProduct = useMemo(() => {
         const normalized = normalizeTextSearch(productQuery)
 
@@ -477,25 +422,17 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             [product.barcode, product.code, product.name].some((value) => normalizeTextSearch(value) === normalized)
         )) || productOptions[0] || null
     }, [productOptions, productQuery])
+
     const quickQuantityValue = useMemo(
         () => Math.max(1, parseNumber(quickQuantity, 1)),
         [quickQuantity],
     )
 
     const statusCounts = useMemo(() => (
-        STATUS_TABS.reduce((carry, tab) => {
-            if (tab.key === 'all') {
-                return {
-                    ...carry,
-                    [tab.key]: records.length,
-                }
-            }
-
-            return {
-                ...carry,
-                [tab.key]: records.filter((record) => record.status === tab.key).length,
-            }
-        }, {})
+        STATUS_TABS.reduce((carry, tab) => ({
+            ...carry,
+            [tab.key]: records.filter((record) => resolveWorkspaceTab(record.status) === tab.key).length,
+        }), {})
     ), [records])
 
     const filteredTotal = useMemo(
@@ -508,6 +445,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         [detailRecordId, records],
     )
 
+    const activeDraftRecord = useMemo(
+        () => records.find((record) => String(record.id) === String(activeDraftRecordId) && record.status === 'draft') || null,
+        [activeDraftRecordId, records],
+    )
+
     const itemsByProductId = useMemo(
         () => form.items.reduce((carry, item) => {
             carry[String(item.product_id)] = item
@@ -515,28 +457,23 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }, {}),
         [form.items],
     )
+
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
-    const total = subtotal
-    const hasCustomName = String(form.custom_name || '').trim().length > 0
-    const stepReady = [
-        hasCustomName,
-        form.items.length > 0,
-    ]
-    const isLocked = isLockedRecord(form)
-    const canEdit = !isLocked
-    const pageFeedbackVisible = Boolean(feedback) && !editorOpen && !selectedDetailRecord
-    const nextDisabledReason = step === 0 && !hasCustomName
-        ? 'Informe um nome para o pedido antes de continuar.'
-        : ''
+    const total = subtotal + parseNumber(form.freight, 0)
+    const canEdit = activeDraftRecord ? !isLockedRecord(activeDraftRecord) : false
+    const editorDirty = Boolean(activeDraftRecordId) && buildDraftSnapshot(form) !== savedDraftSnapshot
+    const pageFeedbackVisible = Boolean(feedback) && !createModalOpen && !selectedDetailRecord && !activeDraftRecordId
+    const editorFeedbackVisible = Boolean(feedback) && Boolean(activeDraftRecordId) && !selectedDetailRecord
+    const selectedRowKey = selectedTab === 'in_progress' ? activeDraftRecordId : detailRecordId
 
     const columns = useMemo(() => ([
         {
             key: 'code',
-            label: 'Numero',
+            label: 'Pedido',
             render: (record) => (
                 <div className="proc-ui-record-card-copy purchases-code-cell">
-                    <strong>{record.code || `#${record.id}`}</strong>
-                    <span>{record.custom_name || 'Sem nome personalizado'}</span>
+                    <strong>{getPurchaseDisplayName(record)}</strong>
+                    <span>{record.code || `#${record.id}`}</span>
                 </div>
             ),
         },
@@ -577,7 +514,23 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     }, [detailRecordId, selectedDetailRecord])
 
     useEffect(() => {
-        if (!editorOpen || step !== 1) {
+        if (!activeDraftRecordId || activeDraftRecord) {
+            return
+        }
+
+        setActiveDraftRecordId(null)
+        setForm(createEmptyForm())
+        setSavedDraftSnapshot('')
+        setProductQuery('')
+        setQuickQuantity('1')
+    }, [activeDraftRecord, activeDraftRecordId])
+
+    useEffect(() => {
+        void refreshRecords({ preserveFeedback: true })
+    }, [])
+
+    useEffect(() => {
+        if (!activeDraftRecordId) {
             return undefined
         }
 
@@ -586,31 +539,65 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         })
 
         return () => window.cancelAnimationFrame(frameId)
-    }, [editorOpen, step])
+    }, [activeDraftRecordId])
+
+    function resetActiveDraftState() {
+        setActiveDraftRecordId(null)
+        setForm(createEmptyForm())
+        setSavedDraftSnapshot('')
+        setProductQuery('')
+        setQuickQuantity('1')
+    }
+
+    function hydrateActiveDraft(record) {
+        const normalized = normalizeRecord(record)
+        setActiveDraftRecordId(normalized.id)
+        setForm(normalized)
+        setSavedDraftSnapshot(buildDraftSnapshot(normalized))
+        setProductQuery('')
+        setQuickQuantity('1')
+    }
+
+    async function confirmDiscardUnsavedChanges() {
+        if (!editorDirty) {
+            return true
+        }
+
+        return confirmPopup({
+            type: 'warning',
+            title: 'Descartar alteracoes',
+            message: 'Existe um pedido com alteracoes nao salvas. Deseja descartar e continuar?',
+            confirmLabel: 'Descartar',
+            cancelLabel: 'Continuar editando',
+        })
+    }
+
+    async function clearActiveDraftSelection(options = {}) {
+        if (!options.skipConfirm && !(await confirmDiscardUnsavedChanges())) {
+            return false
+        }
+
+        resetActiveDraftState()
+        return true
+    }
 
     function handleListFilterChange(field, value) {
         setListFilters((current) => ({
             ...current,
-            [field]: field === 'year' ? value.replace(/\D/g, '').slice(0, 4) : value,
+            [field]: value,
         }))
     }
 
-    async function handleApplyFilters() {
-        if (listFilters.from && listFilters.to && listFilters.from > listFilters.to) {
-            setFeedback({ type: 'error', text: 'O periodo final precisa ser maior ou igual ao periodo inicial.' })
-            return
-        }
-
-        setFeedback(null)
-        setDetailRecordId(null)
-
+    async function refreshRecords(options = {}) {
         setRecordsLoading(true)
+
+        if (!options.preserveFeedback) {
+            setFeedback(null)
+        }
 
         try {
             const response = await apiRequest(buildRecordsUrl('compras'))
             setRecords(Array.isArray(response?.records) ? response.records : [])
-            setAppliedFilters({ ...listFilters })
-            setHasAppliedSearch(true)
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -618,63 +605,70 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
     }
 
-    function resetEditorSession() {
-        setEditorSession({ type: 'create', recordId: null })
-        setStep(0)
-        setForm(createEmptyForm())
-        setProductQuery('')
-        setQuickQuantity('1')
-    }
-
-    function hydrateEditor(record, sessionType = 'edit') {
-        const normalized = normalizeRecord(record)
-        setEditorSession({ type: sessionType, recordId: normalized.id })
-        setStep(0)
-        setForm(normalized)
-        setProductQuery('')
-        setQuickQuantity('1')
-    }
-
-    function openCreateModal() {
-        setDetailRecordId(null)
-        setFeedback(null)
-
-        if (editorSession.type === 'create' && editorSession.recordId === null) {
-            setEditorOpen(true)
+    async function handleTabChange(tabKey) {
+        if (tabKey === selectedTab) {
             return
         }
 
-        resetEditorSession()
-        setEditorOpen(true)
-    }
-
-    function openEditModal(record) {
-        if (isLockedRecord(record)) {
-            setDetailRecordId(record.id)
+        if (!(await clearActiveDraftSelection())) {
             return
         }
 
         setDetailRecordId(null)
         setFeedback(null)
+        setSelectedTab(tabKey)
+    }
 
-        if (editorSession.type === 'edit' && String(editorSession.recordId || '') === String(record.id || '')) {
-            setEditorOpen(true)
+    async function openCreateModal() {
+        if (!(await clearActiveDraftSelection())) {
             return
         }
 
-        hydrateEditor(record, 'edit')
-        setEditorOpen(true)
+        setDetailRecordId(null)
+        setFeedback(null)
+        setCreateDraftName('')
+        setCreateModalOpen(true)
     }
 
-    function closeEditorModal() {
-        setEditorOpen(false)
+    function closeCreateModal() {
+        setCreateModalOpen(false)
+        setCreateDraftName('')
         setFeedback(null)
     }
 
-    function openDetailsModal(record) {
-        setEditorOpen(false)
+    async function openDraftEditor(record) {
+        if (String(activeDraftRecordId || '') === String(record.id || '')) {
+            return
+        }
+
+        if (!(await clearActiveDraftSelection())) {
+            return
+        }
+
+        setDetailRecordId(null)
+        setFeedback(null)
+        hydrateActiveDraft(record)
+        setSelectedTab('in_progress')
+    }
+
+    async function openDetailsModal(record) {
+        if (!(await clearActiveDraftSelection())) {
+            return
+        }
+
+        setCreateModalOpen(false)
         setFeedback(null)
         setDetailRecordId(record.id)
+        setSelectedTab(resolveWorkspaceTab(record.status))
+    }
+
+    async function handleOpenRecord(record) {
+        if (record.status === 'draft') {
+            await openDraftEditor(record)
+            return
+        }
+
+        await openDetailsModal(record)
     }
 
     function closeDetailsModal() {
@@ -715,6 +709,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
         setProductQuery('')
         setQuickQuantity('1')
+
         window.requestAnimationFrame(() => {
             productSearchRef.current?.focus()
         })
@@ -788,19 +783,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
         if (!String(sourceForm.custom_name || '').trim()) {
             setFeedback({ type: 'error', text: 'Informe um nome para o pedido antes de salvar.' })
-            if (options.openEditor !== false) {
-                setEditorOpen(true)
-                setStep(0)
-            }
             return null
         }
 
-        if (!(sourceForm.items || []).length) {
-            setFeedback({ type: 'error', text: 'Adicione pelo menos um item ao pedido.' })
-            if (options.openEditor !== false) {
-                setEditorOpen(true)
-                setStep(1)
-            }
+        if (status !== 'draft' && !(sourceForm.items || []).length) {
+            setFeedback({ type: 'error', text: 'Adicione pelo menos um item ao pedido antes de finalizar.' })
             return null
         }
 
@@ -816,30 +803,45 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 : await apiRequest(buildRecordsUrl('compras'), { method: 'post', data: payloadData })
 
             setRecords((current) => upsertRecord(current, response.record))
-            setSelectedTab(response.record.status || selectedTab)
-            hydrateEditor(response.record, 'edit')
-            setFeedback({ type: 'success', text: response.message })
+            setSelectedTab(resolveWorkspaceTab(response.record.status || status))
 
-            if (options.keepDetailsOpen) {
-                setDetailRecordId(response.record.id)
-            } else {
+            if (response.record.status === 'draft') {
+                hydrateActiveDraft(response.record)
                 setDetailRecordId(null)
+            } else {
+                if (String(activeDraftRecordId || '') === String(response.record.id || '')) {
+                    resetActiveDraftState()
+                }
+
+                setDetailRecordId(options.keepDetailsOpen ? response.record.id : null)
             }
 
-            if (options.closeEditor !== false) {
-                setEditorOpen(false)
-            }
+            setFeedback({ type: 'success', text: response.message })
 
             return response.record
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
-            if (options.openEditor !== false) {
-                setEditorOpen(true)
-            }
             return null
         } finally {
             setSavingAction(null)
         }
+    }
+
+    async function handleCreatePurchase() {
+        const record = await persistPurchase('draft', {
+            ...createEmptyForm(),
+            custom_name: createDraftName,
+            items: [],
+        }, {
+            requestKey: 'create-draft',
+        })
+
+        if (!record) {
+            return
+        }
+
+        setCreateModalOpen(false)
+        setCreateDraftName('')
     }
 
     function openPurchaseReport(recordId) {
@@ -876,9 +878,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             const response = await apiRequest(buildRecordsUrl('compras', record.id), { method: 'delete' })
             setRecords((current) => current.filter((entry) => entry.id !== record.id))
 
-            if (String(editorSession.recordId || '') === String(record.id || '')) {
-                resetEditorSession()
-                setEditorOpen(false)
+            if (String(activeDraftRecordId || '') === String(record.id || '')) {
+                resetActiveDraftState()
             }
 
             if (String(detailRecordId || '') === String(record.id || '')) {
@@ -891,6 +892,47 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         } finally {
             setSavingAction(null)
         }
+    }
+
+    async function handleDiscardActiveChanges() {
+        if (!activeDraftRecord || !editorDirty) {
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Descartar alteracoes',
+            message: `Deseja descartar as alteracoes do pedido ${getPurchaseDisplayName(activeDraftRecord)}?`,
+            confirmLabel: 'Descartar',
+            cancelLabel: 'Continuar editando',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        hydrateActiveDraft(activeDraftRecord)
+        setFeedback(null)
+    }
+
+    async function handleSaveActiveDraft() {
+        await persistPurchase('draft', form, { requestKey: 'active-draft-save' })
+    }
+
+    async function handleFinalizeActiveDraft() {
+        const confirmed = await confirmPopup({
+            type: 'info',
+            title: 'Finalizar compra',
+            message: `Deseja finalizar o pedido ${getPurchaseDisplayName(form)} e mover para Finalizadas?`,
+            confirmLabel: 'Finalizar compra',
+            cancelLabel: 'Voltar',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        await finalizePurchase(form, { requestKey: 'active-draft-finalize' })
     }
 
     async function handleSendFromDetails(record) {
@@ -907,9 +949,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
 
         await finalizePurchase(normalizeRecord(record), {
-            closeEditor: false,
             keepDetailsOpen: true,
-            openEditor: false,
             requestKey: `send-${record.id}`,
         })
     }
@@ -928,9 +968,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
 
         await persistPurchase('received', normalizeRecord(record), {
-            closeEditor: false,
             keepDetailsOpen: true,
-            openEditor: false,
             requestKey: `receive-${record.id}`,
         })
     }
@@ -959,7 +997,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 <i className="fa-solid fa-magnifying-glass" />
                                 <input
                                     className="proc-ui-searchbox"
-                                    placeholder="Buscar por numero, nome ou produto..."
+                                    placeholder="Buscar por nome, numero ou produto..."
                                     type="search"
                                     value={listFilters.search}
                                     onChange={(event) => handleListFilterChange('search', event.target.value)}
@@ -970,7 +1008,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 className="proc-ui-date-range proc-ui-date-range-with-action purchases-range-form"
                                 onSubmit={(event) => {
                                     event.preventDefault()
-                                    handleApplyFilters()
+                                    void refreshRecords()
                                 }}
                             >
                                 <input
@@ -986,26 +1024,26 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     onChange={(event) => handleListFilterChange('to', event.target.value)}
                                 />
                                 <button type="submit" className="ui-button" disabled={recordsLoading}>
-                                    <i className="fa-solid fa-calendar-check" />
-                                    <span>{recordsLoading ? 'Buscando...' : 'Buscar'}</span>
+                                    <i className="fa-solid fa-rotate-right" />
+                                    <span>{recordsLoading ? 'Atualizando...' : 'Atualizar'}</span>
                                 </button>
                             </form>
 
-                            <button type="button" className="ui-button purchases-new-button" onClick={openCreateModal}>
+                            <button type="button" className="ui-button purchases-new-button" onClick={() => void openCreateModal()}>
                                 <i className="fa-solid fa-plus" />
                                 <span>Novo pedido</span>
                             </button>
                         </div>
 
                         <div className="purchases-toolbar-status">
-                            <span className="purchases-toolbar-label">Status</span>
+                            <span className="purchases-toolbar-label">Abas</span>
                             <div className="proc-ui-top-tabs purchases-toolbar-tabs">
                                 {STATUS_TABS.map((tab) => (
                                     <button
                                         key={tab.key}
                                         type="button"
                                         className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
-                                        onClick={() => setSelectedTab(tab.key)}
+                                        onClick={() => void handleTabChange(tab.key)}
                                     >
                                         <span>{tab.label}</span>
                                         <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
@@ -1027,142 +1065,125 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         columns={columns}
                         emptyState={(
                             <div className="proc-ui-empty">
-                                <strong>{recordsLoading ? 'Buscando pedidos...' : hasAppliedSearch ? 'Nenhum pedido encontrado' : 'Use os filtros para buscar pedidos'}</strong>
-                                <p>{recordsLoading ? 'Estamos carregando os pedidos para aplicar os filtros.' : hasAppliedSearch ? 'Ajuste os filtros aplicados ou troque o status selecionado.' : 'Escolha o periodo ou use a busca textual e clique em Buscar.'}</p>
+                                <strong>{recordsLoading ? 'Carregando pedidos...' : 'Nenhum pedido encontrado'}</strong>
+                                <p>
+                                    {recordsLoading
+                                        ? 'Estamos atualizando a lista de pedidos.'
+                                        : selectedTab === 'in_progress'
+                                            ? 'Crie um novo pedido para comecar a montar a compra.'
+                                            : 'Nenhuma compra foi finalizada dentro dos filtros atuais.'}
+                                </p>
                             </div>
                         )}
-                        getRowActions={(record) => [
-                            {
-                                key: 'view',
-                                icon: 'fa-eye',
-                                label: 'Ver',
-                                onClick: () => openDetailsModal(record),
-                            },
-                            {
-                                key: 'edit',
-                                disabled: isLockedRecord(record),
-                                icon: 'fa-pen',
-                                label: 'Editar',
-                                onClick: () => openEditModal(record),
-                                tone: 'info',
-                            },
-                            {
-                                key: 'delete',
-                                disabled: isLockedRecord(record),
-                                icon: 'fa-trash',
-                                label: 'Excluir',
-                                onClick: () => handleDelete(record),
-                                tone: 'danger',
-                            },
-                        ]}
+                        getRowActions={(record) => (
+                            record.status === 'draft'
+                                ? [
+                                    {
+                                        key: 'open',
+                                        icon: 'fa-folder-open',
+                                        label: 'Abrir',
+                                        onClick: () => void openDraftEditor(record),
+                                        tone: 'info',
+                                    },
+                                    {
+                                        key: 'delete',
+                                        icon: 'fa-trash',
+                                        label: 'Excluir',
+                                        onClick: () => handleDelete(record),
+                                        tone: 'danger',
+                                    },
+                                ]
+                                : [
+                                    {
+                                        key: 'view',
+                                        icon: 'fa-eye',
+                                        label: 'Ver',
+                                        onClick: () => void openDetailsModal(record),
+                                    },
+                                ]
+                        )}
                         minWidth={980}
                         rows={filteredRecords}
+                        selectedRowKey={selectedRowKey}
                         showActionLabels
-                        onRowClick={openDetailsModal}
+                        onRowClick={(record) => void handleOpenRecord(record)}
                     />
 
-                    {hasAppliedSearch && !recordsLoading ? (
+                    {!recordsLoading ? (
                         <footer className="purchases-table-footer">
                             <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
                             <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
                         </footer>
                     ) : null}
                 </section>
-            </div>
 
-            <CompactModal
-                open={editorOpen}
-                badge={editorSession.type === 'edit' ? 'Editar pedido' : 'Novo pedido'}
-                bodyClassName="purchases-editor-modal-body"
-                className="purchases-editor-modal"
-                description={form.id ? `${getPurchaseDisplayName(form)} - ${formatNumber(form.items.length)} item(ns)` : 'Nomeie o pedido, monte os itens e gere o PDF final.'}
-                icon={editorSession.type === 'edit' ? 'fa-pen-to-square' : 'fa-cart-plus'}
-                size="lg"
-                title={editorSession.type === 'edit' ? 'Editar pedido' : 'Criar pedido'}
-                onClose={closeEditorModal}
-            >
-                <div className="proc-ui-modal-stack">
-                    <div className="proc-ui-stepper purchases-editor-stepper" style={{ '--proc-step-count': STEPS.length }}>
-                        {STEPS.map((entry, index) => (
-                            <button
-                                key={entry.key}
-                                type="button"
-                                className={`proc-ui-step ${step === index ? 'active' : ''} ${stepReady[index] && step > index ? 'complete' : ''} ${index > step && !stepReady[index - 1] ? 'disabled' : ''}`}
-                                onClick={() => {
-                                    if (index <= step || stepReady[index - 1]) {
-                                        setStep(index)
-                                    }
-                                }}
-                            >
-                                <span className="proc-ui-step-index">
-                                    {stepReady[index] && step > index ? <i className="fa-solid fa-check" /> : index + 1}
-                                </span>
-                                <strong><i className={`fa-solid ${entry.icon}`} /> {entry.label}</strong>
-                            </button>
-                        ))}
-                    </div>
-
-                    {feedback ? (
-                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                            <span>{feedback.text}</span>
+                {activeDraftRecord ? (
+                    <section className="proc-ui-section-card purchases-workspace-card">
+                        <div className="proc-ui-main-header purchases-workspace-header">
+                            <div>
+                                <h2>{getPurchaseDisplayName(form)}</h2>
+                                <p>Edite o nome, inclua produtos e use os botoes para salvar ou descartar alteracoes.</p>
+                            </div>
+                            <PurchaseStatusBadge status={form.status} />
                         </div>
-                    ) : null}
 
-                    {step === 0 ? (
-                        <div className="proc-ui-stage purchases-editor-setup">
-                            <section className="proc-ui-modal-block purchases-name-stage">
-                                <div className="purchases-name-copy">
-                                    <h3>Defina o nome do pedido</h3>
-                                    <p>Esse nome vai aparecer na lista e tambem no PDF final, para ficar facil localizar depois.</p>
-                                </div>
+                        {editorFeedbackVisible ? (
+                            <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                                <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                <span>{feedback.text}</span>
+                            </div>
+                        ) : null}
 
-                                <div className="proc-ui-summary-grid purchases-review-summary">
-                                    <article className="proc-ui-summary-card">
-                                        <span>Status</span>
-                                        <strong>{resolveStatusMeta(form.status).label}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Codigo</span>
-                                        <strong>{form.code || 'Novo pedido'}</strong>
-                                    </article>
-                                </div>
-
-                                <div className="proc-ui-field full">
-                                    <label>
-                                        <span>Nome do pedido</span>
-                                        <input
-                                            autoFocus
-                                            disabled={!canEdit}
-                                            maxLength="160"
-                                            placeholder="Ex.: Pedido feira de sabado"
-                                            type="text"
-                                            value={form.custom_name}
-                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
-                            </section>
-
-                            <div className="proc-ui-step-actions">
-                                <button type="button" className="ui-button-ghost" onClick={closeEditorModal}>
-                                    Fechar
-                                </button>
-                                <button
-                                    type="button"
-                                    className="ui-button"
-                                    disabled={!canEdit || !hasCustomName}
-                                    onClick={() => setStep(1)}
-                                >
-                                    <span>Ir para os itens</span>
-                                    <i className="fa-solid fa-arrow-right" />
-                                </button>
+                        <div className={`proc-ui-banner ${editorDirty ? 'warning' : 'success'} purchases-editor-state`}>
+                            <i className={`fa-solid ${editorDirty ? 'fa-floppy-disk' : 'fa-circle-check'}`} />
+                            <div>
+                                {editorDirty
+                                    ? 'Existem alteracoes pendentes neste pedido. Clique em Salvar para gravar ou em Descartar para voltar ao ultimo estado salvo.'
+                                    : 'Todas as alteracoes deste pedido ja foram salvas.'}
                             </div>
                         </div>
-                    ) : null}
 
-                    {step === 1 ? (
-                        <div className="proc-ui-stage purchases-items-stage">
+                        <section className="proc-ui-modal-block purchases-name-stage">
+                            <div className="purchases-name-copy">
+                                <h3>Pedido em andamento</h3>
+                                <p>O nome e os itens ficam disponiveis aqui para voce voltar quando quiser.</p>
+                            </div>
+
+                            <div className="proc-ui-summary-grid purchases-review-summary">
+                                <article className="proc-ui-summary-card">
+                                    <span>Codigo</span>
+                                    <strong>{form.code || 'Novo pedido'}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Itens</span>
+                                    <strong>{formatNumber(form.items.length)}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Unidades</span>
+                                    <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
+                                </article>
+                                <article className="proc-ui-summary-card">
+                                    <span>Total</span>
+                                    <strong>{formatMoney(total)}</strong>
+                                </article>
+                            </div>
+
+                            <div className="proc-ui-field full">
+                                <label>
+                                    <span>Nome do pedido</span>
+                                    <input
+                                        disabled={!canEdit}
+                                        maxLength="160"
+                                        placeholder="Ex.: Pedido feira de sabado"
+                                        type="text"
+                                        value={form.custom_name}
+                                        onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
+                                    />
+                                </label>
+                            </div>
+                        </section>
+
+                        <div className="purchases-editor-grid">
                             <section className="proc-ui-modal-block purchases-items-search-panel">
                                 <div className="purchases-items-search-head">
                                     <div className="purchases-items-search-copy">
@@ -1171,7 +1192,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     </div>
 
                                     <div className="purchases-items-meta">
-                                        <span>Pedido <strong>{form.custom_name}</strong></span>
+                                        <span>Pedido <strong>{form.custom_name || 'Sem nome'}</strong></span>
                                         <span>Codigo <strong>{form.code || 'Novo pedido'}</strong></span>
                                     </div>
                                 </div>
@@ -1377,7 +1398,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                     <td colSpan="5">
                                                         <div className="proc-ui-empty">
                                                             <strong>Nenhum item no pedido</strong>
-                                                            <p>Use a busca acima para montar a lista antes de finalizar.</p>
+                                                            <p>Use a busca ao lado para montar a lista antes de finalizar.</p>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1398,45 +1419,114 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         <textarea
                                             className="purchases-editor-notes"
                                             disabled={!canEdit}
-                                            rows="2"
+                                            rows="3"
                                             value={form.notes}
                                             onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                                         />
                                     </label>
                                 </div>
                             </section>
+                        </div>
 
-                            <div className="proc-ui-step-actions">
-                                <button type="button" className="ui-button-ghost" onClick={() => setStep(0)}>
-                                    <i className="fa-solid fa-arrow-left" />
-                                    <span>Voltar</span>
-                                </button>
+                        <div className="proc-ui-card-toolbar purchases-workspace-submitbar">
+                            <button type="button" className="ui-button-ghost" onClick={() => void clearActiveDraftSelection()}>
+                                Voltar para todos
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button-ghost"
+                                disabled={!editorDirty || savingAction !== null}
+                                onClick={() => void handleDiscardActiveChanges()}
+                            >
+                                Descartar alteracoes
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button-ghost danger"
+                                disabled={savingAction !== null}
+                                onClick={() => handleDelete(activeDraftRecord)}
+                            >
+                                Excluir
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button-ghost"
+                                disabled={!canEdit || savingAction !== null}
+                                onClick={() => void handleSaveActiveDraft()}
+                            >
+                                {savingAction === 'active-draft-save' ? 'Salvando...' : 'Salvar'}
+                            </button>
+                            <button
+                                type="button"
+                                className="ui-button"
+                                disabled={!canEdit || savingAction !== null}
+                                onClick={() => void handleFinalizeActiveDraft()}
+                            >
+                                {savingAction === 'active-draft-finalize' ? 'Finalizando...' : 'Finalizar compra'}
+                            </button>
+                        </div>
+                    </section>
+                ) : null}
+            </div>
 
-                                <div className="proc-ui-card-toolbar purchases-editor-submitbar">
-                                    <button
-                                        type="button"
-                                        className="ui-button-ghost"
-                                        disabled={!canEdit || savingAction !== null}
-                                        onClick={() => persistPurchase('draft', form, { requestKey: 'editor-draft' })}
-                                    >
-                                        {savingAction === 'editor-draft' ? 'Salvando...' : 'Salvar rascunho'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="ui-button"
-                                        disabled={!canEdit || savingAction !== null}
-                                        onClick={() => finalizePurchase(form, { requestKey: 'editor-ordered' })}
-                                    >
-                                        {savingAction === 'editor-ordered' ? 'Finalizando...' : 'Finalizar e gerar PDF'}
-                                    </button>
-                                </div>
-                            </div>
+            <CompactModal
+                open={createModalOpen}
+                badge="Novo pedido"
+                className="purchases-create-modal"
+                description="Salve o nome e continue a edicao em Em andamento."
+                icon="fa-cart-plus"
+                size="md"
+                title="Criar pedido"
+                onClose={closeCreateModal}
+            >
+                <div className="proc-ui-modal-stack">
+                    {createModalOpen && feedback ? (
+                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                            <span>{feedback.text}</span>
                         </div>
                     ) : null}
 
-                    {nextDisabledReason && step < 1 ? (
-                        <span className="proc-ui-step-note">{nextDisabledReason}</span>
-                    ) : null}
+                    <section className="proc-ui-modal-block purchases-name-stage">
+                        <div className="purchases-name-copy">
+                            <h3>Comece pelo nome</h3>
+                            <p>Depois de salvar, o pedido vai para Em andamento para voce editar, renomear e incluir produtos.</p>
+                        </div>
+
+                        <div className="proc-ui-field full">
+                            <label>
+                                <span>Nome do pedido</span>
+                                <input
+                                    autoFocus
+                                    maxLength="160"
+                                    placeholder="Ex.: Pedido feira de sabado"
+                                    type="text"
+                                    value={createDraftName}
+                                    onChange={(event) => setCreateDraftName(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            event.preventDefault()
+                                            void handleCreatePurchase()
+                                        }
+                                    }}
+                                />
+                            </label>
+                        </div>
+                    </section>
+
+                    <div className="proc-ui-modal-footer purchases-create-actions">
+                        <button type="button" className="ui-button-ghost" onClick={closeCreateModal}>
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            className="ui-button"
+                            disabled={savingAction === 'create-draft' || !String(createDraftName || '').trim()}
+                            onClick={() => void handleCreatePurchase()}
+                        >
+                            {savingAction === 'create-draft' ? 'Salvando...' : 'Salvar e abrir'}
+                        </button>
+                    </div>
                 </div>
             </CompactModal>
 
@@ -1448,7 +1538,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 onCancel={handleCancelOrdered}
                 onClose={closeDetailsModal}
                 onDelete={handleDelete}
-                onEdit={openEditModal}
+                onEdit={(record) => void openDraftEditor(record)}
                 onReceive={handleReceiveFromDetails}
                 onSend={handleSendFromDetails}
                 onViewStockEntry={handleViewStockEntry}

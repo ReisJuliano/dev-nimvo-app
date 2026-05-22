@@ -873,7 +873,10 @@ class OperationsWorkspaceService
 
     protected function savePurchase(?Purchase $purchase, array $input, int $userId): Purchase
     {
-        $validated = Validator::make($input, [
+        $requestedStatus = (string) ($input['status'] ?? $purchase?->status ?? 'draft');
+        $requiresItems = in_array($requestedStatus, ['ordered', 'received'], true);
+
+        $validator = Validator::make($input, [
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'custom_name' => ['nullable', 'string', 'max:160'],
             'status' => ['required', Rule::in(['draft', 'ordered', 'received'])],
@@ -903,22 +906,32 @@ class OperationsWorkspaceService
             'payables.*.paid_at' => ['nullable', 'date'],
             'payables.*.notes' => ['nullable', 'string'],
             'auto_update_sale_price' => ['nullable', 'boolean'],
-            'items' => ['required', 'array', 'min:1'],
+            'items' => ['nullable', 'array'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_cost' => ['required', 'numeric', 'gte:0'],
             'items.*.sale_price' => ['nullable', 'numeric', 'gte:0'],
             'items.*.apply_sale_price' => ['nullable', 'boolean'],
-        ])->validate();
+        ]);
+
+        $validator->after(function ($validator) use ($input, $requiresItems) {
+            $items = $input['items'] ?? [];
+
+            if ($requiresItems && (! is_array($items) || count($items) === 0)) {
+                $validator->errors()->add('items', 'Adicione pelo menos um item antes de concluir a compra.');
+            }
+        });
+
+        $validated = $validator->validate();
 
         return DB::transaction(function () use ($purchase, $validated, $userId) {
             $products = Product::query()
-                ->whereIn('id', collect($validated['items'])->pluck('product_id')->all())
+                ->whereIn('id', collect($validated['items'] ?? [])->pluck('product_id')->all())
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
-            $items = collect($validated['items'])->map(function (array $item) use ($products) {
+            $items = collect($validated['items'] ?? [])->map(function (array $item) use ($products) {
                 $product = $products->get($item['product_id']);
                 $quantity = round((float) $item['quantity'], 3);
                 $unitCost = round((float) $item['unit_cost'], 2);

@@ -157,6 +157,41 @@
     color: #5b6471;
 }
 
+.purchases-workspace-card {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.purchases-workspace-header {
+    align-items: flex-start;
+}
+
+.purchases-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 23rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.purchases-editor-state {
+    margin: 0;
+}
+
+.purchases-workspace-submitbar {
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.purchases-create-modal {
+    width: min(100%, 640px);
+}
+
+.purchases-create-actions {
+    justify-content: flex-end;
+}
+
 .purchases-editor-modal {
     width: min(100%, 1320px);
 }
@@ -467,6 +502,10 @@
         align-items: stretch;
         flex-direction: column;
     }
+
+    .purchases-editor-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 860px) {
@@ -535,7 +574,9 @@
     }
 
     .purchases-editor-submitbar .ui-button,
-    .purchases-editor-submitbar .ui-button-ghost {
+    .purchases-editor-submitbar .ui-button-ghost,
+    .purchases-workspace-submitbar .ui-button,
+    .purchases-workspace-submitbar .ui-button-ghost {
         width: 100%;
     }
 
@@ -554,5 +595,10 @@
     .purchases-product-result-actions .ui-button,
     .purchases-product-result-actions .ui-button-ghost {
         width: 100%;
+    }
+
+    .purchases-workspace-submitbar {
+        width: 100%;
+        justify-content: stretch;
     }
 }
