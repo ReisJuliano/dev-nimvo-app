@@ -71,6 +71,7 @@ function normalizeRecord(record) {
         supplier_id: record?.supplier_id ? String(record.supplier_id) : '',
         expected_at: ensureDate(record?.expected_at),
         freight: String(record?.freight ?? 0),
+        notes: String(record?.notes || ''),
         items: (record?.items || []).map((item) => ({
             id: item.id,
             product_id: String(item.product_id),
@@ -480,7 +481,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const selectedRowKey = listViewTab === 'in_progress' ? activeDraftRecordId : detailRecordId
     const itemsChipLabel = `${formatNumber(form.items.length)} ${form.items.length === 1 ? 'item' : 'itens'}`
     const unitsChipLabel = `${formatNumber(itemUnitsTotal)} un`
-    const hasNotes = form.notes.trim().length > 0
+    const hasNotes = String(form.notes || '').trim().length > 0
     const workspaceTabs = useMemo(() => (
         activeDraftRecord
             ? [
