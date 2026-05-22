@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'nimvo-offline-v2'
+const CACHE_VERSION = 'nimvo-offline-v3'
 const APP_CACHE = `${CACHE_VERSION}:app`
 const PAGE_CACHE = `${CACHE_VERSION}:pages`
 

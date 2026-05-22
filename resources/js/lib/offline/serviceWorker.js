@@ -1,4 +1,4 @@
-const OFFLINE_CACHE_VERSION = 'nimvo-offline-v2'
+const OFFLINE_CACHE_VERSION = 'nimvo-offline-v3'
 const OFFLINE_APP_CACHE = `${OFFLINE_CACHE_VERSION}:app`
 const OFFLINE_WORKSPACE_PATHS = ['/pdv', '/pedidos', '/produtos']
 const OFFLINE_WORKSPACE_PAGE_ENTRIES = [
@@ -122,9 +122,11 @@ export function registerOfflineServiceWorker() {
         try {
             const registration = await navigator.serviceWorker.register('/nimvo-offline-sw.js')
 
+            registration.update().catch(() => {})
             warmOfflineAssets().catch(() => {})
             postWarmMessage(registration)
             navigator.serviceWorker.ready.then((readyRegistration) => {
+                readyRegistration.update().catch(() => {})
                 warmOfflineAssets().catch(() => {})
                 postWarmMessage(readyRegistration)
             }).catch(() => {})
