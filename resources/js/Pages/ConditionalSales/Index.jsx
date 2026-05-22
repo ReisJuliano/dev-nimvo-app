@@ -127,40 +127,45 @@ function TopProductsCard({ topProducts }) {
 
 export default function ConditionalSalesPage({
     conditionals = [],
-    selectedConditionalId,
     customers = [],
     products = [],
     paymentMethods = [],
     filters = {},
 }) {
+    const initialSearch = filters?.search || ''
     const [createOpen, setCreateOpen] = useState(false)
-    const [search, setSearch] = useState(filters?.search || '')
+    const [search, setSearch] = useState(initialSearch)
     const [activeFilter, setActiveFilter] = useState('all')
     const [range, setRange] = useState({ from: '', to: '' })
-    const [selectedRecordId, setSelectedRecordId] = useState(selectedConditionalId || conditionals[0]?.id || null)
+    const [appliedSearch, setAppliedSearch] = useState(initialSearch)
+    const [appliedFilter, setAppliedFilter] = useState('all')
+    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
+    const [selectedRecordId, setSelectedRecordId] = useState(null)
+    const [openedRecordId, setOpenedRecordId] = useState(null)
     const [detailPanel, setDetailPanel] = useState('overview')
     const createForm = useForm(buildCreateDefaults())
     const customerMetaById = useMemo(
         () => new Map(customers.map((customer) => [String(customer.id), customer])),
         [customers],
     )
-    const selectedConditional = useMemo(
-        () => conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId)) || null,
-        [conditionals, selectedRecordId],
+    const openedConditional = useMemo(
+        () => conditionals.find((conditionalSale) => String(conditionalSale.id) === String(openedRecordId)) || null,
+        [conditionals, openedRecordId],
     )
     const selectedCustomer = useMemo(
         () => customers.find((customer) => String(customer.id) === String(createForm.data.customer_id)) || null,
         [customers, createForm.data.customer_id],
     )
-    const returnForm = useForm(buildReturnDefaults(selectedConditional))
-    const finalizeForm = useForm(buildFinalizeDefaults(selectedConditional))
+    const returnForm = useForm(buildReturnDefaults(openedConditional))
+    const finalizeForm = useForm(buildFinalizeDefaults(openedConditional))
+    const hasAppliedFilters = Boolean(appliedSearch.trim() || appliedRange.from || appliedRange.to || appliedFilter !== 'all')
 
     useEffect(() => {
-        returnForm.setData(buildReturnDefaults(selectedConditional))
+        returnForm.setData(buildReturnDefaults(openedConditional))
         returnForm.clearErrors()
-        finalizeForm.setData(buildFinalizeDefaults(selectedConditional))
+        finalizeForm.setData(buildFinalizeDefaults(openedConditional))
         finalizeForm.clearErrors()
-    }, [finalizeForm, returnForm, selectedConditional])
+    }, [finalizeForm, openedConditional, returnForm])
 
     const createPreview = useMemo(
         () => createForm.data.items.reduce((total, item) => total + (parseNumber(item.quantity) * parseNumber(item.unit_price)), 0),
@@ -168,42 +173,46 @@ export default function ConditionalSalesPage({
     )
 
     const finalizePreview = useMemo(() => {
-        if (!selectedConditional) {
+        if (!openedConditional) {
             return 0
         }
 
         return finalizeForm.data.items.reduce((total, item) => {
-            const source = selectedConditional.items.find((entry) => Number(entry.id) === Number(item.id))
+            const source = openedConditional.items.find((entry) => Number(entry.id) === Number(item.id))
             const billedQuantity = parseNumber(item.kept_quantity) + parseNumber(item.lost_quantity) + parseNumber(item.damaged_quantity)
 
             return total + (billedQuantity * Number(source?.unit_price || 0))
         }, 0)
-    }, [finalizeForm.data.items, selectedConditional])
+    }, [finalizeForm.data.items, openedConditional])
 
     const hasCashPayment = finalizeForm.data.payments.some((payment) => payment.method === 'cash')
 
     const filteredRows = useMemo(() => {
+        if (!hasAppliedFilters) {
+            return []
+        }
+
         return conditionals.filter((conditionalSale) => {
             const customerMeta = customerMetaById.get(String(conditionalSale.customer?.id || '')) || {}
             const referenceDate = String(conditionalSale.withdrawn_at || conditionalSale.due_at || '').slice(0, 10)
 
-            if (range.from && referenceDate && referenceDate < range.from) {
+            if (appliedRange.from && referenceDate && referenceDate < appliedRange.from) {
                 return false
             }
 
-            if (range.to && referenceDate && referenceDate > range.to) {
+            if (appliedRange.to && referenceDate && referenceDate > appliedRange.to) {
                 return false
             }
 
-            if (activeFilter === 'owing' && Number(conditionalSale.outstanding_total || 0) <= 0) {
+            if (appliedFilter === 'owing' && Number(conditionalSale.outstanding_total || 0) <= 0) {
                 return false
             }
 
-            if (activeFilter === 'alert' && Number(conditionalSale.days_overdue || 0) <= 0) {
+            if (appliedFilter === 'alert' && Number(conditionalSale.days_overdue || 0) <= 0) {
                 return false
             }
 
-            if (activeFilter === 'over_limit') {
+            if (appliedFilter === 'over_limit') {
                 const limit = Number(customerMeta.credit_limit || 0)
 
                 if (limit <= 0 || Number(conditionalSale.outstanding_total || 0) <= limit) {
@@ -211,7 +220,7 @@ export default function ConditionalSalesPage({
                 }
             }
 
-            if (!search.trim()) {
+            if (!appliedSearch.trim()) {
                 return true
             }
 
@@ -220,16 +229,31 @@ export default function ConditionalSalesPage({
                 conditionalSale.code || '',
                 conditionalSale.sale?.sale_number || '',
                 conditionalSale.operator_name || '',
-            ].join(' ')).toLowerCase().includes(search.trim().toLowerCase())
+            ].join(' ')).toLowerCase().includes(appliedSearch.trim().toLowerCase())
         })
-    }, [activeFilter, conditionals, customerMetaById, range.from, range.to, search])
+    }, [appliedFilter, appliedRange.from, appliedRange.to, appliedSearch, conditionals, customerMetaById, hasAppliedFilters])
 
     const selectedRow = useMemo(
         () => filteredRows.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))
-            || conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))
             || null,
-        [conditionals, filteredRows, selectedRecordId],
+        [filteredRows, selectedRecordId],
     )
+
+    useEffect(() => {
+        if (!filteredRows.length) {
+            setSelectedRecordId(null)
+            setOpenedRecordId(null)
+            return
+        }
+
+        if (selectedRecordId && !filteredRows.some((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))) {
+            setSelectedRecordId(null)
+        }
+
+        if (openedRecordId && !filteredRows.some((conditionalSale) => String(conditionalSale.id) === String(openedRecordId))) {
+            setOpenedRecordId(null)
+        }
+    }, [filteredRows, openedRecordId, selectedRecordId])
 
     function addCreateItem() {
         createForm.setData('items', [
@@ -293,11 +317,11 @@ export default function ConditionalSalesPage({
     function handleReturnSubmit(event) {
         event.preventDefault()
 
-        if (!selectedConditional) {
+        if (!openedConditional) {
             return
         }
 
-        returnForm.post(`/venda-condicional/${selectedConditional.id}/devolver`, {
+        returnForm.post(`/venda-condicional/${openedConditional.id}/devolver`, {
             preserveScroll: true,
         })
     }
@@ -346,13 +370,21 @@ export default function ConditionalSalesPage({
     function handleFinalizeSubmit(event) {
         event.preventDefault()
 
-        if (!selectedConditional) {
+        if (!openedConditional) {
             return
         }
 
-        finalizeForm.post(`/venda-condicional/${selectedConditional.id}/finalizar`, {
+        finalizeForm.post(`/venda-condicional/${openedConditional.id}/finalizar`, {
             preserveScroll: true,
         })
+    }
+
+    function applyFilters() {
+        setAppliedSearch(search)
+        setAppliedFilter(activeFilter)
+        setAppliedRange(range)
+        setSelectedRecordId(null)
+        setOpenedRecordId(null)
     }
 
     function openSelected(panel = 'overview') {
@@ -362,6 +394,7 @@ export default function ConditionalSalesPage({
 
         setDetailPanel(panel)
         setSelectedRecordId(selectedRow.id)
+        setOpenedRecordId(selectedRow.id)
     }
 
     return (
@@ -397,10 +430,16 @@ export default function ConditionalSalesPage({
                             onChange: setRange,
                         }}
                         quickDates
+                        onApply={applyFilters}
                         onReset={() => {
                             setSearch('')
                             setRange({ from: '', to: '' })
                             setActiveFilter('all')
+                            setAppliedSearch('')
+                            setAppliedFilter('all')
+                            setAppliedRange({ from: '', to: '' })
+                            setSelectedRecordId(null)
+                            setOpenedRecordId(null)
                         }}
                     />
 
@@ -451,7 +490,7 @@ export default function ConditionalSalesPage({
                             rowKey="id"
                             selectedRowKey={selectedRecordId}
                             onRowClick={(conditionalSale) => setSelectedRecordId(conditionalSale.id)}
-                            emptyMessage="Nenhum cliente encontrado"
+                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Clique em Filtrar para buscar'}
                             actions={(conditionalSale) => [
                                 {
                                     key: 'view',
@@ -461,6 +500,7 @@ export default function ConditionalSalesPage({
                                     onClick: () => {
                                         setSelectedRecordId(conditionalSale.id)
                                         setDetailPanel('overview')
+                                        setOpenedRecordId(conditionalSale.id)
                                     },
                                 },
                             ]}
@@ -519,17 +559,17 @@ export default function ConditionalSalesPage({
             </ModalForm>
 
             <ActionDrawer
-                open={Boolean(selectedConditional)}
-                title={selectedConditional ? selectedConditional.code : 'Condicional'}
-                description={selectedConditional?.customer?.name || 'Detalhes da condicional'}
+                open={Boolean(openedConditional)}
+                title={openedConditional ? openedConditional.code : 'Condicional'}
+                description={openedConditional?.customer?.name || 'Detalhes da condicional'}
                 icon="fa-right-left"
                 size="lg"
-                badge={selectedConditional?.status_label}
+                badge={openedConditional?.status_label}
                 bodyClassName="conditional-detail-drawer-body"
-                onClose={() => setSelectedRecordId(null)}
+                onClose={() => setOpenedRecordId(null)}
             >
                 <ConditionalSaleDetailCard
-                    conditionalSale={selectedConditional}
+                    conditionalSale={openedConditional}
                     embedded
                     defaultPanel={detailPanel}
                     finalizeForm={finalizeForm}

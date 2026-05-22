@@ -367,17 +367,6 @@ export default function OrdersIndex({
         }
     }, [currentDraft, discountConfig])
 
-    useEffect(() => {
-        if (!filteredDrafts.length) {
-            setSelectedListDraftId(null)
-            return
-        }
-
-        if (!filteredDrafts.some((draft) => Number(draft.id) === Number(selectedListDraftId))) {
-            setSelectedListDraftId(filteredDrafts[0].id)
-        }
-    }, [filteredDrafts, selectedListDraftId])
-
     useEffect(() => () => clearTimeout(saveTimeoutRef.current), [])
 
     useEffect(() => {
@@ -510,6 +499,16 @@ export default function OrdersIndex({
             getDraftNumberLabel(draft),
         ], normalizedListSearch)
     }), [drafts, listFilter, listRange, normalizedListSearch])
+    useEffect(() => {
+        if (!filteredDrafts.length) {
+            setSelectedListDraftId(null)
+            return
+        }
+
+        if (!filteredDrafts.some((draft) => Number(draft.id) === Number(selectedListDraftId))) {
+            setSelectedListDraftId(filteredDrafts[0].id)
+        }
+    }, [filteredDrafts, selectedListDraftId])
     const filteredDraftsValue = useMemo(
         () => roundCurrency(filteredDrafts.reduce((total, draft) => total + Number(draft.total || draft.subtotal || 0), 0)),
         [filteredDrafts],
