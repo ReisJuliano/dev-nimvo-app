@@ -116,6 +116,16 @@ function matchesOrdersDateRange(draft, range) {
     return true
 }
 
+function resolveOrdersVisitApplied(rawUrl) {
+    const fallbackSearch = typeof window !== 'undefined' ? window.location.search : ''
+    const searchFragment = String(rawUrl || '').includes('?')
+        ? String(rawUrl).slice(String(rawUrl).indexOf('?'))
+        : fallbackSearch
+    const params = new URLSearchParams(searchFragment)
+
+    return params.has('applied') || params.has('draft')
+}
+
 export default function OrdersIndex({
     categories = [],
     customers = [],
@@ -126,11 +136,19 @@ export default function OrdersIndex({
     productCatalog = [],
     cashRegister = null,
 }) {
-    const { auth, tenant, localAgentBridge } = usePage().props
+    const page = usePage()
+    const { auth, tenant, localAgentBridge } = page.props
     const moduleState = useModules()
-    const hasAppliedFilters = Boolean(filters?.applied)
+    const hasAppliedFilters = resolveOrdersVisitApplied(page.url)
     const initialDraftState = hasAppliedFilters && initialDraft ? mapOrderToDraft(initialDraft) : null
     const tenantId = tenant?.id
+    const resolvedListSearch = hasAppliedFilters ? (filters?.search || '') : ''
+    const resolvedListFrom = hasAppliedFilters ? (filters?.from || '') : ''
+    const resolvedListTo = hasAppliedFilters ? (filters?.to || '') : ''
+    const resolvedListRange = useMemo(
+        () => ({ from: resolvedListFrom, to: resolvedListTo }),
+        [resolvedListFrom, resolvedListTo],
+    )
 
     const [customerOptions, setCustomerOptions] = useState(customers)
     const [drafts, setDrafts] = useState(sortDrafts(hasAppliedFilters ? initialDrafts : []))
@@ -153,12 +171,10 @@ export default function OrdersIndex({
         : 'open'
     const [listFilter, setListFilter] = useState(initialListFilter)
     const [appliedListFilter, setAppliedListFilter] = useState(hasAppliedFilters ? initialListFilter : 'open')
-    const listSearchControl = useConfirmedSearch(filters?.search || '')
-    const [listRange, setListRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
+    const listSearchControl = useConfirmedSearch(resolvedListSearch)
+    const [listRange, setListRange] = useState(resolvedListRange)
     const [appliedListRange, setAppliedListRange] = useState(
-        hasAppliedFilters
-            ? { from: filters?.from || '', to: filters?.to || '' }
-            : { from: '', to: '' },
+        resolvedListRange,
     )
     const [hasLoadedList, setHasLoadedList] = useState(hasAppliedFilters)
     const [selectedListDraftId, setSelectedListDraftId] = useState(null)
@@ -253,17 +269,18 @@ export default function OrdersIndex({
 
     useEffect(() => {
         setHasLoadedList(hasAppliedFilters)
+        setListFilter(initialListFilter)
         setAppliedListFilter(hasAppliedFilters ? initialListFilter : 'open')
-        setAppliedListRange(
-            hasAppliedFilters
-                ? { from: filters?.from || '', to: filters?.to || '' }
-                : { from: '', to: '' },
-        )
+        setListRange(resolvedListRange)
+        setAppliedListRange(resolvedListRange)
 
         if (!hasAppliedFilters) {
             setSelectedListDraftId(null)
+            setCurrentDraft(null)
+            setSelectedItemId(null)
+            setDraftModalOpen(false)
         }
-    }, [filters?.from, filters?.to, hasAppliedFilters, initialListFilter])
+    }, [hasAppliedFilters, initialListFilter, resolvedListRange])
 
     useEffect(() => {
         if (!tenantId) {
@@ -311,7 +328,7 @@ export default function OrdersIndex({
                     categories,
                     customers,
                     products: productCatalog,
-                    orders: draftDetails,
+                    orders: hasAppliedFilters ? draftDetails : [],
                     cashRegister,
                 })
             }
@@ -335,7 +352,7 @@ export default function OrdersIndex({
             unsubscribe()
             window.removeEventListener('online', handleOnline)
         }
-    }, [cashRegister, categories, customers, draftDetails, localAgentBridge, productCatalog, tenantId])
+    }, [cashRegister, categories, customers, draftDetails, hasAppliedFilters, localAgentBridge, productCatalog, tenantId])
 
     useEffect(() => {
         const trimmedSearchTerm = appliedSearchTerm.trim()
