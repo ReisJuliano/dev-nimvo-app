@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -114,9 +115,9 @@ function matchesOrdersDateRange(draft, range) {
 }
 
 export default function OrdersIndex({
-    categories,
-    customers,
-    drafts: initialDrafts,
+    categories = [],
+    customers = [],
+    drafts: initialDrafts = [],
     draftDetails = [],
     initialDraft,
     productCatalog = [],

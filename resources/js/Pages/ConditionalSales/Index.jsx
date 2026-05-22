@@ -7,6 +7,7 @@ import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
 import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import '@/Pages/Products/products.css'
@@ -125,15 +126,15 @@ function TopProductsCard({ topProducts }) {
 }
 
 export default function ConditionalSalesPage({
-    conditionals,
+    conditionals = [],
     selectedConditionalId,
-    customers,
-    products,
-    paymentMethods,
-    filters,
+    customers = [],
+    products = [],
+    paymentMethods = [],
+    filters = {},
 }) {
     const [createOpen, setCreateOpen] = useState(false)
-    const [search, setSearch] = useState(filters.search || '')
+    const [search, setSearch] = useState(filters?.search || '')
     const [activeFilter, setActiveFilter] = useState('all')
     const [range, setRange] = useState({ from: '', to: '' })
     const [selectedRecordId, setSelectedRecordId] = useState(selectedConditionalId || conditionals[0]?.id || null)
@@ -520,7 +521,7 @@ export default function ConditionalSalesPage({
             <ActionDrawer
                 open={Boolean(selectedConditional)}
                 title={selectedConditional ? selectedConditional.code : 'Condicional'}
-                description={selectedConditional ? selectedConditional.customer.name : 'Detalhes da condicional'}
+                description={selectedConditional?.customer?.name || 'Detalhes da condicional'}
                 icon="fa-right-left"
                 size="lg"
                 badge={selectedConditional?.status_label}
