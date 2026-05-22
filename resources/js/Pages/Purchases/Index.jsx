@@ -12,8 +12,8 @@ import '../Operations/backoffice-workspace.css'
 import './purchases.css'
 
 const STATUS_TABS = [
-    { key: 'in_progress', label: 'Em andamento', icon: 'fa-clock-rotate-left' },
-    { key: 'finalized', label: 'Finalizadas', icon: 'fa-circle-check' },
+    { key: 'in_progress', label: 'Em andamento' },
+    { key: 'finalized', label: 'Finalizadas' },
 ]
 const ACTIVE_DRAFT_TAB_KEY = 'active_draft'
 
@@ -385,12 +385,13 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [activeDraftRecordId, setActiveDraftRecordId] = useState(null)
     const [form, setForm] = useState(createEmptyForm())
     const [savedDraftSnapshot, setSavedDraftSnapshot] = useState('')
+    const [nameEditing, setNameEditing] = useState(false)
     const [productQuery, setProductQuery] = useState('')
-    const [quickQuantity, setQuickQuantity] = useState('1')
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
     const [recordsLoading, setRecordsLoading] = useState(false)
     const [hasLoadedRecords, setHasLoadedRecords] = useState(initialRecords.length > 0)
+    const nameInputRef = useRef(null)
     const productSearchRef = useRef(null)
 
     const listViewTab = selectedTab === ACTIVE_DRAFT_TAB_KEY ? 'in_progress' : selectedTab
@@ -434,11 +435,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         )) || productOptions[0] || null
     }, [productOptions, productQuery])
 
-    const quickQuantityValue = useMemo(
-        () => Math.max(1, parseNumber(quickQuantity, 1)),
-        [quickQuantity],
-    )
-
     const statusCounts = useMemo(() => (
         STATUS_TABS.reduce((carry, tab) => ({
             ...carry,
@@ -469,6 +465,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         [form.items],
     )
 
+    const itemUnitsTotal = useMemo(
+        () => form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0),
+        [form.items],
+    )
+
     const subtotal = useMemo(() => summarizeItems(form.items), [form.items])
     const total = subtotal + parseNumber(form.freight, 0)
     const canEdit = activeDraftRecord ? !isLockedRecord(activeDraftRecord) : false
@@ -476,6 +477,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const pageFeedbackVisible = Boolean(feedback) && !createModalOpen && !selectedDetailRecord && !activeDraftRecordId
     const editorFeedbackVisible = Boolean(feedback) && Boolean(activeDraftRecordId) && !selectedDetailRecord
     const selectedRowKey = listViewTab === 'in_progress' ? activeDraftRecordId : detailRecordId
+    const itemsChipLabel = `${formatNumber(form.items.length)} ${form.items.length === 1 ? 'item' : 'itens'}`
+    const unitsChipLabel = `${formatNumber(itemUnitsTotal)} un`
     const workspaceTabs = useMemo(() => (
         activeDraftRecord
             ? [
@@ -559,12 +562,25 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return () => window.cancelAnimationFrame(frameId)
     }, [activeDraftRecordId])
 
+    useEffect(() => {
+        if (!nameEditing) {
+            return undefined
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+            nameInputRef.current?.focus()
+            nameInputRef.current?.select?.()
+        })
+
+        return () => window.cancelAnimationFrame(frameId)
+    }, [nameEditing])
+
     function resetActiveDraftState(options = {}) {
         setActiveDraftRecordId(null)
         setForm(createEmptyForm())
         setSavedDraftSnapshot('')
+        setNameEditing(false)
         setProductQuery('')
-        setQuickQuantity('1')
 
         if (options.nextTab) {
             setSelectedTab(options.nextTab)
@@ -576,8 +592,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         setActiveDraftRecordId(normalized.id)
         setForm(normalized)
         setSavedDraftSnapshot(buildDraftSnapshot(normalized))
+        setNameEditing(false)
         setProductQuery('')
-        setQuickQuantity('1')
     }
 
     async function confirmDiscardUnsavedChanges() {
@@ -782,7 +798,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         })
 
         setProductQuery('')
-        setQuickQuantity('1')
 
         window.requestAnimationFrame(() => {
             productSearchRef.current?.focus()
@@ -799,20 +814,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
 
         event.preventDefault()
-        addProduct(highlightedProduct, quickQuantityValue)
-    }
-
-    function handleQuickQuantityKeyDown(event) {
-        if (event.key !== 'Enter') {
-            return
-        }
-
-        if (!highlightedProduct || !canEdit) {
-            return
-        }
-
-        event.preventDefault()
-        addProduct(highlightedProduct, quickQuantityValue)
+        addProduct(highlightedProduct, 1)
     }
 
     function handleItemChange(index, field, value) {
@@ -1084,24 +1086,30 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             </label>
 
                             <form
-                                className="proc-ui-date-range proc-ui-date-range-with-action purchases-range-form"
+                                className="purchases-range-form"
                                 onSubmit={(event) => {
                                     event.preventDefault()
                                     void refreshRecords()
                                 }}
                             >
-                                <input
-                                    aria-label="Data inicial"
-                                    type="date"
-                                    value={listFilters.from}
-                                    onChange={(event) => handleListFilterChange('from', event.target.value)}
-                                />
-                                <input
-                                    aria-label="Data final"
-                                    type="date"
-                                    value={listFilters.to}
-                                    onChange={(event) => handleListFilterChange('to', event.target.value)}
-                                />
+                                <div className="purchases-range-field">
+                                    <i className="fa-regular fa-calendar" />
+                                    <input
+                                        aria-label="Data inicial"
+                                        type="date"
+                                        value={listFilters.from}
+                                        onChange={(event) => handleListFilterChange('from', event.target.value)}
+                                    />
+                                    <span className="purchases-range-separator">
+                                        <i className="fa-solid fa-arrow-right" />
+                                    </span>
+                                    <input
+                                        aria-label="Data final"
+                                        type="date"
+                                        value={listFilters.to}
+                                        onChange={(event) => handleListFilterChange('to', event.target.value)}
+                                    />
+                                </div>
                                 <button type="submit" className="ui-button" disabled={recordsLoading}>
                                     <i className="fa-solid fa-rotate-right" />
                                     <span>{recordsLoading ? 'Atualizando...' : 'Atualizar'}</span>
@@ -1115,7 +1123,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         </div>
 
                         <div className="purchases-toolbar-status">
-                            <span className="purchases-toolbar-label">Abas</span>
                             <div className="proc-ui-top-tabs purchases-toolbar-tabs">
                                 {workspaceTabs.map((tab) => (
                                     <button
@@ -1124,11 +1131,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
                                         onClick={() => void handleTabChange(tab.key)}
                                     >
-                                        <i className={`fa-solid ${tab.icon}`} />
-                                        <span>{tab.label}</span>
-                                        {Object.prototype.hasOwnProperty.call(statusCounts, tab.key) ? (
-                                            <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
-                                        ) : null}
+                                        <span>
+                                            {Object.prototype.hasOwnProperty.call(statusCounts, tab.key)
+                                                ? `${tab.label} (${formatNumber(statusCounts[tab.key] || 0)})`
+                                                : tab.label}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -1145,101 +1152,76 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             ) : null}
 
                             <div className="proc-ui-main-header purchases-workspace-header">
-                                <div className="purchases-workspace-title">
-                                    <h2>{getPurchaseDisplayName(form)}</h2>
-                                    <span>{form.code || 'Novo pedido'}</span>
+                                <div className="purchases-inline-summary">
+                                    <span className="purchases-summary-chip purchases-summary-chip-code">
+                                        {form.code || 'Novo pedido'}
+                                    </span>
+
+                                    <div className={`purchases-summary-chip purchases-summary-chip-name ${nameEditing ? 'is-editing' : ''}`}>
+                                        <span className="purchases-summary-chip-label">Nome:</span>
+                                        {nameEditing ? (
+                                            <input
+                                                ref={nameInputRef}
+                                                disabled={!canEdit}
+                                                maxLength="160"
+                                                placeholder="Nome do pedido"
+                                                type="text"
+                                                value={form.custom_name}
+                                                onBlur={() => setNameEditing(false)}
+                                                onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter' || event.key === 'Escape') {
+                                                        event.preventDefault()
+                                                        setNameEditing(false)
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <strong>{form.custom_name || 'Sem nome'}</strong>
+                                        )}
+                                        {canEdit ? (
+                                            <button
+                                                type="button"
+                                                className="proc-ui-ghost-icon purchases-name-edit-button"
+                                                title={nameEditing ? 'Concluir edicao' : 'Editar nome'}
+                                                onClick={() => setNameEditing((current) => !current)}
+                                            >
+                                                <i className={`fa-solid ${nameEditing ? 'fa-check' : 'fa-pen'}`} />
+                                            </button>
+                                        ) : null}
+                                    </div>
+
+                                    <span className="purchases-summary-chip">{itemsChipLabel}</span>
+                                    <span className="purchases-summary-chip">{unitsChipLabel}</span>
+                                    <span className="purchases-summary-chip purchases-summary-chip-total">{formatMoney(total)}</span>
                                 </div>
-                                <PurchaseStatusBadge status={form.status} />
+
+                                <div className="purchases-inline-status">
+                                    <PurchaseStatusBadge compact status={form.status} />
+                                    {editorDirty ? (
+                                        <span className="purchases-inline-badge warning">
+                                            <i className="fa-solid fa-triangle-exclamation" />
+                                            <span>Alteracoes pendentes</span>
+                                        </span>
+                                    ) : null}
+                                </div>
                             </div>
-
-                            <div className={`proc-ui-banner ${editorDirty ? 'warning' : 'success'} purchases-editor-state`}>
-                                <i className={`fa-solid ${editorDirty ? 'fa-floppy-disk' : 'fa-circle-check'}`} />
-                                <div>{editorDirty ? 'Alteracoes pendentes' : 'Pedido salvo'}</div>
-                            </div>
-
-                            <section className="proc-ui-modal-block purchases-name-stage">
-                                <div className="purchases-block-title">
-                                    <h3>Pedido</h3>
-                                </div>
-
-                                <div className="proc-ui-summary-grid purchases-review-summary">
-                                    <article className="proc-ui-summary-card">
-                                        <span>Codigo</span>
-                                        <strong>{form.code || 'Novo pedido'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Itens</span>
-                                        <strong>{formatNumber(form.items.length)}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Unidades</span>
-                                        <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Total</span>
-                                        <strong>{formatMoney(total)}</strong>
-                                    </article>
-                                </div>
-
-                                <div className="proc-ui-field full">
-                                    <label>
-                                        <span>Nome do pedido</span>
-                                        <input
-                                            disabled={!canEdit}
-                                            maxLength="160"
-                                            placeholder="Ex.: Pedido feira de sabado"
-                                            type="text"
-                                            value={form.custom_name}
-                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
-                                        />
-                                    </label>
-                                </div>
-                            </section>
 
                             <div className="purchases-editor-grid">
                                 <section className="proc-ui-modal-block purchases-items-search-panel">
-                                    <div className="purchases-panel-head">
-                                        <h3>Produtos</h3>
-
-                                        <div className="purchases-items-meta">
-                                            <span title="Pedido">
-                                                <i className="fa-solid fa-receipt" />
-                                                <strong>{form.custom_name || 'Sem nome'}</strong>
-                                            </span>
-                                            <span title="Codigo">
-                                                <i className="fa-solid fa-hashtag" />
-                                                <strong>{form.code || 'Novo pedido'}</strong>
-                                            </span>
-                                        </div>
-                                    </div>
-
                                     <div className="purchases-items-entrybar">
                                         <div className="purchases-items-search-field">
-                                            <i className="fa-solid fa-barcode" />
+                                            <i className="fa-solid fa-magnifying-glass" />
                                             <input
                                                 ref={productSearchRef}
                                                 className="proc-ui-searchbox"
                                                 aria-label="Buscar produto"
                                                 disabled={!canEdit}
-                                                placeholder="Produto, codigo ou EAN"
+                                                placeholder="Buscar produto por nome ou codigo de barras..."
                                                 type="search"
                                                 value={productQuery}
                                                 onChange={(event) => setProductQuery(event.target.value)}
                                                 onKeyDown={handleProductSearchKeyDown}
-                                            />
-                                        </div>
-
-                                        <div className="purchases-quick-qty-shell">
-                                            <i className="fa-solid fa-layer-group" />
-                                            <input
-                                                aria-label="Quantidade a pedir"
-                                                disabled={!canEdit}
-                                                min="1"
-                                                step="1"
-                                                type="number"
-                                                value={quickQuantity}
-                                                onChange={(event) => setQuickQuantity(event.target.value)}
-                                                onKeyDown={handleQuickQuantityKeyDown}
                                             />
                                         </div>
 
@@ -1249,9 +1231,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                             aria-label="Adicionar produto"
                                             disabled={!canEdit || !highlightedProduct}
                                             title="Adicionar produto"
-                                            onClick={() => addProduct(highlightedProduct, quickQuantityValue)}
+                                            onClick={() => addProduct(highlightedProduct, 1)}
                                         >
                                             <i className="fa-solid fa-plus" />
+                                            <span>Adicionar</span>
                                         </button>
                                     </div>
 
@@ -1266,7 +1249,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                         <div className="purchases-product-result-copy">
                                                             <strong>{option.name}</strong>
                                                             <span>{option.barcode || option.code || 'Sem codigo'}</span>
-                                                            <small>{formatMoney(option.cost_price || 0)}</small>
+                                                            <small>Custo atual: {formatMoney(option.cost_price || 0)}</small>
                                                         </div>
 
                                                         <div className="purchases-product-result-actions">
@@ -1282,13 +1265,13 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                                 aria-label={`Adicionar ${option.name}`}
                                                                 disabled={!canEdit}
                                                                 title={`Adicionar ${option.name}`}
-                                                                onClick={() => addProduct(option, quickQuantityValue)}
+                                                                onClick={() => addProduct(option, 1)}
                                                             >
                                                                 <i className="fa-solid fa-plus" />
                                                             </button>
                                                         </div>
                                                     </article>
-                                                )
+                                                    )
                                             }) : (
                                                 <div className="proc-ui-empty purchases-product-results-empty">
                                                     <strong>Nenhum produto</strong>
@@ -1299,35 +1282,12 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 </section>
 
                                 <section className="proc-ui-modal-block purchases-items-board">
-                                    <div className="purchases-block-title">
-                                        <h3>Itens</h3>
-                                    </div>
-
-                                    <div className="proc-ui-summary-grid purchases-review-summary">
-                                        <article className="proc-ui-summary-card">
-                                            <span>Itens</span>
-                                            <strong>{formatNumber(form.items.length)}</strong>
-                                        </article>
-                                        <article className="proc-ui-summary-card">
-                                            <span>Unidades</span>
-                                            <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
-                                        </article>
-                                        <article className="proc-ui-summary-card">
-                                            <span>Subtotal</span>
-                                            <strong>{formatMoney(subtotal)}</strong>
-                                        </article>
-                                        <article className="proc-ui-summary-card">
-                                            <span>Total</span>
-                                            <strong>{formatMoney(total)}</strong>
-                                        </article>
-                                    </div>
-
                                     <div className="proc-ui-table-wrap purchases-items-table-wrap">
                                         <table className="proc-ui-table purchases-items-table">
                                             <thead>
                                                 <tr>
                                                     <th>Produto</th>
-                                                    <th>Qtd a pedir</th>
+                                                    <th>Qtd</th>
                                                     <th>Custo unit.</th>
                                                     <th>Total</th>
                                                     <th />
@@ -1413,7 +1373,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     </div>
 
                                     <div className="proc-ui-table-totalbar purchases-items-totalbar">
-                                        <span>Itens diferentes: <strong>{formatNumber(form.items.length)}</strong></span>
+                                        <span>Itens: <strong>{itemsChipLabel}</strong></span>
+                                        <span>Unidades: <strong>{unitsChipLabel}</strong></span>
                                         <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
                                         <span>Total do pedido: <strong>{formatMoney(total)}</strong></span>
                                     </div>
