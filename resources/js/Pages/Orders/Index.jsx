@@ -128,13 +128,14 @@ export default function OrdersIndex({
 }) {
     const { auth, tenant, localAgentBridge } = usePage().props
     const moduleState = useModules()
-    const initialDraftState = initialDraft ? mapOrderToDraft(initialDraft) : null
+    const hasAppliedFilters = Boolean(filters?.applied)
+    const initialDraftState = hasAppliedFilters && initialDraft ? mapOrderToDraft(initialDraft) : null
     const tenantId = tenant?.id
 
     const [customerOptions, setCustomerOptions] = useState(customers)
-    const [drafts, setDrafts] = useState(sortDrafts(initialDrafts))
+    const [drafts, setDrafts] = useState(sortDrafts(hasAppliedFilters ? initialDrafts : []))
     const [currentDraft, setCurrentDraft] = useState(initialDraftState)
-    const [selectedItemId, setSelectedItemId] = useState(initialDraft?.items?.[0]?.id ?? null)
+    const [selectedItemId, setSelectedItemId] = useState(initialDraftState?.items?.[0]?.id ?? null)
     const [selectedCategory, setSelectedCategory] = useState('')
     const productSearchControl = useConfirmedSearch('')
     const [products, setProducts] = useState([])
@@ -147,17 +148,19 @@ export default function OrdersIndex({
     const [printingDraft, setPrintingDraft] = useState(false)
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
     const [submittingDelivery, setSubmittingDelivery] = useState(false)
-    const initialListFilter = filters?.status || resolveOrdersFilter(initialDraft?.status)
+    const initialListFilter = hasAppliedFilters
+        ? (filters?.status || resolveOrdersFilter(initialDraft?.status))
+        : 'open'
     const [listFilter, setListFilter] = useState(initialListFilter)
-    const [appliedListFilter, setAppliedListFilter] = useState(filters?.applied ? initialListFilter : 'open')
+    const [appliedListFilter, setAppliedListFilter] = useState(hasAppliedFilters ? initialListFilter : 'open')
     const listSearchControl = useConfirmedSearch(filters?.search || '')
     const [listRange, setListRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
     const [appliedListRange, setAppliedListRange] = useState(
-        filters?.applied
+        hasAppliedFilters
             ? { from: filters?.from || '', to: filters?.to || '' }
             : { from: '', to: '' },
     )
-    const [hasLoadedList, setHasLoadedList] = useState(Boolean(filters?.applied))
+    const [hasLoadedList, setHasLoadedList] = useState(hasAppliedFilters)
     const [selectedListDraftId, setSelectedListDraftId] = useState(null)
     const [draftModalOpen, setDraftModalOpen] = useState(false)
     const [productsModalOpen, setProductsModalOpen] = useState(false)
@@ -211,11 +214,21 @@ export default function OrdersIndex({
     )
 
     const resetHistoryEntry = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const currentState = window.history.state
+        const currentPage = currentState?.page
+        const isEncryptedPage = typeof ArrayBuffer !== 'undefined' && currentPage instanceof ArrayBuffer
+
         replaceCurrentInertiaHistoryPage((page) => ({
             ...page,
             url: '/pedidos',
             props: {
                 ...page.props,
+                drafts: [],
+                draftDetails: [],
                 initialDraft: null,
                 filters: {
                     applied: false,
@@ -226,13 +239,31 @@ export default function OrdersIndex({
                 },
             },
         }), '/pedidos')
+
+        if (!currentPage || isEncryptedPage) {
+            window.history.replaceState(currentState, '', '/pedidos')
+        }
     }, [])
 
     useResetPageHistoryOnLeave(resetHistoryEntry)
 
     useEffect(() => {
-        setDrafts(sortDrafts(initialDrafts))
-    }, [initialDrafts])
+        setDrafts(sortDrafts(hasAppliedFilters ? initialDrafts : []))
+    }, [hasAppliedFilters, initialDrafts])
+
+    useEffect(() => {
+        setHasLoadedList(hasAppliedFilters)
+        setAppliedListFilter(hasAppliedFilters ? initialListFilter : 'open')
+        setAppliedListRange(
+            hasAppliedFilters
+                ? { from: filters?.from || '', to: filters?.to || '' }
+                : { from: '', to: '' },
+        )
+
+        if (!hasAppliedFilters) {
+            setSelectedListDraftId(null)
+        }
+    }, [filters?.from, filters?.to, hasAppliedFilters, initialListFilter])
 
     useEffect(() => {
         if (!tenantId) {
@@ -630,7 +661,24 @@ export default function OrdersIndex({
     }
 
     function updateDraftUrl(draftId) {
-        window.history.replaceState({}, '', draftId ? `/pedidos?draft=${draftId}` : '/pedidos')
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const nextUrl = draftId ? `/pedidos?draft=${draftId}` : '/pedidos'
+        const currentState = window.history.state
+        const currentPage = currentState?.page
+        const isEncryptedPage = typeof ArrayBuffer !== 'undefined' && currentPage instanceof ArrayBuffer
+
+        if (currentPage && !isEncryptedPage) {
+            replaceCurrentInertiaHistoryPage((page) => ({
+                ...page,
+                url: nextUrl,
+            }), nextUrl)
+            return
+        }
+
+        window.history.replaceState(currentState, '', nextUrl)
     }
 
     function resetCheckoutState(fallbackItemId = '') {
