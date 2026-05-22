@@ -15,6 +15,7 @@ const STATUS_TABS = [
     { key: 'in_progress', label: 'Em andamento', icon: 'fa-clock-rotate-left' },
     { key: 'finalized', label: 'Finalizadas', icon: 'fa-circle-check' },
 ]
+const ACTIVE_DRAFT_TAB_KEY = 'active_draft'
 
 function resolveInitialTab(records) {
     return records.length === 0 || records.some((record) => record.status === 'draft') ? 'in_progress' : 'finalized'
@@ -37,10 +38,28 @@ function createEmptyForm() {
 }
 
 function createListFilters() {
+    const today = createTodayInputValue()
+
     return {
         search: '',
-        from: '',
-        to: '',
+        from: today,
+        to: today,
+    }
+}
+
+function createTodayInputValue() {
+    const now = new Date()
+    const timezoneOffset = now.getTimezoneOffset() * 60000
+
+    return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
+}
+
+function createAppliedPeriod() {
+    const today = createTodayInputValue()
+
+    return {
+        from: today,
+        to: today,
     }
 }
 
@@ -114,10 +133,6 @@ function getPurchaseDisplayName(record) {
     return record?.custom_name || record?.code || `Pedido #${record?.id}`
 }
 
-function getPurchaseFilterDateTime(record) {
-    return String(record?.created_at || record?.received_at || record?.expected_at || '')
-}
-
 function matchesPurchaseFilters(record, filters, tab) {
     if (tab && resolveWorkspaceTab(record.status) !== tab) {
         return false
@@ -133,17 +148,6 @@ function matchesPurchaseFilters(record, filters, tab) {
         record.notes,
         ...(record.items || []).map((item) => item.product_name),
     ], normalizedSearch)) {
-        return false
-    }
-
-    const dateTimeValue = getPurchaseFilterDateTime(record)
-    const recordDate = dateTimeValue.slice(0, 10)
-
-    if (filters?.from && (!recordDate || recordDate < filters.from)) {
-        return false
-    }
-
-    if (filters?.to && (!recordDate || recordDate > filters.to)) {
         return false
     }
 
@@ -374,6 +378,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [records, setRecords] = useState(initialRecords)
     const [selectedTab, setSelectedTab] = useState(initialTab)
     const [listFilters, setListFilters] = useState(createListFilters())
+    const [appliedPeriod, setAppliedPeriod] = useState(createAppliedPeriod())
     const [detailRecordId, setDetailRecordId] = useState(null)
     const [createModalOpen, setCreateModalOpen] = useState(false)
     const [createDraftName, setCreateDraftName] = useState('')
@@ -385,7 +390,13 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const [feedback, setFeedback] = useState(null)
     const [savingAction, setSavingAction] = useState(null)
     const [recordsLoading, setRecordsLoading] = useState(false)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState(initialRecords.length > 0)
     const productSearchRef = useRef(null)
+
+    const listViewTab = selectedTab === ACTIVE_DRAFT_TAB_KEY ? 'in_progress' : selectedTab
+    const periodDirty = listFilters.from !== appliedPeriod.from || listFilters.to !== appliedPeriod.to
+    const listRecordsReady = hasLoadedRecords && !periodDirty
+    const recordsForListView = listRecordsReady ? records : []
 
     const productsById = useMemo(
         () => new Map(products.map((product) => [String(product.id), product])),
@@ -393,8 +404,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     )
 
     const filteredRecords = useMemo(
-        () => records.filter((record) => matchesPurchaseFilters(record, listFilters, selectedTab)),
-        [listFilters, records, selectedTab],
+        () => recordsForListView.filter((record) => matchesPurchaseFilters(record, { search: listFilters.search }, listViewTab)),
+        [listFilters.search, listViewTab, recordsForListView],
     )
 
     const productOptions = useMemo(() => {
@@ -431,9 +442,9 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const statusCounts = useMemo(() => (
         STATUS_TABS.reduce((carry, tab) => ({
             ...carry,
-            [tab.key]: records.filter((record) => resolveWorkspaceTab(record.status) === tab.key).length,
+            [tab.key]: recordsForListView.filter((record) => resolveWorkspaceTab(record.status) === tab.key).length,
         }), {})
-    ), [records])
+    ), [recordsForListView])
 
     const filteredTotal = useMemo(
         () => filteredRecords.reduce((totalAmount, record) => totalAmount + Number(record.total || 0), 0),
@@ -464,7 +475,20 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     const editorDirty = Boolean(activeDraftRecordId) && buildDraftSnapshot(form) !== savedDraftSnapshot
     const pageFeedbackVisible = Boolean(feedback) && !createModalOpen && !selectedDetailRecord && !activeDraftRecordId
     const editorFeedbackVisible = Boolean(feedback) && Boolean(activeDraftRecordId) && !selectedDetailRecord
-    const selectedRowKey = selectedTab === 'in_progress' ? activeDraftRecordId : detailRecordId
+    const selectedRowKey = listViewTab === 'in_progress' ? activeDraftRecordId : detailRecordId
+    const workspaceTabs = useMemo(() => (
+        activeDraftRecord
+            ? [
+                ...STATUS_TABS,
+                {
+                    key: ACTIVE_DRAFT_TAB_KEY,
+                    label: getPurchaseDisplayName(activeDraftRecord),
+                    icon: 'fa-file-pen',
+                },
+            ]
+            : STATUS_TABS
+    ), [activeDraftRecord])
+    const showingActiveDraftWorkspace = selectedTab === ACTIVE_DRAFT_TAB_KEY && activeDraftRecord
 
     const columns = useMemo(() => ([
         {
@@ -518,16 +542,10 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             return
         }
 
-        setActiveDraftRecordId(null)
-        setForm(createEmptyForm())
-        setSavedDraftSnapshot('')
-        setProductQuery('')
-        setQuickQuantity('1')
-    }, [activeDraftRecord, activeDraftRecordId])
-
-    useEffect(() => {
-        void refreshRecords({ preserveFeedback: true })
-    }, [])
+        resetActiveDraftState({
+            nextTab: selectedTab === ACTIVE_DRAFT_TAB_KEY ? 'in_progress' : null,
+        })
+    }, [activeDraftRecord, activeDraftRecordId, selectedTab])
 
     useEffect(() => {
         if (!activeDraftRecordId) {
@@ -541,12 +559,16 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return () => window.cancelAnimationFrame(frameId)
     }, [activeDraftRecordId])
 
-    function resetActiveDraftState() {
+    function resetActiveDraftState(options = {}) {
         setActiveDraftRecordId(null)
         setForm(createEmptyForm())
         setSavedDraftSnapshot('')
         setProductQuery('')
         setQuickQuantity('1')
+
+        if (options.nextTab) {
+            setSelectedTab(options.nextTab)
+        }
     }
 
     function hydrateActiveDraft(record) {
@@ -577,7 +599,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             return false
         }
 
-        resetActiveDraftState()
+        resetActiveDraftState({ nextTab: options.nextTab || null })
         return true
     }
 
@@ -588,7 +610,25 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }))
     }
 
+    async function confirmRefreshWithOpenDraft() {
+        if (!activeDraftRecordId || !editorDirty) {
+            return true
+        }
+
+        return confirmPopup({
+            type: 'warning',
+            title: 'Atualizar lista',
+            message: 'Existe um pedido aberto com alteracoes nao salvas. Atualizar pode fechar esse pedido se ele sair do periodo atual. Deseja continuar?',
+            confirmLabel: 'Atualizar mesmo',
+            cancelLabel: 'Continuar editando',
+        })
+    }
+
     async function refreshRecords(options = {}) {
+        if (!(await confirmRefreshWithOpenDraft())) {
+            return
+        }
+
         setRecordsLoading(true)
 
         if (!options.preserveFeedback) {
@@ -596,8 +636,26 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         }
 
         try {
-            const response = await apiRequest(buildRecordsUrl('compras'))
+            const params = new URLSearchParams()
+
+            if (listFilters.from) {
+                params.set('from', listFilters.from)
+            }
+
+            if (listFilters.to) {
+                params.set('to', listFilters.to)
+            }
+
+            const response = await apiRequest(
+                params.toString() ? `${buildRecordsUrl('compras')}?${params.toString()}` : buildRecordsUrl('compras'),
+            )
+
             setRecords(Array.isArray(response?.records) ? response.records : [])
+            setAppliedPeriod({
+                from: listFilters.from,
+                to: listFilters.to,
+            })
+            setHasLoadedRecords(true)
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -610,17 +668,30 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             return
         }
 
-        if (!(await clearActiveDraftSelection())) {
+        if (tabKey === ACTIVE_DRAFT_TAB_KEY) {
+            if (activeDraftRecord) {
+                setDetailRecordId(null)
+                setFeedback(null)
+                setSelectedTab(tabKey)
+            }
+
+            return
+        }
+
+        if (activeDraftRecordId && !(await clearActiveDraftSelection({ nextTab: tabKey }))) {
             return
         }
 
         setDetailRecordId(null)
         setFeedback(null)
-        setSelectedTab(tabKey)
+
+        if (!activeDraftRecordId) {
+            setSelectedTab(tabKey)
+        }
     }
 
     async function openCreateModal() {
-        if (!(await clearActiveDraftSelection())) {
+        if (!(await clearActiveDraftSelection({ nextTab: 'in_progress' }))) {
             return
         }
 
@@ -638,28 +709,31 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
     async function openDraftEditor(record) {
         if (String(activeDraftRecordId || '') === String(record.id || '')) {
+            setSelectedTab(ACTIVE_DRAFT_TAB_KEY)
             return
         }
 
-        if (!(await clearActiveDraftSelection())) {
+        if (!(await clearActiveDraftSelection({ nextTab: 'in_progress' }))) {
             return
         }
 
         setDetailRecordId(null)
         setFeedback(null)
         hydrateActiveDraft(record)
-        setSelectedTab('in_progress')
+        setSelectedTab(ACTIVE_DRAFT_TAB_KEY)
     }
 
     async function openDetailsModal(record) {
-        if (!(await clearActiveDraftSelection())) {
+        const nextTab = resolveWorkspaceTab(record.status)
+
+        if (!(await clearActiveDraftSelection({ nextTab }))) {
             return
         }
 
         setCreateModalOpen(false)
         setFeedback(null)
         setDetailRecordId(record.id)
-        setSelectedTab(resolveWorkspaceTab(record.status))
+        setSelectedTab(nextTab)
     }
 
     async function handleOpenRecord(record) {
@@ -803,12 +877,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 : await apiRequest(buildRecordsUrl('compras'), { method: 'post', data: payloadData })
 
             setRecords((current) => upsertRecord(current, response.record))
-            setSelectedTab(resolveWorkspaceTab(response.record.status || status))
+            setHasLoadedRecords(true)
 
             if (response.record.status === 'draft') {
                 hydrateActiveDraft(response.record)
                 setDetailRecordId(null)
+                setSelectedTab(ACTIVE_DRAFT_TAB_KEY)
             } else {
+                setSelectedTab(resolveWorkspaceTab(response.record.status || status))
+
                 if (String(activeDraftRecordId || '') === String(response.record.id || '')) {
                     resetActiveDraftState()
                 }
@@ -879,7 +956,9 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             setRecords((current) => current.filter((entry) => entry.id !== record.id))
 
             if (String(activeDraftRecordId || '') === String(record.id || '')) {
-                resetActiveDraftState()
+                resetActiveDraftState({
+                    nextTab: selectedTab === ACTIVE_DRAFT_TAB_KEY ? 'in_progress' : null,
+                })
             }
 
             if (String(detailRecordId || '') === String(record.id || '')) {
@@ -1038,266 +1117,56 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         <div className="purchases-toolbar-status">
                             <span className="purchases-toolbar-label">Abas</span>
                             <div className="proc-ui-top-tabs purchases-toolbar-tabs">
-                                {STATUS_TABS.map((tab) => (
+                                {workspaceTabs.map((tab) => (
                                     <button
                                         key={tab.key}
                                         type="button"
                                         className={`proc-ui-tab-chip ${selectedTab === tab.key ? 'active' : ''}`}
                                         onClick={() => void handleTabChange(tab.key)}
                                     >
+                                        <i className={`fa-solid ${tab.icon}`} />
                                         <span>{tab.label}</span>
-                                        <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
+                                        {Object.prototype.hasOwnProperty.call(statusCounts, tab.key) ? (
+                                            <strong>{formatNumber(statusCounts[tab.key] || 0)}</strong>
+                                        ) : null}
                                     </button>
                                 ))}
                             </div>
                         </div>
                     </div>
 
-                    {pageFeedbackVisible ? (
-                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                            <span>{feedback.text}</span>
-                        </div>
-                    ) : null}
+                    {showingActiveDraftWorkspace ? (
+                        <section className="purchases-workspace-card">
+                            {editorFeedbackVisible ? (
+                                <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                    <span>{feedback.text}</span>
+                                </div>
+                            ) : null}
 
-                    <DenseTable
-                        className="purchases-records-table"
-                        columns={columns}
-                        emptyState={(
-                            <div className="proc-ui-empty">
-                                <strong>{recordsLoading ? 'Carregando pedidos...' : 'Nenhum pedido encontrado'}</strong>
-                                <p>
-                                    {recordsLoading
-                                        ? 'Estamos atualizando a lista de pedidos.'
-                                        : selectedTab === 'in_progress'
-                                            ? 'Crie um novo pedido para comecar a montar a compra.'
-                                            : 'Nenhuma compra foi finalizada dentro dos filtros atuais.'}
-                                </p>
-                            </div>
-                        )}
-                        getRowActions={(record) => (
-                            record.status === 'draft'
-                                ? [
-                                    {
-                                        key: 'open',
-                                        icon: 'fa-folder-open',
-                                        label: 'Abrir',
-                                        onClick: () => void openDraftEditor(record),
-                                        tone: 'info',
-                                    },
-                                    {
-                                        key: 'delete',
-                                        icon: 'fa-trash',
-                                        label: 'Excluir',
-                                        onClick: () => handleDelete(record),
-                                        tone: 'danger',
-                                    },
-                                ]
-                                : [
-                                    {
-                                        key: 'view',
-                                        icon: 'fa-eye',
-                                        label: 'Ver',
-                                        onClick: () => void openDetailsModal(record),
-                                    },
-                                ]
-                        )}
-                        minWidth={980}
-                        rows={filteredRecords}
-                        selectedRowKey={selectedRowKey}
-                        showActionLabels
-                        onRowClick={(record) => void handleOpenRecord(record)}
-                    />
-
-                    {!recordsLoading ? (
-                        <footer className="purchases-table-footer">
-                            <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
-                            <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
-                        </footer>
-                    ) : null}
-                </section>
-
-                {activeDraftRecord ? (
-                    <section className="proc-ui-section-card purchases-workspace-card">
-                        <div className="proc-ui-main-header purchases-workspace-header">
-                            <div>
-                                <h2>{getPurchaseDisplayName(form)}</h2>
-                                <p>Edite o nome, inclua produtos e use os botoes para salvar ou descartar alteracoes.</p>
-                            </div>
-                            <PurchaseStatusBadge status={form.status} />
-                        </div>
-
-                        {editorFeedbackVisible ? (
-                            <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                                <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                <span>{feedback.text}</span>
-                            </div>
-                        ) : null}
-
-                        <div className={`proc-ui-banner ${editorDirty ? 'warning' : 'success'} purchases-editor-state`}>
-                            <i className={`fa-solid ${editorDirty ? 'fa-floppy-disk' : 'fa-circle-check'}`} />
-                            <div>
-                                {editorDirty
-                                    ? 'Existem alteracoes pendentes neste pedido. Clique em Salvar para gravar ou em Descartar para voltar ao ultimo estado salvo.'
-                                    : 'Todas as alteracoes deste pedido ja foram salvas.'}
-                            </div>
-                        </div>
-
-                        <section className="proc-ui-modal-block purchases-name-stage">
-                            <div className="purchases-name-copy">
-                                <h3>Pedido em andamento</h3>
-                                <p>O nome e os itens ficam disponiveis aqui para voce voltar quando quiser.</p>
+                            <div className="proc-ui-main-header purchases-workspace-header">
+                                <div className="purchases-workspace-title">
+                                    <h2>{getPurchaseDisplayName(form)}</h2>
+                                    <span>{form.code || 'Novo pedido'}</span>
+                                </div>
+                                <PurchaseStatusBadge status={form.status} />
                             </div>
 
-                            <div className="proc-ui-summary-grid purchases-review-summary">
-                                <article className="proc-ui-summary-card">
-                                    <span>Codigo</span>
-                                    <strong>{form.code || 'Novo pedido'}</strong>
-                                </article>
-                                <article className="proc-ui-summary-card">
-                                    <span>Itens</span>
-                                    <strong>{formatNumber(form.items.length)}</strong>
-                                </article>
-                                <article className="proc-ui-summary-card">
-                                    <span>Unidades</span>
-                                    <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
-                                </article>
-                                <article className="proc-ui-summary-card">
-                                    <span>Total</span>
-                                    <strong>{formatMoney(total)}</strong>
-                                </article>
+                            <div className={`proc-ui-banner ${editorDirty ? 'warning' : 'success'} purchases-editor-state`}>
+                                <i className={`fa-solid ${editorDirty ? 'fa-floppy-disk' : 'fa-circle-check'}`} />
+                                <div>{editorDirty ? 'Alteracoes pendentes' : 'Pedido salvo'}</div>
                             </div>
 
-                            <div className="proc-ui-field full">
-                                <label>
-                                    <span>Nome do pedido</span>
-                                    <input
-                                        disabled={!canEdit}
-                                        maxLength="160"
-                                        placeholder="Ex.: Pedido feira de sabado"
-                                        type="text"
-                                        value={form.custom_name}
-                                        onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
-                                    />
-                                </label>
-                            </div>
-                        </section>
-
-                        <div className="purchases-editor-grid">
-                            <section className="proc-ui-modal-block purchases-items-search-panel">
-                                <div className="purchases-items-search-head">
-                                    <div className="purchases-items-search-copy">
-                                        <h3>Bipe, pesquise ou digite o produto</h3>
-                                        <p>Voce pode buscar por nome, codigo ou EAN. Ajuste a quantidade e pressione Enter para adicionar rapido.</p>
-                                    </div>
-
-                                    <div className="purchases-items-meta">
-                                        <span>Pedido <strong>{form.custom_name || 'Sem nome'}</strong></span>
-                                        <span>Codigo <strong>{form.code || 'Novo pedido'}</strong></span>
-                                    </div>
+                            <section className="proc-ui-modal-block purchases-name-stage">
+                                <div className="purchases-block-title">
+                                    <h3>Pedido</h3>
                                 </div>
 
-                                <div className="purchases-items-entrybar">
-                                    <label className="purchases-items-searchbox purchases-items-searchbox-wide">
-                                        <span className="proc-ui-label">
-                                            <i className="fa-solid fa-barcode" /> Buscar produto
-                                        </span>
-                                        <div className="purchases-items-search-input">
-                                            <i className="fa-solid fa-magnifying-glass" />
-                                            <input
-                                                ref={productSearchRef}
-                                                className="proc-ui-searchbox"
-                                                disabled={!canEdit}
-                                                placeholder="Nome, codigo ou EAN"
-                                                type="search"
-                                                value={productQuery}
-                                                onChange={(event) => setProductQuery(event.target.value)}
-                                                onKeyDown={handleProductSearchKeyDown}
-                                            />
-                                        </div>
-                                    </label>
-
-                                    <div className="proc-ui-field purchases-quick-qty">
-                                        <label>
-                                            <span>Qtd a pedir</span>
-                                            <input
-                                                disabled={!canEdit}
-                                                min="1"
-                                                step="1"
-                                                type="number"
-                                                value={quickQuantity}
-                                                onChange={(event) => setQuickQuantity(event.target.value)}
-                                                onKeyDown={handleQuickQuantityKeyDown}
-                                            />
-                                        </label>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="ui-button purchases-quick-add-button"
-                                        disabled={!canEdit || !highlightedProduct}
-                                        onClick={() => addProduct(highlightedProduct, quickQuantityValue)}
-                                    >
-                                        <i className="fa-solid fa-plus" />
-                                        <span>Adicionar</span>
-                                    </button>
-                                </div>
-
-                                {productQuery.trim().length > 0 ? (
-                                    <div className="proc-ui-banner info purchases-quick-match">
-                                        <i className="fa-solid fa-wand-magic-sparkles" />
-                                        <div>
-                                            {highlightedProduct
-                                                ? `Enter adiciona ${highlightedProduct.name} com ${formatNumber(quickQuantityValue)} unidade(s).`
-                                                : 'Nenhum produto encontrado com esse termo.'}
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {productQuery.trim().length > 0 ? (
-                                    <div className="purchases-product-results">
-                                        {productOptions.length ? productOptions.map((option) => {
-                                            const queuedItem = itemsByProductId[String(option.id)]
-                                            const queuedQuantity = queuedItem ? formatNumber(queuedItem.quantity) : null
-
-                                            return (
-                                                <article key={option.id} className="purchases-product-result">
-                                                    <div className="purchases-product-result-copy">
-                                                        <strong>{option.name}</strong>
-                                                        <span>{option.barcode || option.code || 'Sem codigo'}</span>
-                                                        <small>Custo atual: {formatMoney(option.cost_price || 0)}</small>
-                                                    </div>
-
-                                                    <div className="purchases-product-result-actions">
-                                                        {queuedQuantity ? <span className="proc-ui-pill">No pedido: {queuedQuantity}</span> : null}
-                                                        <button
-                                                            type="button"
-                                                            className="ui-button"
-                                                            disabled={!canEdit}
-                                                            onClick={() => addProduct(option, quickQuantityValue)}
-                                                        >
-                                                            Adicionar {formatNumber(quickQuantityValue)}
-                                                        </button>
-                                                    </div>
-                                                </article>
-                                            )
-                                        }) : (
-                                            <div className="proc-ui-empty purchases-product-results-empty">
-                                                <strong>Nenhum produto encontrado</strong>
-                                                <p>Tente outro nome, codigo interno ou EAN.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="proc-ui-empty purchases-product-results-empty">
-                                        <strong>Comece lendo ou digitando um produto</strong>
-                                        <p>Assim que voce pesquisar, a lista aparece pronta para adicionar.</p>
-                                    </div>
-                                )}
-                            </section>
-
-                            <section className="proc-ui-modal-block purchases-items-board">
                                 <div className="proc-ui-summary-grid purchases-review-summary">
+                                    <article className="proc-ui-summary-card">
+                                        <span>Codigo</span>
+                                        <strong>{form.code || 'Novo pedido'}</strong>
+                                    </article>
                                     <article className="proc-ui-summary-card">
                                         <span>Itens</span>
                                         <strong>{formatNumber(form.items.length)}</strong>
@@ -1307,166 +1176,380 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
                                     </article>
                                     <article className="proc-ui-summary-card">
-                                        <span>Subtotal</span>
-                                        <strong>{formatMoney(subtotal)}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
                                         <span>Total</span>
                                         <strong>{formatMoney(total)}</strong>
                                     </article>
                                 </div>
 
-                                <div className="proc-ui-table-wrap purchases-items-table-wrap">
-                                    <table className="proc-ui-table purchases-items-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Produto</th>
-                                                <th>Qtd a pedir</th>
-                                                <th>Custo unit.</th>
-                                                <th>Total</th>
-                                                <th />
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {form.items.length ? form.items.map((item, index) => {
-                                                const productMeta = productsById.get(String(item.product_id))
-
-                                                return (
-                                                    <tr key={`${item.product_id}-${index}`}>
-                                                        <td>
-                                                            <div className="purchases-item-identity">
-                                                                <strong>{getProductLabel(item, products)}</strong>
-                                                                <span>{productMeta?.barcode || productMeta?.code || 'Sem codigo'}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <div className="purchases-qty-control">
-                                                                <button
-                                                                    type="button"
-                                                                    className="proc-ui-ghost-icon"
-                                                                    disabled={!canEdit}
-                                                                    title="Diminuir 1"
-                                                                    onClick={() => handleItemQuantityShortcut(index, -1)}
-                                                                >
-                                                                    <i className="fa-solid fa-minus" />
-                                                                </button>
-                                                                <input
-                                                                    disabled={!canEdit}
-                                                                    min="0"
-                                                                    step="0.001"
-                                                                    type="number"
-                                                                    value={item.quantity}
-                                                                    onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    className="proc-ui-ghost-icon"
-                                                                    disabled={!canEdit}
-                                                                    title="Aumentar 1"
-                                                                    onClick={() => handleItemQuantityShortcut(index, 1)}
-                                                                >
-                                                                    <i className="fa-solid fa-plus" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <input
-                                                                disabled={!canEdit}
-                                                                min="0"
-                                                                step="0.01"
-                                                                type="number"
-                                                                value={item.unit_cost}
-                                                                onChange={(event) => handleItemChange(index, 'unit_cost', event.target.value)}
-                                                            />
-                                                        </td>
-                                                        <td><strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong></td>
-                                                        <td>
-                                                            <button
-                                                                type="button"
-                                                                className="proc-ui-ghost-icon"
-                                                                disabled={!canEdit}
-                                                                title="Remover item"
-                                                                onClick={() => handleItemRemove(index)}
-                                                            >
-                                                                <i className="fa-solid fa-xmark" />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            }) : (
-                                                <tr>
-                                                    <td colSpan="5">
-                                                        <div className="proc-ui-empty">
-                                                            <strong>Nenhum item no pedido</strong>
-                                                            <p>Use a busca ao lado para montar a lista antes de finalizar.</p>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="proc-ui-table-totalbar purchases-items-totalbar">
-                                    <span>Itens diferentes: <strong>{formatNumber(form.items.length)}</strong></span>
-                                    <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
-                                    <span>Total do pedido: <strong>{formatMoney(total)}</strong></span>
-                                </div>
-
-                                <div className="proc-ui-field full purchases-review-notes">
+                                <div className="proc-ui-field full">
                                     <label>
-                                        <span>Observacoes</span>
-                                        <textarea
-                                            className="purchases-editor-notes"
+                                        <span>Nome do pedido</span>
+                                        <input
                                             disabled={!canEdit}
-                                            rows="3"
-                                            value={form.notes}
-                                            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                                            maxLength="160"
+                                            placeholder="Ex.: Pedido feira de sabado"
+                                            type="text"
+                                            value={form.custom_name}
+                                            onChange={(event) => setForm((current) => ({ ...current, custom_name: event.target.value }))}
                                         />
                                     </label>
                                 </div>
                             </section>
-                        </div>
 
-                        <div className="proc-ui-card-toolbar purchases-workspace-submitbar">
-                            <button type="button" className="ui-button-ghost" onClick={() => void clearActiveDraftSelection()}>
-                                Voltar para todos
-                            </button>
-                            <button
-                                type="button"
-                                className="ui-button-ghost"
-                                disabled={!editorDirty || savingAction !== null}
-                                onClick={() => void handleDiscardActiveChanges()}
-                            >
-                                Descartar alteracoes
-                            </button>
-                            <button
-                                type="button"
-                                className="ui-button-ghost danger"
-                                disabled={savingAction !== null}
-                                onClick={() => handleDelete(activeDraftRecord)}
-                            >
-                                Excluir
-                            </button>
-                            <button
-                                type="button"
-                                className="ui-button-ghost"
-                                disabled={!canEdit || savingAction !== null}
-                                onClick={() => void handleSaveActiveDraft()}
-                            >
-                                {savingAction === 'active-draft-save' ? 'Salvando...' : 'Salvar'}
-                            </button>
-                            <button
-                                type="button"
-                                className="ui-button"
-                                disabled={!canEdit || savingAction !== null}
-                                onClick={() => void handleFinalizeActiveDraft()}
-                            >
-                                {savingAction === 'active-draft-finalize' ? 'Finalizando...' : 'Finalizar compra'}
-                            </button>
-                        </div>
-                    </section>
-                ) : null}
+                            <div className="purchases-editor-grid">
+                                <section className="proc-ui-modal-block purchases-items-search-panel">
+                                    <div className="purchases-panel-head">
+                                        <h3>Produtos</h3>
+
+                                        <div className="purchases-items-meta">
+                                            <span title="Pedido">
+                                                <i className="fa-solid fa-receipt" />
+                                                <strong>{form.custom_name || 'Sem nome'}</strong>
+                                            </span>
+                                            <span title="Codigo">
+                                                <i className="fa-solid fa-hashtag" />
+                                                <strong>{form.code || 'Novo pedido'}</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="purchases-items-entrybar">
+                                        <div className="purchases-items-search-field">
+                                            <i className="fa-solid fa-barcode" />
+                                            <input
+                                                ref={productSearchRef}
+                                                className="proc-ui-searchbox"
+                                                aria-label="Buscar produto"
+                                                disabled={!canEdit}
+                                                placeholder="Produto, codigo ou EAN"
+                                                type="search"
+                                                value={productQuery}
+                                                onChange={(event) => setProductQuery(event.target.value)}
+                                                onKeyDown={handleProductSearchKeyDown}
+                                            />
+                                        </div>
+
+                                        <div className="purchases-quick-qty-shell">
+                                            <i className="fa-solid fa-layer-group" />
+                                            <input
+                                                aria-label="Quantidade a pedir"
+                                                disabled={!canEdit}
+                                                min="1"
+                                                step="1"
+                                                type="number"
+                                                value={quickQuantity}
+                                                onChange={(event) => setQuickQuantity(event.target.value)}
+                                                onKeyDown={handleQuickQuantityKeyDown}
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className="ui-button purchases-quick-add-button"
+                                            aria-label="Adicionar produto"
+                                            disabled={!canEdit || !highlightedProduct}
+                                            title="Adicionar produto"
+                                            onClick={() => addProduct(highlightedProduct, quickQuantityValue)}
+                                        >
+                                            <i className="fa-solid fa-plus" />
+                                        </button>
+                                    </div>
+
+                                    {productQuery.trim().length > 0 ? (
+                                        <div className="purchases-product-results">
+                                            {productOptions.length ? productOptions.map((option) => {
+                                                const queuedItem = itemsByProductId[String(option.id)]
+                                                const queuedQuantity = queuedItem ? formatNumber(queuedItem.quantity) : null
+
+                                                return (
+                                                    <article key={option.id} className="purchases-product-result">
+                                                        <div className="purchases-product-result-copy">
+                                                            <strong>{option.name}</strong>
+                                                            <span>{option.barcode || option.code || 'Sem codigo'}</span>
+                                                            <small>{formatMoney(option.cost_price || 0)}</small>
+                                                        </div>
+
+                                                        <div className="purchases-product-result-actions">
+                                                            {queuedQuantity ? (
+                                                                <span className="proc-ui-pill" title="Quantidade no pedido">
+                                                                    <i className="fa-solid fa-boxes-stacked" />
+                                                                    <strong>{queuedQuantity}</strong>
+                                                                </span>
+                                                            ) : null}
+                                                            <button
+                                                                type="button"
+                                                                className="ui-button purchases-product-add-button"
+                                                                aria-label={`Adicionar ${option.name}`}
+                                                                disabled={!canEdit}
+                                                                title={`Adicionar ${option.name}`}
+                                                                onClick={() => addProduct(option, quickQuantityValue)}
+                                                            >
+                                                                <i className="fa-solid fa-plus" />
+                                                            </button>
+                                                        </div>
+                                                    </article>
+                                                )
+                                            }) : (
+                                                <div className="proc-ui-empty purchases-product-results-empty">
+                                                    <strong>Nenhum produto</strong>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </section>
+
+                                <section className="proc-ui-modal-block purchases-items-board">
+                                    <div className="purchases-block-title">
+                                        <h3>Itens</h3>
+                                    </div>
+
+                                    <div className="proc-ui-summary-grid purchases-review-summary">
+                                        <article className="proc-ui-summary-card">
+                                            <span>Itens</span>
+                                            <strong>{formatNumber(form.items.length)}</strong>
+                                        </article>
+                                        <article className="proc-ui-summary-card">
+                                            <span>Unidades</span>
+                                            <strong>{formatNumber(form.items.reduce((sum, item) => sum + parseNumber(item.quantity, 0), 0))}</strong>
+                                        </article>
+                                        <article className="proc-ui-summary-card">
+                                            <span>Subtotal</span>
+                                            <strong>{formatMoney(subtotal)}</strong>
+                                        </article>
+                                        <article className="proc-ui-summary-card">
+                                            <span>Total</span>
+                                            <strong>{formatMoney(total)}</strong>
+                                        </article>
+                                    </div>
+
+                                    <div className="proc-ui-table-wrap purchases-items-table-wrap">
+                                        <table className="proc-ui-table purchases-items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Produto</th>
+                                                    <th>Qtd a pedir</th>
+                                                    <th>Custo unit.</th>
+                                                    <th>Total</th>
+                                                    <th />
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {form.items.length ? form.items.map((item, index) => {
+                                                    const productMeta = productsById.get(String(item.product_id))
+
+                                                    return (
+                                                        <tr key={`${item.product_id}-${index}`}>
+                                                            <td>
+                                                                <div className="purchases-item-identity">
+                                                                    <strong>{getProductLabel(item, products)}</strong>
+                                                                    <span>{productMeta?.barcode || productMeta?.code || 'Sem codigo'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="purchases-qty-control">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="proc-ui-ghost-icon"
+                                                                        disabled={!canEdit}
+                                                                        title="Diminuir 1"
+                                                                        onClick={() => handleItemQuantityShortcut(index, -1)}
+                                                                    >
+                                                                        <i className="fa-solid fa-minus" />
+                                                                    </button>
+                                                                    <input
+                                                                        disabled={!canEdit}
+                                                                        min="0"
+                                                                        step="0.001"
+                                                                        type="number"
+                                                                        value={item.quantity}
+                                                                        onChange={(event) => handleItemChange(index, 'quantity', event.target.value)}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className="proc-ui-ghost-icon"
+                                                                        disabled={!canEdit}
+                                                                        title="Aumentar 1"
+                                                                        onClick={() => handleItemQuantityShortcut(index, 1)}
+                                                                    >
+                                                                        <i className="fa-solid fa-plus" />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <input
+                                                                    disabled={!canEdit}
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    type="number"
+                                                                    value={item.unit_cost}
+                                                                    onChange={(event) => handleItemChange(index, 'unit_cost', event.target.value)}
+                                                                />
+                                                            </td>
+                                                            <td><strong>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</strong></td>
+                                                            <td>
+                                                                <button
+                                                                    type="button"
+                                                                    className="proc-ui-ghost-icon"
+                                                                    disabled={!canEdit}
+                                                                    title="Remover item"
+                                                                    onClick={() => handleItemRemove(index)}
+                                                                >
+                                                                    <i className="fa-solid fa-xmark" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                }) : (
+                                                    <tr>
+                                                        <td colSpan="5">
+                                                            <div className="proc-ui-empty">
+                                                                <strong>Nenhum item</strong>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="proc-ui-table-totalbar purchases-items-totalbar">
+                                        <span>Itens diferentes: <strong>{formatNumber(form.items.length)}</strong></span>
+                                        <span>Subtotal: <strong>{formatMoney(subtotal)}</strong></span>
+                                        <span>Total do pedido: <strong>{formatMoney(total)}</strong></span>
+                                    </div>
+
+                                    <div className="proc-ui-field full purchases-review-notes">
+                                        <label>
+                                            <span>Observacoes</span>
+                                            <textarea
+                                                className="purchases-editor-notes"
+                                                disabled={!canEdit}
+                                                rows="3"
+                                                value={form.notes}
+                                                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                                            />
+                                        </label>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div className="proc-ui-card-toolbar purchases-workspace-submitbar">
+                                <button type="button" className="ui-button-ghost" onClick={() => void clearActiveDraftSelection({ nextTab: 'in_progress' })}>
+                                    Voltar
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ui-button-ghost"
+                                    disabled={!editorDirty || savingAction !== null}
+                                    onClick={() => void handleDiscardActiveChanges()}
+                                >
+                                    Descartar alteracoes
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ui-button-ghost danger"
+                                    disabled={savingAction !== null}
+                                    onClick={() => handleDelete(activeDraftRecord)}
+                                >
+                                    Excluir
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ui-button-ghost"
+                                    disabled={!canEdit || savingAction !== null}
+                                    onClick={() => void handleSaveActiveDraft()}
+                                >
+                                    {savingAction === 'active-draft-save' ? 'Salvando...' : 'Salvar'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="ui-button"
+                                    disabled={!canEdit || savingAction !== null}
+                                    onClick={() => void handleFinalizeActiveDraft()}
+                                >
+                                    {savingAction === 'active-draft-finalize' ? 'Finalizando...' : 'Finalizar compra'}
+                                </button>
+                            </div>
+                        </section>
+                    ) : (
+                        <>
+                            {pageFeedbackVisible ? (
+                                <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                    <span>{feedback.text}</span>
+                                </div>
+                            ) : null}
+
+                            <DenseTable
+                                className="purchases-records-table"
+                                columns={columns}
+                                emptyState={(
+                                    <div className="proc-ui-empty">
+                                        <strong>
+                                            {recordsLoading
+                                                ? 'Carregando pedidos...'
+                                                : !hasLoadedRecords
+                                                    ? 'Clique em Atualizar para carregar'
+                                                    : periodDirty
+                                                        ? 'Periodo alterado'
+                                                        : 'Nenhum pedido encontrado'}
+                                        </strong>
+                                        <p>
+                                            {recordsLoading
+                                                ? 'Estamos atualizando a lista de pedidos.'
+                                                : !hasLoadedRecords
+                                                    ? 'A lista aparece somente depois da busca manual.'
+                                                    : periodDirty
+                                                        ? 'Atualize para exibir os pedidos do novo periodo.'
+                                                        : listViewTab === 'in_progress'
+                                                            ? 'Nenhum pedido em andamento dentro do periodo selecionado.'
+                                                            : 'Nenhuma compra finalizada dentro do periodo selecionado.'}
+                                        </p>
+                                    </div>
+                                )}
+                                getRowActions={(record) => (
+                                    record.status === 'draft'
+                                        ? [
+                                            {
+                                                key: 'open',
+                                                icon: 'fa-folder-open',
+                                                label: 'Abrir',
+                                                onClick: () => void openDraftEditor(record),
+                                                tone: 'info',
+                                            },
+                                            {
+                                                key: 'delete',
+                                                icon: 'fa-trash',
+                                                label: 'Excluir',
+                                                onClick: () => handleDelete(record),
+                                                tone: 'danger',
+                                            },
+                                        ]
+                                        : [
+                                            {
+                                                key: 'view',
+                                                icon: 'fa-eye',
+                                                label: 'Ver',
+                                                onClick: () => void openDetailsModal(record),
+                                            },
+                                        ]
+                                )}
+                                minWidth={980}
+                                rows={filteredRecords}
+                                selectedRowKey={selectedRowKey}
+                                showActionLabels
+                                onRowClick={(record) => void handleOpenRecord(record)}
+                            />
+
+                            {listRecordsReady && !recordsLoading ? (
+                                <footer className="purchases-table-footer">
+                                    <span>Total de registros: <strong>{formatNumber(filteredRecords.length)}</strong></span>
+                                    <span>Total geral dos pedidos filtrados: <strong>{formatMoney(filteredTotal)}</strong></span>
+                                </footer>
+                            ) : null}
+                        </>
+                    )}
+                </section>
             </div>
 
             <CompactModal

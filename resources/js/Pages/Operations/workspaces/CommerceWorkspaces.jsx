@@ -81,19 +81,15 @@ function PurchaseItemsEditor({ products, items, onChange }) {
 
 export function DeliveryWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, customer_id: '', reference: '', status: 'pending', channel: 'delivery', recipient_name: '', phone: '', courier_name: '', address: '', neighborhood: '', delivery_fee: '0', order_total: '0', scheduled_for: '', notes: '' }
+    const emptyFilters = { customer_id: '', value: '', date: '', from: '', to: '', status: '' }
     const [records, setRecords] = useState(payload.records || [])
-    const [activeTab, setActiveTab] = useState('pending')
+    const [filters, setFilters] = useState(emptyFilters)
+    const [hasSearched, setHasSearched] = useState(false)
     const [form, setForm] = useState(emptyForm)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [saving, setSaving] = useState(false)
+    const [searching, setSearching] = useState(false)
     const [feedback, setFeedback] = useState(null)
-
-    const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
-    const counts = useMemo(() => ({
-        pending: records.filter((record) => record.status === 'pending').length,
-        dispatched: records.filter((record) => record.status === 'dispatched').length,
-        delivered: records.filter((record) => record.status === 'delivered').length,
-    }), [records])
 
     function deliveryStatusLabel(status) {
         if (status === 'dispatched') return 'Em rota'
@@ -129,6 +125,59 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         setForm(emptyForm)
     }
 
+    function buildFilterParams(currentFilters = filters) {
+        return Object.fromEntries(
+            Object.entries(currentFilters).filter(([, value]) => String(value ?? '').trim() !== ''),
+        )
+    }
+
+    function hasActiveFilters(currentFilters = filters) {
+        return Object.values(currentFilters).some((value) => String(value ?? '').trim() !== '')
+    }
+
+    async function fetchRecords(currentFilters = filters, options = {}) {
+        if (!hasActiveFilters(currentFilters)) {
+            setRecords([])
+            setHasSearched(false)
+
+            if (!options.preserveFeedback) {
+                setFeedback({ type: 'error', text: 'Informe pelo menos um filtro antes de buscar entregas.' })
+            }
+
+            return
+        }
+
+        setSearching(true)
+
+        if (!options.preserveFeedback) {
+            setFeedback(null)
+        }
+
+        try {
+            const response = await apiRequest(buildRecordsUrl(moduleKey), { params: buildFilterParams(currentFilters) })
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setHasSearched(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setSearching(false)
+        }
+    }
+
+    function handleFilterChange(field, value) {
+        setFilters((current) => ({
+            ...current,
+            [field]: value,
+        }))
+    }
+
+    function handleClearFilters() {
+        setFilters(emptyFilters)
+        setRecords([])
+        setHasSearched(false)
+        setFeedback(null)
+    }
+
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -136,10 +185,13 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         try {
             const payloadData = { ...form, customer_id: form.customer_id ? Number(form.customer_id) : null, delivery_fee: parseNumber(form.delivery_fee, 0), order_total: parseNumber(form.order_total, 0), scheduled_for: form.scheduled_for || null }
             const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
             setForm({ ...emptyForm, ...response.record, customer_id: response.record.customer_id ? String(response.record.customer_id) : '', delivery_fee: String(response.record.delivery_fee || 0), order_total: String(response.record.order_total || 0), scheduled_for: ensureDateTime(response.record.scheduled_for) })
             setDrawerOpen(false)
             setFeedback({ type: 'success', text: response.message })
+
+            if (hasSearched) {
+                await fetchRecords(filters, { preserveFeedback: true })
+            }
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -164,6 +216,10 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
             setRecords((current) => current.filter((record) => record.id !== form.id))
             closeDrawer()
             setFeedback({ type: 'success', text: response.message })
+
+            if (hasSearched) {
+                await fetchRecords(filters, { preserveFeedback: true })
+            }
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         }
@@ -187,7 +243,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                 notes: record.notes || '',
             }
             const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'put', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
+
             if (String(form.id) === String(record.id)) {
                 setForm((current) => ({
                     ...current,
@@ -199,6 +255,10 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                 }))
             }
             setFeedback({ type: 'success', text: response.message })
+
+            if (hasSearched) {
+                await fetchRecords(filters, { preserveFeedback: true })
+            }
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         }
@@ -206,22 +266,58 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
 
     return (
         <div className="ops-workspace-stack">
-            <SectionTabs
-                tabs={[
-                    { key: 'pending', label: `Pendentes ${counts.pending}`, icon: 'fa-clock' },
-                    { key: 'dispatched', label: `Em rota ${counts.dispatched}`, icon: 'fa-route' },
-                    { key: 'delivered', label: `Entregues ${counts.delivered}`, icon: 'fa-house-chimney-check' },
-                ]}
-                activeTab={activeTab}
-                onChange={setActiveTab}
-            />
             <section className="ops-workspace-panel ops-delivery-panel">
                 <FeedbackHeader
                     title="Fila de entregas"
-                    subtitle={`${filteredRecords.length} registro(s) em ${activeTab === 'pending' ? 'pendencia' : activeTab === 'dispatched' ? 'rota' : 'historico'}`}
+                    subtitle={hasSearched ? `${records.length} registro(s) encontrados` : 'Use os filtros abaixo e clique em Buscar para carregar as entregas'}
                     action={<button type="button" className="ui-button" onClick={openNewDrawer}><i className="fa-solid fa-plus" />+ Nova entrega</button>}
                 />
                 <Feedback feedback={feedback} />
+
+                <form
+                    className="ops-delivery-filters"
+                    onSubmit={(event) => {
+                        event.preventDefault()
+                        void fetchRecords()
+                    }}
+                >
+                    <label>
+                        <span>Cliente</span>
+                        <select value={filters.customer_id} onChange={(event) => handleFilterChange('customer_id', event.target.value)}>
+                            <option value="">Todos</option>
+                            {payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Valor total</span>
+                        <input type="number" min="0" step="0.01" value={filters.value} onChange={(event) => handleFilterChange('value', event.target.value)} />
+                    </label>
+                    <label>
+                        <span>Data</span>
+                        <input type="date" value={filters.date} onChange={(event) => handleFilterChange('date', event.target.value)} />
+                    </label>
+                    <label>
+                        <span>Periodo de</span>
+                        <input type="date" value={filters.from} onChange={(event) => handleFilterChange('from', event.target.value)} />
+                    </label>
+                    <label>
+                        <span>Periodo ate</span>
+                        <input type="date" value={filters.to} onChange={(event) => handleFilterChange('to', event.target.value)} />
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select value={filters.status} onChange={(event) => handleFilterChange('status', event.target.value)}>
+                            <option value="">Todos</option>
+                            <option value="pending">Pendente</option>
+                            <option value="dispatched">Em rota</option>
+                            <option value="delivered">Entregue</option>
+                        </select>
+                    </label>
+                    <div className="ops-delivery-filters-actions">
+                        <button type="button" className="ui-button-ghost" onClick={handleClearFilters}>Limpar</button>
+                        <button type="submit" className="ui-button" disabled={searching}>{searching ? 'Buscando...' : 'Buscar'}</button>
+                    </div>
+                </form>
 
                 <DenseTable
                     columns={[
@@ -251,10 +347,10 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                             render: (record) => <StatusBadge compact label={deliveryStatusLabel(record.status)} tone={deliveryStatusTone(record.status)} />,
                         },
                     ]}
-                    rows={filteredRecords}
+                    rows={records}
                     rowKey="id"
                     onRowClick={openRecordDrawer}
-                    emptyState={<EmptyState title="Sem entregas" text="Nenhum registro nesta etapa." />}
+                    emptyState={<EmptyState title={hasSearched ? 'Sem entregas' : 'Nenhuma busca realizada'} text={hasSearched ? 'Nenhuma entrega encontrada com os filtros informados.' : 'Defina cliente, valor, data, periodo ou status para consultar a fila.'} />}
                     getRowActions={(record) => [
                         {
                             key: 'view',

@@ -82,7 +82,7 @@ class OperationsWorkspaceService
                 'moduleKey' => 'delivery',
                 'moduleTitle' => 'Delivery',
                 'moduleDescription' => 'Fila de entrega e retirada com taxa, endereco, status e entregador.',
-                'payload' => $this->deliveryPayload(),
+                'payload' => $this->deliveryPayload(false),
             ],
             'compras' => [
                 'moduleKey' => 'compras',
@@ -138,8 +138,11 @@ class OperationsWorkspaceService
     {
         return match ($module) {
             'clientes' => $this->customersPayload($filters),
+            'delivery' => [
+                'records' => $this->deliveryRecords($filters),
+            ],
             'compras' => [
-                'records' => $this->purchaseRecords(),
+                'records' => $this->purchaseRecords($filters),
             ],
             default => [
                 'records' => data_get($this->build($module), 'payload.records', []),
@@ -194,24 +197,70 @@ class OperationsWorkspaceService
         return $message;
     }
 
-    protected function deliveryPayload(): array
+    protected function deliveryPayload(bool $includeRecords = true, array $filters = []): array
     {
         return [
-            'records' => DeliveryOrder::query()
-                ->with(['customer:id,name,phone'])
-                ->latest()
-                ->get()
-                ->map(fn (DeliveryOrder $order) => $this->serializeDeliveryOrder($order))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->deliveryRecords($filters) : [],
             'customers' => $this->customerOptions(),
         ];
+    }
+
+    protected function deliveryRecords(array $filters = []): array
+    {
+        $validated = Validator::make($filters, [
+            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'value' => ['nullable', 'numeric', 'gte:0'],
+            'date' => ['nullable', 'date'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::in(['all', 'pending', 'dispatched', 'delivered'])],
+        ])->validate();
+
+        if (!$this->hasDeliverySearchFilters($validated)) {
+            return [];
+        }
+
+        if (filled($validated['from'] ?? null) && filled($validated['to'] ?? null) && $validated['from'] > $validated['to']) {
+            throw ValidationException::withMessages([
+                'filters' => 'O periodo final precisa ser maior ou igual ao periodo inicial.',
+            ]);
+        }
+
+        $referenceDateExpression = 'COALESCE(scheduled_for, created_at)';
+        $referenceDateOnlyExpression = "DATE({$referenceDateExpression})";
+        $targetValue = filled($validated['value'] ?? null) ? round((float) $validated['value'], 2) : null;
+
+        return DeliveryOrder::query()
+            ->with(['customer:id,name,phone'])
+            ->when(filled($validated['customer_id'] ?? null), fn ($query) => $query->where('customer_id', (int) $validated['customer_id']))
+            ->when(filled($validated['status'] ?? null) && $validated['status'] !== 'all', fn ($query) => $query->where('status', $validated['status']))
+            ->when(filled($validated['date'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} = ?", [$validated['date']]))
+            ->when(filled($validated['from'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} >= ?", [$validated['from']]))
+            ->when(filled($validated['to'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} <= ?", [$validated['to']]))
+            ->orderByRaw("{$referenceDateExpression} desc")
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (DeliveryOrder $order) => $this->serializeDeliveryOrder($order))
+            ->filter(fn (array $record) => $targetValue === null
+                || round((float) $record['order_total'] + (float) $record['delivery_fee'], 2) === $targetValue)
+            ->values()
+            ->all();
+    }
+
+    protected function hasDeliverySearchFilters(array $filters): bool
+    {
+        return filled($filters['customer_id'] ?? null)
+            || filled($filters['value'] ?? null)
+            || filled($filters['date'] ?? null)
+            || filled($filters['from'] ?? null)
+            || filled($filters['to'] ?? null)
+            || (filled($filters['status'] ?? null) && $filters['status'] !== 'all');
     }
 
     protected function purchasesPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => $includeRecords ? $this->purchaseRecords() : [],
+            'records' => $includeRecords ? $this->purchaseRecords([], false) : [],
             'suppliers' => $this->supplierOptions(),
             'products' => $this->productOptions(),
             'incoming_nfe_documents' => IncomingNfeDocument::query()
@@ -238,15 +287,33 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function purchaseRecords(): array
+    protected function purchaseRecords(array $filters = [], bool $requireDateFilters = true): array
     {
+        if ($requireDateFilters && !$this->hasPurchaseDateFilters($filters)) {
+            return [];
+        }
+
+        $date = filled($filters['date'] ?? null) ? (string) $filters['date'] : null;
+        $from = filled($filters['from'] ?? null) ? (string) $filters['from'] : null;
+        $to = filled($filters['to'] ?? null) ? (string) $filters['to'] : null;
+
         return Purchase::query()
             ->with(['supplier:id,name', 'items.product:id,name,code,unit'])
+            ->when($date, fn ($query, $value) => $query->whereRaw('substr(created_at, 1, 10) = ?', [Carbon::parse($value)->toDateString()]))
+            ->when($from, fn ($query, $value) => $query->whereRaw('substr(created_at, 1, 10) >= ?', [Carbon::parse($value)->toDateString()]))
+            ->when($to, fn ($query, $value) => $query->whereRaw('substr(created_at, 1, 10) <= ?', [Carbon::parse($value)->toDateString()]))
             ->latest()
             ->get()
             ->map(fn (Purchase $purchase) => $this->serializePurchase($purchase))
             ->values()
             ->all();
+    }
+
+    protected function hasPurchaseDateFilters(array $filters): bool
+    {
+        return filled($filters['date'] ?? null)
+            || filled($filters['from'] ?? null)
+            || filled($filters['to'] ?? null);
     }
 
     protected function payablesPayload(): array

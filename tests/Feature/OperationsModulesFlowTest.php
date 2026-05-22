@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Tenant\CashRegister;
+use App\Models\Tenant\Customer;
+use App\Models\Tenant\DeliveryOrder;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Supplier;
@@ -10,6 +12,7 @@ use App\Models\Tenant\User;
 use App\Services\Tenant\OperationsWorkspaceService;
 use App\Services\Tenant\PosService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Tests\TestCase;
@@ -134,6 +137,143 @@ class OperationsModulesFlowTest extends TestCase
         ]);
     }
 
+    public function test_delivery_records_require_filters_and_support_precise_search(): void
+    {
+        $customer = $this->makeCustomer(['name' => 'Maria Entrega']);
+        $otherCustomer = $this->makeCustomer(['name' => 'Joao Retirada']);
+
+        DeliveryOrder::query()->create([
+            'customer_id' => $customer->id,
+            'reference' => 'DEL-001',
+            'status' => 'pending',
+            'channel' => 'delivery',
+            'recipient_name' => 'Maria Entrega',
+            'phone' => '11999990000',
+            'courier_name' => 'Carlos',
+            'address' => 'Rua A, 100',
+            'neighborhood' => 'Centro',
+            'delivery_fee' => 8.50,
+            'order_total' => 41.50,
+            'scheduled_for' => '2026-05-20 18:30:00',
+            'notes' => 'Casa azul',
+        ]);
+
+        DeliveryOrder::query()->create([
+            'customer_id' => $customer->id,
+            'reference' => 'DEL-002',
+            'status' => 'delivered',
+            'channel' => 'delivery',
+            'recipient_name' => 'Maria Entrega',
+            'phone' => '11999990000',
+            'courier_name' => 'Carlos',
+            'address' => 'Rua A, 100',
+            'neighborhood' => 'Centro',
+            'delivery_fee' => 5.00,
+            'order_total' => 20.00,
+            'scheduled_for' => '2026-05-21 12:00:00',
+            'notes' => null,
+        ]);
+
+        DeliveryOrder::query()->create([
+            'customer_id' => $otherCustomer->id,
+            'reference' => 'DEL-003',
+            'status' => 'pending',
+            'channel' => 'retirada',
+            'recipient_name' => 'Joao Retirada',
+            'phone' => '11888880000',
+            'courier_name' => null,
+            'address' => '',
+            'neighborhood' => null,
+            'delivery_fee' => 0,
+            'order_total' => 50.00,
+            'scheduled_for' => '2026-05-20 19:00:00',
+            'notes' => null,
+        ]);
+
+        $service = app(OperationsWorkspaceService::class);
+
+        $this->assertSame([], $service->records('delivery')['records']);
+
+        $customerOnly = $service->records('delivery', [
+            'customer_id' => (string) $customer->id,
+        ]);
+
+        $this->assertCount(2, $customerOnly['records']);
+
+        $customerAndStatus = $service->records('delivery', [
+            'customer_id' => (string) $customer->id,
+            'status' => 'pending',
+        ]);
+
+        $this->assertCount(1, $customerAndStatus['records']);
+
+        $customerAndValue = $service->records('delivery', [
+            'customer_id' => (string) $customer->id,
+            'value' => '50.00',
+        ]);
+
+        $this->assertCount(1, $customerAndValue['records']);
+
+        $customerAndDate = $service->records('delivery', [
+            'customer_id' => (string) $customer->id,
+            'date' => '2026-05-20',
+        ]);
+
+        $this->assertCount(1, $customerAndDate['records']);
+
+        $response = $service->records('delivery', [
+            'customer_id' => (string) $customer->id,
+            'value' => '50.00',
+            'date' => '2026-05-20',
+            'from' => '2026-05-19',
+            'to' => '2026-05-20',
+            'status' => 'pending',
+        ]);
+
+        $this->assertCount(1, $response['records']);
+        $this->assertSame('DEL-001', $response['records'][0]['reference']);
+        $this->assertSame('Maria Entrega', $response['records'][0]['customer_name']);
+    }
+
+    public function test_purchase_records_require_period_and_filter_by_created_date(): void
+    {
+        $user = $this->makeUser();
+        $service = app(OperationsWorkspaceService::class);
+
+        Carbon::setTestNow('2026-05-20 09:00:00');
+        $service->store('compras', [
+            'custom_name' => 'Compra 20',
+            'status' => 'draft',
+            'items' => [],
+        ], $user->id);
+
+        Carbon::setTestNow('2026-05-21 10:00:00');
+        $service->store('compras', [
+            'custom_name' => 'Compra 21',
+            'status' => 'draft',
+            'items' => [],
+        ], $user->id);
+
+        Carbon::setTestNow();
+
+        $this->assertSame([], $service->records('compras')['records']);
+
+        $sameDay = $service->records('compras', [
+            'from' => '2026-05-20',
+            'to' => '2026-05-20',
+        ]);
+
+        $this->assertCount(1, $sameDay['records']);
+        $this->assertSame('Compra 20', $sameDay['records'][0]['custom_name']);
+
+        $exactDate = $service->records('compras', [
+            'date' => '2026-05-21',
+        ]);
+
+        $this->assertCount(1, $exactDate['records']);
+        $this->assertSame('Compra 21', $exactDate['records'][0]['custom_name']);
+    }
+
     public function test_stock_movement_workspace_updates_product_to_informed_balance(): void
     {
         $user = $this->makeUser();
@@ -224,6 +364,15 @@ class OperationsModulesFlowTest extends TestCase
             'name' => 'Fornecedor Teste',
             'active' => true,
         ]);
+    }
+
+    protected function makeCustomer(array $attributes = []): Customer
+    {
+        return Customer::query()->create(array_merge([
+            'name' => 'Cliente Teste',
+            'phone' => null,
+            'active' => true,
+        ], $attributes));
     }
 
     protected function makeProduct(array $attributes = []): Product
