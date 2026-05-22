@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
 import CompactModal from '@/Components/UI/CompactModal'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
@@ -78,6 +81,17 @@ function matchesDateRange(record, range) {
     return true
 }
 
+function buildPaymentDraft(record) {
+    return {
+        record,
+        amount: record.remaining_amount ? String(record.remaining_amount) : '',
+        date: todayInput(),
+        method: record.payment_method || 'pix',
+        account: record.bank_name || '',
+        notes: '',
+    }
+}
+
 export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload }) {
     const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const categories = Array.isArray(payload?.categories) ? payload.categories : []
@@ -88,6 +102,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const [range, setRange] = useState({ from: '', to: '' })
     const [search, setSearch] = useState('')
     const [selectedId, setSelectedId] = useState((payload?.records || [])[0]?.id ?? null)
+    const [detailModalOpen, setDetailModalOpen] = useState(false)
     const [launchModalOpen, setLaunchModalOpen] = useState(false)
     const [launchModalMode, setLaunchModalMode] = useState('create')
     const [launchForm, setLaunchForm] = useState(createLaunchForm())
@@ -98,11 +113,12 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const normalizedSearch = normalizeTextSearch(search)
     const filteredRecords = useMemo(() => (
         records.filter((record) => {
-            if (activeFilter !== 'all' && record.status !== activeFilter) {
-                return false
-            }
+            const matchesFilter = activeFilter === 'all'
+                || (activeFilter === 'open'
+                    ? ['open', 'overdue'].includes(record.status)
+                    : record.status === activeFilter)
 
-            if (!matchesDateRange(record, range)) {
+            if (!matchesFilter || !matchesDateRange(record, range)) {
                 return false
             }
 
@@ -125,9 +141,59 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     )
 
     const totals = useMemo(() => ({
-        open: records.filter((record) => ['open', 'overdue'].includes(record.status)).reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
-        overdue: records.filter((record) => record.status === 'overdue').reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
+        open: records
+            .filter((record) => ['open', 'overdue'].includes(record.status))
+            .reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
+        overdue: records
+            .filter((record) => record.status === 'overdue')
+            .reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
     }), [records])
+
+    const statusCounts = useMemo(() => ({
+        open: records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
+        overdue: records.filter((record) => record.status === 'overdue').length,
+        paid: records.filter((record) => record.status === 'paid').length,
+        all: records.length,
+    }), [records])
+
+    const tableColumns = useMemo(() => ([
+        {
+            key: 'description',
+            label: 'Descricao',
+            render: (record) => (
+                <div className="proc-ui-record-card-copy">
+                    <strong>{record.description}</strong>
+                    <span>{record.purchase_code || record.code || 'Sem referencia'}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'supplier_name',
+            label: 'Fornecedor',
+            render: (record) => record.supplier_name || 'Credor avulso',
+        },
+        {
+            key: 'amount',
+            label: 'Valor',
+            align: 'right',
+            render: (record) => <strong>{formatMoney(record.amount)}</strong>,
+        },
+        {
+            key: 'due_date',
+            label: 'Vencimento',
+            render: (record) => record.due_date ? formatDate(record.due_date) : 'Nao informado',
+        },
+        {
+            key: 'payment_method',
+            label: 'Forma',
+            render: (record) => record.payment_method || 'Livre',
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (record) => <StatusBadge compact label={record.status_label} tone={record.status_tone} />,
+        },
+    ]), [])
 
     function openCreateModal() {
         setLaunchModalMode('create')
@@ -147,7 +213,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         setFeedback(null)
 
         const description = launchForm.creditor_name
-            ? `${launchForm.creditor_name} · ${launchForm.description}`
+            ? `${launchForm.creditor_name} - ${launchForm.description}`
             : launchForm.description
 
         try {
@@ -198,9 +264,12 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         try {
             const response = await apiRequest(buildRecordsUrl('contas-a-pagar', record.id), { method: 'delete' })
             setRecords((current) => current.filter((entry) => entry.id !== record.id))
+
             if (selectedId === record.id) {
                 setSelectedId(null)
+                setDetailModalOpen(false)
             }
+
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -243,246 +312,201 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
 
     return (
         <AppLayout title={moduleTitle}>
-            <div className="proc-ui-page">
-                <div className="proc-ui-shell">
-                    <section className="proc-ui-main-card">
-                        <div className="proc-ui-main-header">
-                            <div>
-                                <h2>{selectedRecord ? selectedRecord.description : moduleTitle}</h2>
-                            </div>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title={moduleTitle}
+                        search={{
+                            placeholder: 'Buscar por fornecedor ou descricao',
+                            value: search,
+                            onChange: setSearch,
+                        }}
+                        filters={STATUS_FILTERS.map((filter) => ({
+                            ...filter,
+                            count: statusCounts[filter.key],
+                        }))}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        dateRange={{
+                            from: range.from,
+                            to: range.to,
+                            onChange: setRange,
+                        }}
+                        quickDates
+                        onReset={() => {
+                            setSearch('')
+                            setRange({ from: '', to: '' })
+                            setActiveFilter('open')
+                        }}
+                    />
 
-                            <button type="button" className="ui-button" onClick={openCreateModal}>
-                                <i className="fa-solid fa-plus" />
-                                <span>Novo lancamento</span>
-                            </button>
+                    {feedback ? (
+                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                            <span>{feedback.text}</span>
                         </div>
+                    ) : null}
 
-                        {feedback ? (
-                            <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                                <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                <span>{feedback.text}</span>
-                            </div>
-                        ) : null}
-
-                        {selectedRecord ? (
-                            <div className="proc-ui-stage">
-                                <div className="proc-ui-summary-grid">
-                                    <article className="proc-ui-summary-card">
-                                        <span>Status</span>
-                                        <strong>{selectedRecord.status_label}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Valor</span>
-                                        <strong>{formatMoney(selectedRecord.amount)}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Pago</span>
-                                        <strong>{formatMoney(selectedRecord.amount_paid)}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Saldo</span>
-                                        <strong>{formatMoney(selectedRecord.remaining_amount)}</strong>
-                                    </article>
-                                </div>
-
-                                <section className="proc-ui-review-card">
-                                    <div className="proc-ui-card-toolbar">
-                                        <div className="proc-ui-section-title">
-                                            <h3>{selectedRecord.description}</h3>
-                                            <p>{selectedRecord.supplier_name || 'Credor avulso'} · {selectedRecord.purchase_code || 'Sem vinculo com NF'}</p>
-                                        </div>
-                                        <StatusBadge compact label={selectedRecord.status_label} tone={selectedRecord.status_tone} />
-                                    </div>
-
-                                    <div className="proc-ui-two-grid">
-                                        <div className="proc-ui-mini-card">
-                                            <span>Vencimento</span>
-                                            <strong>{selectedRecord.due_date ? formatDate(selectedRecord.due_date) : 'Nao informado'}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Forma</span>
-                                            <strong>{selectedRecord.payment_method || 'Nao definida'}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Banco / conta</span>
-                                            <strong>{selectedRecord.bank_name || 'Nao informado'}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Parcela</span>
-                                            <strong>{selectedRecord.installment_label || 'Unica'}</strong>
-                                        </div>
-                                    </div>
-
-                                    {selectedRecord.notes ? (
-                                        <div className="proc-ui-banner info">
-                                            <i className="fa-solid fa-note-sticky" />
-                                            <div>{selectedRecord.notes}</div>
-                                        </div>
-                                    ) : null}
-
-                                    <div className="proc-ui-card-toolbar">
-                                        <button
-                                            type="button"
-                                            className="ui-button"
-                                            disabled={selectedRecord.status === 'paid'}
-                                            onClick={() => setPaymentModal({
-                                                record: selectedRecord,
-                                                amount: selectedRecord.remaining_amount ? String(selectedRecord.remaining_amount) : '',
-                                                date: todayInput(),
-                                                method: selectedRecord.payment_method || 'pix',
-                                                account: selectedRecord.bank_name || '',
-                                                notes: '',
-                                            })}
-                                        >
-                                            <i className="fa-solid fa-money-bill-wave" />
-                                            <span>Registrar pagamento</span>
-                                        </button>
-
-                                        <div className="proc-ui-table-actions">
-                                            <button type="button" className="ui-button-ghost" onClick={() => openEditModal(selectedRecord)}>
-                                                <i className="fa-solid fa-pen" />
-                                                <span>Editar</span>
-                                            </button>
-                                            <button type="button" className="ui-button-ghost danger" onClick={() => handleDelete(selectedRecord)}>
-                                                <i className="fa-solid fa-trash" />
-                                                <span>Excluir</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="proc-ui-section-card">
-                                    <div className="proc-ui-section-title">
-                                        <h3>Historico de pagamentos</h3>
-                                        <p>Pagamentos registrados manualmente ficam listados abaixo.</p>
-                                    </div>
-
-                                    {(selectedRecord.metadata?.payments || []).length ? (
-                                        <div className="proc-ui-surface-list">
-                                            {(selectedRecord.metadata?.payments || []).map((payment, index) => (
-                                                <div key={`payment-${index}`} className="proc-ui-surface-item">
-                                                    <div>
-                                                        <strong>{formatMoney(payment.amount)}</strong>
-                                                        <small>{formatDate(payment.paid_at)} · {payment.method}</small>
-                                                    </div>
-                                                    <div className="proc-ui-record-card-copy">
-                                                        <strong>{payment.account || 'Sem conta'}</strong>
-                                                        <span>{payment.notes || 'Sem observacao'}</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="proc-ui-empty">
-                                            <strong>Sem pagamentos registrados</strong>
-                                            <p>Use o modal acima para registrar pagamentos totais ou parciais.</p>
-                                        </div>
-                                    )}
-                                </section>
-                            </div>
-                        ) : (
-                            <div className="proc-ui-empty">
-                                <strong>Selecione uma conta a pagar</strong>
-                                <p>Os detalhes completos e as acoes ficam aqui, enquanto a lista historica permanece fixa na lateral.</p>
-                            </div>
-                        )}
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={tableColumns}
+                            rows={filteredRecords}
+                            selectedRowKey={selectedId}
+                            onRowClick={(record) => setSelectedId(record.id)}
+                            emptyMessage="Nenhuma conta encontrada"
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => {
+                                        setSelectedId(record.id)
+                                        setDetailModalOpen(true)
+                                    },
+                                },
+                            ]}
+                        />
                     </section>
 
-                    <aside className="proc-ui-sidebar">
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-sidebar-header">
-                                <div>
-                                    <h2>Lista</h2>
-                                    <p>{filteredRecords.length} conta(s) no filtro.</p>
+                    <div className="proc-ui-footer-totals">
+                        <span>Total em aberto: <strong>{formatMoney(totals.open)}</strong></span>
+                        <span>Vencidos: <strong>{formatMoney(totals.overdue)}</strong></span>
+                    </div>
+                </div>
+
+                <ActionSidebar
+                    storageKey="payables-index"
+                    actions={[
+                        {
+                            key: 'create',
+                            icon: 'fa-plus',
+                            label: 'Novo lancamento',
+                            tone: 'primary',
+                            onClick: openCreateModal,
+                        },
+                        {
+                            key: 'payment',
+                            icon: 'fa-money-bill-wave',
+                            label: 'Registrar pagamento',
+                            disabled: !selectedRecord || selectedRecord.status === 'paid',
+                            onClick: () => selectedRecord && setPaymentModal(buildPaymentDraft(selectedRecord)),
+                        },
+                        {
+                            key: 'edit',
+                            icon: 'fa-pen',
+                            label: 'Editar',
+                            disabled: !selectedRecord,
+                            onClick: () => selectedRecord && openEditModal(selectedRecord),
+                        },
+                        {
+                            key: 'delete',
+                            icon: 'fa-trash',
+                            label: 'Excluir',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRecord,
+                            onClick: () => selectedRecord && handleDelete(selectedRecord),
+                        },
+                    ]}
+                />
+            </div>
+
+            <CompactModal
+                open={detailModalOpen && Boolean(selectedRecord)}
+                title={selectedRecord?.description || 'Detalhes'}
+                description={selectedRecord ? `${selectedRecord.supplier_name || 'Credor avulso'} · ${formatMoney(selectedRecord.amount)}` : ''}
+                icon="fa-file-invoice-dollar"
+                size="lg"
+                onClose={() => setDetailModalOpen(false)}
+            >
+                {selectedRecord ? (
+                    <div className="proc-ui-modal-stack">
+                        <div className="proc-ui-summary-grid">
+                            <article className="proc-ui-summary-card">
+                                <span>Status</span>
+                                <strong>{selectedRecord.status_label}</strong>
+                            </article>
+                            <article className="proc-ui-summary-card">
+                                <span>Valor</span>
+                                <strong>{formatMoney(selectedRecord.amount)}</strong>
+                            </article>
+                            <article className="proc-ui-summary-card">
+                                <span>Pago</span>
+                                <strong>{formatMoney(selectedRecord.amount_paid)}</strong>
+                            </article>
+                            <article className="proc-ui-summary-card">
+                                <span>Saldo</span>
+                                <strong>{formatMoney(selectedRecord.remaining_amount)}</strong>
+                            </article>
+                        </div>
+
+                        <section className="proc-ui-review-card">
+                            <div className="proc-ui-card-toolbar">
+                                <div className="proc-ui-section-title">
+                                    <h3>{selectedRecord.description}</h3>
+                                    <p>{selectedRecord.supplier_name || 'Credor avulso'} · {selectedRecord.purchase_code || 'Sem vinculo com NF'}</p>
                                 </div>
-                                <button type="button" className="ui-button" onClick={openCreateModal}>
-                                    <i className="fa-solid fa-plus" />
-                                    <span>Novo</span>
-                                </button>
+                                <StatusBadge compact label={selectedRecord.status_label} tone={selectedRecord.status_tone} />
                             </div>
-                        </div>
 
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-chip-row">
-                                {STATUS_FILTERS.map((filter) => (
-                                    <button key={filter.key} type="button" className={`proc-ui-chip ${activeFilter === filter.key ? 'active' : ''}`} onClick={() => setActiveFilter(filter.key)}>
-                                        {filter.label}
-                                    </button>
-                                ))}
+                            <div className="proc-ui-two-grid">
+                                <div className="proc-ui-mini-card">
+                                    <span>Vencimento</span>
+                                    <strong>{selectedRecord.due_date ? formatDate(selectedRecord.due_date) : 'Nao informado'}</strong>
+                                </div>
+                                <div className="proc-ui-mini-card">
+                                    <span>Forma</span>
+                                    <strong>{selectedRecord.payment_method || 'Nao definida'}</strong>
+                                </div>
+                                <div className="proc-ui-mini-card">
+                                    <span>Banco / conta</span>
+                                    <strong>{selectedRecord.bank_name || 'Nao informado'}</strong>
+                                </div>
+                                <div className="proc-ui-mini-card">
+                                    <span>Parcela</span>
+                                    <strong>{selectedRecord.installment_label || 'Unica'}</strong>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-date-range">
-                                <input type="date" value={range.from} onChange={(event) => setRange((current) => ({ ...current, from: event.target.value }))} />
-                                <input type="date" value={range.to} onChange={(event) => setRange((current) => ({ ...current, to: event.target.value }))} />
+                            {selectedRecord.notes ? (
+                                <div className="proc-ui-banner info">
+                                    <i className="fa-solid fa-note-sticky" />
+                                    <div>{selectedRecord.notes}</div>
+                                </div>
+                            ) : null}
+                        </section>
+
+                        <section className="proc-ui-section-card">
+                            <div className="proc-ui-section-title">
+                                <h3>Historico de pagamentos</h3>
+                                <p>Pagamentos registrados manualmente ficam listados abaixo.</p>
                             </div>
-                        </div>
 
-                        <div className="proc-ui-sidebar-section">
-                            <input className="proc-ui-searchbox" type="search" placeholder="Buscar fornecedor ou descricao" value={search} onChange={(event) => setSearch(event.target.value)} />
-                        </div>
-
-                        <div className="proc-ui-sidebar-list">
-                            {filteredRecords.length ? filteredRecords.map((record) => (
-                                <button key={record.id} type="button" className={`proc-ui-record-card ${record.id === selectedId ? 'active' : ''}`} onClick={() => setSelectedId(record.id)}>
-                                    <div className="proc-ui-record-card-top">
-                                        <div className="proc-ui-record-card-copy">
-                                            <strong>{record.purchase_code || record.code}</strong>
-                                            <span>{record.supplier_name || record.description}</span>
+                            {(selectedRecord.metadata?.payments || []).length ? (
+                                <div className="proc-ui-surface-list">
+                                    {(selectedRecord.metadata?.payments || []).map((payment, index) => (
+                                        <div key={`payment-${index}`} className="proc-ui-surface-item">
+                                            <div>
+                                                <strong>{formatMoney(payment.amount)}</strong>
+                                                <small>{formatDate(payment.paid_at)} · {payment.method}</small>
+                                            </div>
+                                            <div className="proc-ui-record-card-copy">
+                                                <strong>{payment.account || 'Sem conta'}</strong>
+                                                <span>{payment.notes || 'Sem observacao'}</span>
+                                            </div>
                                         </div>
-                                        <StatusBadge compact label={record.status_label} tone={record.status_tone} />
-                                    </div>
-
-                                    <div className="proc-ui-record-card-copy">
-                                        <strong>{formatMoney(record.amount)}</strong>
-                                        <span>{record.due_date ? `Vence ${formatDate(record.due_date)}` : 'Sem vencimento'} · {(record.payment_method || 'forma livre').toUpperCase()}</span>
-                                    </div>
-
-                                    <div className="proc-ui-record-card-actions">
-                                        <button type="button" className="proc-ui-ghost-icon" title="Registrar pagamento" onClick={(event) => {
-                                            event.stopPropagation()
-                                            setSelectedId(record.id)
-                                            setPaymentModal({
-                                                record,
-                                                amount: record.remaining_amount ? String(record.remaining_amount) : '',
-                                                date: todayInput(),
-                                                method: record.payment_method || 'pix',
-                                                account: record.bank_name || '',
-                                                notes: '',
-                                            })
-                                        }}>
-                                            <i className="fa-solid fa-money-bill-wave" />
-                                        </button>
-                                        <button type="button" className="proc-ui-ghost-icon" title="Editar" onClick={(event) => {
-                                            event.stopPropagation()
-                                            openEditModal(record)
-                                        }}>
-                                            <i className="fa-solid fa-pen" />
-                                        </button>
-                                        <button type="button" className="proc-ui-ghost-icon" title="Excluir" onClick={(event) => {
-                                            event.stopPropagation()
-                                            handleDelete(record)
-                                        }}>
-                                            <i className="fa-solid fa-trash" />
-                                        </button>
-                                    </div>
-                                </button>
-                            )) : (
+                                    ))}
+                                </div>
+                            ) : (
                                 <div className="proc-ui-empty">
-                                    <strong>Nenhuma conta encontrada</strong>
-                                    <p>Revise os filtros ou crie um novo lancamento.</p>
+                                    <strong>Sem pagamentos registrados</strong>
                                 </div>
                             )}
-                        </div>
-
-                        <div className="proc-ui-footer-totals">
-                            <span>Total em aberto: <strong>{formatMoney(totals.open)}</strong></span>
-                            <span>Vencidos: <strong>{formatMoney(totals.overdue)}</strong></span>
-                        </div>
-                    </aside>
-                </div>
-            </div>
+                        </section>
+                    </div>
+                ) : null}
+            </CompactModal>
 
             <CompactModal
                 open={launchModalOpen}

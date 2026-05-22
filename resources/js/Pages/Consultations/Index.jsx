@@ -1,30 +1,15 @@
-import { router } from '@inertiajs/react'
 import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
 import CompactModal from '@/Components/UI/CompactModal'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatTime } from '@/lib/format'
+import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import '../Operations/backoffice-workspace.css'
-
-const DEFAULT_SORT = { key: 'date', direction: 'desc' }
-const DEFAULT_COLUMN_FILTERS = {
-    date: '',
-    customer: '',
-    amount: '',
-    payment: '',
-    status: '',
-}
-
-const SORTABLE_COLUMNS = {
-    date: 'Data',
-    customer: 'Cliente',
-    amount: 'Valor',
-    payment: 'Forma pagamento',
-    status: 'Status',
-}
 
 function summaryIcon(type) {
     switch (type) {
@@ -70,120 +55,145 @@ function recordTypeLabel(recordType, recordTypes) {
     return recordTypes.find((entry) => entry.key === recordType)?.label || 'Registro'
 }
 
-function recordDateInputValue(value) {
+function matchDateRange(record, range) {
+    const value = String(record.date || '').slice(0, 10)
+
     if (!value) {
-        return ''
-    }
-
-    const date = new Date(value)
-
-    if (Number.isNaN(date.getTime())) {
-        return ''
-    }
-
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
-}
-
-function includesNormalizedText(values, term) {
-    const normalizedTerm = normalizeTextSearch(term)
-
-    if (!normalizedTerm) {
         return true
     }
 
-    return (values || []).some((value) => normalizeTextSearch(value).includes(normalizedTerm))
-}
-
-function compareValues(left, right) {
-    if (typeof left === 'number' && typeof right === 'number') {
-        return left - right
+    if (range.from && value < range.from) {
+        return false
     }
 
-    return String(left || '').localeCompare(String(right || ''), 'pt-BR', {
-        numeric: true,
-        sensitivity: 'base',
-    })
+    if (range.to && value > range.to) {
+        return false
+    }
+
+    return true
 }
 
-function recordSearchValues(record, recordTypes) {
-    const payments = record.details?.payments || []
-    const items = record.details?.items || []
-    const fiscal = record.details?.fiscal || {}
+function resolveRecordColumns(activeType, recordTypes) {
+    if (activeType === 'fiscal') {
+        return [
+            {
+                key: 'access_key',
+                label: 'Chave',
+                render: (record) => record.details?.access_key || record.details?.number || record.title || '-',
+            },
+            {
+                key: 'date',
+                label: 'Data',
+                render: (record) => record.date ? formatDate(record.date) : '-',
+            },
+            {
+                key: 'amount',
+                label: 'Valor',
+                align: 'right',
+                render: (record) => <strong>{formatMoney(record.amount)}</strong>,
+            },
+            {
+                key: 'status',
+                label: 'Situacao',
+                render: (record) => <StatusBadge compact label={record.status_label} tone={record.status_tone} />,
+            },
+            {
+                key: 'protocol',
+                label: 'Protocolo',
+                render: (record) => record.details?.protocol || '-',
+            },
+        ]
+    }
+
+    if (activeType === 'sale') {
+        return [
+            {
+                key: 'number',
+                label: 'Numero',
+                render: (record) => <strong>{record.details?.sale_number || record.title}</strong>,
+            },
+            {
+                key: 'date',
+                label: 'Data',
+                render: (record) => record.date ? formatDate(record.date) : '-',
+            },
+            {
+                key: 'customer',
+                label: 'Cliente',
+                render: (record) => recordCounterparty(record),
+            },
+            {
+                key: 'items',
+                label: 'Itens',
+                align: 'center',
+                render: (record) => formatNumber((record.details?.items || []).length),
+            },
+            {
+                key: 'amount',
+                label: 'Total',
+                align: 'right',
+                render: (record) => <strong>{formatMoney(record.amount)}</strong>,
+            },
+            {
+                key: 'status',
+                label: 'Status',
+                render: (record) => <StatusBadge compact label={record.status_label} tone={record.status_tone} />,
+            },
+        ]
+    }
 
     return [
-        record.title,
-        record.subtitle,
-        record.status_label,
-        recordTypeLabel(record.type, recordTypes),
-        recordCounterparty(record),
-        recordPaymentSummary(record),
-        formatMoney(record.amount),
-        String(record.amount ?? ''),
-        record.date ? formatDate(record.date) : null,
-        record.date ? formatDateTime(record.date) : null,
-        ...(record.tags || []),
-        record.details?.recipient,
-        record.details?.supplier,
-        record.details?.address,
-        record.details?.notes,
-        record.details?.document,
-        record.details?.operator,
-        record.details?.phone,
-        record.details?.courier,
-        record.details?.sale_number,
-        record.details?.status,
-        record.details?.number,
-        record.details?.series,
-        record.details?.access_key,
-        record.details?.code,
-        fiscal.status,
-        fiscal.number,
-        fiscal.series,
-        fiscal.access_key,
-        fiscal.last_error,
-        ...payments.flatMap((payment) => [
-            payment.label,
-            formatMoney(payment.amount),
-            String(payment.amount ?? ''),
-        ]),
-        ...items.flatMap((item) => [
-            item.name,
-            item.code,
-            formatMoney(item.total),
-            formatMoney(item.unit_price),
-            formatMoney(item.unit_cost),
-            String(item.quantity ?? ''),
-            String(item.total ?? ''),
-            String(item.unit_price ?? ''),
-            String(item.unit_cost ?? ''),
-        ]),
+        {
+            key: 'type',
+            label: 'Tipo',
+            render: (record) => recordTypeLabel(record.type, recordTypes),
+        },
+        {
+            key: 'title',
+            label: 'Numero',
+            render: (record) => <strong>{record.title}</strong>,
+        },
+        {
+            key: 'date',
+            label: 'Data',
+            render: (record) => record.date ? formatDate(record.date) : '-',
+        },
+        {
+            key: 'counterparty',
+            label: 'Cliente',
+            render: (record) => recordCounterparty(record),
+        },
+        {
+            key: 'amount',
+            label: 'Valor',
+            align: 'right',
+            render: (record) => <strong>{formatMoney(record.amount)}</strong>,
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (record) => <StatusBadge compact icon={summaryIcon(record.type)} label={record.status_label} tone={record.status_tone} />,
+        },
     ]
 }
 
-export default function ConsultationsIndex({ filters, range, recordTypes, summary, records }) {
+function resolvePrintUrl(record) {
+    return record.actions?.preview_url
+        || record.actions?.authorized_xml_url
+        || record.actions?.cancelled_xml_url
+        || record.actions?.signed_xml_url
+        || record.actions?.mirror_url
+        || null
+}
+
+export default function ConsultationsIndex({ recordTypes, records }) {
     const [activeType, setActiveType] = useState('all')
     const [search, setSearch] = useState('')
-    const [selectedUid, setSelectedUid] = useState(null)
+    const [range, setRange] = useState({ from: '', to: '' })
+    const [selectedUid, setSelectedUid] = useState(records[0]?.uid ?? null)
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
-    const [sortConfig, setSortConfig] = useState(DEFAULT_SORT)
-    const [columnFilters, setColumnFilters] = useState(DEFAULT_COLUMN_FILTERS)
-    const [columnFiltersExpanded, setColumnFiltersExpanded] = useState(false)
-    const [highlightedColumnFilter, setHighlightedColumnFilter] = useState(null)
     const normalizedSearch = normalizeTextSearch(search)
-
-    const statusOptions = useMemo(() => (
-        Array.from(new Set((records || []).map((record) => record.status_label).filter(Boolean)))
-            .sort((left, right) => left.localeCompare(right, 'pt-BR'))
-    ), [records])
-
-    const hasActiveColumnFilters = useMemo(() => (
-        Object.values(columnFilters).some((value) => String(value || '').trim() !== '')
-    ), [columnFilters])
 
     const filteredRecords = useMemo(() => (
         (records || []).filter((record) => {
@@ -191,34 +201,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                 return false
             }
 
-            if (columnFilters.date && recordDateInputValue(record.date) !== columnFilters.date) {
-                return false
-            }
-
-            if (!includesNormalizedText([
-                recordCounterparty(record),
-                record.subtitle,
-                record.title,
-                record.details?.document,
-            ], columnFilters.customer)) {
-                return false
-            }
-
-            if (!includesNormalizedText([
-                formatMoney(record.amount),
-                String(record.amount ?? ''),
-            ], columnFilters.amount)) {
-                return false
-            }
-
-            if (!includesNormalizedText([
-                recordPaymentSummary(record),
-                ...(record.tags || []),
-            ], columnFilters.payment)) {
-                return false
-            }
-
-            if (columnFilters.status && record.status_label !== columnFilters.status) {
+            if (!matchDateRange(record, range)) {
                 return false
             }
 
@@ -226,47 +209,32 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                 return true
             }
 
-            return matchesTextSearchAny(recordSearchValues(record, recordTypes), normalizedSearch)
-        }).sort((left, right) => {
-            const direction = sortConfig.direction === 'asc' ? 1 : -1
-
-            return compareValues(sortValue(left, sortConfig.key), sortValue(right, sortConfig.key)) * direction
+            return matchesTextSearchAny([
+                record.title,
+                record.subtitle,
+                record.status_label,
+                recordCounterparty(record),
+                recordPaymentSummary(record),
+                formatMoney(record.amount),
+                record.details?.document,
+                record.details?.address,
+                record.details?.access_key,
+                record.details?.number,
+            ], normalizedSearch)
         })
-    ), [activeType, columnFilters, normalizedSearch, records, recordTypes, sortConfig])
+    ), [activeType, normalizedSearch, range, records])
 
     const selectedRecord = useMemo(
-        () => (records || []).find((record) => record.uid === selectedUid) || null,
-        [records, selectedUid],
+        () => filteredRecords.find((record) => record.uid === selectedUid)
+            || (records || []).find((record) => record.uid === selectedUid)
+            || null,
+        [filteredRecords, records, selectedUid],
     )
 
-    function sortValue(record, key) {
-        switch (key) {
-            case 'customer':
-                return recordCounterparty(record)
-            case 'amount':
-                return Number(record.amount || 0)
-            case 'payment':
-                return recordPaymentSummary(record)
-            case 'status':
-                return record.status_label
-            default:
-                return record.date ? new Date(record.date).getTime() : 0
-        }
-    }
-
-    function changePeriod(period) {
-        router.get('/consultas-cancelamentos', { period }, { preserveScroll: true, replace: true })
-    }
-
-    function applyCustomRange(event) {
-        event.preventDefault()
-        const form = new FormData(event.currentTarget)
-        router.get('/consultas-cancelamentos', {
-            period: 'custom',
-            from: form.get('from'),
-            to: form.get('to'),
-        }, { preserveScroll: true, replace: true })
-    }
+    const columns = useMemo(
+        () => resolveRecordColumns(activeType, recordTypes),
+        [activeType, recordTypes],
+    )
 
     async function handleRetry(url) {
         if (!url) {
@@ -278,7 +246,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
 
         try {
             await apiRequest(url, { method: 'post' })
-            router.reload({ preserveScroll: true })
+            setFeedback({ type: 'success', text: 'Acao reenfileirada com sucesso.' })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -308,8 +276,8 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
 
         try {
             await apiRequest(url, { method: 'post', data: { reason: 'Cancelado pela central de consultas.' } })
+            setFeedback({ type: 'success', text: `${label} cancelado com sucesso.` })
             setSelectedUid(null)
-            router.reload({ preserveScroll: true })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -323,7 +291,7 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
 
         try {
             await apiRequest(record.actions.mark_dispatched, { method: 'post', data: { status } })
-            router.reload({ preserveScroll: true })
+            setFeedback({ type: 'success', text: 'Status da entrega atualizado.' })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -349,8 +317,8 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
 
         try {
             await apiRequest(record.actions.delete_url, { method: 'delete' })
+            setFeedback({ type: 'success', text: 'Entrega cancelada com sucesso.' })
             setSelectedUid(null)
-            router.reload({ preserveScroll: true })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -358,72 +326,39 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
         }
     }
 
-    function toggleSort(key) {
-        setSortConfig((current) => {
-            if (current.key === key) {
-                return {
-                    key,
-                    direction: current.direction === 'asc' ? 'desc' : 'asc',
-                }
-            }
-
-            return {
-                key,
-                direction: key === 'amount' ? 'desc' : 'asc',
-            }
-        })
-    }
-
-    function sortIcon(columnKey) {
-        if (sortConfig.key !== columnKey) {
-            return 'fa-arrows-up-down'
-        }
-
-        return sortConfig.direction === 'asc'
-            ? 'fa-arrow-up-short-wide'
-            : 'fa-arrow-down-wide-short'
-    }
-
-    function handleColumnFilterChange(key, value) {
-        setColumnFilters((current) => ({
-            ...current,
-            [key]: value,
-        }))
-    }
-
-    function toggleColumnFilters(columnKey) {
-        setColumnFiltersExpanded((current) => (highlightedColumnFilter === columnKey ? !current : true))
-        setHighlightedColumnFilter(columnKey)
-    }
-
-    function clearColumnFilters() {
-        setColumnFilters(DEFAULT_COLUMN_FILTERS)
-        setColumnFiltersExpanded(false)
-        setHighlightedColumnFilter(null)
-    }
-
-    function openRecord(uid) {
-        setSelectedUid(uid)
-    }
-
-    function handleRowKeyDown(event, uid) {
-        if (event.key !== 'Enter' && event.key !== ' ') {
-            return
-        }
-
-        event.preventDefault()
-        openRecord(uid)
-    }
-
     return (
         <AppLayout title="Consultas">
-            <div className="proc-ui-page">
-                <section className="proc-ui-main-card">
-                    <div className="proc-ui-main-header">
-                        <div>
-                            <h2>{range.label}</h2>
-                        </div>
-                    </div>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Consultas"
+                        search={{
+                            placeholder: 'Buscar por numero ou valor',
+                            value: search,
+                            onChange: setSearch,
+                        }}
+                        filters={(recordTypes || []).map((type) => ({
+                            key: type.key,
+                            value: type.key,
+                            label: type.label,
+                            count: type.key === 'all'
+                                ? (records || []).length
+                                : (records || []).filter((record) => record.type === type.key).length,
+                        }))}
+                        activeFilter={activeType}
+                        onFilterChange={setActiveType}
+                        dateRange={{
+                            from: range.from,
+                            to: range.to,
+                            onChange: setRange,
+                        }}
+                        quickDates
+                        onReset={() => {
+                            setSearch('')
+                            setRange({ from: '', to: '' })
+                            setActiveType('all')
+                        }}
+                    />
 
                     {feedback ? (
                         <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
@@ -432,199 +367,86 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                         </div>
                     ) : null}
 
-                    <div className="proc-ui-chip-row">
-                        {recordTypes.map((type) => (
-                            <button key={type.key} type="button" className={`proc-ui-chip ${activeType === type.key ? 'active' : ''}`} onClick={() => setActiveType(type.key)}>
-                                {type.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="proc-ui-card-toolbar">
-                        <div className="proc-ui-chip-row">
-                            {[
-                                { key: 'day', label: 'Hoje' },
-                                { key: 'week', label: 'Semana' },
-                                { key: 'month', label: 'Mes' },
-                            ].map((period) => (
-                                <button key={period.key} type="button" className={`proc-ui-chip ${filters.period === period.key ? 'active' : ''}`} onClick={() => changePeriod(period.key)}>
-                                    {period.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        <form className="proc-ui-date-range proc-ui-date-range-with-action" onSubmit={applyCustomRange}>
-                            <input defaultValue={filters.from} name="from" type="date" />
-                            <input defaultValue={filters.to} name="to" type="date" />
-                            <button type="submit" className="ui-button">
-                                <i className="fa-solid fa-calendar-check" />
-                                <span>Aplicar</span>
-                            </button>
-                        </form>
-                    </div>
-
-                    <div className="proc-ui-consultations-toolbar">
-                        <input
-                            className="proc-ui-searchbox"
-                            type="search"
-                            placeholder="Buscar por numero, cliente, fornecedor, endereco ou status"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={columns}
+                            rows={filteredRecords}
+                            rowKey="uid"
+                            selectedRowKey={selectedUid}
+                            onRowClick={(record) => setSelectedUid(record.uid)}
+                            emptyMessage="Sem registros nesse recorte"
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => setSelectedUid(record.uid),
+                                },
+                            ]}
                         />
-                        {hasActiveColumnFilters ? (
-                            <div className="proc-ui-consultations-toolbar-actions">
-                                <button type="button" className="ui-button-ghost" onClick={clearColumnFilters}>
-                                    <i className="fa-solid fa-rotate-left" />
-                                    <span>Limpar filtros</span>
-                                </button>
-                            </div>
-                        ) : null}
-                    </div>
+                    </section>
+                </div>
 
-                    <div className="proc-ui-list-stack">
-                        {filteredRecords.length ? (
-                            <div className="proc-ui-table-wrap proc-ui-records-table-wrap">
-                                <table className="proc-ui-table proc-ui-records-table">
-                                    <thead>
-                                        <tr>
-                                            {Object.entries(SORTABLE_COLUMNS).map(([key, label]) => (
-                                                <th key={key}>
-                                                    <div className="proc-ui-record-table-heading">
-                                                        <button type="button" className="proc-ui-record-sort-button" onClick={() => toggleSort(key)}>
-                                                            <span>{label}</span>
-                                                            <i className={`fa-solid ${sortIcon(key)}`} />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className={`proc-ui-record-filter-trigger ${(columnFilters[key] || '') !== '' || highlightedColumnFilter === key ? 'active' : ''}`}
-                                                            onClick={() => toggleColumnFilters(key)}
-                                                            aria-label={`Filtrar coluna ${label}`}
-                                                        >
-                                                            <i className="fa-solid fa-filter" />
-                                                        </button>
-                                                    </div>
-                                                </th>
-                                            ))}
-                                            <th className="proc-ui-record-open-column">Abrir</th>
-                                        </tr>
-                                        {columnFiltersExpanded || hasActiveColumnFilters ? (
-                                            <tr className="proc-ui-record-filter-row">
-                                                <th>
-                                                    <input
-                                                        type="date"
-                                                        value={columnFilters.date}
-                                                        onChange={(event) => handleColumnFilterChange('date', event.target.value)}
-                                                        autoFocus={highlightedColumnFilter === 'date'}
-                                                    />
-                                                </th>
-                                                <th>
-                                                    <input
-                                                        type="search"
-                                                        value={columnFilters.customer}
-                                                        onChange={(event) => handleColumnFilterChange('customer', event.target.value)}
-                                                        placeholder="Nome, doc. ou venda"
-                                                        autoFocus={highlightedColumnFilter === 'customer'}
-                                                    />
-                                                </th>
-                                                <th>
-                                                    <input
-                                                        type="search"
-                                                        value={columnFilters.amount}
-                                                        onChange={(event) => handleColumnFilterChange('amount', event.target.value)}
-                                                        placeholder="Ex.: 50,00"
-                                                        autoFocus={highlightedColumnFilter === 'amount'}
-                                                    />
-                                                </th>
-                                                <th>
-                                                    <input
-                                                        type="search"
-                                                        value={columnFilters.payment}
-                                                        onChange={(event) => handleColumnFilterChange('payment', event.target.value)}
-                                                        placeholder="Pix, credito, entrega..."
-                                                        autoFocus={highlightedColumnFilter === 'payment'}
-                                                    />
-                                                </th>
-                                                <th>
-                                                    <select
-                                                        value={columnFilters.status}
-                                                        onChange={(event) => handleColumnFilterChange('status', event.target.value)}
-                                                        autoFocus={highlightedColumnFilter === 'status'}
-                                                    >
-                                                        <option value="">Todos</option>
-                                                        {statusOptions.map((status) => (
-                                                            <option key={status} value={status}>{status}</option>
-                                                        ))}
-                                                    </select>
-                                                </th>
-                                                <th className="proc-ui-record-filter-actions">
-                                                    <button type="button" className="proc-ui-ghost-icon" onClick={clearColumnFilters} aria-label="Limpar filtros">
-                                                        <i className="fa-solid fa-xmark" />
-                                                    </button>
-                                                </th>
-                                            </tr>
-                                        ) : null}
-                                    </thead>
-                                    <tbody>
-                                        {filteredRecords.map((record) => (
-                                            <tr
-                                                key={record.uid}
-                                                className={`proc-ui-record-row ${selectedUid === record.uid ? 'active' : ''}`}
-                                                tabIndex={0}
-                                                onClick={() => openRecord(record.uid)}
-                                                onKeyDown={(event) => handleRowKeyDown(event, record.uid)}
-                                            >
-                                                <td>
-                                                    <div className="proc-ui-record-primary">
-                                                        <strong>{record.date ? formatDate(record.date) : 'Sem data'}</strong>
-                                                        <small>{record.date ? formatTime(record.date) : 'Horario indisponivel'}</small>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="proc-ui-record-primary">
-                                                        <strong>{recordCounterparty(record)}</strong>
-                                                        <small>{record.title}</small>
-                                                    </div>
-                                                </td>
-                                                <td className="proc-ui-record-value-cell">
-                                                    <div className="proc-ui-record-primary">
-                                                        <strong>{formatMoney(record.amount)}</strong>
-                                                        <small>{recordTypeLabel(record.type, recordTypes)}</small>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="proc-ui-record-primary">
-                                                        <strong>{recordPaymentSummary(record)}</strong>
-                                                        <small>{(record.tags || [])[0] || 'Sem marcador adicional'}</small>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="proc-ui-record-status-cell">
-                                                        <StatusBadge compact icon={summaryIcon(record.type)} label={record.status_label} tone={record.status_tone} />
-                                                    </div>
-                                                </td>
-                                                <td className="proc-ui-record-open-cell">
-                                                    <span className="proc-ui-record-open-indicator" aria-hidden="true">
-                                                        <i className="fa-solid fa-arrow-up-right-from-square" />
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                <ActionSidebar
+                    storageKey="consultations-index"
+                    actions={[
+                        {
+                            key: 'view',
+                            icon: 'fa-eye',
+                            label: 'Ver detalhes',
+                            tone: 'primary',
+                            disabled: !selectedRecord,
+                            onClick: () => selectedRecord && setSelectedUid(selectedRecord.uid),
+                        },
+                        {
+                            key: 'retry',
+                            icon: 'fa-rotate',
+                            label: 'Reenfileirar',
+                            disabled: !selectedRecord || activeType !== 'fiscal' || !selectedRecord.actions?.retry_url,
+                            onClick: () => selectedRecord && handleRetry(selectedRecord.actions.retry_url),
+                        },
+                        {
+                            key: 'invalidate',
+                            icon: 'fa-hashtag',
+                            label: 'Inutilizar',
+                            disabled: !selectedRecord || activeType !== 'fiscal',
+                            onClick: () => setFeedback({ type: 'error', text: 'Inutilizacao segue o fluxo fiscal proprio nesta versao.' }),
+                        },
+                        {
+                            key: 'print',
+                            icon: 'fa-print',
+                            label: 'Imprimir',
+                            disabled: !selectedRecord || !resolvePrintUrl(selectedRecord),
+                            onClick: () => {
+                                const printUrl = selectedRecord ? resolvePrintUrl(selectedRecord) : null
+                                if (printUrl) {
+                                    window.open(printUrl, '_blank', 'noopener,noreferrer')
+                                }
+                            },
+                        },
+                        {
+                            key: 'cancel',
+                            icon: 'fa-xmark',
+                            label: 'Cancelar',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRecord,
+                            onClick: () => {
+                                if (!selectedRecord) {
+                                    return
+                                }
 
-                                <div className="proc-ui-table-totalbar">
-                                    <span>{filteredRecords.length} registro(s)</span>
-                                    <span>Ordenado por {SORTABLE_COLUMNS[sortConfig.key]} ({sortConfig.direction === 'asc' ? 'crescente' : 'decrescente'})</span>
-                                    <span>{summary.length} indicador(es) no topo</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="proc-ui-empty">
-                                <strong>Sem registros nesse recorte</strong>
-                            </div>
-                        )}
-                    </div>
-                </section>
+                                if (selectedRecord.type === 'delivery') {
+                                    void handleDeliveryDelete(selectedRecord)
+                                    return
+                                }
+
+                                void handleCancel(selectedRecord.actions?.cancel_url, selectedRecord.title)
+                            },
+                        },
+                    ]}
+                />
             </div>
 
             <CompactModal
@@ -682,21 +504,6 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                                         <article className="proc-ui-summary-card"><span>Total</span><strong>{formatMoney(selectedRecord.amount)}</strong></article>
                                     </div>
                                 </section>
-
-                                <section className="proc-ui-modal-block">
-                                    <h3>Itens recebidos</h3>
-                                    <div className="proc-ui-surface-list">
-                                        {selectedRecord.details.items.map((item, index) => (
-                                            <div key={`${selectedRecord.uid}-item-${index}`} className="proc-ui-surface-item">
-                                                <div>
-                                                    <strong>{item.name}</strong>
-                                                    <small>{formatNumber(item.quantity)} un - {formatMoney(item.unit_cost)}</small>
-                                                </div>
-                                                <strong>{formatMoney(item.total)}</strong>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
                             </>
                         ) : null}
 
@@ -750,77 +557,16 @@ export default function ConsultationsIndex({ filters, range, recordTypes, summar
                             </section>
                         ) : null}
 
-                        <div className="proc-ui-modal-footer">
-                            {selectedRecord.type === 'sale' ? (
-                                <>
-                                    <button type="button" className="ui-button-ghost" disabled={!selectedRecord.actions.preview_url} onClick={() => window.open(selectedRecord.actions.preview_url, '_blank', 'noopener,noreferrer')}>
-                                        Reimprimir
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled={!selectedRecord.actions.retry_url || busyAction === selectedRecord.actions.retry_url} onClick={() => handleRetry(selectedRecord.actions.retry_url)}>
-                                        Reenfileirar NF-e
-                                    </button>
-                                    <button type="button" className="ui-button-ghost danger" disabled={busyAction === selectedRecord.actions.cancel_url} onClick={() => handleCancel(selectedRecord.actions.cancel_url, selectedRecord.title)}>
-                                        Cancelar
-                                    </button>
-                                </>
-                            ) : null}
-
-                            {selectedRecord.type === 'entry' ? (
-                                <>
-                                    <button type="button" className="ui-button-ghost" disabled={!selectedRecord.actions.mirror_url} onClick={() => window.open(selectedRecord.actions.mirror_url, '_blank', 'noopener,noreferrer')}>
-                                        Espelho NF
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled title="Cancelamento de entrada ainda nao e suportado neste backend.">
-                                        Cancelar entrada
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled title="Estorno de estoque ainda nao e suportado neste backend.">
-                                        Estornar estoque
-                                    </button>
-                                </>
-                            ) : null}
-
-                            {selectedRecord.type === 'delivery' ? (
-                                <>
-                                    <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-dispatched`} onClick={() => handleDeliveryStatus(selectedRecord, 'dispatched')}>
-                                        Alterar para rota
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-delivered`} onClick={() => handleDeliveryStatus(selectedRecord, 'delivered')}>
-                                        Marcar entregue
-                                    </button>
-                                    <button type="button" className="ui-button-ghost danger" disabled={busyAction === selectedRecord.actions.delete_url} onClick={() => handleDeliveryDelete(selectedRecord)}>
-                                        Cancelar
-                                    </button>
-                                </>
-                            ) : null}
-
-                            {selectedRecord.type === 'credit' ? (
-                                <>
-                                    <button type="button" className="ui-button-ghost" disabled title="Pagamento a prazo permanece centralizado no modulo proprio.">
-                                        Registrar pagamento
-                                    </button>
-                                    <button type="button" className="ui-button-ghost danger" disabled={busyAction === selectedRecord.actions.cancel_url} onClick={() => handleCancel(selectedRecord.actions.cancel_url, selectedRecord.title)}>
-                                        Cancelar
-                                    </button>
-                                </>
-                            ) : null}
-
-                            {selectedRecord.type === 'fiscal' ? (
-                                <>
-                                    <button type="button" className="ui-button-ghost" disabled={!selectedRecord.actions.signed_xml_url} onClick={() => window.open(selectedRecord.actions.signed_xml_url, '_blank', 'noopener,noreferrer')}>
-                                        Ver XML
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled={busyAction === selectedRecord.actions.retry_url} onClick={() => handleRetry(selectedRecord.actions.retry_url)}>
-                                        Reenfileirar
-                                    </button>
-                                    <button type="button" className="ui-button-ghost" disabled title="Inutilizacao segue fluxo proprio de numeracao fiscal.">
-                                        Inutilizar
-                                    </button>
-                                    <button type="button" className="ui-button" disabled={!selectedRecord.actions.authorized_xml_url && !selectedRecord.actions.cancelled_xml_url} onClick={() => window.open(selectedRecord.actions.authorized_xml_url || selectedRecord.actions.cancelled_xml_url, '_blank', 'noopener,noreferrer')}>
-                                        Download XML
-                                    </button>
-                                </>
-                            ) : null}
-                        </div>
+                        {selectedRecord.type === 'delivery' ? (
+                            <div className="proc-ui-modal-footer">
+                                <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-dispatched`} onClick={() => handleDeliveryStatus(selectedRecord, 'dispatched')}>
+                                    Alterar para rota
+                                </button>
+                                <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-delivered`} onClick={() => handleDeliveryStatus(selectedRecord, 'delivered')}>
+                                    Marcar entregue
+                                </button>
+                            </div>
+                        ) : null}
                     </div>
                 ) : null}
             </CompactModal>

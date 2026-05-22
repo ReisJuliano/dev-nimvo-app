@@ -1,6 +1,9 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
 import { confirmPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
@@ -64,6 +67,52 @@ function sortCustomerOptions(currentCustomers) {
     )
 }
 
+const ORDER_LIST_FILTERS = [
+    { key: 'open', label: 'Abertos' },
+    { key: 'preparing', label: 'Em preparo' },
+    { key: 'ready', label: 'Prontos' },
+    { key: 'delivered', label: 'Entregues' },
+    { key: 'cancelled', label: 'Cancelados' },
+]
+
+function resolveOrdersFilter(status) {
+    if (status === 'sent_to_cashier' || status === 'ready') {
+        return 'ready'
+    }
+
+    if (status === 'preparing' || status === 'in_progress') {
+        return 'preparing'
+    }
+
+    if (status === 'delivered') {
+        return 'delivered'
+    }
+
+    if (status === 'cancelled' || status === 'canceled') {
+        return 'cancelled'
+    }
+
+    return 'open'
+}
+
+function matchesOrdersDateRange(draft, range) {
+    const value = String(draft.updated_at || draft.sent_to_cashier_at || draft.created_at || '').slice(0, 10)
+
+    if (!value) {
+        return true
+    }
+
+    if (range.from && value < range.from) {
+        return false
+    }
+
+    if (range.to && value > range.to) {
+        return false
+    }
+
+    return true
+}
+
 export default function OrdersIndex({
     categories,
     customers,
@@ -94,7 +143,10 @@ export default function OrdersIndex({
     const [printingDraft, setPrintingDraft] = useState(false)
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
     const [submittingDelivery, setSubmittingDelivery] = useState(false)
-    const [listFilter, setListFilter] = useState(initialDraft?.status === 'sent_to_cashier' ? 'sent_to_cashier' : 'draft')
+    const [listFilter, setListFilter] = useState(resolveOrdersFilter(initialDraft?.status))
+    const [listSearch, setListSearch] = useState('')
+    const [listRange, setListRange] = useState({ from: '', to: '' })
+    const [selectedListDraftId, setSelectedListDraftId] = useState(initialDraft?.id ?? initialDrafts[0]?.id ?? null)
     const [draftModalOpen, setDraftModalOpen] = useState(false)
     const [productsModalOpen, setProductsModalOpen] = useState(false)
     const [newDraftModalOpen, setNewDraftModalOpen] = useState(false)
@@ -314,6 +366,17 @@ export default function OrdersIndex({
         }
     }, [currentDraft, discountConfig])
 
+    useEffect(() => {
+        if (!filteredDrafts.length) {
+            setSelectedListDraftId(null)
+            return
+        }
+
+        if (!filteredDrafts.some((draft) => Number(draft.id) === Number(selectedListDraftId))) {
+            setSelectedListDraftId(filteredDrafts[0].id)
+        }
+    }, [filteredDrafts, selectedListDraftId])
+
     useEffect(() => () => clearTimeout(saveTimeoutRef.current), [])
 
     useEffect(() => {
@@ -416,10 +479,36 @@ export default function OrdersIndex({
         return resolvePricing(currentDraft?.items || [], previewConfig, selectedItem)
     }, [currentDraft, discountDraft, pricing.subtotal, selectedItem])
     const currentDraftStatus = currentDraft ? getOrderStatusMeta(currentDraft.status) : null
-    const draftOnlyCount = drafts.filter((draft) => draft.status !== 'sent_to_cashier').length
-    const cashierCount = drafts.length - draftOnlyCount
-    const activeFilterMeta = filterMetaByStatus[listFilter] || filterMetaByStatus.draft
-    const filteredDrafts = useMemo(() => drafts.filter((draft) => draft.status === listFilter), [drafts, listFilter])
+    const normalizedListSearch = normalizeTextSearch(listSearch)
+    const filterCounts = useMemo(
+        () => ORDER_LIST_FILTERS.reduce((carry, filter) => ({
+            ...carry,
+            [filter.key]: drafts.filter((draft) => resolveOrdersFilter(draft.status) === filter.key).length,
+        }), {}),
+        [drafts],
+    )
+    const filteredDrafts = useMemo(() => drafts.filter((draft) => {
+        if (resolveOrdersFilter(draft.status) !== listFilter) {
+            return false
+        }
+
+        if (!matchesOrdersDateRange(draft, listRange)) {
+            return false
+        }
+
+        if (!normalizedListSearch) {
+            return true
+        }
+
+        return matchesTextSearchAny([
+            draft.label,
+            draft.reference,
+            draft.customer?.name,
+            draft.created_by,
+            getOrderTypeLabel(draft.type),
+            getDraftNumberLabel(draft),
+        ], normalizedListSearch)
+    }), [drafts, listFilter, listRange, normalizedListSearch])
     const filteredDraftsValue = useMemo(
         () => roundCurrency(filteredDrafts.reduce((total, draft) => total + Number(draft.total || draft.subtotal || 0), 0)),
         [filteredDrafts],
@@ -427,6 +516,21 @@ export default function OrdersIndex({
     const filteredDraftsItems = useMemo(
         () => filteredDrafts.reduce((total, draft) => total + Number(draft.items_count || 0), 0),
         [filteredDrafts],
+    )
+    const selectedListDraft = useMemo(
+        () => filteredDrafts.find((draft) => Number(draft.id) === Number(selectedListDraftId))
+            || drafts.find((draft) => Number(draft.id) === Number(selectedListDraftId))
+            || null,
+        [drafts, filteredDrafts, selectedListDraftId],
+    )
+    const canAdvanceSelectedListDraft = Boolean(
+        selectedListDraft
+        && !['sent_to_cashier', 'ready', 'delivered', 'cancelled', 'canceled'].includes(selectedListDraft.status)
+        && Number(selectedListDraft.items_count || 0) > 0,
+    )
+    const canCancelSelectedListDraft = Boolean(
+        selectedListDraft
+        && !['delivered', 'cancelled', 'canceled'].includes(selectedListDraft.status),
     )
     const searchResults = useMemo(() => {
         const normalizedTerm = normalizeTextSearch(appliedSearchDraftTerm)
@@ -861,7 +965,7 @@ export default function OrdersIndex({
                 hydrateDraft(offlineOrder)
                 setDraftModalOpen(true)
                 setNewDraftModalOpen(false)
-                setListFilter('draft')
+                setListFilter(resolveOrdersFilter('draft'))
                 setNewDraftForm(getInitialNewDraftForm())
                 showFeedback('warning', 'Atendimento iniciado no modo offline.')
 
@@ -894,7 +998,7 @@ export default function OrdersIndex({
             hydrateDraft(nextOrder)
             setDraftModalOpen(true)
             setNewDraftModalOpen(false)
-            setListFilter('draft')
+            setListFilter(resolveOrdersFilter('draft'))
             setNewDraftForm(getInitialNewDraftForm())
             showFeedback('success', response.message)
 
@@ -917,7 +1021,7 @@ export default function OrdersIndex({
                 hydrateDraft(offlineOrder)
                 setDraftModalOpen(true)
                 setNewDraftModalOpen(false)
-                setListFilter('draft')
+                setListFilter(resolveOrdersFilter('draft'))
                 setNewDraftForm(getInitialNewDraftForm())
                 showFeedback('warning', 'Atendimento salvo no modo offline.')
 
@@ -972,7 +1076,7 @@ export default function OrdersIndex({
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const offlineOrder = sendOfflineOrderToCashier(tenantId, currentDraft.id)
                 hydrateDraft(offlineOrder)
-                setListFilter('sent_to_cashier')
+                setListFilter(resolveOrdersFilter('sent_to_cashier'))
                 setDraftModalOpen(false)
                 showFeedback('warning', 'Atendimento enviado para o caixa no modo offline.')
                 return
@@ -981,16 +1085,65 @@ export default function OrdersIndex({
             const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', currentDraft.id)}/send-to-cashier`, { method: 'post' })
             upsertOrderInWorkspace(response.order)
             hydrateDraft(response.order)
-            setListFilter('sent_to_cashier')
+            setListFilter(resolveOrdersFilter('sent_to_cashier'))
             setDraftModalOpen(false)
             showFeedback('success', response.message)
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 const offlineOrder = sendOfflineOrderToCashier(tenantId, currentDraft.id)
                 hydrateDraft(offlineOrder)
-                setListFilter('sent_to_cashier')
+                setListFilter(resolveOrdersFilter('sent_to_cashier'))
                 setDraftModalOpen(false)
                 showFeedback('warning', 'Atendimento enviado para o caixa no modo offline.')
+            } else {
+                showFeedback('error', error.message)
+            }
+        } finally {
+            setSendingDraft(false)
+        }
+    }
+
+    async function handleAdvanceListDraft(draft = selectedListDraft) {
+        if (!draft) return
+
+        if (Number(currentDraft?.id) === Number(draft.id)) {
+            await handleSendToCashier()
+            return
+        }
+
+        if (['sent_to_cashier', 'ready', 'delivered', 'cancelled', 'canceled'].includes(draft.status)) {
+            showFeedback('warning', 'Esse pedido ja esta na etapa mais avancada disponivel nesta tela.')
+            return
+        }
+
+        if (Number(draft.items_count || 0) <= 0) {
+            showFeedback('error', 'Adicione ao menos um produto antes de avancar o status do pedido.')
+            return
+        }
+
+        setSendingDraft(true)
+        setFeedback(null)
+
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const offlineOrder = sendOfflineOrderToCashier(tenantId, draft.id)
+                syncDraftSummary(offlineOrder)
+                setListFilter(resolveOrdersFilter(offlineOrder.status))
+                showFeedback('warning', 'Pedido enviado para a proxima etapa no modo offline.')
+                return
+            }
+
+            const response = await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', draft.id)}/send-to-cashier`, { method: 'post' })
+            upsertOrderInWorkspace(response.order)
+            syncDraftSummary(response.order)
+            setListFilter(resolveOrdersFilter(response.order.status))
+            showFeedback('success', response.message)
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                const offlineOrder = sendOfflineOrderToCashier(tenantId, draft.id)
+                syncDraftSummary(offlineOrder)
+                setListFilter(resolveOrdersFilter(offlineOrder.status))
+                showFeedback('warning', 'Pedido enviado para a proxima etapa no modo offline.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -1059,6 +1212,59 @@ export default function OrdersIndex({
                 updateDraftUrl(null)
                 resetCheckoutState('')
                 showFeedback('warning', 'Atendimento removido no modo offline.')
+            } else {
+                clearDraftDeletedMark(draftId)
+                showFeedback('error', error.message)
+            }
+        } finally {
+            setDeletingDraft(false)
+        }
+    }
+
+    async function handleCancelListDraft(draft = selectedListDraft) {
+        if (!draft) return
+
+        if (Number(currentDraft?.id) === Number(draft.id)) {
+            await handleDeleteDraft()
+            return
+        }
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Cancelar pedido',
+            message: `O cancelamento sera tratado como exclusao para o pedido "${draft.label}". Deseja continuar?`,
+            confirmLabel: 'Cancelar pedido',
+            cancelLabel: 'Voltar',
+        })
+
+        if (!confirmed) return
+
+        const draftId = Number(draft.id)
+        setDeletingDraft(true)
+        setFeedback(null)
+        markDraftDeleted(draftId)
+
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+                removeOfflineOrderDraft(tenantId, draftId)
+            } else {
+                await apiRequest(`/api/orders/${resolveOfflineEntityId(tenantId, 'orders', draftId)}`, { method: 'delete' })
+                removeOrderFromWorkspace(draftId)
+            }
+
+            setDrafts((current) => current.filter((entry) => Number(entry.id) !== draftId))
+            if (String(selectedListDraftId) === String(draftId)) {
+                setSelectedListDraftId(null)
+            }
+            showFeedback(typeof navigator !== 'undefined' && navigator.onLine === false ? 'warning' : 'success', 'Pedido cancelado com sucesso.')
+        } catch (error) {
+            if (tenantId && isNetworkApiError(error)) {
+                removeOfflineOrderDraft(tenantId, draftId)
+                setDrafts((current) => current.filter((entry) => Number(entry.id) !== draftId))
+                if (String(selectedListDraftId) === String(draftId)) {
+                    setSelectedListDraftId(null)
+                }
+                showFeedback('warning', 'Pedido cancelado no modo offline.')
             } else {
                 clearDraftDeletedMark(draftId)
                 showFeedback('error', error.message)
@@ -1348,152 +1554,136 @@ export default function OrdersIndex({
                     </div>
                 ) : null}
 
-                <div className="orders-shell">
-                    <section className="orders-stage">
-                        <header className="orders-stage-header">
-                            <div className="orders-stage-copy">
-                                <span className="orders-page-kicker">Pedidos</span>
-                                <h1>{activeFilterMeta.title}</h1>
-                                <div className="orders-stage-stats">
-                                    <div className="orders-stage-stat">
-                                        <span>Em aberto</span>
-                                        <strong>{draftOnlyCount}</strong>
-                                    </div>
-                                    <div className="orders-stage-stat">
-                                        <span>No caixa</span>
-                                        <strong>{cashierCount}</strong>
-                                    </div>
-                                    <div className="orders-stage-stat">
-                                        <span>Volume</span>
-                                        <strong>{formatMoney(filteredDraftsValue)}</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="orders-stage-actions">
-                                <div className="orders-stage-filters" role="tablist" aria-label="Filtrar pedidos">
-                                    <button
-                                        type="button"
-                                        className={`orders-filter-pill ${listFilter === 'draft' ? 'active' : ''}`}
-                                        onClick={() => setListFilter('draft')}
-                                    >
-                                        <span>Abertos</span>
-                                        <strong>{draftOnlyCount}</strong>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`orders-filter-pill ${listFilter === 'sent_to_cashier' ? 'active' : ''}`}
-                                        onClick={() => setListFilter('sent_to_cashier')}
-                                    >
-                                        <span>No caixa</span>
-                                        <strong>{cashierCount}</strong>
-                                    </button>
-                                </div>
-                                <div className="orders-stage-toolbar">
-                                    <button
-                                        type="button"
-                                        className={`orders-icon-action ${newDraftModalOpen ? 'active' : ''} ui-tooltip`}
-                                        data-tooltip="Novo atendimento"
-                                        onClick={() => {
-                                            setNewDraftForm(getInitialNewDraftForm())
-                                            setNewDraftModalOpen(true)
-                                        }}
-                                    >
-                                        <i className="fa-solid fa-plus" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`orders-icon-action ${searchModalOpen ? 'active' : ''} ui-tooltip`}
-                                        data-tooltip="Pesquisar atendimento"
-                                        onClick={() => setSearchModalOpen(true)}
-                                    >
-                                        <i className="fa-solid fa-magnifying-glass" />
-                                    </button>
-                                    {canOpenReports ? (
-                                        <button
-                                            type="button"
-                                            className="orders-icon-action ui-tooltip"
-                                            data-tooltip="Relatorios"
-                                            onClick={() => handleSidebarNavigate('/relatorios')}
-                                        >
-                                            <i className="fa-solid fa-chart-line" />
-                                        </button>
-                                    ) : null}
-                                </div>
-                                <div className="orders-stage-meta">
-                                    <span>{filteredDrafts.length} ativos</span>
-                                    <strong>{filteredDraftsItems} itens</strong>
-                                </div>
-                            </div>
-                        </header>
+                <div className="ui-list-page-shell">
+                    <div className="ui-list-page-main">
+                        <PageHeader
+                            title="Pedidos"
+                            search={{
+                                placeholder: 'Buscar por numero ou cliente',
+                                value: listSearch,
+                                onChange: setListSearch,
+                            }}
+                            filters={ORDER_LIST_FILTERS.map((filter) => ({
+                                ...filter,
+                                value: filter.key,
+                                count: filterCounts[filter.key] || 0,
+                            }))}
+                            activeFilter={listFilter}
+                            onFilterChange={setListFilter}
+                            dateRange={{
+                                from: listRange.from,
+                                to: listRange.to,
+                                onChange: setListRange,
+                            }}
+                            quickDates
+                            onReset={() => {
+                                setListSearch('')
+                                setListRange({ from: '', to: '' })
+                                setListFilter('open')
+                            }}
+                        />
 
-                        {filteredDrafts.length ? (
-                            <div className="orders-stage-grid">
-                                {filteredDrafts.map((draft) => {
-                                    const statusMeta = getOrderStatusMeta(draft.status)
-                                    const isCurrent = Number(currentDraft?.id) === Number(draft.id)
+                        <section className="ui-list-page-table-card">
+                            <DataTable
+                                columns={[
+                                    {
+                                        key: 'number',
+                                        label: 'Numero',
+                                        render: (draft) => <strong>{getDraftNumberLabel(draft)}</strong>,
+                                    },
+                                    {
+                                        key: 'customer',
+                                        label: 'Cliente',
+                                        render: (draft) => draft.customer?.name || 'Cliente avulso',
+                                    },
+                                    {
+                                        key: 'items_count',
+                                        label: 'Itens',
+                                        align: 'center',
+                                        render: (draft) => draft.items_count || 0,
+                                    },
+                                    {
+                                        key: 'total',
+                                        label: 'Total',
+                                        align: 'right',
+                                        render: (draft) => <strong>{formatMoney(draft.total)}</strong>,
+                                    },
+                                    {
+                                        key: 'type',
+                                        label: 'Canal',
+                                        render: (draft) => getOrderTypeLabel(draft.type),
+                                    },
+                                    {
+                                        key: 'status',
+                                        label: 'Status',
+                                        render: (draft) => {
+                                            const statusMeta = getOrderStatusMeta(draft.status)
+                                            return <StatusBadge compact label={statusMeta.label} tone={statusMeta.badge} />
+                                        },
+                                    },
+                                ]}
+                                rows={filteredDrafts}
+                                rowKey="id"
+                                selectedRowKey={selectedListDraftId}
+                                onRowClick={(draft) => setSelectedListDraftId(draft.id)}
+                                emptyMessage="Nenhum pedido encontrado"
+                                actions={(draft) => [
+                                    {
+                                        key: 'view',
+                                        icon: 'fa-eye',
+                                        label: 'Ver detalhes',
+                                        tone: 'primary',
+                                        onClick: () => openDraft(draft.id),
+                                    },
+                                ]}
+                            />
+                        </section>
 
-                                    return (
-                                        <button
-                                            key={draft.id}
-                                            type="button"
-                                            className={`orders-order-card ${isCurrent ? 'active' : ''}`}
-                                            onClick={() => openDraft(draft.id)}
-                                            disabled={loadingDraft}
-                                        >
-                                            <div className="orders-order-card-top">
-                                                <span className="orders-order-card-type">{getOrderTypeLabel(draft.type)}</span>
-                                                <span className={`ui-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
-                                            </div>
+                        <footer className="purchases-table-footer">
+                            <span>{filteredDrafts.length} pedido(s)</span>
+                            <span>{filteredDraftsItems} item(ns)</span>
+                            <span>Total: <strong>{formatMoney(filteredDraftsValue)}</strong></span>
+                        </footer>
+                    </div>
 
-                                            <div className="orders-order-card-body">
-                                                <div className="orders-order-card-main">
-                                                    <strong className="orders-order-card-number">{getDraftNumberLabel(draft)}</strong>
-                                                    <strong>{draft.customer?.name || 'Cliente avulso'}</strong>
-                                                    <small>{draft.created_by || 'Sem operador'}</small>
-                                                </div>
-
-                                                <div className="orders-order-card-metrics">
-                                                    <div>
-                                                        <span>Total</span>
-                                                        <strong>{formatMoney(draft.total)}</strong>
-                                                    </div>
-                                                    <div>
-                                                        <span>Itens</span>
-                                                        <strong>{draft.items_count}</strong>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="orders-order-card-footer">
-                                                <span>
-                                                    <i className="fa-regular fa-clock" />
-                                                    {formatElapsedTime(draft.updated_at, clock)}
-                                                </span>
-                                                <i className="fa-solid fa-arrow-up-right-from-square" />
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <section className="orders-empty-state ui-card">
-                                <div className="ui-card-body">
-                                    <i className="fa-solid fa-receipt" />
-                                    <h2>Sem pedidos</h2>
-                                    <div className="orders-empty-state-actions">
-                                        <button type="button" className="ui-button orders-empty-action orders-empty-action-primary" onClick={() => setNewDraftModalOpen(true)}>
-                                            <i className="fa-solid fa-plus" />
-                                            Novo
-                                        </button>
-                                        <button type="button" className="ui-button-ghost orders-empty-action" onClick={() => setSearchModalOpen(true)}>
-                                            <i className="fa-solid fa-magnifying-glass" />
-                                            Buscar
-                                        </button>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
-                    </section>
+                    <ActionSidebar
+                        storageKey="orders-index"
+                        actions={[
+                            {
+                                key: 'create',
+                                icon: 'fa-plus',
+                                label: 'Novo pedido',
+                                tone: 'primary',
+                                onClick: () => {
+                                    setNewDraftForm(getInitialNewDraftForm())
+                                    setNewDraftModalOpen(true)
+                                },
+                            },
+                            {
+                                key: 'view',
+                                icon: 'fa-eye',
+                                label: 'Ver detalhes',
+                                disabled: !selectedListDraft,
+                                onClick: () => selectedListDraft && openDraft(selectedListDraft.id),
+                            },
+                            {
+                                key: 'advance',
+                                icon: 'fa-play',
+                                label: 'Avancar status',
+                                disabled: !canAdvanceSelectedListDraft || sendingDraft,
+                                onClick: () => selectedListDraft && void handleAdvanceListDraft(selectedListDraft),
+                            },
+                            {
+                                key: 'cancel',
+                                icon: 'fa-xmark',
+                                label: 'Cancelar',
+                                tone: 'danger',
+                                dividerBefore: true,
+                                disabled: !canCancelSelectedListDraft || deletingDraft,
+                                onClick: () => selectedListDraft && void handleCancelListDraft(selectedListDraft),
+                            },
+                        ]}
+                    />
                 </div>
 
                 {draftModalOpen ? (
@@ -1575,7 +1765,7 @@ export default function OrdersIndex({
                         onClose={() => setSearchModalOpen(false)}
                         onOpenDraft={async (draft) => {
                             setSearchModalOpen(false)
-                            setListFilter(draft.status === 'sent_to_cashier' ? 'sent_to_cashier' : 'draft')
+                            setListFilter(resolveOrdersFilter(draft.status))
                             await openDraft(draft.id)
                         }}
                     />

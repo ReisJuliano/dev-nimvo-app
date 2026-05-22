@@ -2,13 +2,13 @@ import { router, useForm } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateConditionalSaleCard'
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
-import ConditionalSearchPanel from '@/Components/ConditionalSales/ConditionalSearchPanel'
-import ConditionalSalesTableCard from '@/Components/ConditionalSales/ConditionalSalesTableCard'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
-import ActionButton from '@/Components/UI/ActionButton'
+import PageHeader from '@/Components/UI/PageHeader'
 import AppLayout from '@/Layouts/AppLayout'
-import { formatMoney, formatNumber } from '@/lib/format'
+import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import '@/Pages/Products/products.css'
 import './conditional-sales.css'
 
@@ -125,25 +125,27 @@ function TopProductsCard({ topProducts }) {
 }
 
 export default function ConditionalSalesPage({
-    summary,
-    topProducts,
     conditionals,
     selectedConditionalId,
     customers,
     products,
     paymentMethods,
-    statusOptions,
     filters,
 }) {
     const [createOpen, setCreateOpen] = useState(false)
-    const filterForm = useForm({
-        search: filters.search || '',
-        status: filters.status || 'open',
-    })
+    const [search, setSearch] = useState(filters.search || '')
+    const [activeFilter, setActiveFilter] = useState('all')
+    const [range, setRange] = useState({ from: '', to: '' })
+    const [selectedRecordId, setSelectedRecordId] = useState(selectedConditionalId || conditionals[0]?.id || null)
+    const [detailPanel, setDetailPanel] = useState('overview')
     const createForm = useForm(buildCreateDefaults())
+    const customerMetaById = useMemo(
+        () => new Map(customers.map((customer) => [String(customer.id), customer])),
+        [customers],
+    )
     const selectedConditional = useMemo(
-        () => conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedConditionalId)) || null,
-        [conditionals, selectedConditionalId],
+        () => conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId)) || null,
+        [conditionals, selectedRecordId],
     )
     const selectedCustomer = useMemo(
         () => customers.find((customer) => String(customer.id) === String(createForm.data.customer_id)) || null,
@@ -179,65 +181,54 @@ export default function ConditionalSalesPage({
 
     const hasCashPayment = finalizeForm.data.payments.some((payment) => payment.method === 'cash')
 
-    function buildQueryParams(extra = {}) {
-        const nextStatus = Object.prototype.hasOwnProperty.call(extra, 'status') ? extra.status : filterForm.data.status
-        const nextSearch = Object.prototype.hasOwnProperty.call(extra, 'search') ? extra.search : filterForm.data.search
-        const nextConditional = Object.prototype.hasOwnProperty.call(extra, 'conditional') ? extra.conditional : selectedConditionalId
+    const filteredRows = useMemo(() => {
+        return conditionals.filter((conditionalSale) => {
+            const customerMeta = customerMetaById.get(String(conditionalSale.customer?.id || '')) || {}
+            const referenceDate = String(conditionalSale.withdrawn_at || conditionalSale.due_at || '').slice(0, 10)
 
-        return Object.fromEntries(
-            Object.entries({
-                status: nextStatus || 'open',
-                search: nextSearch,
-                conditional: nextConditional,
-            }).filter(([key, value]) => key === 'status' || (value !== undefined && value !== null && String(value).trim() !== '')),
-        )
-    }
+            if (range.from && referenceDate && referenceDate < range.from) {
+                return false
+            }
 
-    function visitWithFilters(extra = {}) {
-        router.get('/venda-condicional', buildQueryParams(extra), {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
+            if (range.to && referenceDate && referenceDate > range.to) {
+                return false
+            }
+
+            if (activeFilter === 'owing' && Number(conditionalSale.outstanding_total || 0) <= 0) {
+                return false
+            }
+
+            if (activeFilter === 'alert' && Number(conditionalSale.days_overdue || 0) <= 0) {
+                return false
+            }
+
+            if (activeFilter === 'over_limit') {
+                const limit = Number(customerMeta.credit_limit || 0)
+
+                if (limit <= 0 || Number(conditionalSale.outstanding_total || 0) <= limit) {
+                    return false
+                }
+            }
+
+            if (!search.trim()) {
+                return true
+            }
+
+            return String([
+                conditionalSale.customer?.name || '',
+                conditionalSale.code || '',
+                conditionalSale.sale?.sale_number || '',
+                conditionalSale.operator_name || '',
+            ].join(' ')).toLowerCase().includes(search.trim().toLowerCase())
         })
-    }
+    }, [activeFilter, conditionals, customerMetaById, range.from, range.to, search])
 
-    function handleToolbarSubmit(event) {
-        event.preventDefault()
-        visitWithFilters({ conditional: null })
-    }
-
-    function handleToolbarReset() {
-        filterForm.setData({
-            search: '',
-            status: 'open',
-        })
-
-        visitWithFilters({
-            search: '',
-            status: 'open',
-            conditional: null,
-        })
-    }
-
-    function handleStatusChange(value) {
-        filterForm.setData('status', value)
-        visitWithFilters({
-            status: value,
-            conditional: null,
-        })
-    }
-
-    function handleSelectConditional(id) {
-        visitWithFilters({
-            conditional: id,
-        })
-    }
-
-    function handleCloseConditional() {
-        visitWithFilters({
-            conditional: null,
-        })
-    }
+    const selectedRow = useMemo(
+        () => filteredRows.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))
+            || conditionals.find((conditionalSale) => String(conditionalSale.id) === String(selectedRecordId))
+            || null,
+        [conditionals, filteredRows, selectedRecordId],
+    )
 
     function addCreateItem() {
         createForm.setData('items', [
@@ -363,71 +354,145 @@ export default function ConditionalSalesPage({
         })
     }
 
-    const statPills = [
-        { key: 'open', label: 'Abertos', value: formatNumber(summary.open_count), tone: 'warning', icon: 'fa-right-left' },
-        { key: 'overdue', label: 'Atrasados', value: formatNumber(summary.overdue_count), tone: summary.overdue_count > 0 ? 'danger' : 'success', icon: 'fa-clock' },
-        { key: 'out', label: 'Saldo', value: formatMoney(summary.outstanding_total), tone: 'primary', icon: 'fa-wallet' },
-        { key: 'conv', label: 'Conv.', value: `${formatNumber(summary.conversion_rate)}%`, tone: summary.loss_quantity > 0 ? 'danger' : 'success', icon: 'fa-chart-line' },
-    ]
+    function openSelected(panel = 'overview') {
+        if (!selectedRow) {
+            return
+        }
+
+        setDetailPanel(panel)
+        setSelectedRecordId(selectedRow.id)
+    }
 
     return (
-        <AppLayout title="Condicional">
-            <div className="products-page">
-                <section className="products-shell conditional-page-shell">
-                    <header className="conditional-page-head">
-                        <div className="conditional-page-head-text">
-                            <span className="products-kicker">Prazo</span>
-                            <h1>Condicional</h1>
-                        </div>
-                        <div className="conditional-page-head-actions">
-                            <ActionButton icon="fa-plus" onClick={() => setCreateOpen(true)}>
-                                Nova condicional
-                            </ActionButton>
-                            <button
-                                type="button"
-                                className="conditional-fab-plus"
-                                title="Abrir formulario de nova condicional"
-                                aria-label="Nova condicional"
-                                onClick={() => setCreateOpen(true)}
-                            >
-                                <i className="fa-solid fa-plus" />
-                            </button>
-                        </div>
-                    </header>
-
-                    <div className="conditional-metrics-strip" role="list">
-                        {statPills.map((pill) => (
-                            <div key={pill.key} className={`conditional-stat-pill tone-${pill.tone}`} role="listitem">
-                                <i className={`fa-solid ${pill.icon}`} aria-hidden />
-                                <div>
-                                    <span>{pill.label}</span>
-                                    <strong>{pill.value}</strong>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <ConditionalSearchPanel
-                        filterForm={filterForm}
-                        statusOptions={statusOptions}
-                        onReset={handleToolbarReset}
-                        onStatusChange={handleStatusChange}
-                        onSubmit={handleToolbarSubmit}
+        <AppLayout title="A Prazo">
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="A Prazo"
+                        search={{
+                            placeholder: 'Buscar cliente por nome',
+                            value: search,
+                            onChange: setSearch,
+                        }}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todos', count: conditionals.length },
+                            { key: 'owing', value: 'owing', label: 'Devendo', count: conditionals.filter((entry) => Number(entry.outstanding_total || 0) > 0).length },
+                            { key: 'alert', value: 'alert', label: 'Em alerta', count: conditionals.filter((entry) => Number(entry.days_overdue || 0) > 0).length },
+                            {
+                                key: 'over_limit',
+                                value: 'over_limit',
+                                label: 'Acima do limite',
+                                count: conditionals.filter((entry) => {
+                                    const customerMeta = customerMetaById.get(String(entry.customer?.id || '')) || {}
+                                    return Number(customerMeta.credit_limit || 0) > 0 && Number(entry.outstanding_total || 0) > Number(customerMeta.credit_limit || 0)
+                                }).length,
+                            },
+                        ]}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        dateRange={{
+                            from: range.from,
+                            to: range.to,
+                            onChange: setRange,
+                        }}
+                        quickDates
+                        onReset={() => {
+                            setSearch('')
+                            setRange({ from: '', to: '' })
+                            setActiveFilter('all')
+                        }}
                     />
 
-                    <div className="conditional-main-split">
-                        <div className="conditional-main-col-list">
-                            <ConditionalSalesTableCard
-                                conditionals={conditionals}
-                                selectedConditionalId={selectedConditionalId}
-                                onSelect={handleSelectConditional}
-                            />
-                        </div>
-                        <aside className="conditional-main-col-side">
-                            <TopProductsCard topProducts={topProducts} />
-                        </aside>
-                    </div>
-                </section>
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'customer',
+                                    label: 'Cliente',
+                                    render: (conditionalSale) => conditionalSale.customer?.name || 'Cliente nao informado',
+                                },
+                                {
+                                    key: 'purchase',
+                                    label: 'Compras',
+                                    render: (conditionalSale) => conditionalSale.sale?.sale_number ? `Venda ${conditionalSale.sale.sale_number}` : conditionalSale.code,
+                                },
+                                {
+                                    key: 'open',
+                                    label: 'Total em aberto',
+                                    align: 'right',
+                                    render: (conditionalSale) => <strong>{formatMoney(conditionalSale.outstanding_total || 0)}</strong>,
+                                },
+                                {
+                                    key: 'last_payment',
+                                    label: 'Ultimo pagamento',
+                                    render: (conditionalSale) => conditionalSale.resolved_at
+                                        ? formatDateTime(conditionalSale.resolved_at)
+                                        : '--',
+                                },
+                                {
+                                    key: 'limit',
+                                    label: 'Limite',
+                                    align: 'right',
+                                    render: (conditionalSale) => {
+                                        const customerMeta = customerMetaById.get(String(conditionalSale.customer?.id || '')) || {}
+                                        return formatMoney(customerMeta.credit_limit || 0)
+                                    },
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (conditionalSale) => (
+                                        <StatusBadge compact label={conditionalSale.status_label} tone={conditionalSale.status_tone} />
+                                    ),
+                                },
+                            ]}
+                            rows={filteredRows}
+                            rowKey="id"
+                            selectedRowKey={selectedRecordId}
+                            onRowClick={(conditionalSale) => setSelectedRecordId(conditionalSale.id)}
+                            emptyMessage="Nenhum cliente encontrado"
+                            actions={(conditionalSale) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver cliente',
+                                    tone: 'primary',
+                                    onClick: () => {
+                                        setSelectedRecordId(conditionalSale.id)
+                                        setDetailPanel('overview')
+                                    },
+                                },
+                            ]}
+                        />
+                    </section>
+                </div>
+
+                <ActionSidebar
+                    storageKey="conditional-sales-index"
+                    actions={[
+                        {
+                            key: 'view',
+                            icon: 'fa-eye',
+                            label: 'Ver cliente',
+                            disabled: !selectedRow,
+                            onClick: () => openSelected('overview'),
+                        },
+                        {
+                            key: 'payment',
+                            icon: 'fa-money-bill-wave',
+                            label: 'Registrar pagamento',
+                            disabled: !selectedRow || selectedRow.status === 'closed',
+                            onClick: () => openSelected('finalize'),
+                        },
+                        {
+                            key: 'entries',
+                            icon: 'fa-clipboard-list',
+                            label: 'Ver lancamentos',
+                            disabled: !selectedRow,
+                            onClick: () => openSelected('return'),
+                        },
+                    ]}
+                />
             </div>
 
             <ModalForm
@@ -460,11 +525,12 @@ export default function ConditionalSalesPage({
                 size="lg"
                 badge={selectedConditional?.status_label}
                 bodyClassName="conditional-detail-drawer-body"
-                onClose={handleCloseConditional}
+                onClose={() => setSelectedRecordId(null)}
             >
                 <ConditionalSaleDetailCard
                     conditionalSale={selectedConditional}
                     embedded
+                    defaultPanel={detailPanel}
                     finalizeForm={finalizeForm}
                     finalizePreview={finalizePreview}
                     hasCashPayment={hasCashPayment}

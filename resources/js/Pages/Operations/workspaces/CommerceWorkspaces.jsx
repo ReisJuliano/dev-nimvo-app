@@ -3,8 +3,12 @@ import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
 import DenseTable from '@/Components/UI/DenseTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import IncomingNfeWorkspace from './IncomingNfeWorkspace'
 import {
     Badge,
@@ -81,14 +85,14 @@ function PurchaseItemsEditor({ products, items, onChange }) {
 
 export function DeliveryWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, customer_id: '', reference: '', status: 'pending', channel: 'delivery', recipient_name: '', phone: '', courier_name: '', address: '', neighborhood: '', delivery_fee: '0', order_total: '0', scheduled_for: '', notes: '' }
-    const emptyFilters = { customer_id: '', value: '', date: '', from: '', to: '', status: '' }
     const [records, setRecords] = useState(payload.records || [])
-    const [filters, setFilters] = useState(emptyFilters)
-    const [hasSearched, setHasSearched] = useState(false)
+    const [activeTab, setActiveTab] = useState('pending')
+    const [search, setSearch] = useState('')
+    const [range, setRange] = useState({ from: '', to: '' })
+    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const [saving, setSaving] = useState(false)
-    const [searching, setSearching] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
     function deliveryStatusLabel(status) {
@@ -103,79 +107,126 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         return 'warning'
     }
 
-    function openNewDrawer() {
-        setForm(emptyForm)
-        setDrawerOpen(true)
+    function recordDateValue(record) {
+        return String(record?.scheduled_for || record?.created_at || record?.updated_at || '').slice(0, 10)
     }
 
-    function openRecordDrawer(record) {
-        setForm({
+    function normalizeRecord(record) {
+        return {
             ...emptyForm,
             ...record,
             customer_id: record.customer_id ? String(record.customer_id) : '',
             delivery_fee: String(record.delivery_fee || 0),
             order_total: String(record.order_total || 0),
             scheduled_for: ensureDateTime(record.scheduled_for),
+        }
+    }
+
+    function matchesRange(record) {
+        const value = recordDateValue(record)
+
+        if (!value) {
+            return true
+        }
+
+        if (range.from && value < range.from) {
+            return false
+        }
+
+        if (range.to && value > range.to) {
+            return false
+        }
+
+        return true
+    }
+
+    const normalizedSearch = normalizeTextSearch(search)
+    const filteredRecords = useMemo(() => (
+        records.filter((record) => {
+            if (record.status !== activeTab) {
+                return false
+            }
+
+            if (!matchesRange(record)) {
+                return false
+            }
+
+            if (!normalizedSearch) {
+                return true
+            }
+
+            return matchesTextSearchAny([
+                record.reference,
+                record.customer_name,
+                record.recipient_name,
+                record.address,
+                record.courier_name,
+            ], normalizedSearch)
         })
+    ), [activeTab, normalizedSearch, range.from, range.to, records])
+
+    const selectedRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId))
+            || records.find((record) => String(record.id) === String(selectedId))
+            || null,
+        [filteredRecords, records, selectedId],
+    )
+
+    const statusCounts = useMemo(() => ({
+        pending: records.filter((record) => record.status === 'pending').length,
+        dispatched: records.filter((record) => record.status === 'dispatched').length,
+        delivered: records.filter((record) => record.status === 'delivered').length,
+    }), [records])
+
+    const tableColumns = useMemo(() => ([
+        {
+            key: 'reference',
+            label: 'Codigo',
+            render: (record) => <strong>{record.reference || record.recipient_name || `Entrega #${record.id}`}</strong>,
+        },
+        {
+            key: 'customer',
+            label: 'Cliente',
+            render: (record) => record.customer_name || record.recipient_name || 'Sem cliente',
+        },
+        {
+            key: 'address',
+            label: 'Endereco',
+            render: (record) => record.channel === 'retirada' ? 'Retirada no balcao' : (record.address || 'Endereco nao informado'),
+        },
+        {
+            key: 'total',
+            label: 'Valor',
+            align: 'right',
+            render: (record) => formatMoney(parseNumber(record.order_total, 0) + parseNumber(record.delivery_fee, 0)),
+        },
+        {
+            key: 'courier_name',
+            label: 'Entregador',
+            render: (record) => record.courier_name || 'Nao definido',
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (record) => <StatusBadge compact label={deliveryStatusLabel(record.status)} tone={deliveryStatusTone(record.status)} />,
+        },
+    ]), [])
+
+    function openNewDrawer() {
+        setForm(emptyForm)
+        setSelectedId(null)
+        setDrawerOpen(true)
+    }
+
+    function openRecordDrawer(record) {
+        setSelectedId(record.id)
+        setForm(normalizeRecord(record))
         setDrawerOpen(true)
     }
 
     function closeDrawer() {
         setDrawerOpen(false)
         setForm(emptyForm)
-    }
-
-    function buildFilterParams(currentFilters = filters) {
-        return Object.fromEntries(
-            Object.entries(currentFilters).filter(([, value]) => String(value ?? '').trim() !== ''),
-        )
-    }
-
-    function hasActiveFilters(currentFilters = filters) {
-        return Object.values(currentFilters).some((value) => String(value ?? '').trim() !== '')
-    }
-
-    async function fetchRecords(currentFilters = filters, options = {}) {
-        if (!hasActiveFilters(currentFilters)) {
-            setRecords([])
-            setHasSearched(false)
-
-            if (!options.preserveFeedback) {
-                setFeedback({ type: 'error', text: 'Informe pelo menos um filtro antes de buscar entregas.' })
-            }
-
-            return
-        }
-
-        setSearching(true)
-
-        if (!options.preserveFeedback) {
-            setFeedback(null)
-        }
-
-        try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey), { params: buildFilterParams(currentFilters) })
-            setRecords(Array.isArray(response?.records) ? response.records : [])
-            setHasSearched(true)
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        } finally {
-            setSearching(false)
-        }
-    }
-
-    function handleFilterChange(field, value) {
-        setFilters((current) => ({
-            ...current,
-            [field]: value,
-        }))
-    }
-
-    function handleClearFilters() {
-        setFilters(emptyFilters)
-        setRecords([])
-        setHasSearched(false)
-        setFeedback(null)
     }
 
     async function handleSubmit(event) {
@@ -185,13 +236,11 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         try {
             const payloadData = { ...form, customer_id: form.customer_id ? Number(form.customer_id) : null, delivery_fee: parseNumber(form.delivery_fee, 0), order_total: parseNumber(form.order_total, 0), scheduled_for: form.scheduled_for || null }
             const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setForm({ ...emptyForm, ...response.record, customer_id: response.record.customer_id ? String(response.record.customer_id) : '', delivery_fee: String(response.record.delivery_fee || 0), order_total: String(response.record.order_total || 0), scheduled_for: ensureDateTime(response.record.scheduled_for) })
+            setRecords((current) => upsertRecord(current, response.record))
+            setSelectedId(response.record.id)
+            setForm(normalizeRecord(response.record))
             setDrawerOpen(false)
             setFeedback({ type: 'success', text: response.message })
-
-            if (hasSearched) {
-                await fetchRecords(filters, { preserveFeedback: true })
-            }
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -199,27 +248,28 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         }
     }
 
-    async function handleDelete() {
-        if (!form.id) return
+    async function handleDelete(record = form) {
+        if (!record?.id) return
 
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Remover entrega',
-            message: `Remover a entrega "${form.reference || form.recipient_name}"?`,
+            message: `Remover a entrega "${record.reference || record.recipient_name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
 
         if (!confirmed) return
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            closeDrawer()
-            setFeedback({ type: 'success', text: response.message })
-
-            if (hasSearched) {
-                await fetchRecords(filters, { preserveFeedback: true })
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+            if (String(form.id) === String(record.id)) {
+                closeDrawer()
             }
+            if (String(selectedId) === String(record.id)) {
+                setSelectedId(null)
+            }
+            setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         }
@@ -243,139 +293,114 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                 notes: record.notes || '',
             }
             const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'put', data: payloadData })
+            setRecords((current) => upsertRecord(current, response.record))
 
             if (String(form.id) === String(record.id)) {
-                setForm((current) => ({
-                    ...current,
-                    ...response.record,
-                    customer_id: response.record.customer_id ? String(response.record.customer_id) : '',
-                    delivery_fee: String(response.record.delivery_fee || 0),
-                    order_total: String(response.record.order_total || 0),
-                    scheduled_for: ensureDateTime(response.record.scheduled_for),
-                }))
+                setForm(normalizeRecord(response.record))
             }
+            setSelectedId(response.record.id)
             setFeedback({ type: 'success', text: response.message })
-
-            if (hasSearched) {
-                await fetchRecords(filters, { preserveFeedback: true })
-            }
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         }
     }
 
     return (
-        <div className="ops-workspace-stack">
-            <section className="ops-workspace-panel ops-delivery-panel">
-                <FeedbackHeader
-                    title="Fila de entregas"
-                    subtitle={hasSearched ? `${records.length} registro(s) encontrados` : 'Use os filtros abaixo e clique em Buscar para carregar as entregas'}
-                    action={<button type="button" className="ui-button" onClick={openNewDrawer}><i className="fa-solid fa-plus" />+ Nova entrega</button>}
+        <div className="ui-list-page-shell">
+            <div className="ui-list-page-main">
+                <PageHeader
+                    title="Entregas"
+                    search={{
+                        placeholder: 'Buscar por codigo ou cliente',
+                        value: search,
+                        onChange: setSearch,
+                    }}
+                    filters={[
+                        { key: 'pending', value: 'pending', label: 'Pendentes', count: statusCounts.pending },
+                        { key: 'dispatched', value: 'dispatched', label: 'Em rota', count: statusCounts.dispatched },
+                        { key: 'delivered', value: 'delivered', label: 'Entregues', count: statusCounts.delivered },
+                    ]}
+                    activeFilter={activeTab}
+                    onFilterChange={setActiveTab}
+                    dateRange={{
+                        from: range.from,
+                        to: range.to,
+                        onChange: setRange,
+                    }}
+                    quickDates
+                    onReset={() => {
+                        setSearch('')
+                        setRange({ from: '', to: '' })
+                        setActiveTab('pending')
+                    }}
                 />
+
                 <Feedback feedback={feedback} />
 
-                <form
-                    className="ops-delivery-filters"
-                    onSubmit={(event) => {
-                        event.preventDefault()
-                        void fetchRecords()
-                    }}
-                >
-                    <label>
-                        <span>Cliente</span>
-                        <select value={filters.customer_id} onChange={(event) => handleFilterChange('customer_id', event.target.value)}>
-                            <option value="">Todos</option>
-                            {payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Valor total</span>
-                        <input type="number" min="0" step="0.01" value={filters.value} onChange={(event) => handleFilterChange('value', event.target.value)} />
-                    </label>
-                    <label>
-                        <span>Data</span>
-                        <input type="date" value={filters.date} onChange={(event) => handleFilterChange('date', event.target.value)} />
-                    </label>
-                    <label>
-                        <span>Periodo de</span>
-                        <input type="date" value={filters.from} onChange={(event) => handleFilterChange('from', event.target.value)} />
-                    </label>
-                    <label>
-                        <span>Periodo ate</span>
-                        <input type="date" value={filters.to} onChange={(event) => handleFilterChange('to', event.target.value)} />
-                    </label>
-                    <label>
-                        <span>Status</span>
-                        <select value={filters.status} onChange={(event) => handleFilterChange('status', event.target.value)}>
-                            <option value="">Todos</option>
-                            <option value="pending">Pendente</option>
-                            <option value="dispatched">Em rota</option>
-                            <option value="delivered">Entregue</option>
-                        </select>
-                    </label>
-                    <div className="ops-delivery-filters-actions">
-                        <button type="button" className="ui-button-ghost" onClick={handleClearFilters}>Limpar</button>
-                        <button type="submit" className="ui-button" disabled={searching}>{searching ? 'Buscando...' : 'Buscar'}</button>
-                    </div>
-                </form>
+                <section className="ui-list-page-table-card">
+                    <DataTable
+                        columns={tableColumns}
+                        rows={filteredRecords}
+                        rowKey="id"
+                        selectedRowKey={selectedId}
+                        onRowClick={(record) => setSelectedId(record.id)}
+                        emptyMessage="Nenhuma entrega encontrada"
+                        actions={(record) => [
+                            {
+                                key: 'view',
+                                icon: 'fa-eye',
+                                label: 'Ver detalhes',
+                                tone: 'primary',
+                                onClick: () => openRecordDrawer(record),
+                            },
+                        ]}
+                    />
+                </section>
+            </div>
 
-                <DenseTable
-                    columns={[
-                        {
-                            key: 'reference',
-                            label: 'Codigo',
-                            render: (record) => <strong>{record.reference || record.recipient_name || `Entrega #${record.id}`}</strong>,
-                        },
-                        {
-                            key: 'address',
-                            label: 'Endereco',
-                            render: (record) => record.channel === 'retirada' ? 'Retirada no balcao' : (record.address || 'Endereco nao informado'),
-                        },
-                        {
-                            key: 'customer',
-                            label: 'Cliente',
-                            render: (record) => record.customer_name || record.recipient_name || 'Sem cliente',
-                        },
-                        {
-                            key: 'total',
-                            label: 'Valor',
-                            render: (record) => formatMoney(parseNumber(record.order_total, 0) + parseNumber(record.delivery_fee, 0)),
-                        },
-                        {
-                            key: 'status',
-                            label: 'Status',
-                            render: (record) => <StatusBadge compact label={deliveryStatusLabel(record.status)} tone={deliveryStatusTone(record.status)} />,
-                        },
-                    ]}
-                    rows={records}
-                    rowKey="id"
-                    onRowClick={openRecordDrawer}
-                    emptyState={<EmptyState title={hasSearched ? 'Sem entregas' : 'Nenhuma busca realizada'} text={hasSearched ? 'Nenhuma entrega encontrada com os filtros informados.' : 'Defina cliente, valor, data, periodo ou status para consultar a fila.'} />}
-                    getRowActions={(record) => [
-                        {
-                            key: 'view',
-                            icon: 'fa-eye',
-                            label: 'Ver detalhes',
-                            tone: 'primary',
-                            onClick: () => openRecordDrawer(record),
-                        },
-                        record.status !== 'dispatched' ? {
-                            key: 'dispatch',
-                            icon: 'fa-route',
-                            label: 'Iniciar rota',
-                            tone: 'info',
-                            onClick: () => handleStatusChange(record, 'dispatched'),
-                        } : null,
-                        record.status !== 'delivered' ? {
-                            key: 'deliver',
-                            icon: 'fa-circle-check',
-                            label: 'Marcar entregue',
-                            tone: 'primary',
-                            onClick: () => handleStatusChange(record, 'delivered'),
-                        } : null,
-                    ]}
-                />
-            </section>
+            <ActionSidebar
+                storageKey="delivery-workspace"
+                actions={[
+                    {
+                        key: 'create',
+                        icon: 'fa-plus',
+                        label: 'Nova entrega',
+                        tone: 'primary',
+                        onClick: openNewDrawer,
+                    },
+                    {
+                        key: 'view',
+                        icon: 'fa-eye',
+                        label: 'Ver detalhes',
+                        disabled: !selectedRecord,
+                        onClick: () => selectedRecord && openRecordDrawer(selectedRecord),
+                    },
+                    {
+                        key: 'dispatch',
+                        icon: 'fa-route',
+                        label: 'Iniciar rota',
+                        disabled: !selectedRecord || selectedRecord.status === 'dispatched' || selectedRecord.status === 'delivered',
+                        onClick: () => selectedRecord && handleStatusChange(selectedRecord, 'dispatched'),
+                    },
+                    {
+                        key: 'deliver',
+                        icon: 'fa-circle-check',
+                        label: 'Marcar entregue',
+                        tone: 'success',
+                        disabled: !selectedRecord || selectedRecord.status === 'delivered',
+                        onClick: () => selectedRecord && handleStatusChange(selectedRecord, 'delivered'),
+                    },
+                    {
+                        key: 'cancel',
+                        icon: 'fa-xmark',
+                        label: 'Cancelar',
+                        tone: 'danger',
+                        dividerBefore: true,
+                        disabled: !selectedRecord,
+                        onClick: () => selectedRecord && handleDelete(selectedRecord),
+                    },
+                ]}
+            />
 
             <ActionDrawer
                 open={drawerOpen}
@@ -409,7 +434,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
                         <div className="ops-workspace-actions span-2">
                             <button type="button" className="ui-button-ghost" onClick={closeDrawer}>Cancelar</button>
-                            {form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}
+                            {form.id ? <button type="button" className="ui-button-ghost danger" onClick={() => handleDelete(form)}>Excluir</button> : null}
                             {form.id && form.status !== 'dispatched' ? (
                                 <button type="button" className="ui-button-ghost" onClick={() => handleStatusChange(form, 'dispatched')}>
                                     Iniciar rota

@@ -2,8 +2,10 @@ function normalizeTone(tone) {
     switch (tone) {
         case 'success':
         case 'positive':
-        case 'active':
         case 'delivered':
+        case 'done':
+        case 'finalized':
+        case 'finished':
             return 'success'
         case 'danger':
         case 'error':
@@ -15,10 +17,19 @@ function normalizeTone(tone) {
         case 'primary':
         case 'processing':
         case 'dispatched':
+        case 'active':
+        case 'open':
+        case 'aberto':
             return 'info'
+        case 'draft':
+        case 'rascunho':
+        case 'neutral':
+        case 'inactive':
+            return 'neutral'
         case 'warning':
         case 'pending':
-        case 'neutral':
+        case 'in_progress':
+        case 'em_andamento':
         default:
             return 'warning'
     }

@@ -309,17 +309,41 @@ export function getOrderTypeLabel(type) {
 }
 
 export function getOrderStatusMeta(status) {
-    if (status === 'sent_to_cashier') {
+    if (status === 'sent_to_cashier' || status === 'ready') {
         return {
-            label: 'No caixa',
-            badge: 'info',
+            label: 'Pronto',
+            badge: 'success',
             description: 'Atendimento enviado para cobranca e pronto para fechamento.',
         }
     }
 
+    if (status === 'preparing' || status === 'in_progress') {
+        return {
+            label: 'Em preparo',
+            badge: 'warning',
+            description: 'Pedido em preparo antes da etapa de cobranca.',
+        }
+    }
+
+    if (status === 'delivered') {
+        return {
+            label: 'Entregue',
+            badge: 'success',
+            description: 'Pedido finalizado e entregue ao cliente.',
+        }
+    }
+
+    if (status === 'cancelled' || status === 'canceled') {
+        return {
+            label: 'Cancelado',
+            badge: 'danger',
+            description: 'Pedido encerrado sem conclusao.',
+        }
+    }
+
     return {
-        label: 'Em aberto',
-        badge: 'warning',
+        label: 'Aberto',
+        badge: 'info',
         description: 'Edicao ativa com salvamento automatico.',
     }
 }

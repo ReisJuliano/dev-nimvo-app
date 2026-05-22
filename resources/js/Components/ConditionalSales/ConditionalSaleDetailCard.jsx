@@ -121,12 +121,13 @@ export default function ConditionalSaleDetailCard({
     onRemovePayment,
     onPaymentChange,
     embedded = false,
+    defaultPanel = 'overview',
 }) {
-    const [activePanel, setActivePanel] = useState('overview')
+    const [activePanel, setActivePanel] = useState(defaultPanel)
 
     useEffect(() => {
-        setActivePanel('overview')
-    }, [conditionalSale?.id, conditionalSale?.status])
+        setActivePanel(defaultPanel)
+    }, [conditionalSale?.id, conditionalSale?.status, defaultPanel])
 
     if (!conditionalSale) {
         const emptyState = (
