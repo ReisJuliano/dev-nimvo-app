@@ -1,13 +1,14 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { usePage } from '@inertiajs/react'
-import ActionButton from '@/Components/UI/ActionButton'
-import DataList from '@/Components/UI/DataList'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
-import ProductsTable from '@/Components/Products/ProductsTable'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
-import { formatNumber } from '@/lib/format'
+import { formatMoney, formatNumber } from '@/lib/format'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import {
@@ -69,6 +70,26 @@ function getProductSearchScore(product, searchTerm) {
     return 4
 }
 
+function isLowStock(product) {
+    return Number(product.stock_quantity || 0) <= Number(product.min_stock || 0)
+}
+
+function getProductStatusMeta(product) {
+    if (!product.active) {
+        return { label: 'Inativo', tone: 'inactive' }
+    }
+
+    if (Number(product.stock_quantity || 0) <= 0) {
+        return { label: 'Sem estoque', tone: 'danger' }
+    }
+
+    if (isLowStock(product)) {
+        return { label: 'Estoque baixo', tone: 'warning' }
+    }
+
+    return { label: 'Ativo', tone: 'active' }
+}
+
 export default function ProductsIndex({ products, categories, suppliers }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
@@ -76,14 +97,13 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
     const searchControl = useConfirmedSearch('')
-    const [categoryId, setCategoryId] = useState('')
+    const [activeFilter, setActiveFilter] = useState('all')
+    const [selectedProductId, setSelectedProductId] = useState((products || [])[0]?.id ?? null)
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
     const deferredSearch = useDeferredValue(searchControl.value)
     const normalizedSearch = normalizeTextSearch(deferredSearch)
-    const hasSearch = normalizedSearch.length > 0
-    const hasFilters = searchControl.draftValue.trim() !== '' || searchControl.value.trim() !== '' || categoryId !== ''
 
     useEffect(() => {
         if (!tenantId) {
@@ -152,20 +172,30 @@ export default function ProductsIndex({ products, categories, suppliers }) {
         }
     }, [categories, localAgentBridge, products, suppliers, tenantId])
 
-    const filteredProducts = useMemo(() => {
-        if (!hasSearch) {
-            return []
-        }
+    useEffect(() => {
+        setSelectedProductId((current) => {
+            if (current && collectionItems.some((product) => String(product.id) === String(current))) {
+                return current
+            }
 
+            return collectionItems[0]?.id ?? null
+        })
+    }, [collectionItems])
+
+    const filteredProducts = useMemo(() => {
         return collectionItems
             .filter((product) => {
-                const matchesSearch = matchesTextSearchAny(getSearchableValues(product), normalizedSearch)
-                const matchesCategory = categoryId === '' || String(product.category_id) === String(categoryId)
+                const matchesSearch = normalizedSearch === '' || matchesTextSearchAny(getSearchableValues(product), normalizedSearch)
+                const matchesStatus = activeFilter === 'all'
+                    || (activeFilter === 'active' ? product.active : !product.active)
+                    || (activeFilter === 'low_stock' ? isLowStock(product) : false)
 
-                return matchesSearch && matchesCategory
+                return matchesSearch && matchesStatus
             })
             .sort((left, right) => {
-                const score = getProductSearchScore(left, normalizedSearch) - getProductSearchScore(right, normalizedSearch)
+                const score = normalizedSearch === ''
+                    ? 0
+                    : getProductSearchScore(left, normalizedSearch) - getProductSearchScore(right, normalizedSearch)
 
                 if (score !== 0) {
                     return score
@@ -173,26 +203,37 @@ export default function ProductsIndex({ products, categories, suppliers }) {
 
                 return String(left.name || '').localeCompare(String(right.name || ''))
             })
-    }, [categoryId, collectionItems, hasSearch, normalizedSearch])
+    }, [activeFilter, collectionItems, normalizedSearch])
+
+    const selectedRow = useMemo(
+        () => filteredProducts.find((product) => String(product.id) === String(selectedProductId))
+            || collectionItems.find((product) => String(product.id) === String(selectedProductId))
+            || null,
+        [collectionItems, filteredProducts, selectedProductId],
+    )
+
+    const filterCounts = useMemo(() => ({
+        all: collectionItems.length,
+        active: collectionItems.filter((product) => product.active).length,
+        low_stock: collectionItems.filter((product) => isLowStock(product)).length,
+        inactive: collectionItems.filter((product) => !product.active).length,
+    }), [collectionItems])
 
     function handleCreate() {
+        setSelectedProductId(null)
         setSelectedProduct(null)
         setModalOpen(true)
     }
 
     function handleEdit(product) {
+        setSelectedProductId(product.id)
         setSelectedProduct(product)
         setModalOpen(true)
     }
 
     function handleResetFilters() {
         searchControl.clear()
-        setCategoryId('')
-    }
-
-    function handleSearchSubmit(event) {
-        event.preventDefault()
-        searchControl.apply()
+        setActiveFilter('all')
     }
 
     async function handleDelete(product) {
@@ -222,6 +263,9 @@ export default function ProductsIndex({ products, categories, suppliers }) {
             const response = await apiRequest(`/api/products/${resolveOfflineEntityId(tenantId, 'products', product.id)}`, { method: 'delete' })
             const nextItems = collectionItems.filter((entry) => entry.id !== product.id)
             setCollectionItems(nextItems)
+            if (String(selectedProductId) === String(product.id)) {
+                setSelectedProductId(nextItems[0]?.id ?? null)
+            }
             seedOfflineWorkspace(tenantId, {
                 products: nextItems,
                 categories: categoryOptions,
@@ -301,6 +345,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 const normalized = normalizeProductRecord(response.product)
                 const nextItems = collectionItems.map((entry) => (entry.id === normalized.id ? normalized : entry))
                 setCollectionItems(nextItems)
+                setSelectedProductId(normalized.id)
                 seedOfflineWorkspace(tenantId, {
                     products: nextItems,
                     categories: categoryOptions,
@@ -311,6 +356,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                 const normalized = normalizeProductRecord(response.product)
                 const nextItems = [normalized, ...collectionItems]
                 setCollectionItems(nextItems)
+                setSelectedProductId(normalized.id)
                 seedOfflineWorkspace(tenantId, {
                     products: nextItems,
                     categories: categoryOptions,
@@ -402,88 +448,132 @@ export default function ProductsIndex({ products, categories, suppliers }) {
 
     return (
         <AppLayout title="Produtos">
-            <div className="products-page">
-                <section className="products-shell">
-                    <header className="products-header">
-                        <div className="products-title-block">
-                            <span className="products-kicker">Catalogo</span>
-                            <h1>Produtos</h1>
-                        </div>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Produtos"
+                        search={{
+                            placeholder: 'Buscar por nome, codigo ou EAN',
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
+                            onApply: () => searchControl.apply(),
+                        }}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
+                            { key: 'active', value: 'active', label: 'Ativos', count: filterCounts.active },
+                            { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: filterCounts.low_stock },
+                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+                        ]}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        onReset={handleResetFilters}
+                    />
 
-                        <ActionButton icon="fa-plus" onClick={handleCreate}>
-                            Novo
-                        </ActionButton>
-                    </header>
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'product',
+                                    label: 'Produto',
+                                    render: (product) => (
+                                        <div className="products-product-cell">
+                                            <strong>{product.name}</strong>
+                                            <div className="products-row-meta">
+                                                {product.code ? <span>#{product.code}</span> : null}
+                                                {product.barcode ? <span>{product.barcode}</span> : null}
+                                            </div>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'category',
+                                    label: 'Categoria',
+                                    render: (product) => product.category_name || 'Sem categoria',
+                                },
+                                {
+                                    key: 'supplier',
+                                    label: 'Fornecedor',
+                                    render: (product) => product.supplier_name || 'Sem fornecedor',
+                                },
+                                {
+                                    key: 'sale_price',
+                                    label: 'Venda',
+                                    align: 'right',
+                                    render: (product) => (
+                                        <div className="products-price-cell">
+                                            <strong>{formatMoney(product.sale_price || 0)}</strong>
+                                            <small>Custo {formatMoney(product.cost_price || 0)}</small>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'stock',
+                                    label: 'Estoque',
+                                    align: 'right',
+                                    render: (product) => (
+                                        <div className="products-stock-cell">
+                                            <strong>{formatNumber(product.stock_quantity || 0)}</strong>
+                                            <small>Min {formatNumber(product.min_stock || 0)}</small>
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (product) => {
+                                        const statusMeta = getProductStatusMeta(product)
 
-                    <section className="products-search-panel">
-                        <form className="products-search-row" onSubmit={handleSearchSubmit}>
-                            <label className="products-search-input">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    type="search"
-                                    placeholder="Buscar por nome, codigo ou EAN"
-                                    value={searchControl.draftValue}
-                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                                />
-                            </label>
-
-                            <label className="products-filter">
-                                <span>Categoria</span>
-                                <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                                    <option value="">Todas</option>
-                                    {categoryOptions.map((category) => (
-                                        <option key={category.id} value={category.id}>
-                                            {category.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-
-                            <ActionButton icon="fa-magnifying-glass" type="submit">
-                                Pesquisar
-                            </ActionButton>
-
-                            {hasFilters ? (
-                                <ActionButton
-                                    icon="fa-rotate-left"
-                                    tone="ghost"
-                                    iconOnly
-                                    onClick={handleResetFilters}
-                                    className="ui-tooltip"
-                                    data-tooltip="Limpar filtros"
-                                    aria-label="Limpar filtros"
-                                />
-                            ) : null}
-                        </form>
+                                        return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                    },
+                                },
+                            ]}
+                            rows={filteredProducts}
+                            rowKey="id"
+                            selectedRowKey={selectedProductId}
+                            onRowClick={(product) => setSelectedProductId(product.id)}
+                            emptyMessage="Nenhum produto encontrado"
+                            emptyIcon="fa-box-open"
+                            actions={(product) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => handleEdit(product),
+                                },
+                            ]}
+                        />
                     </section>
+                </div>
 
-                    <DataList
-                        title="Resultados"
-                        icon="fa-box-open"
-                        count={hasSearch ? `${formatNumber(filteredProducts.length)} item(ns)` : 'Pesquise para listar'}
-                        className="products-data-list"
-                    >
-                        {hasSearch ? (
-                            filteredProducts.length ? (
-                                <ProductsTable products={filteredProducts} onEdit={handleEdit} onDelete={handleDelete} />
-                            ) : (
-                                <div className="products-results-empty">
-                                    <span className="products-results-icon">
-                                        <i className="fa-solid fa-box-open" />
-                                    </span>
-                                    <strong>Sem resultados</strong>
-                                </div>
-                            )
-                        ) : (
-                            <div className="products-results-empty">
-                                <span className="products-results-icon">
-                                    <i className="fa-solid fa-magnifying-glass" />
-                                </span>
-                                <strong>Pesquise produtos</strong>
-                            </div>
-                        )}
-                    </DataList>
-                </section>
+                <ActionSidebar
+                    storageKey="products-index"
+                    actions={[
+                        {
+                            key: 'create',
+                            icon: 'fa-plus',
+                            label: 'Novo produto',
+                            tone: 'primary',
+                            onClick: handleCreate,
+                        },
+                        {
+                            key: 'edit',
+                            icon: 'fa-pen',
+                            label: 'Editar',
+                            disabled: !selectedRow,
+                            onClick: () => selectedRow && handleEdit(selectedRow),
+                        },
+                        {
+                            key: 'delete',
+                            icon: 'fa-trash-can',
+                            label: 'Excluir',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRow,
+                            onClick: () => selectedRow && handleDelete(selectedRow),
+                        },
+                    ]}
+                />
             </div>
 
             <ProductFormModal

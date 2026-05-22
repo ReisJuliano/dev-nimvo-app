@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
-import { formatMoney } from '@/lib/format'
+import { formatMoney, formatNumber } from '@/lib/format'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
+import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import {
     Badge,
     buildRecordsUrl,
@@ -71,6 +75,58 @@ function normalizeCustomerSearch(value) {
 
 function normalizeCustomerSearchKey(value) {
     return normalizeTextSearch(value)
+}
+
+function resolveActiveStatusMeta(active, activeLabel = 'Ativo', inactiveLabel = 'Inativo') {
+    return active
+        ? { label: activeLabel, tone: 'active' }
+        : { label: inactiveLabel, tone: 'inactive' }
+}
+
+function matchesCategoryView(record, activeFilter) {
+    const hasProducts = Number(record.products_count || 0) > 0
+
+    switch (activeFilter) {
+        case 'active':
+            return Boolean(record.active)
+        case 'inactive':
+            return !record.active
+        case 'with-products':
+            return hasProducts
+        case 'without-products':
+            return !hasProducts
+        default:
+            return true
+    }
+}
+
+function matchesSupplierView(record, activeFilter) {
+    const hasProducts = Number(record.products_count || 0) > 0
+
+    switch (activeFilter) {
+        case 'active':
+            return Boolean(record.active)
+        case 'inactive':
+            return !record.active
+        case 'with-products':
+            return hasProducts
+        case 'without-products':
+            return !hasProducts
+        default:
+            return true
+    }
+}
+
+function matchesCustomerView(record, activeFilter) {
+    if (activeFilter === 'active') {
+        return Boolean(record.active)
+    }
+
+    if (activeFilter === 'inactive') {
+        return !record.active
+    }
+
+    return true
 }
 
 function sortSuppliers(records) {
@@ -215,42 +271,57 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', description: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
     const searchControl = useConfirmedSearch('')
-    const [statusFilter, setStatusFilter] = useState('all')
-    const [productFilter, setProductFilter] = useState('all')
+    const [activeFilter, setActiveFilter] = useState('all')
+    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeCategorySearch(searchControl.value), [searchControl.value])
-    const hasFilters = searchControl.draftValue !== '' || searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
-    const hasAppliedFilters = searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
-
     const filteredRecords = useMemo(
-        () => {
-            if (!hasAppliedFilters) {
-                return []
+        () => records.filter((record) => {
+            const matchesSearch = normalizedSearch === ''
+                || matchesTextSearchAny([record.name, record.description], normalizedSearch)
+
+            return matchesSearch && matchesCategoryView(record, activeFilter)
+        }),
+        [activeFilter, normalizedSearch, records],
+    )
+    const selectedRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId))
+            || records.find((record) => String(record.id) === String(selectedId))
+            || null,
+        [filteredRecords, records, selectedId],
+    )
+    const filterCounts = useMemo(() => ({
+        all: records.length,
+        active: records.filter((record) => record.active).length,
+        inactive: records.filter((record) => !record.active).length,
+        with_products: records.filter((record) => Number(record.products_count || 0) > 0).length,
+        without_products: records.filter((record) => Number(record.products_count || 0) <= 0).length,
+    }), [records])
+
+    useEffect(() => {
+        setSelectedId((current) => {
+            if (current && records.some((record) => String(record.id) === String(current))) {
+                return current
             }
 
-            return records.filter((record) => {
-                const matchesSearch = normalizedSearch === ''
-                    || matchesTextSearchAny([record.name, record.description], normalizedSearch)
-                const matchesStatus = statusFilter === 'all'
-                    || (statusFilter === 'active' ? record.active : !record.active)
-                const hasProducts = Number(record.products_count || 0) > 0
-                const matchesProducts = productFilter === 'all'
-                    || (productFilter === 'with-products' ? hasProducts : !hasProducts)
+            return records[0]?.id ?? null
+        })
+    }, [records])
 
-                return matchesSearch && matchesStatus && matchesProducts
-            })
-        },
-        [hasAppliedFilters, normalizedSearch, productFilter, records, statusFilter],
-    )
     function handleCreate() {
         setForm(emptyForm)
         setModalOpen(true)
     }
 
-    function handleSelectRecord(record) {
+    function openRecordModal(record = selectedRecord) {
+        if (!record) {
+            return
+        }
+
+        setSelectedId(record.id)
         setForm({ ...emptyForm, ...record })
         setModalOpen(true)
     }
@@ -262,13 +333,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 
     function handleClearFilters() {
         searchControl.clear()
-        setStatusFilter('all')
-        setProductFilter('all')
-    }
-
-    function handleSearchSubmit(event) {
-        event.preventDefault()
-        searchControl.apply()
+        setActiveFilter('all')
     }
 
     async function handleSubmit(event) {
@@ -280,11 +345,11 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => upsertRecord(current, response.record))
+            setSelectedId(response.record.id)
             setForm({ ...emptyForm, ...response.record })
             setModalOpen(false)
             searchControl.sync(response.record.name || '')
-            setStatusFilter(response.record.active ? 'active' : 'inactive')
-            setProductFilter('all')
+            setActiveFilter('all')
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -293,15 +358,15 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         }
     }
 
-    async function handleDelete() {
-        if (!form.id) {
+    async function handleDelete(record = form) {
+        if (!record?.id) {
             return
         }
 
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Remover categoria',
-            message: `Remover a categoria "${form.name}"?`,
+            message: `Remover a categoria "${record.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
@@ -311,9 +376,14 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
         }
 
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            handleCloseModal()
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+            if (String(form.id) === String(record.id)) {
+                handleCloseModal()
+            }
+            if (String(selectedId) === String(record.id)) {
+                setSelectedId(null)
+            }
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -323,82 +393,111 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     return (
         <>
             <Feedback feedback={feedback} />
-            <WorkspaceCollectionShell
-                tabs={[]}
-                activeTab={null}
-                onTabChange={() => {}}
-                listTitle="Categorias"
-                listIcon="fa-layer-group"
-                listCount={hasAppliedFilters ? `${filteredRecords.length} resultado(s)` : 'Pesquise ou filtre'}
-                createLabel="Nova categoria"
-                onCreate={handleCreate}
-                summaryItems={[]}
-                emptyState={null}
-                listChildren={(
-                    <div className="ops-category-shell">
-                        <form className="ops-category-toolbar" onSubmit={handleSearchSubmit}>
-                            <label className="ops-category-search-field">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    type="search"
-                                    value={searchControl.draftValue}
-                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                                    placeholder="Buscar categoria"
-                                />
-                            </label>
-                            <label className="ops-category-filter-field">
-                                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                                    {CATEGORY_STATUS_FILTERS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="ops-category-filter-field">
-                                <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
-                                    {CATEGORY_PRODUCT_FILTERS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <ActionButton icon="fa-magnifying-glass" type="submit">
-                                Buscar
-                            </ActionButton>
-                            <ActionButton
-                                tone="ghost"
-                                icon="fa-rotate-left"
-                                iconOnly
-                                onClick={handleClearFilters}
-                                title="Limpar filtros"
-                                aria-label="Limpar filtros"
-                                disabled={!hasFilters}
-                            />
-                        </form>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Categorias"
+                        search={{
+                            placeholder: 'Buscar categoria',
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
+                            onApply: () => searchControl.apply(),
+                        }}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todas', count: filterCounts.all },
+                            { key: 'active', value: 'active', label: 'Ativas', count: filterCounts.active },
+                            { key: 'inactive', value: 'inactive', label: 'Inativas', count: filterCounts.inactive },
+                            { key: 'with-products', value: 'with-products', label: 'Com produtos', count: filterCounts.with_products },
+                            { key: 'without-products', value: 'without-products', label: 'Sem produtos', count: filterCounts.without_products },
+                        ]}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        onReset={handleClearFilters}
+                    />
 
-                        {hasAppliedFilters ? (
-                            filteredRecords.length ? (
-                                <div className="ops-category-results">
-                                    {filteredRecords.map((record) => (
-                                        <CategoryListCard
-                                            key={record.id}
-                                            record={record}
-                                            active={modalOpen && form.id === record.id}
-                                            onClick={() => handleSelectRecord(record)}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <EmptyState icon="fa-folder-open" title="Nenhum resultado" text="Refine a busca." />
-                            )
-                        ) : (
-                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Ative um recorte para listar." />
-                        )}
-                    </div>
-                )}
-            />
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'name',
+                                    label: 'Categoria',
+                                    render: (record) => <strong>{record.name}</strong>,
+                                },
+                                {
+                                    key: 'description',
+                                    label: 'Descricao',
+                                    render: (record) => record.description || 'Sem descricao',
+                                },
+                                {
+                                    key: 'products_count',
+                                    label: 'Produtos',
+                                    align: 'right',
+                                    render: (record) => formatNumber(record.products_count || 0),
+                                },
+                                {
+                                    key: 'stock_value',
+                                    label: 'Valor em estoque',
+                                    align: 'right',
+                                    render: (record) => <strong>{formatMoney(record.stock_value || 0)}</strong>,
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (record) => {
+                                        const statusMeta = resolveActiveStatusMeta(record.active, 'Ativa', 'Inativa')
+
+                                        return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                    },
+                                },
+                            ]}
+                            rows={filteredRecords}
+                            rowKey="id"
+                            selectedRowKey={selectedId}
+                            onRowClick={(record) => setSelectedId(record.id)}
+                            emptyMessage="Nenhuma categoria encontrada"
+                            emptyIcon="fa-layer-group"
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => openRecordModal(record),
+                                },
+                            ]}
+                        />
+                    </section>
+                </div>
+
+                <ActionSidebar
+                    storageKey="operations-categories"
+                    actions={[
+                        {
+                            key: 'create',
+                            icon: 'fa-plus',
+                            label: 'Nova categoria',
+                            tone: 'primary',
+                            onClick: handleCreate,
+                        },
+                        {
+                            key: 'edit',
+                            icon: 'fa-pen',
+                            label: 'Editar',
+                            disabled: !selectedRecord,
+                            onClick: () => openRecordModal(selectedRecord),
+                        },
+                        {
+                            key: 'delete',
+                            icon: 'fa-trash-can',
+                            label: 'Excluir',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRecord,
+                            onClick: () => handleDelete(selectedRecord),
+                        },
+                    ]}
+                />
+            </div>
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar categoria' : 'Nova categoria'}
@@ -409,7 +508,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 footer={(
                     <>
                         {form.id ? (
-                            <ActionButton tone="danger" onClick={handleDelete}>
+                            <ActionButton tone="danger" onClick={() => handleDelete(form)}>
                                 Excluir
                             </ActionButton>
                         ) : <span />}
@@ -445,41 +544,56 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, name: '', document: '', trade_name: '', state_registration: '', city_name: '', state: '', phone: '', email: '', active: true }
     const [records, setRecords] = useState(payload.records || [])
     const searchControl = useConfirmedSearch('')
-    const [statusFilter, setStatusFilter] = useState('all')
-    const [productFilter, setProductFilter] = useState('all')
+    const [activeFilter, setActiveFilter] = useState('all')
+    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeSupplierSearch(searchControl.value), [searchControl.value])
-    const hasFilters = searchControl.draftValue !== '' || searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
-    const hasAppliedFilters = searchControl.value !== '' || statusFilter !== 'all' || productFilter !== 'all'
-
     const filteredRecords = useMemo(
-        () => {
-            if (!hasAppliedFilters) {
-                return []
+        () => records.filter((record) => {
+            const matchesSearch = normalizedSearch === '' || matchesTextSearchAny(supplierSearchValues(record), normalizedSearch)
+
+            return matchesSearch && matchesSupplierView(record, activeFilter)
+        }),
+        [activeFilter, normalizedSearch, records],
+    )
+    const selectedRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId))
+            || records.find((record) => String(record.id) === String(selectedId))
+            || null,
+        [filteredRecords, records, selectedId],
+    )
+    const filterCounts = useMemo(() => ({
+        all: records.length,
+        active: records.filter((record) => record.active).length,
+        inactive: records.filter((record) => !record.active).length,
+        with_products: records.filter((record) => Number(record.products_count || 0) > 0).length,
+        without_products: records.filter((record) => Number(record.products_count || 0) <= 0).length,
+    }), [records])
+
+    useEffect(() => {
+        setSelectedId((current) => {
+            if (current && records.some((record) => String(record.id) === String(current))) {
+                return current
             }
 
-            return records.filter((record) => matchesSupplierFilters(record, normalizedSearch, statusFilter, productFilter))
-        },
-        [hasAppliedFilters, normalizedSearch, productFilter, records, statusFilter],
-    )
-    const overviewItems = useMemo(
-        () => [
-            { label: 'Base', value: records.length, caption: 'Fornecedores', icon: 'fa-building' },
-            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Em operacao', icon: 'fa-circle-check' },
-            { label: 'Cobertura', value: records.filter((record) => Number(record.products_count || 0) > 0).length, caption: 'Com produtos', icon: 'fa-boxes-stacked' },
-        ],
-        [records],
-    )
+            return records[0]?.id ?? null
+        })
+    }, [records])
 
     function handleCreate() {
         setForm(emptyForm)
         setModalOpen(true)
     }
 
-    function handleSelectRecord(record) {
+    function openRecordModal(record = selectedRecord) {
+        if (!record) {
+            return
+        }
+
+        setSelectedId(record.id)
         setForm({ ...emptyForm, ...record })
         setModalOpen(true)
     }
@@ -491,13 +605,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 
     function handleClearFilters() {
         searchControl.clear()
-        setStatusFilter('all')
-        setProductFilter('all')
-    }
-
-    function handleSearchSubmit(event) {
-        event.preventDefault()
-        searchControl.apply()
+        setActiveFilter('all')
     }
 
     async function handleSubmit(event) {
@@ -509,12 +617,10 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => sortSuppliers(upsertRecord(current, response.record)))
+            setSelectedId(response.record.id)
             handleCloseModal()
-            if (!hasAppliedFilters || !matchesSupplierFilters(response.record, normalizedSearch, statusFilter, productFilter)) {
-                searchControl.sync(response.record.name || '')
-                setStatusFilter('all')
-                setProductFilter('all')
-            }
+            searchControl.sync(response.record.name || '')
+            setActiveFilter('all')
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -523,15 +629,15 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         }
     }
 
-    async function handleDelete() {
-        if (!form.id) {
+    async function handleDelete(record = form) {
+        if (!record?.id) {
             return
         }
 
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Remover fornecedor',
-            message: `Remover o fornecedor "${form.name}"?`,
+            message: `Remover o fornecedor "${record.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
@@ -541,9 +647,14 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
         }
 
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            handleCloseModal()
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+            if (String(form.id) === String(record.id)) {
+                handleCloseModal()
+            }
+            if (String(selectedId) === String(record.id)) {
+                setSelectedId(null)
+            }
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -553,97 +664,120 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     return (
         <>
             <Feedback feedback={feedback} />
-            <WorkspaceCollectionShell
-                tabs={[]}
-                activeTab={null}
-                onTabChange={() => {}}
-                listTitle="Fornecedores"
-                listIcon="fa-truck-ramp-box"
-                listCount={hasAppliedFilters ? `${filteredRecords.length} resultado(s)` : 'Aplique filtros'}
-                createLabel="Novo"
-                onCreate={handleCreate}
-                summaryItems={[]}
-                emptyState={null}
-                listChildren={(
-                    <div className="ops-supplier-shell">
-                        <section className="ops-supplier-overview">
-                            {overviewItems.map((item) => (
-                                <article key={item.label} className="ops-supplier-overview-card">
-                                    <span className="ops-supplier-overview-icon">
-                                        <i className={`fa-solid ${item.icon}`} />
-                                    </span>
-                                    <div className="ops-supplier-overview-copy">
-                                        <small>{item.label}</small>
-                                        <strong>{item.value.toLocaleString('pt-BR')}</strong>
-                                        <span>{item.caption}</span>
-                                    </div>
-                                </article>
-                            ))}
-                        </section>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Fornecedores"
+                        search={{
+                            placeholder: 'Buscar fornecedor',
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
+                            onApply: () => searchControl.apply(),
+                        }}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
+                            { key: 'active', value: 'active', label: 'Ativos', count: filterCounts.active },
+                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+                            { key: 'with-products', value: 'with-products', label: 'Com produtos', count: filterCounts.with_products },
+                            { key: 'without-products', value: 'without-products', label: 'Sem produtos', count: filterCounts.without_products },
+                        ]}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        onReset={handleClearFilters}
+                    />
 
-                        <form className="ops-supplier-toolbar" onSubmit={handleSearchSubmit}>
-                            <label className="ops-supplier-search-field">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    type="search"
-                                    value={searchControl.draftValue}
-                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                                    placeholder="Buscar fornecedor"
-                                />
-                            </label>
-                            <label className="ops-supplier-filter-field">
-                                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                                    {SUPPLIER_STATUS_FILTERS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="ops-supplier-filter-field">
-                                <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
-                                    {SUPPLIER_PRODUCT_FILTERS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <ActionButton icon="fa-magnifying-glass" type="submit">
-                                Buscar
-                            </ActionButton>
-                            <ActionButton
-                                tone="ghost"
-                                icon="fa-rotate-left"
-                                iconOnly
-                                onClick={handleClearFilters}
-                                title="Limpar filtros"
-                                aria-label="Limpar filtros"
-                                disabled={!hasFilters}
-                            />
-                        </form>
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'name',
+                                    label: 'Fornecedor',
+                                    render: (record) => (
+                                        <div>
+                                            <strong>{record.name}</strong>
+                                            {record.trade_name ? <small>{record.trade_name}</small> : null}
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'document',
+                                    label: 'Documento',
+                                    render: (record) => record.document || 'Nao informado',
+                                },
+                                {
+                                    key: 'location',
+                                    label: 'Cidade / UF',
+                                    render: (record) => supplierLocationLabel(record),
+                                },
+                                {
+                                    key: 'contact',
+                                    label: 'Contato',
+                                    render: (record) => record.phone || record.email || 'Sem contato',
+                                },
+                                {
+                                    key: 'products_count',
+                                    label: 'Produtos',
+                                    align: 'right',
+                                    render: (record) => formatNumber(record.products_count || 0),
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (record) => {
+                                        const statusMeta = resolveActiveStatusMeta(record.active)
 
-                        {hasAppliedFilters ? (
-                            filteredRecords.length ? (
-                                <div className="ops-supplier-results">
-                                    {filteredRecords.map((record) => (
-                                        <SupplierListCard
-                                            key={record.id}
-                                            active={modalOpen && form.id === record.id}
-                                            onClick={() => handleSelectRecord(record)}
-                                            record={record}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <EmptyState icon="fa-building" title="Nenhum fornecedor" text="Ajuste o recorte." />
-                            )
-                        ) : (
-                            <EmptyState icon="fa-sliders" title="Pesquise ou filtre" text="Use nome, status ou produtos." />
-                        )}
-                    </div>
-                )}
-            />
+                                        return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                    },
+                                },
+                            ]}
+                            rows={filteredRecords}
+                            rowKey="id"
+                            selectedRowKey={selectedId}
+                            onRowClick={(record) => setSelectedId(record.id)}
+                            emptyMessage="Nenhum fornecedor encontrado"
+                            emptyIcon="fa-building"
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => openRecordModal(record),
+                                },
+                            ]}
+                        />
+                    </section>
+                </div>
+
+                <ActionSidebar
+                    storageKey="operations-suppliers"
+                    actions={[
+                        {
+                            key: 'create',
+                            icon: 'fa-plus',
+                            label: 'Novo fornecedor',
+                            tone: 'primary',
+                            onClick: handleCreate,
+                        },
+                        {
+                            key: 'edit',
+                            icon: 'fa-pen',
+                            label: 'Editar',
+                            disabled: !selectedRecord,
+                            onClick: () => openRecordModal(selectedRecord),
+                        },
+                        {
+                            key: 'delete',
+                            icon: 'fa-trash-can',
+                            label: 'Excluir',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRecord,
+                            onClick: () => handleDelete(selectedRecord),
+                        },
+                    ]}
+                />
+            </div>
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar fornecedor' : 'Novo fornecedor'}
@@ -654,7 +788,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 footer={(
                     <>
                         {form.id ? (
-                            <ActionButton tone="danger" onClick={handleDelete}>
+                            <ActionButton tone="danger" onClick={() => handleDelete(form)}>
                                 Excluir
                             </ActionButton>
                         ) : <span />}
@@ -732,6 +866,8 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     }
     const [records, setRecords] = useState(payload.records || [])
     const searchControl = useConfirmedSearch('')
+    const [activeFilter, setActiveFilter] = useState('all')
+    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
     const [activeModalTab, setActiveModalTab] = useState('registration')
@@ -742,6 +878,31 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     const normalizedSearch = useMemo(() => normalizeCustomerSearch(searchControl.value), [searchControl.value])
     const normalizedSearchKey = useMemo(() => normalizeCustomerSearchKey(searchControl.value), [searchControl.value])
     const hasSearch = normalizedSearch !== ''
+    const filteredRecords = useMemo(
+        () => records.filter((record) => matchesCustomerView(record, activeFilter)),
+        [activeFilter, records],
+    )
+    const selectedRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId))
+            || records.find((record) => String(record.id) === String(selectedId))
+            || null,
+        [filteredRecords, records, selectedId],
+    )
+    const filterCounts = useMemo(() => ({
+        all: records.length,
+        active: records.filter((record) => record.active).length,
+        inactive: records.filter((record) => !record.active).length,
+    }), [records])
+
+    useEffect(() => {
+        setSelectedId((current) => {
+            if (current && records.some((record) => String(record.id) === String(current))) {
+                return current
+            }
+
+            return records[0]?.id ?? null
+        })
+    }, [records])
 
     useEffect(() => {
         if (!hasSearch) {
@@ -817,6 +978,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     }
 
     function handleSelectRecord(record) {
+        setSelectedId(record.id)
         setForm(buildCustomerForm(record))
         setActiveModalTab('registration')
         setModalOpen(true)
@@ -837,12 +999,12 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     function handleClearSearch() {
         requestIdRef.current += 1
         searchControl.clear()
+        setActiveFilter('all')
         setRecords([])
         setLoading(false)
     }
 
-    function handleSearchSubmit(event) {
-        event.preventDefault()
+    function handleSearchApply() {
         const nextSearch = searchControl.apply()
 
         if (normalizeCustomerSearch(nextSearch) === '') {
@@ -878,6 +1040,8 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                 setRecords(sortCustomers([response.record]))
             }
 
+            setSelectedId(response.record.id)
+            setActiveFilter('all')
             handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
@@ -887,15 +1051,15 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         }
     }
 
-    async function handleDelete() {
-        if (!form.id) {
+    async function handleDelete(record = form) {
+        if (!record?.id) {
             return
         }
 
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Remover cliente',
-            message: `Remover o cliente "${form.name}"?`,
+            message: `Remover o cliente "${record.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
@@ -905,9 +1069,14 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         }
 
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            handleCloseModal()
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+            if (String(form.id) === String(record.id)) {
+                handleCloseModal()
+            }
+            if (String(selectedId) === String(record.id)) {
+                setSelectedId(null)
+            }
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -917,68 +1086,113 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     return (
         <>
             <Feedback feedback={feedback} />
-            <WorkspaceCollectionShell
-                tabs={[]}
-                activeTab={null}
-                onTabChange={() => {}}
-                listTitle="Clientes"
-                listIcon="fa-user-group"
-                listCount={loading ? 'Buscando...' : hasSearch ? `${records.length} resultado(s)` : 'Digite o nome'}
-                createLabel="Novo cliente"
-                onCreate={handleCreate}
-                emptyState={null}
-                listChildren={(
-                    <div className="ops-category-shell">
-                        <form className="ops-customer-toolbar" onSubmit={handleSearchSubmit}>
-                            <label className="ops-category-search-field">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    type="search"
-                                    value={searchControl.draftValue}
-                                    onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                                    placeholder="Buscar cliente por nome"
-                                />
-                            </label>
-                            <ActionButton icon="fa-magnifying-glass" type="submit">
-                                Buscar
-                            </ActionButton>
-                            <ActionButton
-                                tone="ghost"
-                                icon="fa-rotate-left"
-                                iconOnly
-                                onClick={handleClearSearch}
-                                title="Limpar busca"
-                                aria-label="Limpar busca"
-                                disabled={!searchControl.draftValue && !searchControl.value}
-                            />
-                        </form>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Clientes"
+                        search={{
+                            placeholder: 'Buscar cliente por nome',
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
+                            onApply: handleSearchApply,
+                        }}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
+                            { key: 'active', value: 'active', label: 'Ativos', count: filterCounts.active },
+                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+                        ]}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        onReset={handleClearSearch}
+                    />
 
-                        {loading ? (
-                            <EmptyState icon="fa-spinner fa-spin" title="Buscando clientes" text="Aguarde a consulta." />
-                        ) : hasSearch ? (
-                            records.length ? (
-                                <div className="ops-workspace-list-stack">
-                                    {records.map((record) => (
-                                        <ListCard
-                                            key={record.id}
-                                            active={modalOpen && form.id === record.id}
-                                            onClick={() => handleSelectRecord(record)}
-                                            title={record.name}
-                                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.active ? 'Ativo' : 'Inativo'}</Badge>}
-                                            description={customerListDescription(record)}
-                                            meta={[customerLocationLabel(record), `Vendas: ${record.sales_count || 0}`, `Limite: ${formatMoney(record.credit_limit || 0)}`]}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <EmptyState icon="fa-user-slash" title="Nenhum cliente" text="Refine o nome pesquisado." />
-                            )
-                        ) : (
-                            <EmptyState icon="fa-magnifying-glass" title="Busque um cliente" text="Digite o nome para listar." />
-                        )}
-                    </div>
-                )}
-            />
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'name',
+                                    label: 'Cliente',
+                                    render: (record) => <strong>{record.name}</strong>,
+                                },
+                                {
+                                    key: 'document',
+                                    label: 'Documento',
+                                    render: (record) => record.document || 'Nao informado',
+                                },
+                                {
+                                    key: 'contact',
+                                    label: 'Contato',
+                                    render: (record) => customerListDescription(record),
+                                },
+                                {
+                                    key: 'location',
+                                    label: 'Cidade / UF',
+                                    render: (record) => customerLocationLabel(record),
+                                },
+                                {
+                                    key: 'credit_limit',
+                                    label: 'Limite',
+                                    align: 'right',
+                                    render: (record) => <strong>{formatMoney(record.credit_limit || 0)}</strong>,
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (record) => {
+                                        const statusMeta = resolveActiveStatusMeta(record.active)
+
+                                        return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                    },
+                                },
+                            ]}
+                            rows={filteredRecords}
+                            rowKey="id"
+                            selectedRowKey={selectedId}
+                            onRowClick={(record) => setSelectedId(record.id)}
+                            emptyMessage={loading ? 'Buscando clientes' : hasSearch ? 'Nenhum cliente encontrado' : 'Busque um cliente pelo nome'}
+                            emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-user-group'}
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => handleSelectRecord(record),
+                                },
+                            ]}
+                        />
+                    </section>
+                </div>
+
+                <ActionSidebar
+                    storageKey="operations-customers"
+                    actions={[
+                        {
+                            key: 'create',
+                            icon: 'fa-plus',
+                            label: 'Novo cliente',
+                            tone: 'primary',
+                            onClick: handleCreate,
+                        },
+                        {
+                            key: 'edit',
+                            icon: 'fa-pen',
+                            label: 'Editar',
+                            disabled: !selectedRecord,
+                            onClick: () => selectedRecord && handleSelectRecord(selectedRecord),
+                        },
+                        {
+                            key: 'delete',
+                            icon: 'fa-trash-can',
+                            label: 'Excluir',
+                            tone: 'danger',
+                            dividerBefore: true,
+                            disabled: !selectedRecord,
+                            onClick: () => handleDelete(selectedRecord),
+                        },
+                    ]}
+                />
+            </div>
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar cliente' : 'Novo cliente'}
@@ -989,7 +1203,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                 footer={(
                     <>
                         {form.id ? (
-                            <ActionButton tone="danger" onClick={handleDelete}>
+                            <ActionButton tone="danger" onClick={() => handleDelete(form)}>
                                 Excluir
                             </ActionButton>
                         ) : <span />}

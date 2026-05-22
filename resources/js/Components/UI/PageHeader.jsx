@@ -54,9 +54,13 @@ export default function PageHeader({
     quickDates = false,
     quickDateOptions = null,
     onReset = null,
+    onApply = null,
+    applyLabel = 'Filtrar',
     className = '',
 }) {
     const quickDateButtons = resolveQuickDates(quickDates, quickDateOptions)
+    const hasDateRange = Boolean(dateRange)
+    const hasApplyButton = Boolean(onApply || search?.onApply || hasDateRange)
 
     function handleSearchChange(event) {
         search?.onChange?.(event.target.value, event)
@@ -82,6 +86,38 @@ export default function PageHeader({
         dateRange.onChange(createRangeFromToday(option.days || 1), option)
     }
 
+    function handleApply() {
+        const payload = {
+            search: search?.value || '',
+            from: dateRange?.from || '',
+            to: dateRange?.to || '',
+        }
+
+        if (typeof onApply === 'function') {
+            onApply(payload)
+            return
+        }
+
+        if (typeof search?.onApply === 'function') {
+            search.onApply(payload.search, payload)
+        }
+
+        if (typeof dateRange?.onApply === 'function') {
+            dateRange.onApply({
+                from: payload.from,
+                to: payload.to,
+            }, payload)
+            return
+        }
+
+        if (typeof dateRange?.onChange === 'function') {
+            dateRange.onChange({
+                from: payload.from,
+                to: payload.to,
+            })
+        }
+    }
+
     function handleReset() {
         if (typeof onReset === 'function') {
             onReset()
@@ -89,6 +125,7 @@ export default function PageHeader({
         }
 
         search?.onChange?.('')
+        search?.onApply?.('', { search: '', from: '', to: '' })
         dateRange?.onChange?.({ from: '', to: '' })
 
         const firstFilter = filters[0]
@@ -113,27 +150,46 @@ export default function PageHeader({
                         placeholder={search?.placeholder || 'Buscar'}
                         value={search?.value || ''}
                         onChange={handleSearchChange}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault()
+                                handleApply()
+                            }
+                        }}
                     />
                 </label>
 
                 <div className="ui-page-header-date-tools">
-                    <div className="ui-page-header-date-range">
-                        <input
-                            aria-label="Data inicial"
-                            type="date"
-                            value={dateRange?.from || ''}
-                            onChange={(event) => handleDateChange('from', event.target.value)}
-                        />
-                        <span className="ui-page-header-date-separator">
-                            <i className="fa-solid fa-arrow-right" />
-                        </span>
-                        <input
-                            aria-label="Data final"
-                            type="date"
-                            value={dateRange?.to || ''}
-                            onChange={(event) => handleDateChange('to', event.target.value)}
-                        />
-                    </div>
+                    {hasDateRange ? (
+                        <div className="ui-page-header-date-range">
+                            <input
+                                aria-label="Data inicial"
+                                type="date"
+                                value={dateRange?.from || ''}
+                                onChange={(event) => handleDateChange('from', event.target.value)}
+                            />
+                            <span className="ui-page-header-date-separator">
+                                <i className="fa-solid fa-arrow-right" />
+                            </span>
+                            <input
+                                aria-label="Data final"
+                                type="date"
+                                value={dateRange?.to || ''}
+                                onChange={(event) => handleDateChange('to', event.target.value)}
+                            />
+                        </div>
+                    ) : null}
+
+                    {hasApplyButton ? (
+                        <button
+                            type="button"
+                            className="ui-page-header-apply"
+                            onClick={handleApply}
+                        >
+                            <i className="fa-solid fa-filter" />
+                            <span>{applyLabel}</span>
+                        </button>
+                    ) : null}
 
                     <button
                         type="button"
