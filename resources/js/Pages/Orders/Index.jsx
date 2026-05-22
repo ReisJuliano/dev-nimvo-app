@@ -120,6 +120,7 @@ export default function OrdersIndex({
     drafts: initialDrafts = [],
     draftDetails = [],
     initialDraft,
+    filters = {},
     productCatalog = [],
     cashRegister = null,
 }) {
@@ -144,10 +145,18 @@ export default function OrdersIndex({
     const [printingDraft, setPrintingDraft] = useState(false)
     const [submittingCheckout, setSubmittingCheckout] = useState(false)
     const [submittingDelivery, setSubmittingDelivery] = useState(false)
-    const [listFilter, setListFilter] = useState(resolveOrdersFilter(initialDraft?.status))
-    const [listSearch, setListSearch] = useState('')
-    const [listRange, setListRange] = useState({ from: '', to: '' })
-    const [selectedListDraftId, setSelectedListDraftId] = useState(initialDraft?.id ?? initialDrafts[0]?.id ?? null)
+    const initialListFilter = filters?.status || resolveOrdersFilter(initialDraft?.status)
+    const [listFilter, setListFilter] = useState(initialListFilter)
+    const [appliedListFilter, setAppliedListFilter] = useState(filters?.applied ? initialListFilter : 'open')
+    const listSearchControl = useConfirmedSearch(filters?.search || '')
+    const [listRange, setListRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
+    const [appliedListRange, setAppliedListRange] = useState(
+        filters?.applied
+            ? { from: filters?.from || '', to: filters?.to || '' }
+            : { from: '', to: '' },
+    )
+    const [hasLoadedList, setHasLoadedList] = useState(Boolean(filters?.applied))
+    const [selectedListDraftId, setSelectedListDraftId] = useState(null)
     const [draftModalOpen, setDraftModalOpen] = useState(false)
     const [productsModalOpen, setProductsModalOpen] = useState(false)
     const [newDraftModalOpen, setNewDraftModalOpen] = useState(false)
@@ -179,6 +188,8 @@ export default function OrdersIndex({
     const [creditStatus, setCreditStatus] = useState(null)
     const [quantityDraft, setQuantityDraft] = useState(String(initialDraftState?.items?.[0]?.qty ?? '1'))
     const [clock, setClock] = useState(Date.now())
+    const listSearchTerm = listSearchControl.draftValue
+    const appliedListSearchTerm = listSearchControl.value
     const searchTerm = productSearchControl.draftValue
     const appliedSearchTerm = productSearchControl.value
     const searchDraftTerm = searchDraftControl.draftValue
@@ -191,6 +202,10 @@ export default function OrdersIndex({
     const quantityInputRef = useRef(null)
     const lastSavedSignatureRef = useRef(initialDraftState ? JSON.stringify(buildDraftPayload(initialDraftState)) : null)
     const deletedDraftIdsRef = useRef(new Set())
+
+    useEffect(() => {
+        setDrafts(sortDrafts(initialDrafts))
+    }, [initialDrafts])
 
     useEffect(() => {
         if (!tenantId) {
@@ -469,7 +484,7 @@ export default function OrdersIndex({
         return resolvePricing(currentDraft?.items || [], previewConfig, selectedItem)
     }, [currentDraft, discountDraft, pricing.subtotal, selectedItem])
     const currentDraftStatus = currentDraft ? getOrderStatusMeta(currentDraft.status) : null
-    const normalizedListSearch = normalizeTextSearch(listSearch)
+    const normalizedListSearch = normalizeTextSearch(appliedListSearchTerm)
     const filterCounts = useMemo(
         () => ORDER_LIST_FILTERS.reduce((carry, filter) => ({
             ...carry,
@@ -478,11 +493,15 @@ export default function OrdersIndex({
         [drafts],
     )
     const filteredDrafts = useMemo(() => drafts.filter((draft) => {
-        if (resolveOrdersFilter(draft.status) !== listFilter) {
+        if (!hasLoadedList) {
             return false
         }
 
-        if (!matchesOrdersDateRange(draft, listRange)) {
+        if (resolveOrdersFilter(draft.status) !== appliedListFilter) {
+            return false
+        }
+
+        if (!matchesOrdersDateRange(draft, appliedListRange)) {
             return false
         }
 
@@ -498,7 +517,7 @@ export default function OrdersIndex({
             getOrderTypeLabel(draft.type),
             getDraftNumberLabel(draft),
         ], normalizedListSearch)
-    }), [drafts, listFilter, listRange, normalizedListSearch])
+    }), [appliedListFilter, appliedListRange, drafts, hasLoadedList, normalizedListSearch])
     useEffect(() => {
         if (!filteredDrafts.length) {
             setSelectedListDraftId(null)
@@ -506,7 +525,7 @@ export default function OrdersIndex({
         }
 
         if (!filteredDrafts.some((draft) => Number(draft.id) === Number(selectedListDraftId))) {
-            setSelectedListDraftId(filteredDrafts[0].id)
+            setSelectedListDraftId(null)
         }
     }, [filteredDrafts, selectedListDraftId])
     const filteredDraftsValue = useMemo(
@@ -1313,6 +1332,67 @@ export default function OrdersIndex({
         router.get(path)
     }
 
+    async function handleApplyListFilters() {
+        try {
+            if (currentDraft) {
+                await saveDraftNow(currentDraft)
+            }
+        } catch {
+            return
+        }
+
+        const nextSearch = listSearchControl.apply()
+        const params = {
+            applied: 1,
+            status: listFilter || 'open',
+        }
+
+        if (String(nextSearch || '').trim()) {
+            params.search = String(nextSearch).trim()
+        }
+
+        if (listRange.from) {
+            params.from = listRange.from
+        }
+
+        if (listRange.to) {
+            params.to = listRange.to
+        }
+
+        setHasLoadedList(true)
+        setAppliedListFilter(listFilter || 'open')
+        setAppliedListRange({ ...listRange })
+        setSelectedListDraftId(null)
+
+        router.get('/pedidos', params, {
+            preserveScroll: true,
+            replace: true,
+        })
+    }
+
+    async function handleResetListFilters() {
+        try {
+            if (currentDraft) {
+                await saveDraftNow(currentDraft)
+            }
+        } catch {
+            return
+        }
+
+        listSearchControl.clear()
+        setListFilter('open')
+        setAppliedListFilter('open')
+        setListRange({ from: '', to: '' })
+        setAppliedListRange({ from: '', to: '' })
+        setHasLoadedList(false)
+        setSelectedListDraftId(null)
+
+        router.get('/pedidos', {}, {
+            preserveScroll: true,
+            replace: true,
+        })
+    }
+
     async function handleFinalizeCheckout() {
         if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
         if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
@@ -1560,8 +1640,8 @@ export default function OrdersIndex({
                             title="Pedidos"
                             search={{
                                 placeholder: 'Buscar por numero ou cliente',
-                                value: listSearch,
-                                onChange: setListSearch,
+                                value: listSearchTerm,
+                                onChange: listSearchControl.setDraftValue,
                             }}
                             filters={ORDER_LIST_FILTERS.map((filter) => ({
                                 ...filter,
@@ -1576,11 +1656,8 @@ export default function OrdersIndex({
                                 onChange: setListRange,
                             }}
                             quickDates
-                            onReset={() => {
-                                setListSearch('')
-                                setListRange({ from: '', to: '' })
-                                setListFilter('open')
-                            }}
+                            onApply={handleApplyListFilters}
+                            onReset={handleResetListFilters}
                         />
 
                         <section className="ui-list-page-table-card">
@@ -1626,7 +1703,7 @@ export default function OrdersIndex({
                                 rowKey="id"
                                 selectedRowKey={selectedListDraftId}
                                 onRowClick={(draft) => setSelectedListDraftId(draft.id)}
-                                emptyMessage="Nenhum pedido encontrado"
+                                emptyMessage={hasLoadedList ? 'Nenhum pedido encontrado' : 'Clique em Filtrar para buscar'}
                                 actions={(draft) => [
                                     {
                                         key: 'view',

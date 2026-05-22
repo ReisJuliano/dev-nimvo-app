@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
-import { usePage } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -90,13 +90,13 @@ function getProductStatusMeta(product) {
     return { label: 'Ativo', tone: 'active' }
 }
 
-export default function ProductsIndex({ products, categories, suppliers }) {
+export default function ProductsIndex({ products, categories, suppliers, filters = {} }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const [collectionItems, setCollectionItems] = useState((products || []).map((product) => normalizeProductRecord(product)))
     const [categoryOptions, setCategoryOptions] = useState(categories || [])
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
-    const searchControl = useConfirmedSearch('')
+    const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeFilter, setActiveFilter] = useState('all')
     const [selectedProductId, setSelectedProductId] = useState((products || [])[0]?.id ?? null)
     const [modalOpen, setModalOpen] = useState(false)
@@ -234,6 +234,26 @@ export default function ProductsIndex({ products, categories, suppliers }) {
     function handleResetFilters() {
         searchControl.clear()
         setActiveFilter('all')
+        router.get('/produtos', {}, {
+            preserveScroll: true,
+            replace: true,
+        })
+    }
+
+    function handleApplyFilters() {
+        const nextSearch = searchControl.apply()
+        const params = {}
+
+        if (String(nextSearch || '').trim()) {
+            params.search = String(nextSearch).trim()
+        }
+
+        params.applied = 1
+
+        router.get('/produtos', params, {
+            preserveScroll: true,
+            replace: true,
+        })
     }
 
     async function handleDelete(product) {
@@ -456,7 +476,6 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                             placeholder: 'Buscar por nome, codigo ou EAN',
                             value: searchControl.draftValue,
                             onChange: searchControl.setDraftValue,
-                            onApply: () => searchControl.apply(),
                         }}
                         filters={[
                             { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
@@ -466,6 +485,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                         ]}
                         activeFilter={activeFilter}
                         onFilterChange={setActiveFilter}
+                        onApply={handleApplyFilters}
                         onReset={handleResetFilters}
                     />
 
@@ -531,7 +551,7 @@ export default function ProductsIndex({ products, categories, suppliers }) {
                             rowKey="id"
                             selectedRowKey={selectedProductId}
                             onRowClick={(product) => setSelectedProductId(product.id)}
-                            emptyMessage="Nenhum produto encontrado"
+                            emptyMessage={filters?.applied ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon="fa-box-open"
                             actions={(product) => [
                                 {

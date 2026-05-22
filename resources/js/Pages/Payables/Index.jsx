@@ -5,6 +5,7 @@ import CompactModal from '@/Components/UI/CompactModal'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatMoney } from '@/lib/format'
@@ -98,9 +99,11 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const paymentMethods = Array.isArray(payload?.payment_methods) ? payload.payment_methods : []
     const recurrences = Array.isArray(payload?.recurrences) ? payload.recurrences : []
     const [records, setRecords] = useState(Array.isArray(payload?.records) ? payload.records : [])
+    const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('open')
+    const [appliedFilter, setAppliedFilter] = useState('open')
     const [range, setRange] = useState({ from: '', to: '' })
-    const [search, setSearch] = useState('')
+    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
     const [selectedId, setSelectedId] = useState((payload?.records || [])[0]?.id ?? null)
     const [detailModalOpen, setDetailModalOpen] = useState(false)
     const [launchModalOpen, setLaunchModalOpen] = useState(false)
@@ -109,16 +112,17 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const [paymentModal, setPaymentModal] = useState(null)
     const [busy, setBusy] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState(Array.isArray(payload?.records) && payload.records.length > 0)
 
-    const normalizedSearch = normalizeTextSearch(search)
+    const normalizedSearch = normalizeTextSearch(searchControl.value)
     const filteredRecords = useMemo(() => (
         records.filter((record) => {
-            const matchesFilter = activeFilter === 'all'
-                || (activeFilter === 'open'
+            const matchesFilter = appliedFilter === 'all'
+                || (appliedFilter === 'open'
                     ? ['open', 'overdue'].includes(record.status)
-                    : record.status === activeFilter)
+                    : record.status === appliedFilter)
 
-            if (!matchesFilter || !matchesDateRange(record, range)) {
+            if (!matchesFilter || !matchesDateRange(record, appliedRange)) {
                 return false
             }
 
@@ -133,7 +137,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                 record.code,
             ], normalizedSearch)
         })
-    ), [activeFilter, normalizedSearch, range, records])
+    ), [appliedFilter, appliedRange, normalizedSearch, records])
 
     const selectedRecord = useMemo(
         () => filteredRecords.find((record) => record.id === selectedId) || records.find((record) => record.id === selectedId) || null,
@@ -238,6 +242,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                 : await apiRequest(buildRecordsUrl('contas-a-pagar'), { method: 'post', data: payloadData })
 
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedRecords(true)
             setSelectedId(response.record.id)
             setLaunchModalOpen(false)
             setFeedback({ type: 'success', text: response.message })
@@ -300,6 +305,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             })
 
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedRecords(true)
             setSelectedId(response.record.id)
             setPaymentModal(null)
             setFeedback({ type: 'success', text: response.message })
@@ -310,6 +316,43 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         }
     }
 
+    async function handleApplyFilters() {
+        setBusy(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = searchControl.apply()
+            const response = await apiRequest(buildRecordsUrl('contas-a-pagar'), {
+                params: {
+                    applied: 1,
+                },
+            })
+
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setAppliedFilter(activeFilter)
+            setAppliedRange({ ...range })
+            searchControl.sync(nextSearch)
+            setSelectedId((response?.records || [])[0]?.id ?? null)
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    function handleResetFilters() {
+        searchControl.clear()
+        setActiveFilter('open')
+        setAppliedFilter('open')
+        setRange({ from: '', to: '' })
+        setAppliedRange({ from: '', to: '' })
+        setRecords([])
+        setSelectedId(null)
+        setHasLoadedRecords(false)
+        setFeedback(null)
+    }
+
     return (
         <AppLayout title={moduleTitle}>
             <div className="ui-list-page-shell">
@@ -318,8 +361,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         title={moduleTitle}
                         search={{
                             placeholder: 'Buscar por fornecedor ou descricao',
-                            value: search,
-                            onChange: setSearch,
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
                         }}
                         filters={STATUS_FILTERS.map((filter) => ({
                             ...filter,
@@ -333,11 +376,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             onChange: setRange,
                         }}
                         quickDates
-                        onReset={() => {
-                            setSearch('')
-                            setRange({ from: '', to: '' })
-                            setActiveFilter('open')
-                        }}
+                        onApply={handleApplyFilters}
+                        onReset={handleResetFilters}
                     />
 
                     {feedback ? (
@@ -353,7 +393,13 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             rows={filteredRecords}
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
-                            emptyMessage="Nenhuma conta encontrada"
+                            emptyMessage={
+                                busy
+                                    ? 'Buscando contas'
+                                    : hasLoadedRecords
+                                        ? 'Nenhuma conta encontrada'
+                                        : 'Clique em Filtrar para buscar'
+                            }
                             actions={(record) => [
                                 {
                                     key: 'view',

@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { router } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
 import CompactModal from '@/Components/UI/CompactModal'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
@@ -186,14 +188,15 @@ function resolvePrintUrl(record) {
         || null
 }
 
-export default function ConsultationsIndex({ recordTypes, records }) {
+export default function ConsultationsIndex({ recordTypes, records, filters = {} }) {
+    const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeType, setActiveType] = useState('all')
-    const [search, setSearch] = useState('')
-    const [range, setRange] = useState({ from: '', to: '' })
-    const [selectedUid, setSelectedUid] = useState(records[0]?.uid ?? null)
+    const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
+    const [appliedRange, setAppliedRange] = useState(Boolean(filters?.applied) ? { from: filters?.from || '', to: filters?.to || '' } : { from: '', to: '' })
+    const [selectedUid, setSelectedUid] = useState(null)
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
-    const normalizedSearch = normalizeTextSearch(search)
+    const normalizedSearch = normalizeTextSearch(searchControl.value)
 
     const filteredRecords = useMemo(() => (
         (records || []).filter((record) => {
@@ -201,7 +204,7 @@ export default function ConsultationsIndex({ recordTypes, records }) {
                 return false
             }
 
-            if (!matchDateRange(record, range)) {
+            if (!matchDateRange(record, appliedRange)) {
                 return false
             }
 
@@ -222,7 +225,7 @@ export default function ConsultationsIndex({ recordTypes, records }) {
                 record.details?.number,
             ], normalizedSearch)
         })
-    ), [activeType, normalizedSearch, range, records])
+    ), [activeType, appliedRange, normalizedSearch, records])
 
     const selectedRecord = useMemo(
         () => filteredRecords.find((record) => record.uid === selectedUid)
@@ -326,6 +329,44 @@ export default function ConsultationsIndex({ recordTypes, records }) {
         }
     }
 
+    function handleApplyFilters() {
+        const nextSearch = searchControl.apply()
+        const params = { applied: 1 }
+
+        if (String(nextSearch || '').trim()) {
+            params.search = String(nextSearch).trim()
+        }
+
+        if (range.from) {
+            params.from = range.from
+        }
+
+        if (range.to) {
+            params.to = range.to
+        }
+
+        setAppliedRange({ ...range })
+        setSelectedUid(null)
+        router.get('/consultas-cancelamentos', params, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        })
+    }
+
+    function handleResetFilters() {
+        searchControl.clear()
+        setRange({ from: '', to: '' })
+        setAppliedRange({ from: '', to: '' })
+        setActiveType('all')
+        setSelectedUid(null)
+        router.get('/consultas-cancelamentos', {}, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        })
+    }
+
     return (
         <AppLayout title="Consultas">
             <div className="ui-list-page-shell">
@@ -334,8 +375,8 @@ export default function ConsultationsIndex({ recordTypes, records }) {
                         title="Consultas"
                         search={{
                             placeholder: 'Buscar por numero ou valor',
-                            value: search,
-                            onChange: setSearch,
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
                         }}
                         filters={(recordTypes || []).map((type) => ({
                             key: type.key,
@@ -353,11 +394,8 @@ export default function ConsultationsIndex({ recordTypes, records }) {
                             onChange: setRange,
                         }}
                         quickDates
-                        onReset={() => {
-                            setSearch('')
-                            setRange({ from: '', to: '' })
-                            setActiveType('all')
-                        }}
+                        onApply={handleApplyFilters}
+                        onReset={handleResetFilters}
                     />
 
                     {feedback ? (
@@ -374,7 +412,7 @@ export default function ConsultationsIndex({ recordTypes, records }) {
                             rowKey="uid"
                             selectedRowKey={selectedUid}
                             onRowClick={(record) => setSelectedUid(record.uid)}
-                            emptyMessage="Sem registros nesse recorte"
+                            emptyMessage={filters?.applied ? 'Sem registros nesse recorte' : 'Clique em Filtrar para buscar'}
                             actions={(record) => [
                                 {
                                     key: 'view',

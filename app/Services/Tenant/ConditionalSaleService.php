@@ -32,19 +32,27 @@ class ConditionalSaleService
 
     public function pageData(array $filters = []): array
     {
+        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
         $status = $filters['status'] ?? 'open';
         $search = trim((string) ($filters['search'] ?? ''));
+        $from = filled($filters['from'] ?? null) ? (string) $filters['from'] : null;
+        $to = filled($filters['to'] ?? null) ? (string) $filters['to'] : null;
 
-        $conditionals = $this->conditionalsQuery($status, $search)
-            ->get()
-            ->map(fn (ConditionalSale $conditionalSale) => $this->serializeConditionalSale($conditionalSale))
-            ->values()
-            ->all();
+        $conditionals = $applied
+            ? $this->conditionalsQuery($status, $search, $from, $to)
+                ->get()
+                ->map(fn (ConditionalSale $conditionalSale) => $this->serializeConditionalSale($conditionalSale))
+                ->values()
+                ->all()
+            : [];
 
         return [
             'filters' => [
+                'applied' => $applied,
                 'status' => $status,
                 'search' => $search,
+                'from' => $from,
+                'to' => $to,
             ],
             'statusOptions' => [
                 ['value' => 'open', 'label' => 'Abertos'],
@@ -52,10 +60,18 @@ class ConditionalSaleService
                 ['value' => 'closed', 'label' => 'Fechados'],
                 ['value' => 'all', 'label' => 'Todos'],
             ],
-            'summary' => $this->summaryPayload(),
-            'topProducts' => $this->topProductsPayload(),
+            'summary' => $applied ? $this->summaryPayload() : [
+                'open_count' => 0,
+                'overdue_count' => 0,
+                'outstanding_total' => 0,
+                'conversion_rate' => 0,
+                'loss_quantity' => 0,
+            ],
+            'topProducts' => $applied ? $this->topProductsPayload() : [],
             'conditionals' => $conditionals,
-            'selectedConditionalId' => $this->resolveSelectedConditionalId($conditionals, $filters['conditional'] ?? null),
+            'selectedConditionalId' => $applied
+                ? $this->resolveSelectedConditionalId($conditionals, $filters['conditional'] ?? null)
+                : null,
             'customers' => $this->customersPayload(),
             'products' => $this->productsPayload(),
             'paymentMethods' => collect(PaymentMethod::all())
@@ -420,7 +436,7 @@ class ConditionalSaleService
         });
     }
 
-    protected function conditionalsQuery(string $status, string $search)
+    protected function conditionalsQuery(string $status, string $search, ?string $from = null, ?string $to = null)
     {
         $query = ConditionalSale::query()
             ->with([
@@ -446,6 +462,14 @@ class ConditionalSaleService
                     ->where('code', 'like', "%{$search}%")
                     ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('name', 'like', "%{$search}%"));
             });
+        }
+
+        if ($from) {
+            $query->whereDate('withdrawn_at', '>=', $from);
+        }
+
+        if ($to) {
+            $query->whereDate('withdrawn_at', '<=', $to);
         }
 
         return $query

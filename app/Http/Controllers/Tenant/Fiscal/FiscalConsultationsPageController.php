@@ -17,7 +17,9 @@ class FiscalConsultationsPageController extends Controller
         FiscalContingencyService $contingencyService,
     ): Response
     {
-        $contingencyService->retryPending();
+        if ($request->boolean('applied')) {
+            $contingencyService->retryPending();
+        }
 
         return Inertia::render('Consultations/Index', $service->build($request->all()));
     }

@@ -8,19 +8,22 @@ use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\ProductService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OrdersPageController extends Controller
 {
     public function __invoke(
+        Request $request,
         OrderDraftService $orderDraftService,
         ProductService $productService,
     ): Response
     {
         $userId = auth()->user()?->getKey();
-        $draftId = request()->integer('draft');
-        $activeDrafts = $orderDraftService->activeDrafts();
+        $draftId = $request->integer('draft');
+        $applied = $request->boolean('applied') || $draftId !== null;
+        $activeDrafts = $applied ? $orderDraftService->activeDrafts() : [];
         $cashRegister = CashRegister::query()
             ->where('user_id', $userId)
             ->where('status', 'open')
@@ -30,11 +33,6 @@ class OrdersPageController extends Controller
             ? $orderDraftService->findForEditing($draftId)
             : null;
 
-        if (!$initialDraft) {
-            $firstDraftId = data_get($activeDrafts, '0.id');
-            $initialDraft = $firstDraftId ? $orderDraftService->findForEditing((int) $firstDraftId) : null;
-        }
-
         return Inertia::render('Orders/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
             'customers' => Customer::query()
@@ -42,8 +40,15 @@ class OrdersPageController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone']),
             'drafts' => $activeDrafts,
-            'draftDetails' => $orderDraftService->activeDraftsDetailed(),
+            'draftDetails' => $applied ? $orderDraftService->activeDraftsDetailed() : [],
             'initialDraft' => $initialDraft ? $orderDraftService->toDetail($initialDraft) : null,
+            'filters' => [
+                'applied' => $applied,
+                'search' => $request->query('search', ''),
+                'status' => $request->query('status', 'open'),
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+            ],
             'productCatalog' => $productService->activeCatalog(),
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,

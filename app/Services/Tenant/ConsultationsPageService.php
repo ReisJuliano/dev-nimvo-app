@@ -14,7 +14,41 @@ class ConsultationsPageService
 {
     public function build(array $filters): array
     {
+        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
         [$period, $from, $to] = $this->resolveRange($filters);
+
+        if (! $applied) {
+            return [
+                'filters' => [
+                    'applied' => false,
+                    'period' => $period,
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                    'search' => trim((string) ($filters['search'] ?? '')),
+                ],
+                'range' => [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                    'label' => $this->rangeLabel($period, $from, $to),
+                ],
+                'recordTypes' => [
+                    ['key' => 'all', 'label' => 'Todas'],
+                    ['key' => 'sale', 'label' => 'Vendas'],
+                    ['key' => 'entry', 'label' => 'Entradas'],
+                    ['key' => 'delivery', 'label' => 'Entregas'],
+                    ['key' => 'credit', 'label' => 'A Prazo'],
+                    ['key' => 'fiscal', 'label' => 'NF-e Fiscais'],
+                ],
+                'summary' => [
+                    ['key' => 'sales', 'label' => 'Vendas', 'value' => 0],
+                    ['key' => 'entries', 'label' => 'Entradas', 'value' => 0],
+                    ['key' => 'deliveries', 'label' => 'Entregas', 'value' => 0],
+                    ['key' => 'credit', 'label' => 'A prazo', 'value' => 0],
+                    ['key' => 'fiscal', 'label' => 'NF-e', 'value' => 0],
+                ],
+                'records' => [],
+            ];
+        }
 
         $sales = Sale::query()
             ->with([
@@ -94,9 +128,11 @@ class ConsultationsPageService
 
         return [
             'filters' => [
+                'applied' => true,
                 'period' => $period,
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
+                'search' => trim((string) ($filters['search'] ?? '')),
             ],
             'range' => [
                 'from' => $from->toDateString(),

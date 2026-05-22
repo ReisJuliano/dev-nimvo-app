@@ -70,13 +70,13 @@ class OperationsWorkspaceService
                 'moduleKey' => 'fornecedores',
                 'moduleTitle' => 'Fornecedores',
                 'moduleDescription' => 'Cadastro operacional de fornecedores com contato e cobertura por produtos.',
-                'payload' => $this->suppliersPayload(),
+                'payload' => $this->suppliersPayload(false),
             ],
             'categorias' => [
                 'moduleKey' => 'categorias',
                 'moduleTitle' => 'Categorias',
                 'moduleDescription' => 'Estrutura do catalogo com descricao, status e acompanhamento de itens por categoria.',
-                'payload' => $this->categoriesPayload(),
+                'payload' => $this->categoriesPayload(false),
             ],
             'delivery' => [
                 'moduleKey' => 'delivery',
@@ -94,7 +94,7 @@ class OperationsWorkspaceService
                 'moduleKey' => 'contas-a-pagar',
                 'moduleTitle' => 'Contas a pagar',
                 'moduleDescription' => 'Compromissos gerados por notas de entrada e lancamentos financeiros avulsos.',
-                'payload' => $this->payablesPayload(),
+                'payload' => $this->payablesPayload(false),
             ],
             'entrada-estoque' => [
                 'moduleKey' => 'entrada-estoque',
@@ -138,11 +138,20 @@ class OperationsWorkspaceService
     {
         return match ($module) {
             'clientes' => $this->customersPayload($filters),
+            'fornecedores' => [
+                'records' => $this->supplierRecords($filters),
+            ],
+            'categorias' => [
+                'records' => $this->categoryRecords($filters),
+            ],
             'delivery' => [
                 'records' => $this->deliveryRecords($filters),
             ],
             'compras' => [
                 'records' => $this->purchaseRecords($filters),
+            ],
+            'contas-a-pagar' => [
+                'records' => $this->payableRecords($filters),
             ],
             default => [
                 'records' => data_get($this->build($module), 'payload.records', []),
@@ -316,18 +325,10 @@ class OperationsWorkspaceService
             || filled($filters['to'] ?? null);
     }
 
-    protected function payablesPayload(): array
+    protected function payablesPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => Payable::query()
-                ->with(['supplier:id,name', 'purchase:id,code'])
-                ->orderByRaw("CASE WHEN status = 'paid' THEN 2 WHEN due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 0 ELSE 1 END")
-                ->orderBy('due_date')
-                ->orderByDesc('id')
-                ->get()
-                ->map(fn (Payable $payable) => $this->serializePayable($payable))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->payableRecords(['applied' => true]) : [],
             'suppliers' => $this->supplierOptions(),
             'categories' => [
                 ['value' => 'supplier', 'label' => 'Fornecedor'],
@@ -376,30 +377,70 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function suppliersPayload(): array
+    protected function suppliersPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => Supplier::query()
-                ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Supplier $supplier) => $this->serializeSupplier($supplier))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->supplierRecords(['applied' => true]) : [],
         ];
     }
 
-    protected function categoriesPayload(): array
+    protected function categoriesPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => Category::query()
-                ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Category $category) => $this->serializeCategory($category))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->categoryRecords(['applied' => true]) : [],
         ];
+    }
+
+    protected function supplierRecords(array $filters = []): array
+    {
+        if (! $this->shouldLoadListRecords($filters)) {
+            return [];
+        }
+
+        return Supplier::query()
+            ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Supplier $supplier) => $this->serializeSupplier($supplier))
+            ->values()
+            ->all();
+    }
+
+    protected function categoryRecords(array $filters = []): array
+    {
+        if (! $this->shouldLoadListRecords($filters)) {
+            return [];
+        }
+
+        return Category::query()
+            ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Category $category) => $this->serializeCategory($category))
+            ->values()
+            ->all();
+    }
+
+    protected function payableRecords(array $filters = []): array
+    {
+        if (! $this->shouldLoadListRecords($filters)) {
+            return [];
+        }
+
+        return Payable::query()
+            ->with(['supplier:id,name', 'purchase:id,code'])
+            ->orderByRaw("CASE WHEN status = 'paid' THEN 2 WHEN due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 0 ELSE 1 END")
+            ->orderBy('due_date')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (Payable $payable) => $this->serializePayable($payable))
+            ->values()
+            ->all();
+    }
+
+    protected function shouldLoadListRecords(array $filters = []): bool
+    {
+        return filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
     }
 
     protected function stockInboundPayload(): array

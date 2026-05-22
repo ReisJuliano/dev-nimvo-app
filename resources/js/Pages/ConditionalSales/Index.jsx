@@ -133,13 +133,15 @@ export default function ConditionalSalesPage({
     filters = {},
 }) {
     const initialSearch = filters?.search || ''
+    const initialApplied = Boolean(filters?.applied)
     const [createOpen, setCreateOpen] = useState(false)
     const [search, setSearch] = useState(initialSearch)
     const [activeFilter, setActiveFilter] = useState('all')
-    const [range, setRange] = useState({ from: '', to: '' })
-    const [appliedSearch, setAppliedSearch] = useState(initialSearch)
+    const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
+    const [appliedSearch, setAppliedSearch] = useState(initialApplied ? initialSearch : '')
     const [appliedFilter, setAppliedFilter] = useState('all')
-    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
+    const [appliedRange, setAppliedRange] = useState(initialApplied ? { from: filters?.from || '', to: filters?.to || '' } : { from: '', to: '' })
+    const [hasAppliedFilters, setHasAppliedFilters] = useState(initialApplied)
     const [selectedRecordId, setSelectedRecordId] = useState(null)
     const [openedRecordId, setOpenedRecordId] = useState(null)
     const [detailPanel, setDetailPanel] = useState('overview')
@@ -158,8 +160,6 @@ export default function ConditionalSalesPage({
     )
     const returnForm = useForm(buildReturnDefaults(openedConditional))
     const finalizeForm = useForm(buildFinalizeDefaults(openedConditional))
-    const hasAppliedFilters = Boolean(appliedSearch.trim() || appliedRange.from || appliedRange.to || appliedFilter !== 'all')
-
     useEffect(() => {
         returnForm.setData(buildReturnDefaults(openedConditional))
         returnForm.clearErrors()
@@ -383,8 +383,29 @@ export default function ConditionalSalesPage({
         setAppliedSearch(search)
         setAppliedFilter(activeFilter)
         setAppliedRange(range)
+        setHasAppliedFilters(true)
         setSelectedRecordId(null)
         setOpenedRecordId(null)
+
+        const params = { applied: 1 }
+
+        if (String(search || '').trim()) {
+            params.search = String(search).trim()
+        }
+
+        if (range.from) {
+            params.from = range.from
+        }
+
+        if (range.to) {
+            params.to = range.to
+        }
+
+        router.get('/venda-condicional', params, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        })
     }
 
     function openSelected(panel = 'overview') {
@@ -438,8 +459,14 @@ export default function ConditionalSalesPage({
                             setAppliedSearch('')
                             setAppliedFilter('all')
                             setAppliedRange({ from: '', to: '' })
+                            setHasAppliedFilters(false)
                             setSelectedRecordId(null)
                             setOpenedRecordId(null)
+                            router.get('/venda-condicional', {}, {
+                                preserveScroll: true,
+                                preserveState: true,
+                                replace: true,
+                            })
                         }}
                     />
 

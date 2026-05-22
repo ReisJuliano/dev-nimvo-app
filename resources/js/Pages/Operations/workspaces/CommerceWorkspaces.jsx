@@ -8,6 +8,7 @@ import DataTable from '@/Components/UI/DataTable'
 import DenseTable from '@/Components/UI/DenseTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import IncomingNfeWorkspace from './IncomingNfeWorkspace'
 import {
@@ -87,13 +88,18 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, customer_id: '', reference: '', status: 'pending', channel: 'delivery', recipient_name: '', phone: '', courier_name: '', address: '', neighborhood: '', delivery_fee: '0', order_total: '0', scheduled_for: '', notes: '' }
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('pending')
-    const [search, setSearch] = useState('')
+    const [appliedTab, setAppliedTab] = useState('pending')
+    const searchControl = useConfirmedSearch('')
+    const [appliedSearch, setAppliedSearch] = useState('')
     const [range, setRange] = useState({ from: '', to: '' })
-    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
+    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
+    const [selectedId, setSelectedId] = useState(null)
     const [form, setForm] = useState(emptyForm)
     const [drawerOpen, setDrawerOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
 
     function deliveryStatusLabel(status) {
         if (status === 'dispatched') return 'Em rota'
@@ -129,21 +135,25 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
             return true
         }
 
-        if (range.from && value < range.from) {
+        if (appliedRange.from && value < appliedRange.from) {
             return false
         }
 
-        if (range.to && value > range.to) {
+        if (appliedRange.to && value > appliedRange.to) {
             return false
         }
 
         return true
     }
 
-    const normalizedSearch = normalizeTextSearch(search)
+    const normalizedSearch = normalizeTextSearch(appliedSearch)
     const filteredRecords = useMemo(() => (
         records.filter((record) => {
-            if (record.status !== activeTab) {
+            if (!hasLoadedRecords) {
+                return false
+            }
+
+            if (record.status !== appliedTab) {
                 return false
             }
 
@@ -163,7 +173,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                 record.courier_name,
             ], normalizedSearch)
         })
-    ), [activeTab, normalizedSearch, range.from, range.to, records])
+    ), [appliedRange, appliedTab, hasLoadedRecords, normalizedSearch, records])
 
     const selectedRecord = useMemo(
         () => filteredRecords.find((record) => String(record.id) === String(selectedId))
@@ -212,6 +222,48 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         },
     ]), [])
 
+    async function handleApplyFilters() {
+        setLoading(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = searchControl.apply()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                    status: activeTab,
+                    from: range.from || undefined,
+                    to: range.to || undefined,
+                },
+            })
+
+            setRecords(response.records || [])
+            setAppliedTab(activeTab)
+            setAppliedSearch(nextSearch)
+            setAppliedRange({ ...range })
+            setSelectedId(null)
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    function handleResetFilters() {
+        searchControl.clear()
+        setActiveTab('pending')
+        setAppliedTab('pending')
+        setAppliedSearch('')
+        setRange({ from: '', to: '' })
+        setAppliedRange({ from: '', to: '' })
+        setRecords([])
+        setSelectedId(null)
+        setHasLoadedRecords(false)
+        setLoading(false)
+        setFeedback(null)
+    }
+
     function openNewDrawer() {
         setForm(emptyForm)
         setSelectedId(null)
@@ -237,6 +289,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
             const payloadData = { ...form, customer_id: form.customer_id ? Number(form.customer_id) : null, delivery_fee: parseNumber(form.delivery_fee, 0), order_total: parseNumber(form.order_total, 0), scheduled_for: form.scheduled_for || null }
             const response = form.id ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: payloadData }) : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedRecords(true)
             setSelectedId(response.record.id)
             setForm(normalizeRecord(response.record))
             setDrawerOpen(false)
@@ -312,8 +365,8 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                     title="Entregas"
                     search={{
                         placeholder: 'Buscar por codigo ou cliente',
-                        value: search,
-                        onChange: setSearch,
+                        value: searchControl.draftValue,
+                        onChange: searchControl.setDraftValue,
                     }}
                     filters={[
                         { key: 'pending', value: 'pending', label: 'Pendentes', count: statusCounts.pending },
@@ -328,11 +381,8 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         onChange: setRange,
                     }}
                     quickDates
-                    onReset={() => {
-                        setSearch('')
-                        setRange({ from: '', to: '' })
-                        setActiveTab('pending')
-                    }}
+                    onApply={handleApplyFilters}
+                    onReset={handleResetFilters}
                 />
 
                 <Feedback feedback={feedback} />
@@ -344,7 +394,13 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         rowKey="id"
                         selectedRowKey={selectedId}
                         onRowClick={(record) => setSelectedId(record.id)}
-                        emptyMessage="Nenhuma entrega encontrada"
+                        emptyMessage={
+                            loading
+                                ? 'Buscando entregas'
+                                : hasLoadedRecords
+                                    ? 'Nenhuma entrega encontrada'
+                                    : 'Clique em Filtrar para buscar'
+                        }
                         actions={(record) => [
                             {
                                 key: 'view',

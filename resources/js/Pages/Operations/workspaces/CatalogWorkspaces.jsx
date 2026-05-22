@@ -275,6 +275,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeCategorySearch(searchControl.value), [searchControl.value])
@@ -334,6 +336,33 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     function handleClearFilters() {
         searchControl.clear()
         setActiveFilter('all')
+        setRecords([])
+        setSelectedId(null)
+        setLoading(false)
+        setHasLoadedRecords(false)
+    }
+
+    async function handleApplyFilters() {
+        setLoading(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = searchControl.apply()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                },
+            })
+
+            setRecords(response.records || [])
+            searchControl.sync(nextSearch)
+            setSelectedId((response.records || [])[0]?.id ?? null)
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
     }
 
     async function handleSubmit(event) {
@@ -345,6 +374,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedRecords(true)
             setSelectedId(response.record.id)
             setForm({ ...emptyForm, ...response.record })
             setModalOpen(false)
@@ -412,6 +442,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                         ]}
                         activeFilter={activeFilter}
                         onFilterChange={setActiveFilter}
+                        onApply={handleApplyFilters}
                         onReset={handleClearFilters}
                     />
 
@@ -454,8 +485,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             rowKey="id"
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
-                            emptyMessage="Nenhuma categoria encontrada"
-                            emptyIcon="fa-layer-group"
+                            emptyMessage={loading ? 'Buscando categorias' : hasLoadedRecords ? 'Nenhuma categoria encontrada' : 'Clique em Filtrar para buscar'}
+                            emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-layer-group'}
                             actions={(record) => [
                                 {
                                     key: 'view',
@@ -548,6 +579,8 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
     const [form, setForm] = useState(emptyForm)
     const [modalOpen, setModalOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = useMemo(() => normalizeSupplierSearch(searchControl.value), [searchControl.value])
@@ -606,6 +639,33 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     function handleClearFilters() {
         searchControl.clear()
         setActiveFilter('all')
+        setRecords([])
+        setSelectedId(null)
+        setLoading(false)
+        setHasLoadedRecords(false)
+    }
+
+    async function handleApplyFilters() {
+        setLoading(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = searchControl.apply()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                },
+            })
+
+            setRecords(sortSuppliers(response.records || []))
+            searchControl.sync(nextSearch)
+            setSelectedId((response.records || [])[0]?.id ?? null)
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
     }
 
     async function handleSubmit(event) {
@@ -617,6 +677,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
             setRecords((current) => sortSuppliers(upsertRecord(current, response.record)))
+            setHasLoadedRecords(true)
             setSelectedId(response.record.id)
             handleCloseModal()
             searchControl.sync(response.record.name || '')
@@ -683,6 +744,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                         ]}
                         activeFilter={activeFilter}
                         onFilterChange={setActiveFilter}
+                        onApply={handleApplyFilters}
                         onReset={handleClearFilters}
                     />
 
@@ -734,8 +796,8 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                             rowKey="id"
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
-                            emptyMessage="Nenhum fornecedor encontrado"
-                            emptyIcon="fa-building"
+                            emptyMessage={loading ? 'Buscando fornecedores' : hasLoadedRecords ? 'Nenhum fornecedor encontrado' : 'Clique em Filtrar para buscar'}
+                            emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-building'}
                             actions={(record) => [
                                 {
                                     key: 'view',
