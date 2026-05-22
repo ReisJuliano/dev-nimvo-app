@@ -1423,40 +1423,40 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         <AppLayout title={moduleTitle}>
             <div className="proc-ui-page purchases-page">
                 <section className="proc-ui-section-card purchases-list-card">
-                    <PageHeader
-                        title={moduleTitle}
-                        search={{
-                            placeholder: 'Buscar por numero, fornecedor ou produto',
-                            value: listFilters.search,
-                            onChange: (value) => handleListFilterChange('search', value),
-                        }}
-                        filters={STATUS_TABS.map((tab) => ({
-                            ...tab,
-                            value: tab.key,
-                            count: statusCounts[tab.key] || 0,
-                        }))}
-                        activeFilter={listViewTab}
-                        onFilterChange={(value) => void handleTabChange(value)}
-                        dateRange={{
-                            from: listFilters.from,
-                            to: listFilters.to,
-                            onChange: (nextRange) => setListFilters((current) => ({
-                                ...current,
-                                from: nextRange.from,
-                                to: nextRange.to,
-                            })),
-                        }}
-                        quickDates
-                        onReset={() => {
-                            const next = createListFilters()
-                            setListFilters(next)
-                            setSelectedListId(null)
-                            setFeedback(null)
-                        }}
-                    />
-
                     <div className="ui-list-page-shell" style={{ padding: 0 }}>
                         <div className="ui-list-page-main">
+                            <PageHeader
+                                title={moduleTitle}
+                                search={{
+                                    placeholder: 'Buscar por numero, fornecedor ou produto',
+                                    value: listFilters.search,
+                                    onChange: (value) => handleListFilterChange('search', value),
+                                }}
+                                filters={STATUS_TABS.map((tab) => ({
+                                    ...tab,
+                                    value: tab.key,
+                                    count: statusCounts[tab.key] || 0,
+                                }))}
+                                activeFilter={listViewTab}
+                                onFilterChange={(value) => void handleTabChange(value)}
+                                dateRange={{
+                                    from: listFilters.from,
+                                    to: listFilters.to,
+                                    onChange: (nextRange) => setListFilters((current) => ({
+                                        ...current,
+                                        from: nextRange.from,
+                                        to: nextRange.to,
+                                    })),
+                                }}
+                                quickDates
+                                onReset={() => {
+                                    const next = createListFilters()
+                                    setListFilters(next)
+                                    setSelectedListId(null)
+                                    setFeedback(null)
+                                }}
+                            />
+
                             {pageFeedbackVisible ? (
                                 <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
                                     <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
@@ -1504,6 +1504,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
                         <ActionSidebar
                             storageKey="purchases-index"
+                            persistCollapsed={false}
                             actions={[
                                 {
                                     key: 'create',

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-function readCollapsedPreference(storageKey, initialCollapsed) {
-    if (typeof window === 'undefined') {
+function readCollapsedPreference(storageKey, initialCollapsed, persistCollapsed) {
+    if (!persistCollapsed || typeof window === 'undefined') {
         return initialCollapsed
     }
 
@@ -27,13 +27,14 @@ export default function ActionSidebar({
     actions = [],
     title = 'Acoes',
     initialCollapsed = true,
+    persistCollapsed = true,
     className = '',
 }) {
     const resolvedStorageKey = storageKey || `ui-action-sidebar:${title.toLowerCase().replace(/\s+/g, '-')}`
-    const [collapsed, setCollapsed] = useState(() => readCollapsedPreference(resolvedStorageKey, initialCollapsed))
+    const [collapsed, setCollapsed] = useState(() => readCollapsedPreference(resolvedStorageKey, initialCollapsed, persistCollapsed))
 
     useEffect(() => {
-        if (typeof window === 'undefined') {
+        if (!persistCollapsed || typeof window === 'undefined') {
             return
         }
 
@@ -42,7 +43,19 @@ export default function ActionSidebar({
         } catch {
             return
         }
-    }, [collapsed, resolvedStorageKey])
+    }, [collapsed, persistCollapsed, resolvedStorageKey])
+
+    useEffect(() => {
+        if (persistCollapsed || typeof window === 'undefined') {
+            return
+        }
+
+        try {
+            window.localStorage.removeItem(resolvedStorageKey)
+        } catch {
+            return
+        }
+    }, [persistCollapsed, resolvedStorageKey])
 
     const visibleActions = useMemo(
         () => (actions || []).filter((action) => action && action.visible !== false),
