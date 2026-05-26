@@ -325,6 +325,10 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             const response = await apiRequest(buildRecordsUrl('contas-a-pagar'), {
                 params: {
                     applied: 1,
+                    status: activeFilter,
+                    search: nextSearch || undefined,
+                    from: range.from || undefined,
+                    to: range.to || undefined,
                 },
             })
 

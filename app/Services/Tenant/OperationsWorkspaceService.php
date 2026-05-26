@@ -158,7 +158,7 @@ class OperationsWorkspaceService
             ],
             'movimentacao-estoque' => [
                 'records' => $this->shouldLoadListRecords($filters)
-                    ? $this->stockMovementRecords(['manual_adjustment'])
+                    ? $this->stockMovementRecords(['manual_adjustment'], 120, $filters)
                     : [],
             ],
             'usuarios' => [
@@ -438,15 +438,65 @@ class OperationsWorkspaceService
             return [];
         }
 
+        $validated = Validator::make($filters, [
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::in(['all', 'open', 'overdue', 'paid', 'cancelled'])],
+            'search' => ['nullable', 'string', 'max:255'],
+        ])->validate();
+
+        if (filled($validated['from'] ?? null) && filled($validated['to'] ?? null) && $validated['from'] > $validated['to']) {
+            throw ValidationException::withMessages([
+                'filters' => 'O periodo final precisa ser maior ou igual ao periodo inicial.',
+            ]);
+        }
+
+        $from = filled($validated['from'] ?? null) ? Carbon::parse((string) $validated['from'])->toDateString() : null;
+        $to = filled($validated['to'] ?? null) ? Carbon::parse((string) $validated['to'])->toDateString() : null;
+        $status = (string) ($validated['status'] ?? 'all');
+        $search = TextSearch::normalize($validated['search'] ?? null);
+        $referenceDateExpression = 'COALESCE(due_date, paid_at, created_at)';
+
         return Payable::query()
             ->with(['supplier:id,name', 'purchase:id,code'])
+            ->when($from, fn ($query, string $value) => $query->whereRaw("DATE({$referenceDateExpression}) >= ?", [$value]))
+            ->when($to, fn ($query, string $value) => $query->whereRaw("DATE({$referenceDateExpression}) <= ?", [$value]))
             ->orderByRaw("CASE WHEN status = 'paid' THEN 2 WHEN due_date IS NOT NULL AND due_date < CURRENT_DATE THEN 0 ELSE 1 END")
             ->orderBy('due_date')
             ->orderByDesc('id')
             ->get()
             ->map(fn (Payable $payable) => $this->serializePayable($payable))
+            ->filter(fn (array $record) => $this->matchesPayableStatusFilter($record, $status))
+            ->filter(fn (array $record) => $this->matchesPayableSearchFilter($record, $search))
             ->values()
             ->all();
+    }
+
+    protected function matchesPayableStatusFilter(array $record, string $status): bool
+    {
+        return match ($status) {
+            'open' => in_array($record['status'] ?? '', ['open', 'overdue'], true),
+            'overdue', 'paid', 'cancelled' => ($record['status'] ?? '') === $status,
+            default => true,
+        };
+    }
+
+    protected function matchesPayableSearchFilter(array $record, string $search): bool
+    {
+        if ($search === '') {
+            return true;
+        }
+
+        $haystack = implode(' ', array_filter([
+            $record['description'] ?? null,
+            $record['supplier_name'] ?? null,
+            $record['purchase_code'] ?? null,
+            $record['code'] ?? null,
+            $record['payment_method'] ?? null,
+            $record['bank_name'] ?? null,
+        ], fn ($value) => filled($value)));
+
+        return str_contains(mb_strtolower($haystack), mb_strtolower($search));
     }
 
     protected function shouldLoadListRecords(array $filters = []): bool
@@ -472,10 +522,10 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function stockMovementsPayload(bool $includeRecords = false): array
+    protected function stockMovementsPayload(bool $includeRecords = false, array $filters = []): array
     {
         return [
-            'records' => $includeRecords ? $this->stockMovementRecords(['manual_adjustment']) : [],
+            'records' => $includeRecords ? $this->stockMovementRecords(['manual_adjustment'], 120, $filters) : [],
             'products' => $this->stockProductOptions(),
         ];
     }
@@ -1334,7 +1384,10 @@ class OperationsWorkspaceService
         $nf = TextSearch::normalize($filters['nf'] ?? null);
         $supplier = TextSearch::normalize($filters['supplier'] ?? null);
         $product = TextSearch::normalize($filters['product'] ?? null);
+        $search = TextSearch::normalize($filters['search'] ?? null);
         $date = filled($filters['date'] ?? null) ? Carbon::parse((string) $filters['date'])->toDateString() : null;
+        $from = filled($filters['from'] ?? null) ? Carbon::parse((string) $filters['from'])->toDateString() : null;
+        $to = filled($filters['to'] ?? null) ? Carbon::parse((string) $filters['to'])->toDateString() : null;
         $month = filled($filters['month'] ?? null) ? substr((string) $filters['month'], 0, 7) : null;
         $period = (string) ($filters['period'] ?? '');
         $exactTime = filled($filters['time'] ?? null) ? substr((string) $filters['time'], 0, 5) : null;
@@ -1350,6 +1403,8 @@ class OperationsWorkspaceService
             ->with(['supplier:id,name', 'items.product:id,name,code,barcode,unit'])
             ->where('status', 'received')
             ->when($date, fn ($query, $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 10) = ?', [$value]))
+            ->when($from, fn ($query, string $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 10) >= ?', [$value]))
+            ->when($to, fn ($query, string $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 10) <= ?', [$value]))
             ->when($month, fn ($query, $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 7) = ?', [$value]))
             ->when($periodStart, fn ($query, Carbon $value) => $query->whereRaw('COALESCE(received_at, created_at) >= ?', [$value->toDateTimeString()]))
             ->when($nf !== '', function ($query) use ($nf) {
@@ -1377,6 +1432,25 @@ class OperationsWorkspaceService
                     $itemQuery
                         ->where('product_name', 'like', $like)
                         ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', $like));
+                });
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $like = TextSearch::likePattern($search);
+
+                $query->where(function ($nestedQuery) use ($like, $search) {
+                    $nestedQuery
+                        ->where('code', 'like', $like)
+                        ->orWhere('notes', 'like', $like)
+                        ->orWhereHas('supplier', fn ($supplierQuery) => $supplierQuery->where('name', 'like', $like))
+                        ->orWhereHas('items', function ($itemQuery) use ($like) {
+                            $itemQuery
+                                ->where('product_name', 'like', $like)
+                                ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', $like));
+                        });
+
+                    if (is_numeric($search)) {
+                        $nestedQuery->orWhere('id', (int) $search);
+                    }
                 });
             })
             ->orderByDesc('received_at')
@@ -1423,11 +1497,34 @@ class OperationsWorkspaceService
         return true;
     }
 
-    protected function stockMovementRecords(array $types, int $limit = 120): array
+    protected function stockMovementRecords(array $types, int $limit = 120, array $filters = []): array
     {
+        $search = TextSearch::normalize($filters['search'] ?? null);
+        $date = filled($filters['date'] ?? null) ? Carbon::parse((string) $filters['date'])->toDateString() : null;
+        $from = filled($filters['from'] ?? null) ? Carbon::parse((string) $filters['from'])->toDateString() : null;
+        $to = filled($filters['to'] ?? null) ? Carbon::parse((string) $filters['to'])->toDateString() : null;
+
         return InventoryMovement::query()
             ->with(['product:id,name,code,unit', 'user:id,name'])
             ->whereIn('type', $types)
+            ->when($date, fn ($query, string $value) => $query->whereRaw('substr(occurred_at, 1, 10) = ?', [$value]))
+            ->when($from, fn ($query, string $value) => $query->whereRaw('substr(occurred_at, 1, 10) >= ?', [$value]))
+            ->when($to, fn ($query, string $value) => $query->whereRaw('substr(occurred_at, 1, 10) <= ?', [$value]))
+            ->when($search !== '', function ($query) use ($search) {
+                $like = TextSearch::likePattern($search);
+
+                $query->where(function ($nestedQuery) use ($like) {
+                    $nestedQuery
+                        ->where('notes', 'like', $like)
+                        ->orWhereHas('product', function ($productQuery) use ($like) {
+                            $productQuery
+                                ->where('name', 'like', $like)
+                                ->orWhere('code', 'like', $like)
+                                ->orWhere('barcode', 'like', $like);
+                        })
+                        ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', $like));
+                });
+            })
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->limit($limit)

@@ -3,6 +3,8 @@ import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
+import PageHeader from '@/Components/UI/PageHeader'
+import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import {
     Badge,
     buildRecordsUrl,
@@ -192,6 +194,10 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [products] = useState(payload.products || [])
     const [form, setForm] = useState(emptyForm)
+    const historySearchControl = useConfirmedSearch('')
+    const [historyRange, setHistoryRange] = useState({ from: '', to: '' })
+    const [historyLoading, setHistoryLoading] = useState(false)
+    const [hasLoadedHistory, setHasLoadedHistory] = useState((payload.records || []).length > 0)
     const [step, setStep] = useState(0)
     const [scanCode, setScanCode] = useState('')
     const [manualProductId, setManualProductId] = useState('')
@@ -311,6 +317,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
 
             const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedHistory(true)
             resetForm()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
@@ -318,6 +325,38 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
         } finally {
             setSaving(false)
         }
+    }
+
+    async function handleLoadHistory() {
+        setHistoryLoading(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = historySearchControl.apply()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                    search: nextSearch || undefined,
+                    from: historyRange.from || undefined,
+                    to: historyRange.to || undefined,
+                },
+            })
+
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setHasLoadedHistory(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setHistoryLoading(false)
+        }
+    }
+
+    function handleResetHistory() {
+        historySearchControl.clear()
+        setHistoryRange({ from: '', to: '' })
+        setRecords([])
+        setHasLoadedHistory(false)
+        setHistoryLoading(false)
     }
 
     return (
@@ -472,7 +511,23 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                 </section>
 
                 <section className="ops-workspace-panel ops-compact-panel">
-                    <FeedbackHeader title="Entradas" subtitle={`${records.length} registro(s)`} />
+                    <PageHeader
+                        title={`Entradas (${records.length})`}
+                        search={{
+                            placeholder: 'Buscar NF, fornecedor ou produto',
+                            value: historySearchControl.draftValue,
+                            onChange: historySearchControl.setDraftValue,
+                        }}
+                        dateRange={{
+                            from: historyRange.from,
+                            to: historyRange.to,
+                            onChange: setHistoryRange,
+                        }}
+                        quickDates
+                        applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
+                        onApply={() => void handleLoadHistory()}
+                        onReset={handleResetHistory}
+                    />
                     <div className="ops-workspace-list-stack">
                         {records.length ? records.map((record) => (
                             <ListCard
@@ -484,7 +539,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                                 description={formatMoney(record.total || 0)}
                                 meta={[`${formatNumber(record.quantity_total || 0)} un`, record.billing_due_date || 'Sem vencimento']}
                             />
-                        )) : <EmptyState title="Sem entradas" text="Nenhum recebimento salvo." />}
+                        )) : <EmptyState title={historyLoading ? 'Buscando entradas' : hasLoadedHistory ? 'Sem entradas' : 'Clique em Filtrar para buscar'} text={hasLoadedHistory ? 'Nenhum recebimento encontrado nesse recorte.' : 'Use a busca e o periodo acima.'} />}
                     </div>
                 </section>
             </div>
@@ -503,6 +558,10 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [products, setProducts] = useState(payload.products || [])
     const [form, setForm] = useState(emptyForm)
+    const historySearchControl = useConfirmedSearch('')
+    const [historyRange, setHistoryRange] = useState({ from: '', to: '' })
+    const [historyLoading, setHistoryLoading] = useState(false)
+    const [hasLoadedHistory, setHasLoadedHistory] = useState((payload.records || []).length > 0)
     const [scanCode, setScanCode] = useState('')
     const [productSearch, setProductSearch] = useState('')
     const [saving, setSaving] = useState(false)
@@ -589,6 +648,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
             const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedHistory(true)
             setProducts((current) => updateStockInProducts(current, response.record.product_id, response.record.stock_after))
             setForm(emptyForm)
             setScanCode('')
@@ -600,6 +660,38 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         } finally {
             setSaving(false)
         }
+    }
+
+    async function handleLoadHistory() {
+        setHistoryLoading(true)
+        setFeedback(null)
+
+        try {
+            const nextSearch = historySearchControl.apply()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                    search: nextSearch || undefined,
+                    from: historyRange.from || undefined,
+                    to: historyRange.to || undefined,
+                },
+            })
+
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setHasLoadedHistory(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setHistoryLoading(false)
+        }
+    }
+
+    function handleResetHistory() {
+        historySearchControl.clear()
+        setHistoryRange({ from: '', to: '' })
+        setRecords([])
+        setHasLoadedHistory(false)
+        setHistoryLoading(false)
     }
 
     return (
@@ -691,7 +783,23 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                 </section>
 
                 <section className="ops-workspace-panel ops-compact-panel">
-                    <FeedbackHeader title="Historico" subtitle={`${records.length} registro(s)`} />
+                    <PageHeader
+                        title={`Historico (${records.length})`}
+                        search={{
+                            placeholder: 'Buscar produto, motivo ou usuario',
+                            value: historySearchControl.draftValue,
+                            onChange: historySearchControl.setDraftValue,
+                        }}
+                        dateRange={{
+                            from: historyRange.from,
+                            to: historyRange.to,
+                            onChange: setHistoryRange,
+                        }}
+                        quickDates
+                        applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
+                        onApply={() => void handleLoadHistory()}
+                        onReset={handleResetHistory}
+                    />
                     <div className="ops-workspace-list-stack">
                         {records.length ? records.map((record) => (
                             <ListCard
@@ -703,7 +811,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                 description={record.reason || 'Ajuste manual'}
                                 meta={[`${formatNumber(record.stock_before || 0)} -> ${formatNumber(record.stock_after || 0)}`, record.product_code || '-']}
                             />
-                        )) : <EmptyState title="Sem ajustes" text="Nenhum movimento registrado." />}
+                        )) : <EmptyState title={historyLoading ? 'Buscando ajustes' : hasLoadedHistory ? 'Sem ajustes' : 'Clique em Filtrar para buscar'} text={hasLoadedHistory ? 'Nenhum movimento encontrado nesse recorte.' : 'Use a busca e o periodo acima.'} />}
                     </div>
                 </section>
             </div>

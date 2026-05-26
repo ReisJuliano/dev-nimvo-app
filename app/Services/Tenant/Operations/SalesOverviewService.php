@@ -299,6 +299,7 @@ class SalesOverviewService
             ->where('sales.status', 'finalized')
             ->where('sale_payments.payment_method', PaymentMethod::CREDIT)
             ->whereNotNull('sales.customer_id')
+            ->whereBetween('sales.created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->selectRaw('sales.customer_id, COALESCE(SUM(sale_payments.amount), 0) as open_credit, COUNT(DISTINCT sales.id) as credit_sales_count, MAX(sales.created_at) as last_credit_at')
             ->groupBy('sales.customer_id')
             ->get()

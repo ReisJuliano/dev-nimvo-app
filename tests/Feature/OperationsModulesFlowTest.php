@@ -6,11 +6,16 @@ use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\DeliveryOrder;
 use App\Models\Tenant\InventoryMovement;
+use App\Models\Tenant\Payable;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\Sale;
+use App\Models\Tenant\SalePayment;
 use App\Models\Tenant\Supplier;
 use App\Models\Tenant\User;
+use App\Services\Tenant\Operations\SalesOverviewService;
 use App\Services\Tenant\OperationsWorkspaceService;
 use App\Services\Tenant\PosService;
+use App\Support\Tenant\PaymentMethod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -272,6 +277,128 @@ class OperationsModulesFlowTest extends TestCase
 
         $this->assertCount(1, $exactDate['records']);
         $this->assertSame('Compra 21', $exactDate['records'][0]['custom_name']);
+    }
+
+    public function test_payable_records_apply_status_search_and_date_filters(): void
+    {
+        $supplier = $this->makeSupplier();
+        $service = app(OperationsWorkspaceService::class);
+
+        Payable::query()->create([
+            'supplier_id' => $supplier->id,
+            'code' => 'PAY-200',
+            'description' => 'Conta filtrada',
+            'category' => 'supplier',
+            'status' => 'open',
+            'payment_method' => 'boleto',
+            'amount' => 120,
+            'amount_paid' => 0,
+            'due_date' => '2026-05-26',
+        ]);
+
+        Payable::query()->create([
+            'supplier_id' => $supplier->id,
+            'code' => 'PAY-201',
+            'description' => 'Conta fora',
+            'category' => 'supplier',
+            'status' => 'open',
+            'payment_method' => 'boleto',
+            'amount' => 80,
+            'amount_paid' => 0,
+            'due_date' => '2026-05-27',
+        ]);
+
+        Payable::query()->create([
+            'supplier_id' => $supplier->id,
+            'code' => 'PAY-202',
+            'description' => 'Conta paga filtrada',
+            'category' => 'supplier',
+            'status' => 'paid',
+            'payment_method' => 'pix',
+            'amount' => 90,
+            'amount_paid' => 90,
+            'due_date' => '2026-05-26',
+            'paid_at' => '2026-05-26 12:00:00',
+        ]);
+
+        $this->assertSame([], $service->records('contas-a-pagar')['records']);
+
+        $sameDay = $service->records('contas-a-pagar', [
+            'applied' => true,
+            'from' => '2026-05-26',
+            'to' => '2026-05-26',
+            'status' => 'open',
+            'search' => 'filtrada',
+        ]);
+
+        $this->assertCount(1, $sameDay['records']);
+        $this->assertSame('PAY-200', $sameDay['records'][0]['code']);
+
+        $paid = $service->records('contas-a-pagar', [
+            'applied' => true,
+            'from' => '2026-05-26',
+            'to' => '2026-05-26',
+            'status' => 'paid',
+        ]);
+
+        $this->assertCount(1, $paid['records']);
+        $this->assertSame('PAY-202', $paid['records'][0]['code']);
+    }
+
+    public function test_credit_overview_portfolio_respects_applied_period(): void
+    {
+        $user = $this->makeUser();
+        $customer = $this->makeCustomer(['name' => 'Cliente do dia', 'credit_limit' => 500]);
+        $oldCustomer = $this->makeCustomer(['name' => 'Cliente antigo', 'credit_limit' => 500]);
+
+        $sale = Sale::query()->forceCreate([
+            'sale_number' => 'SALE-2605',
+            'customer_id' => $customer->id,
+            'user_id' => $user->id,
+            'subtotal' => 100,
+            'discount' => 0,
+            'total' => 100,
+            'cost_total' => 0,
+            'profit' => 100,
+            'payment_method' => PaymentMethod::CREDIT,
+            'status' => 'finalized',
+            'created_at' => '2026-05-26 10:00:00',
+        ]);
+
+        SalePayment::query()->create([
+            'sale_id' => $sale->id,
+            'payment_method' => PaymentMethod::CREDIT,
+            'amount' => 100,
+        ]);
+
+        $oldSale = Sale::query()->forceCreate([
+            'sale_number' => 'SALE-2505',
+            'customer_id' => $oldCustomer->id,
+            'user_id' => $user->id,
+            'subtotal' => 70,
+            'discount' => 0,
+            'total' => 70,
+            'cost_total' => 0,
+            'profit' => 70,
+            'payment_method' => PaymentMethod::CREDIT,
+            'status' => 'finalized',
+            'created_at' => '2026-05-25 10:00:00',
+        ]);
+
+        SalePayment::query()->create([
+            'sale_id' => $oldSale->id,
+            'payment_method' => PaymentMethod::CREDIT,
+            'amount' => 70,
+        ]);
+
+        $overview = app(SalesOverviewService::class)->credit([
+            'applied' => true,
+            'from' => '2026-05-26',
+            'to' => '2026-05-26',
+        ]);
+
+        $this->assertSame(['Cliente do dia'], collect($overview['portfolio'])->pluck('name')->all());
+        $this->assertSame(['SALE-2605'], collect($overview['recent_sales'])->pluck('sale_number')->all());
     }
 
     public function test_stock_movement_workspace_updates_product_to_informed_balance(): void
