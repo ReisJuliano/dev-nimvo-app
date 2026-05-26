@@ -4,6 +4,24 @@
     gap: 1rem;
 }
 
+.credit-table-customer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.credit-table-usage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 9rem;
+}
+
+.credit-table-usage .credit-progress-track {
+    max-width: 12rem;
+}
+
 .credit-header-card,
 .credit-metric-card,
 .credit-panel,

@@ -1,16 +1,14 @@
 import { router } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
-import { matchesTextSearch, normalizeTextSearch } from '@/lib/textSearch'
+import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import './credit-overview.css'
-
-const quickRanges = [
-    { key: 'today', label: 'Hoje', days: 0 },
-    { key: 'week', label: '7d', days: 6 },
-    { key: 'month', label: '30d', days: 29 },
-]
 
 const customerFilters = [
     { key: 'all', label: 'Todos' },
@@ -29,24 +27,6 @@ function buildFilterPayload(filters, overrides = {}) {
             ...overrides,
         }).filter(([, value]) => value != null && value !== ''),
     )
-}
-
-function formatInputDate(value) {
-    const date = value ? new Date(value) : new Date()
-    const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
-
-    return localDate.toISOString().slice(0, 10)
-}
-
-function resolveQuickRange(days) {
-    const end = new Date()
-    const start = new Date(end)
-    start.setDate(end.getDate() - days)
-
-    return {
-        from: formatInputDate(start),
-        to: formatInputDate(end),
-    }
 }
 
 function getInitials(name) {
@@ -232,6 +212,7 @@ export default function CreditOverview({ module }) {
     const recentSales = Array.isArray(module.recent_sales) ? module.recent_sales : []
     const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('all')
+    const [selectedCustomerId, setSelectedCustomerId] = useState(null)
     const [activeCustomerId, setActiveCustomerId] = useState(null)
     const [dateRange, setDateRange] = useState({
         from: module.filters?.from || '',
@@ -246,6 +227,10 @@ export default function CreditOverview({ module }) {
     }, [module.filters?.from, module.filters?.to])
 
     useEffect(() => {
+        if (selectedCustomerId && !customers.some((customer) => customer.id === selectedCustomerId)) {
+            setSelectedCustomerId(null)
+        }
+
         if (!activeCustomerId) {
             return
         }
@@ -253,21 +238,31 @@ export default function CreditOverview({ module }) {
         if (!customers.some((customer) => customer.id === activeCustomerId)) {
             setActiveCustomerId(null)
         }
-    }, [activeCustomerId, customers])
+    }, [activeCustomerId, customers, selectedCustomerId])
 
     const normalizedSearch = normalizeTextSearch(searchControl.value)
-    const shouldShowResults = normalizedSearch.length > 0
 
     const filteredCustomers = useMemo(() => {
-        if (!shouldShowResults) {
-            return []
-        }
-
         return customers.filter((customer) =>
-            matchesTextSearch(customer.name, normalizedSearch)
+            (normalizedSearch === ''
+                || matchesTextSearchAny([customer.name, customer.phone], normalizedSearch))
             && matchesCustomerFilter(customer, activeFilter),
         )
-    }, [activeFilter, customers, normalizedSearch, shouldShowResults])
+    }, [activeFilter, customers, normalizedSearch])
+
+    const filterCounts = useMemo(() => ({
+        all: customers.length,
+        debt: customers.filter((customer) => Number(customer.open_credit || 0) > 0).length,
+        attention: customers.filter((customer) => customer.status === 'attention').length,
+        overflow: customers.filter((customer) => customer.status === 'overflow').length,
+    }), [customers])
+
+    const selectedCustomer = useMemo(
+        () => filteredCustomers.find((customer) => String(customer.id) === String(selectedCustomerId))
+            || customers.find((customer) => String(customer.id) === String(selectedCustomerId))
+            || null,
+        [customers, filteredCustomers, selectedCustomerId],
+    )
 
     const activeCustomer = useMemo(
         () => customers.find((customer) => customer.id === activeCustomerId) || null,
@@ -277,14 +272,6 @@ export default function CreditOverview({ module }) {
         () => recentSales.filter((sale) => sale.customer_id === activeCustomer?.id),
         [activeCustomer?.id, recentSales],
     )
-
-    const activeRangeKey = useMemo(() => {
-        return quickRanges.find((range) => {
-            const resolved = resolveQuickRange(range.days)
-
-            return resolved.from === dateRange.from && resolved.to === dateRange.to
-        })?.key || null
-    }, [dateRange.from, dateRange.to])
 
     function submitFilters(nextRange = dateRange) {
         router.get(
@@ -297,200 +284,178 @@ export default function CreditOverview({ module }) {
         )
     }
 
-    function handleFilterSubmit(event) {
-        event.preventDefault()
-        submitFilters()
-    }
-
-    function applyQuickRange(days) {
-        const nextRange = resolveQuickRange(days)
-        setDateRange(nextRange)
-        submitFilters(nextRange)
-    }
-
     function resetDates() {
         const nextRange = { from: '', to: '' }
         setDateRange(nextRange)
         submitFilters(nextRange)
     }
 
+    function handleApplyFilters() {
+        searchControl.apply()
+        submitFilters()
+    }
+
+    function handleResetFilters() {
+        searchControl.clear()
+        setActiveFilter('all')
+        setSelectedCustomerId(null)
+        setActiveCustomerId(null)
+        resetDates()
+    }
+
+    function openSelectedCustomer() {
+        if (!selectedCustomer) {
+            return
+        }
+
+        setActiveCustomerId(selectedCustomer.id)
+    }
+
     return (
         <AppLayout title={module.title}>
-            <div className="credit-page">
-                <section className="credit-header-card">
-                    <div className="credit-header-copy">
-                        <span className="credit-kicker">Carteira</span>
-                        <div className="credit-header-title">
-                            <h1>{module.title}</h1>
-                            {typeof module.description === 'string' && module.description.trim() ? (
-                                <span>{module.description}</span>
-                            ) : null}
-                        </div>
-                    </div>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title={module.title}
+                        search={{
+                            placeholder: 'Buscar cliente por nome ou telefone',
+                            value: searchControl.draftValue,
+                            onChange: searchControl.setDraftValue,
+                        }}
+                        filters={customerFilters.map((filter) => ({
+                            ...filter,
+                            value: filter.key,
+                            count: filterCounts[filter.key],
+                        }))}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        dateRange={{
+                            from: dateRange.from,
+                            to: dateRange.to,
+                            onChange: setDateRange,
+                        }}
+                        quickDates
+                        onApply={handleApplyFilters}
+                        onReset={handleResetFilters}
+                    />
 
-                    <form className="credit-toolbar compact" onSubmit={handleFilterSubmit}>
-                        <label className="credit-search-bar">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <input
-                                type="search"
-                                value={searchControl.draftValue}
-                                onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key !== 'Enter') {
-                                        return
-                                    }
-
-                                    event.preventDefault()
-                                    searchControl.apply()
-                                }}
-                                placeholder="Buscar cliente por nome"
-                            />
-                            <button type="button" className="credit-search-apply" onClick={() => searchControl.apply()}>
-                                Pesquisar
-                            </button>
-                            {searchControl.draftValue || searchControl.value ? (
-                                <button type="button" className="credit-icon-button subtle" onClick={() => searchControl.clear()} aria-label="Limpar busca">
-                                    <i className="fa-solid fa-xmark" />
-                                </button>
-                            ) : null}
-                        </label>
-
-                        <div className="credit-filter-row">
-                            <div className="credit-filter-chips">
-                                {customerFilters.map((filter) => (
-                                    <button
-                                        key={filter.key}
-                                        type="button"
-                                        className={`credit-quick-chip ${activeFilter === filter.key ? 'active' : ''}`}
-                                        onClick={() => setActiveFilter(filter.key)}
-                                    >
-                                        {filter.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="credit-date-row">
-                                <label className="credit-field inline">
-                                    <span>De</span>
-                                    <input
-                                        name="from"
-                                        type="date"
-                                        value={dateRange.from}
-                                        onChange={(event) => setDateRange((current) => ({ ...current, from: event.target.value }))}
-                                    />
-                                </label>
-
-                                <label className="credit-field inline">
-                                    <span>Ate</span>
-                                    <input
-                                        name="to"
-                                        type="date"
-                                        value={dateRange.to}
-                                        onChange={(event) => setDateRange((current) => ({ ...current, to: event.target.value }))}
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="credit-quick-actions">
-                                {quickRanges.map((range) => (
-                                    <button
-                                        key={range.key}
-                                        type="button"
-                                        className={`credit-quick-chip ${activeRangeKey === range.key ? 'active' : ''}`}
-                                        onClick={() => applyQuickRange(range.days)}
-                                    >
-                                        {range.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="credit-toolbar-actions">
-                                <button type="button" className="credit-icon-button" onClick={resetDates} aria-label="Limpar periodo">
-                                    <i className="fa-solid fa-rotate-left" />
-                                </button>
-                                <button type="submit" className="credit-submit-button">
-                                    <i className="fa-solid fa-arrow-up-right-from-square" />
-                                    <span>Filtrar</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </section>
-
-                <section className="credit-panel credit-results-panel">
-                    <header className="credit-panel-header">
-                        <div>
-                            <h2>Busca</h2>
-                            <span>
-                                {shouldShowResults
-                                    ? `${filteredCustomers.length} resultado(s)`
-                                    : 'Pesquise por nome para listar clientes'}
-                            </span>
-                        </div>
-
-                        <div className="credit-results-meta">
-                            <span>{customerFilters.find((filter) => filter.key === activeFilter)?.label || 'Todos'}</span>
-                        </div>
-                    </header>
-
-                    {!shouldShowResults ? (
-                        <div className="credit-empty-state search">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <span>Busque cliente</span>
-                        </div>
-                    ) : filteredCustomers.length ? (
-                        <div className="credit-results-grid">
-                            {filteredCustomers.map((customer) => {
-                                const status = getStatusMeta(customer.status)
-
-                                return (
-                                    <button
-                                        key={customer.id}
-                                        type="button"
-                                        className="credit-result-card"
-                                        onClick={() => setActiveCustomerId(customer.id)}
-                                    >
-                                        <div className="credit-customer-top">
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'customer',
+                                    label: 'Cliente',
+                                    render: (customer) => (
+                                        <div className="credit-table-customer">
                                             <div className="credit-avatar">{getInitials(customer.name)}</div>
-
                                             <div className="credit-customer-copy">
                                                 <strong>{customer.name}</strong>
                                                 <span>{customer.phone || 'Sem telefone'}</span>
                                             </div>
-
-                                            <span className={`credit-status-chip ${status.tone}`}>{status.label}</span>
                                         </div>
+                                    ),
+                                },
+                                {
+                                    key: 'open_credit',
+                                    label: 'Em aberto',
+                                    align: 'right',
+                                    render: (customer) => <strong>{formatMoney(customer.open_credit)}</strong>,
+                                },
+                                {
+                                    key: 'credit_limit',
+                                    label: 'Limite',
+                                    align: 'right',
+                                    render: (customer) => formatMoney(customer.credit_limit),
+                                },
+                                {
+                                    key: 'available_credit',
+                                    label: 'Disponivel',
+                                    align: 'right',
+                                    render: (customer) => formatMoney(customer.available_credit),
+                                },
+                                {
+                                    key: 'usage',
+                                    label: 'Uso',
+                                    render: (customer) => {
+                                        const status = getStatusMeta(customer.status)
 
-                                        <div className="credit-result-metrics">
-                                            <div>
-                                                <span>Saldo</span>
-                                                <strong>{formatMoney(customer.open_credit)}</strong>
-                                            </div>
-                                            <div>
-                                                <span>Livre</span>
-                                                <strong>{formatMoney(customer.available_credit)}</strong>
-                                            </div>
-                                            <div>
-                                                <span>Uso</span>
+                                        return (
+                                            <div className="credit-table-usage">
                                                 <strong>{formatPercent(customer.utilization_percent || 0)}</strong>
+                                                <div className="credit-progress-track">
+                                                    <span className={`credit-progress-fill ${status.tone} ${getUsageClass(customer.utilization_percent)}`} />
+                                                </div>
                                             </div>
-                                        </div>
+                                        )
+                                    },
+                                },
+                                {
+                                    key: 'last_credit_at',
+                                    label: 'Ultimo lanc.',
+                                    render: (customer) => customer.last_credit_at ? formatDateTime(customer.last_credit_at) : 'Sem registro',
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (customer) => {
+                                        const status = getStatusMeta(customer.status)
 
-                                        <div className="credit-progress-track">
-                                            <span className={`credit-progress-fill ${status.tone} ${getUsageClass(customer.utilization_percent)}`} />
-                                        </div>
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    ) : (
-                        <div className="credit-empty-state search">
-                            <i className="fa-solid fa-user-slash" />
-                            <span>Sem resultado</span>
-                            <small>Dica: use % antes do nome, como %Maria, para encontrar clientes com outro nome antes.</small>
-                        </div>
-                    )}
-                </section>
+                                        return <StatusBadge compact label={status.label} tone={status.tone} />
+                                    },
+                                },
+                            ]}
+                            rows={filteredCustomers}
+                            rowKey="id"
+                            selectedRowKey={selectedCustomerId}
+                            onRowClick={(customer) => setSelectedCustomerId(customer.id)}
+                            emptyMessage="Nenhum cliente encontrado"
+                            emptyIcon="fa-user-slash"
+                            actions={(customer) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => {
+                                        setSelectedCustomerId(customer.id)
+                                        setActiveCustomerId(customer.id)
+                                    },
+                                },
+                            ]}
+                        />
+                    </section>
+
+                    <div className="proc-ui-footer-totals">
+                        <span>Carteira em aberto: <strong>{formatMoney(customers.reduce((total, customer) => total + Number(customer.open_credit || 0), 0))}</strong></span>
+                        <span>Limite total: <strong>{formatMoney(module.portfolio_summary?.total_limit || 0)}</strong></span>
+                    </div>
+                </div>
+
+                <ActionSidebar
+                    storageKey="credit-overview"
+                    actions={[
+                        {
+                            key: 'view',
+                            icon: 'fa-eye',
+                            label: 'Ver detalhes',
+                            disabled: !selectedCustomer,
+                            onClick: openSelectedCustomer,
+                        },
+                        {
+                            key: 'debt',
+                            icon: 'fa-hand-holding-dollar',
+                            label: 'Mostrar devendo',
+                            onClick: () => setActiveFilter('debt'),
+                        },
+                        {
+                            key: 'customers',
+                            icon: 'fa-users',
+                            label: 'Ir para clientes',
+                            dividerBefore: true,
+                            onClick: () => router.visit('/clientes'),
+                        },
+                    ]}
+                />
             </div>
 
             <CreditCustomerModal customer={activeCustomer} sales={activeCustomerSales} onClose={() => setActiveCustomerId(null)} />
