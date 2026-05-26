@@ -103,6 +103,7 @@ export function WorkspaceCollectionShell({
     onCreate,
     emptyState,
     listChildren,
+    listActions = null,
     children,
     summaryItems = [],
     formTitle,
@@ -147,9 +148,12 @@ export function WorkspaceCollectionShell({
                     icon={listIcon}
                     count={listCount}
                     actions={(
-                        <ActionButton icon="fa-plus" onClick={onCreate}>
-                            {createLabel}
-                        </ActionButton>
+                        <>
+                            {listActions}
+                            <ActionButton icon="fa-plus" onClick={onCreate}>
+                                {createLabel}
+                            </ActionButton>
+                        </>
                     )}
                     empty={emptyState}
                 >

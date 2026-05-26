@@ -100,19 +100,19 @@ class OperationsWorkspaceService
                 'moduleKey' => 'entrada-estoque',
                 'moduleTitle' => 'Entrada de estoque',
                 'moduleDescription' => 'Recebimento em etapas com fornecedor, nota, bipagem de itens e dados do boleto.',
-                'payload' => $this->stockInboundPayload(),
+                'payload' => $this->stockInboundPayload(false),
             ],
             'movimentacao-estoque' => [
                 'moduleKey' => 'movimentacao-estoque',
                 'moduleTitle' => 'Movimentacao de estoque',
                 'moduleDescription' => 'Bipe o produto, confira o estoque atual e ajuste a quantidade final com confirmacao.',
-                'payload' => $this->stockMovementsPayload(),
+                'payload' => $this->stockMovementsPayload(false),
             ],
             'usuarios' => [
                 'moduleKey' => 'usuarios',
                 'moduleTitle' => 'Usuarios',
                 'moduleDescription' => 'Perfis de acesso, senha de autorizacao gerencial e status operacional.',
-                'payload' => $this->usersPayload(),
+                'payload' => $this->usersPayload(false),
             ],
             default => abort(404),
         };
@@ -152,6 +152,17 @@ class OperationsWorkspaceService
             ],
             'contas-a-pagar' => [
                 'records' => $this->payableRecords($filters),
+            ],
+            'entrada-estoque' => [
+                'records' => $this->stockInboundRecords($filters),
+            ],
+            'movimentacao-estoque' => [
+                'records' => $this->shouldLoadListRecords($filters)
+                    ? $this->stockMovementRecords(['manual_adjustment'])
+                    : [],
+            ],
+            'usuarios' => [
+                'records' => $this->userRecords($filters),
             ],
             default => [
                 'records' => data_get($this->build($module), 'payload.records', []),
@@ -443,10 +454,10 @@ class OperationsWorkspaceService
         return filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
     }
 
-    protected function stockInboundPayload(): array
+    protected function stockInboundPayload(bool $includeRecords = false, array $filters = []): array
     {
         return [
-            'records' => $this->stockInboundRecords(),
+            'records' => $includeRecords ? $this->stockInboundRecords($filters) : [],
             'products' => $this->stockProductOptions(),
             'suppliers' => $this->supplierOptions(),
         ];
@@ -461,30 +472,39 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function stockMovementsPayload(): array
+    protected function stockMovementsPayload(bool $includeRecords = false): array
     {
         return [
-            'records' => $this->stockMovementRecords(['manual_adjustment']),
+            'records' => $includeRecords ? $this->stockMovementRecords(['manual_adjustment']) : [],
             'products' => $this->stockProductOptions(),
         ];
     }
 
-    protected function usersPayload(): array
+    protected function usersPayload(bool $includeRecords = true): array
     {
         return [
-            'records' => User::query()
-                ->orderByRaw("CASE WHEN role = 'admin' THEN 0 WHEN role = 'manager' THEN 1 ELSE 2 END")
-                ->orderBy('name')
-                ->get()
-                ->map(fn (User $user) => $this->serializeUser($user))
-                ->values()
-                ->all(),
+            'records' => $includeRecords ? $this->userRecords(['applied' => true]) : [],
             'roles' => [
                 ['value' => 'admin', 'label' => 'Administrador'],
                 ['value' => 'manager', 'label' => 'Gerente'],
                 ['value' => 'operator', 'label' => 'Operador'],
             ],
         ];
+    }
+
+    protected function userRecords(array $filters = []): array
+    {
+        if (! $this->shouldLoadListRecords($filters)) {
+            return [];
+        }
+
+        return User::query()
+            ->orderByRaw("CASE WHEN role = 'admin' THEN 0 WHEN role = 'manager' THEN 1 ELSE 2 END")
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $user) => $this->serializeUser($user))
+            ->values()
+            ->all();
     }
 
     protected function saveCustomer(?Customer $customer, array $input): Customer
@@ -1305,18 +1325,102 @@ class OperationsWorkspaceService
         }
     }
 
-    protected function stockInboundRecords(int $limit = 80): array
+    protected function stockInboundRecords(array $filters = [], int $limit = 80): array
     {
-        return Purchase::query()
+        if (! $this->shouldLoadListRecords($filters)) {
+            return [];
+        }
+
+        $nf = TextSearch::normalize($filters['nf'] ?? null);
+        $supplier = TextSearch::normalize($filters['supplier'] ?? null);
+        $product = TextSearch::normalize($filters['product'] ?? null);
+        $date = filled($filters['date'] ?? null) ? Carbon::parse((string) $filters['date'])->toDateString() : null;
+        $month = filled($filters['month'] ?? null) ? substr((string) $filters['month'], 0, 7) : null;
+        $period = (string) ($filters['period'] ?? '');
+        $exactTime = filled($filters['time'] ?? null) ? substr((string) $filters['time'], 0, 5) : null;
+        $timeSlot = (string) ($filters['time_slot'] ?? '');
+        $periodStart = match ($period) {
+            'today' => now()->startOfDay(),
+            'week' => now()->subDays(6)->startOfDay(),
+            'month' => now()->subDays(29)->startOfDay(),
+            default => null,
+        };
+
+        $records = Purchase::query()
             ->with(['supplier:id,name', 'items.product:id,name,code,barcode,unit'])
             ->where('status', 'received')
+            ->when($date, fn ($query, $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 10) = ?', [$value]))
+            ->when($month, fn ($query, $value) => $query->whereRaw('substr(COALESCE(received_at, created_at), 1, 7) = ?', [$value]))
+            ->when($periodStart, fn ($query, Carbon $value) => $query->whereRaw('COALESCE(received_at, created_at) >= ?', [$value->toDateTimeString()]))
+            ->when($nf !== '', function ($query) use ($nf) {
+                $like = TextSearch::likePattern($nf);
+
+                $query->where(function ($nestedQuery) use ($like, $nf) {
+                    $nestedQuery
+                        ->where('code', 'like', $like)
+                        ->orWhere('notes', 'like', $like);
+
+                    if (is_numeric($nf)) {
+                        $nestedQuery->orWhere('id', (int) $nf);
+                    }
+                });
+            })
+            ->when($supplier !== '', function ($query) use ($supplier) {
+                $like = TextSearch::likePattern($supplier);
+
+                $query->whereHas('supplier', fn ($supplierQuery) => $supplierQuery->where('name', 'like', $like));
+            })
+            ->when($product !== '', function ($query) use ($product) {
+                $like = TextSearch::likePattern($product);
+
+                $query->whereHas('items', function ($itemQuery) use ($like) {
+                    $itemQuery
+                        ->where('product_name', 'like', $like)
+                        ->orWhereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', $like));
+                });
+            })
             ->orderByDesc('received_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get()
             ->map(fn (Purchase $purchase) => $this->serializePurchase($purchase))
-            ->values()
-            ->all();
+            ->filter(fn (array $record) => $this->matchesStockInboundTimeFilters($record, $exactTime, $timeSlot))
+            ->values();
+
+        return $records->all();
+    }
+
+    protected function matchesStockInboundTimeFilters(array $record, ?string $exactTime, string $timeSlot): bool
+    {
+        if (! $exactTime && $timeSlot === '') {
+            return true;
+        }
+
+        $value = $record['received_at'] ?? $record['created_at'] ?? null;
+
+        if (! $value) {
+            return false;
+        }
+
+        $date = Carbon::parse((string) $value);
+
+        if ($exactTime && ! str_starts_with($date->format('H:i'), $exactTime)) {
+            return false;
+        }
+
+        if ($timeSlot === 'morning') {
+            return $date->hour >= 6 && $date->hour < 12;
+        }
+
+        if ($timeSlot === 'afternoon') {
+            return $date->hour >= 12 && $date->hour < 18;
+        }
+
+        if ($timeSlot === 'night') {
+            return $date->hour >= 18 || $date->hour < 6;
+        }
+
+        return true;
     }
 
     protected function stockMovementRecords(array $types, int $limit = 120): array

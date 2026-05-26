@@ -31,6 +31,7 @@ class OperationsPageController extends Controller
                 'product' => $request->query('product'),
                 'section' => $request->query('section'),
                 'cash_register' => $request->query('cash_register'),
+                'applied' => $request->query('applied'),
             ], [
                 'enabledModules' => data_get($settingsService->get(), 'modules', []),
             ]),

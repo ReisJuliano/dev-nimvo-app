@@ -240,7 +240,50 @@ class SalesOverviewService
 
     public function credit(array $filters): array
     {
+        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
         [$from, $to] = $this->resolvePeriod($filters);
+
+        if (! $applied) {
+            $page = $this->page(
+                'A Prazo',
+                '',
+                [],
+                [],
+                [
+                    $this->table('Clientes', [
+                        ['key' => 'name', 'label' => 'Cliente'],
+                        ['key' => 'phone', 'label' => 'Telefone'],
+                        ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
+                        ['key' => 'open_credit', 'label' => 'Em aberto', 'format' => 'money'],
+                        ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
+                        ['key' => 'utilization_percent', 'label' => 'Uso', 'format' => 'percent'],
+                    ], [], 'Clique em Filtrar para buscar.'),
+                    $this->table('Lancamentos recentes', [
+                        ['key' => 'sale_number', 'label' => 'Venda'],
+                        ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
+                        ['key' => 'customer_name', 'label' => 'Cliente'],
+                        ['key' => 'user_name', 'label' => 'Operador'],
+                        ['key' => 'credit_amount', 'label' => 'A prazo', 'format' => 'money'],
+                    ], [], 'Clique em Filtrar para buscar.'),
+                ],
+                $from,
+                $to,
+                ['applied' => false],
+            );
+
+            $page['view'] = 'credit_overview';
+            $page['portfolio'] = [];
+            $page['recent_sales'] = [];
+            $page['portfolio_summary'] = [
+                'with_balance' => 0,
+                'near_limit' => 0,
+                'without_limit' => 0,
+                'total_limit' => 0,
+                'largest_exposure' => null,
+            ];
+
+            return $page;
+        }
 
         $creditSales = Sale::query()
             ->with(['customer:id,name', 'user:id,name', 'payments:id,sale_id,payment_method,amount'])
@@ -335,6 +378,7 @@ class SalesOverviewService
             ],
             $from,
             $to,
+            ['applied' => true],
         );
 
         $page['view'] = 'credit_overview';

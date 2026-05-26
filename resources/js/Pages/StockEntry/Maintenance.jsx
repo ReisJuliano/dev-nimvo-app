@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
+import { apiRequest } from '@/lib/http'
+import { buildRecordsUrl } from '@/Pages/Operations/workspaces/shared'
 import '../Operations/backoffice-workspace.css'
 
 const PERIOD_FILTERS = [
@@ -164,12 +166,16 @@ function matchesTimeSlot(record, timeSlot) {
 }
 
 export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de entradas', payload }) {
-    const records = Array.isArray(payload?.records) ? payload.records : []
+    const initialRecords = Array.isArray(payload?.records) ? payload.records : []
     const importedDocuments = Array.isArray(payload?.incoming_nfe_documents) ? payload.incoming_nfe_documents : []
 
+    const [records, setRecords] = useState(initialRecords)
     const [draftFilters, setDraftFilters] = useState(() => readInitialFilters())
-    const [appliedFilters, setAppliedFilters] = useState(() => readInitialFilters())
+    const [appliedFilters, setAppliedFilters] = useState(createDraftFilters())
     const [selectedId, setSelectedId] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState(initialRecords.length > 0)
+    const [feedback, setFeedback] = useState(null)
 
     const normalizedSupplier = normalizeTextSearch(appliedFilters.supplier)
     const normalizedProduct = normalizeTextSearch(appliedFilters.product)
@@ -237,16 +243,46 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
         setDraftFilters((current) => ({ ...current, [field]: value }))
     }
 
-    function applyFilters() {
-        setAppliedFilters(draftFilters)
-        setSelectedId(null)
+    async function applyFilters() {
+        setLoading(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(buildRecordsUrl('entrada-estoque'), {
+                params: {
+                    applied: 1,
+                    nf: draftFilters.nf || undefined,
+                    supplier: draftFilters.supplier || undefined,
+                    product: draftFilters.product || undefined,
+                    date: draftFilters.exactDate || undefined,
+                    month: draftFilters.month || undefined,
+                    time: draftFilters.exactTime || undefined,
+                    time_slot: draftFilters.timeSlot || undefined,
+                    period: draftFilters.period || undefined,
+                },
+            })
+
+            setRecords(Array.isArray(response?.records) ? response.records : [])
+            setAppliedFilters(draftFilters)
+            setSelectedId(null)
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setRecords([])
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
     }
 
     function clearFilters() {
         const empty = createDraftFilters()
         setDraftFilters(empty)
         setAppliedFilters(empty)
+        setRecords([])
         setSelectedId(null)
+        setLoading(false)
+        setHasLoadedRecords(false)
+        setFeedback(null)
     }
 
     useEffect(() => {
@@ -272,9 +308,9 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                                 <i className="fa-solid fa-rotate-left" />
                                 <span>Limpar</span>
                             </button>
-                            <button type="button" className="ui-button" onClick={applyFilters}>
+                            <button type="button" className="ui-button" disabled={loading} onClick={() => void applyFilters()}>
                                 <i className="fa-solid fa-magnifying-glass" />
-                                <span>Buscar</span>
+                                <span>{loading ? 'Buscando...' : 'Buscar'}</span>
                             </button>
                             <Link className="ui-button-ghost" href="/entrada-estoque">
                                 <i className="fa-solid fa-plus" />
@@ -352,6 +388,13 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                         </div>
                     </div>
                 </section>
+
+                {feedback ? (
+                    <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                        <span>{feedback.text}</span>
+                    </div>
+                ) : null}
 
                 <div className="proc-ui-shell">
                     <section className="proc-ui-main-card">
@@ -477,7 +520,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                             </div>
                         ) : (
                             <div className="proc-ui-empty">
-                                <strong>{filteredRecords.length ? 'Selecione uma nota' : 'Sem entradas registradas'}</strong>
+                                <strong>{loading ? 'Buscando entradas...' : hasLoadedRecords ? 'Sem entradas registradas' : 'Clique em Buscar para listar'}</strong>
                             </div>
                         )}
                     </section>
@@ -510,7 +553,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                                 </button>
                             )) : (
                                 <div className="proc-ui-empty">
-                                    <strong>Sem notas</strong>
+                                    <strong>{loading ? 'Buscando...' : hasLoadedRecords ? 'Sem notas' : 'Aguardando busca'}</strong>
                                 </div>
                             )}
                         </div>

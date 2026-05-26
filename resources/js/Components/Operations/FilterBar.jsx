@@ -14,6 +14,7 @@ export default function FilterBar({ filters }) {
         router.get(
             window.location.pathname,
             {
+                applied: 1,
                 from: from || undefined,
                 to: to || undefined,
                 product: product || undefined,

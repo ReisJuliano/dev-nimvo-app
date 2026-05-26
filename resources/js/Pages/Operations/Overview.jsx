@@ -20,6 +20,7 @@ function buildFilterPayload(filters, overrides = {}) {
             from: filters?.from || undefined,
             to: filters?.to || undefined,
             product: filters?.product || undefined,
+            applied: filters?.applied ? 1 : undefined,
             section: filters?.section || undefined,
             cash_register: filters?.cash_register || undefined,
             ...overrides,

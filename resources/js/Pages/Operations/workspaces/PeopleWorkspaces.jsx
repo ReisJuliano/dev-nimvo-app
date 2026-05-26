@@ -200,12 +200,20 @@ export function UsersWorkspace({ moduleKey, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('active')
     const [form, setForm] = useState(emptyForm)
+    const [loading, setLoading] = useState(false)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
     const filteredRecords = useMemo(
-        () => records.filter((record) => (activeTab === 'active' ? record.active : !record.active)),
-        [records, activeTab],
+        () => {
+            if (!hasLoadedRecords) {
+                return []
+            }
+
+            return records.filter((record) => (activeTab === 'active' ? record.active : !record.active))
+        },
+        [hasLoadedRecords, records, activeTab],
     )
 
     const metrics = useMemo(
@@ -222,6 +230,27 @@ export function UsersWorkspace({ moduleKey, payload }) {
         setForm(emptyForm)
     }
 
+    async function handleLoadRecords() {
+        setLoading(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: {
+                    applied: 1,
+                },
+            })
+
+            setRecords(response.records || [])
+            setHasLoadedRecords(true)
+            setForm(emptyForm)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
+    }
+
     async function handleSubmit(event) {
         event.preventDefault()
         setSaving(true)
@@ -233,6 +262,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                 : await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: form })
 
             setRecords((current) => upsertRecord(current, response.record))
+            setHasLoadedRecords(true)
             setForm({
                 ...emptyForm,
                 ...response.record,
@@ -287,8 +317,13 @@ export function UsersWorkspace({ moduleKey, payload }) {
                 listCount={`${filteredRecords.length} registro(s)`}
                 createLabel="Novo usuario"
                 onCreate={handleCreate}
+                listActions={(
+                    <ActionButton icon="fa-magnifying-glass" onClick={() => void handleLoadRecords()} disabled={loading}>
+                        {loading ? 'Buscando...' : 'Buscar'}
+                    </ActionButton>
+                )}
                 summaryItems={metrics}
-                emptyState={<EmptyState title="Sem usuarios nesse recorte" text="Ajuste o recorte ou crie um novo cadastro." />}
+                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuarios nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela nao carrega usuarios automaticamente.'} />}
                 formTitle={form.id ? 'Editar usuario' : 'Novo usuario'}
                 formSubtitle="Perfis e autorizacoes"
                 formChildren={(

@@ -598,18 +598,6 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return () => window.cancelAnimationFrame(frameId)
     }, [nameEditing])
 
-    useEffect(() => {
-        if (listFilters.from === appliedPeriod.from && listFilters.to === appliedPeriod.to) {
-            return undefined
-        }
-
-        const timeoutId = window.setTimeout(() => {
-            void refreshRecords({ preserveFeedback: true })
-        }, 250)
-
-        return () => window.clearTimeout(timeoutId)
-    }, [appliedPeriod.from, appliedPeriod.to, listFilters.from, listFilters.to])
-
     function resetActiveDraftState(options = {}) {
         setActiveDraftRecordId(null)
         setForm(createEmptyForm())
@@ -690,6 +678,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
         try {
             const params = new URLSearchParams()
+            params.set('applied', '1')
 
             if (listFilters.from) {
                 params.set('from', listFilters.from)
@@ -1449,10 +1438,15 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     })),
                                 }}
                                 quickDates
+                                onApply={() => void refreshRecords()}
                                 onReset={() => {
                                     const next = createListFilters()
                                     setListFilters(next)
+                                    setAppliedPeriod(createAppliedPeriod())
+                                    setRecords([])
                                     setSelectedListId(null)
+                                    setHasLoadedRecords(false)
+                                    setRecordsLoading(false)
                                     setFeedback(null)
                                 }}
                             />

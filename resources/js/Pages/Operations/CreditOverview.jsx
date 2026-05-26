@@ -22,6 +22,7 @@ function buildFilterPayload(filters, overrides = {}) {
         Object.entries({
             from: filters?.from || undefined,
             to: filters?.to || undefined,
+            applied: filters?.applied ? 1 : undefined,
             section: filters?.section || undefined,
             cash_register: filters?.cash_register || undefined,
             ...overrides,
@@ -211,6 +212,7 @@ export default function CreditOverview({ module }) {
     }, [module.portfolio])
     const recentSales = Array.isArray(module.recent_sales) ? module.recent_sales : []
     const searchControl = useConfirmedSearch('')
+    const hasAppliedFilters = Boolean(module.filters?.applied)
     const [activeFilter, setActiveFilter] = useState('all')
     const [selectedCustomerId, setSelectedCustomerId] = useState(null)
     const [activeCustomerId, setActiveCustomerId] = useState(null)
@@ -277,6 +279,7 @@ export default function CreditOverview({ module }) {
         router.get(
             window.location.pathname,
             buildFilterPayload(module.filters, {
+                applied: 1,
                 from: nextRange.from || undefined,
                 to: nextRange.to || undefined,
             }),
@@ -287,7 +290,11 @@ export default function CreditOverview({ module }) {
     function resetDates() {
         const nextRange = { from: '', to: '' }
         setDateRange(nextRange)
-        submitFilters(nextRange)
+        router.get(
+            window.location.pathname,
+            {},
+            { preserveScroll: true, preserveState: true, replace: true },
+        )
     }
 
     function handleApplyFilters() {
@@ -408,7 +415,7 @@ export default function CreditOverview({ module }) {
                             rowKey="id"
                             selectedRowKey={selectedCustomerId}
                             onRowClick={(customer) => setSelectedCustomerId(customer.id)}
-                            emptyMessage="Nenhum cliente encontrado"
+                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon="fa-user-slash"
                             actions={(customer) => [
                                 {
