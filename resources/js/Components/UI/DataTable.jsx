@@ -112,6 +112,9 @@ export default function DataTable({
                                                     title: action.label,
                                                     onClick: (event) => {
                                                         event.stopPropagation()
+                                                        if (onRowClick && action.selectRow !== false) {
+                                                            onRowClick(row, key)
+                                                        }
                                                         action.onClick?.(row, event)
                                                     },
                                                 }

@@ -197,6 +197,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
     const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
     const [appliedRange, setAppliedRange] = useState(Boolean(filters?.applied) ? { from: filters?.from || '', to: filters?.to || '' } : { from: '', to: '' })
     const [selectedUid, setSelectedUid] = useState(null)
+    const [detailsOpen, setDetailsOpen] = useState(false)
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
     const normalizedSearch = normalizeTextSearch(searchControl.value)
@@ -307,6 +308,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
             await apiRequest(url, { method: 'post', data: { reason: 'Cancelado pela central de consultas.' } })
             setFeedback({ type: 'success', text: `${label} cancelado com sucesso.` })
             setSelectedUid(null)
+            setDetailsOpen(false)
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -348,6 +350,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
             await apiRequest(record.actions.delete_url, { method: 'delete' })
             setFeedback({ type: 'success', text: 'Entrega cancelada com sucesso.' })
             setSelectedUid(null)
+            setDetailsOpen(false)
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -373,6 +376,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
 
         setAppliedRange({ ...range })
         setSelectedUid(null)
+        setDetailsOpen(false)
         router.get('/consultas-cancelamentos', params, {
             preserveScroll: true,
             preserveState: true,
@@ -386,6 +390,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
         setAppliedRange({ from: '', to: '' })
         setActiveType('all')
         setSelectedUid(null)
+        setDetailsOpen(false)
         router.get('/consultas-cancelamentos', {}, {
             preserveScroll: true,
             preserveState: true,
@@ -445,7 +450,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                                     icon: 'fa-eye',
                                     label: 'Ver detalhes',
                                     tone: 'primary',
-                                    onClick: () => setSelectedUid(record.uid),
+                                    onClick: () => setDetailsOpen(true),
                                 },
                             ]}
                         />
@@ -461,7 +466,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             label: 'Ver detalhes',
                             tone: 'primary',
                             disabled: !selectedRecord,
-                            onClick: () => selectedRecord && setSelectedUid(selectedRecord.uid),
+                            onClick: () => selectedRecord && setDetailsOpen(true),
                         },
                         {
                             key: 'retry',
@@ -514,12 +519,12 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
             </div>
 
             <CompactModal
-                open={Boolean(selectedRecord)}
+                open={detailsOpen && Boolean(selectedRecord)}
                 title={selectedRecord?.title || 'Detalhes'}
                 description={selectedRecord ? `${selectedRecord.subtitle} - ${formatMoney(selectedRecord.amount)}` : ''}
                 icon={selectedRecord ? summaryIcon(selectedRecord.type) : 'fa-circle-info'}
                 size="lg"
-                onClose={() => setSelectedUid(null)}
+                onClose={() => setDetailsOpen(false)}
             >
                 {selectedRecord ? (
                     <div className="proc-ui-modal-stack">
