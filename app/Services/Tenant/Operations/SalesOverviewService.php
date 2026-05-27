@@ -334,7 +334,7 @@ class SalesOverviewService
                     'status' => $status,
                 ];
             })
-            ->filter(fn (array $customer) => $customer['credit_limit'] > 0 || $customer['open_credit'] > 0)
+            ->filter(fn (array $customer) => $customer['credit_sales_count'] > 0)
             ->values();
 
         $totalLimit = (float) $customers->sum('credit_limit');
