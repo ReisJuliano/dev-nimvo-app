@@ -423,8 +423,24 @@ class OperationsWorkspaceService
             return [];
         }
 
+        $search = TextSearch::normalize($filters['search'] ?? null);
+        $status = (string) ($filters['status'] ?? 'all');
+
         return Category::query()
             ->withCount(['products as products_count' => fn ($query) => $query->where('active', true)])
+            ->when($search !== '' && ! TextSearch::matchesAll($search), function ($query) use ($search) {
+                $pattern = TextSearch::likePattern($search);
+
+                $query->where(function ($query) use ($pattern) {
+                    $query
+                        ->where('name', 'like', $pattern)
+                        ->orWhere('description', 'like', $pattern);
+                });
+            })
+            ->when($status === 'active', fn ($query) => $query->where('active', true))
+            ->when($status === 'inactive', fn ($query) => $query->where('active', false))
+            ->when($status === 'with-products', fn ($query) => $query->whereHas('products', fn ($query) => $query->where('active', true)))
+            ->when($status === 'without-products', fn ($query) => $query->whereDoesntHave('products', fn ($query) => $query->where('active', true)))
             ->orderBy('name')
             ->get()
             ->map(fn (Category $category) => $this->serializeCategory($category))

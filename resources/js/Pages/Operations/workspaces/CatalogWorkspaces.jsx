@@ -351,6 +351,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
             const response = await apiRequest(buildRecordsUrl(moduleKey), {
                 params: {
                     applied: 1,
+                    search: nextSearch || undefined,
+                    status: activeFilter,
                 },
             })
 
