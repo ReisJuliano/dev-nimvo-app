@@ -472,20 +472,23 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             key: 'retry',
                             icon: 'fa-rotate',
                             label: 'Reenfileirar',
-                            disabled: !selectedRecord || activeType !== 'fiscal' || !selectedRecord.actions?.retry_url,
+                            visible: selectedRecord?.type === 'fiscal' && Boolean(selectedRecord.actions?.retry_url),
+                            disabled: !selectedRecord?.actions?.retry_url,
                             onClick: () => selectedRecord && handleRetry(selectedRecord.actions.retry_url),
                         },
                         {
                             key: 'invalidate',
                             icon: 'fa-hashtag',
                             label: 'Inutilizar',
-                            disabled: !selectedRecord || activeType !== 'fiscal',
+                            visible: selectedRecord?.type === 'fiscal' && selectedRecord.actions?.inutilize_supported !== false,
+                            disabled: true,
                             onClick: () => setFeedback({ type: 'error', text: 'Inutilizacao segue o fluxo fiscal proprio nesta versao.' }),
                         },
                         {
                             key: 'print',
                             icon: 'fa-print',
                             label: 'Imprimir',
+                            visible: Boolean(selectedRecord && resolvePrintUrl(selectedRecord)),
                             disabled: !selectedRecord || !resolvePrintUrl(selectedRecord),
                             onClick: () => {
                                 const printUrl = selectedRecord ? resolvePrintUrl(selectedRecord) : null
@@ -495,11 +498,29 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             },
                         },
                         {
+                            key: 'dispatch',
+                            icon: 'fa-route',
+                            label: 'Iniciar rota',
+                            visible: selectedRecord?.type === 'delivery',
+                            disabled: !selectedRecord || selectedRecord.status_label === 'Em rota' || selectedRecord.status_label === 'Entregue' || busyAction === `${selectedRecord.uid}-dispatched`,
+                            onClick: () => selectedRecord && handleDeliveryStatus(selectedRecord, 'dispatched'),
+                        },
+                        {
+                            key: 'deliver',
+                            icon: 'fa-circle-check',
+                            label: 'Marcar entregue',
+                            tone: 'success',
+                            visible: selectedRecord?.type === 'delivery',
+                            disabled: !selectedRecord || selectedRecord.status_label === 'Entregue' || busyAction === `${selectedRecord.uid}-delivered`,
+                            onClick: () => selectedRecord && handleDeliveryStatus(selectedRecord, 'delivered'),
+                        },
+                        {
                             key: 'cancel',
                             icon: 'fa-xmark',
                             label: 'Cancelar',
                             tone: 'danger',
                             dividerBefore: true,
+                            visible: Boolean(selectedRecord?.actions?.cancel_url || selectedRecord?.actions?.delete_url),
                             disabled: !selectedRecord,
                             onClick: () => {
                                 if (!selectedRecord) {
