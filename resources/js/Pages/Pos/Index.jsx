@@ -307,11 +307,29 @@ function buildPendingSaleDismissStorageKey(tenantId, userId) {
 }
 
 function getPendingSaleSignature(pendingSale) {
-    if (!pendingSale?.id) {
+    if (!pendingSale) {
         return null
     }
 
-    return String(pendingSale.id)
+    if (pendingSale.id) {
+        return String(pendingSale.id)
+    }
+
+    const cartSignature = (pendingSale.cart || [])
+        .map((item) => [
+            item.id ?? item.product_id ?? item.code ?? '',
+            item.qty ?? item.quantity ?? '',
+            item.sale_price ?? item.price ?? '',
+        ].join('@'))
+        .join('|')
+
+    return [
+        'offline',
+        pendingSale.updated_at || pendingSale.saved_at || '',
+        pendingSale.customer_id || '',
+        pendingSale.order_draft_id || '',
+        cartSignature,
+    ].join(':')
 }
 
 function readDismissedPendingSaleSignature(tenantId, userId) {
@@ -3894,6 +3912,88 @@ export default function PosIndex({
             />
 
             <ClosingReportModal report={cashReportModal} onClose={closeCashReportModal} />
+
+            {customerPickerOpen ? (
+                <div className="pos-quick-customer" onClick={closeCustomerPicker}>
+                    <div className="pos-quick-customer-card pos-customer-picker-card" onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header pos-customer-picker-header">
+                            <div>
+                                <h2>Selecionar cliente</h2>
+                                <p>Pesquise por nome, telefone ou CPF e vincule a venda rapidamente.</p>
+                            </div>
+                            <div className="pos-customer-picker-top-actions">
+                                <button className="ui-button-ghost" type="button" onClick={handleOpenQuickCustomer}>
+                                    <i className="fa-solid fa-user-plus" />
+                                    Novo cliente
+                                </button>
+                                <button className="ui-button-ghost" type="button" onClick={closeCustomerPicker}>Fechar</button>
+                            </div>
+                        </div>
+
+                        <div className="pos-customer-picker-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input className="ui-input pos-customer-picker-input" placeholder="Buscar cliente por nome, telefone ou CPF" value={customerSearch} onChange={(event) => customerSearchControl.setDraftValue(event.target.value)} onKeyDown={(event) => {
+                                if (event.key !== 'Enter') {
+                                    return
+                                }
+
+                                event.preventDefault()
+                                applyCustomerSearch()
+                            }} autoFocus />
+                            <button type="button" className="ui-button-ghost" onClick={() => applyCustomerSearch()}>
+                                <i className="fa-solid fa-magnifying-glass" />
+                                Pesquisar
+                            </button>
+                        </div>
+
+                        <div className="pos-customer-picker-toolbar">
+                            <button type="button" className={`pos-customer-picker-ghost ${selectedCustomer ? '' : 'active'}`} onClick={handleClearCustomer}>
+                                <i className="fa-solid fa-user-slash" />
+                                Nao identificado
+                            </button>
+                            <span>{filteredCustomers.length} cliente(s) encontrado(s)</span>
+                        </div>
+
+                        <div className="pos-customer-picker-list">
+                            {filteredCustomers.length ? filteredCustomers.map((customer) => {
+                                const isActive = String(customer.id) === String(selectedCustomer)
+                                return (
+                                    <button key={customer.id} type="button" className={`pos-customer-picker-item ${isActive ? 'active' : ''}`} onClick={() => handleCustomerSelect(customer.id)}>
+                                        <span className="pos-customer-picker-item-icon"><i className={`fa-solid ${isActive ? 'fa-circle-check' : 'fa-user'}`} /></span>
+                                        <span className="pos-customer-picker-item-copy">
+                                            <strong>{customer.name}</strong>
+                                            <small>{customer.document || customer.phone || 'Sem documento informado'}</small>
+                                        </span>
+                                        <span className="pos-customer-picker-item-action">{isActive ? 'Selecionado' : 'Selecionar'}</span>
+                                    </button>
+                                )
+                            }) : <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+
+            {quickCustomerOpen ? (
+                <div className="pos-quick-customer" onClick={() => setQuickCustomerOpen(false)}>
+                    <form className="pos-quick-customer-card" onSubmit={handleQuickCustomerSubmit} onClick={(event) => event.stopPropagation()}>
+                        <div className="pos-quick-customer-header">
+                            <div>
+                                <h2>Novo cliente</h2>
+                                <p>Cadastre rapidamente e selecione na venda.</p>
+                            </div>
+                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Fechar</button>
+                        </div>
+                        <input className="ui-input" placeholder="Nome do cliente" value={quickCustomerForm.name} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, name: event.target.value }))} />
+                        <input className="ui-input" placeholder="Telefone" value={quickCustomerForm.phone} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, phone: event.target.value }))} />
+                        <input className="ui-input" placeholder="CPF" value={quickCustomerForm.document} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, document: event.target.value }))} />
+                        <input className="ui-input" placeholder="E-mail" type="email" value={quickCustomerForm.email} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, email: event.target.value }))} />
+                        <div className="pos-quick-customer-actions">
+                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Cancelar</button>
+                            <button className="pos-finalize-button" type="submit">Salvar cliente</button>
+                        </div>
+                    </form>
+                </div>
+            ) : null}
         </AppLayout>
     )
 
