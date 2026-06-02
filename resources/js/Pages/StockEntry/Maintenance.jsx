@@ -1,37 +1,83 @@
-import { Link } from '@inertiajs/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionSidebar from '@/Components/UI/ActionSidebar'
+import CompactModal from '@/Components/UI/CompactModal'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import { apiRequest } from '@/lib/http'
 import { buildRecordsUrl } from '@/Pages/Operations/workspaces/shared'
 import '../Operations/backoffice-workspace.css'
+import './maintenance.css'
 
 const PERIOD_FILTERS = [
-    { key: '', label: 'Livre', icon: 'fa-sliders' },
-    { key: 'today', label: 'Hoje', icon: 'fa-calendar-day' },
-    { key: 'week', label: 'Semana', icon: 'fa-calendar-week' },
-    { key: 'month', label: 'Mes', icon: 'fa-calendar' },
+    { key: 'all', label: 'Todas', value: '' },
+    { key: 'today', label: 'Hoje', value: 'today', days: 1 },
+    { key: 'week', label: 'Semana', value: 'week', days: 7 },
+    { key: 'month', label: 'Mês', value: 'month', days: 30 },
 ]
 
 const TIME_FILTERS = [
-    { key: '', label: 'Qualquer', icon: 'fa-clock' },
-    { key: 'morning', label: 'Manha', icon: 'fa-sun' },
+    { key: 'morning', label: 'Manhã', icon: 'fa-sun' },
     { key: 'afternoon', label: 'Tarde', icon: 'fa-cloud-sun' },
     { key: 'night', label: 'Noite', icon: 'fa-moon' },
 ]
 
-function createDraftFilters() {
+function pad(value) {
+    return String(value).padStart(2, '0')
+}
+
+function formatInputDate(value) {
+    if (!value) {
+        return ''
+    }
+
+    const date = value instanceof Date ? value : new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function createTodayInputValue() {
+    const now = new Date()
+
+    return formatInputDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+}
+
+function createRangeFromToday(days) {
+    const end = new Date()
+    const start = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+    start.setDate(start.getDate() - Math.max(0, days - 1))
+
     return {
+        from: formatInputDate(start),
+        to: createTodayInputValue(),
+    }
+}
+
+function createMonthRange() {
+    const now = new Date()
+
+    return {
+        from: formatInputDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+        to: createTodayInputValue(),
+    }
+}
+
+function createDraftFilters() {
+    const monthRange = createMonthRange()
+
+    return {
+        search: '',
+        from: monthRange.from,
+        to: monthRange.to,
         period: '',
-        exactDate: '',
-        month: '',
-        exactTime: '',
         timeSlot: '',
-        supplier: '',
-        product: '',
-        nf: '',
     }
 }
 
@@ -46,95 +92,55 @@ function readInitialFilters() {
 
     return {
         ...filters,
-        nf: params.get('nf') || '',
-        supplier: params.get('supplier') || '',
-        product: params.get('product') || '',
-        exactDate: params.get('date') || '',
-        month: params.get('month') || '',
+        search: params.get('search') || params.get('nf') || params.get('supplier') || params.get('product') || '',
+        from: params.get('from') || filters.from,
+        to: params.get('to') || filters.to,
+        period: params.get('period') || '',
+        timeSlot: params.get('time_slot') || '',
     }
-}
-
-function matchesPeriod(record, periodKey) {
-    if (!periodKey) {
-        return true
-    }
-
-    const baseValue = record?.received_at || record?.created_at
-
-    if (!baseValue) {
-        return true
-    }
-
-    const target = new Date(baseValue)
-    const now = new Date()
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-    if (periodKey === 'today') {
-        return target >= dayStart
-    }
-
-    if (periodKey === 'week') {
-        const start = new Date(dayStart)
-        start.setDate(dayStart.getDate() - 6)
-
-        return target >= start
-    }
-
-    if (periodKey === 'month') {
-        const start = new Date(dayStart)
-        start.setDate(dayStart.getDate() - 29)
-
-        return target >= start
-    }
-
-    return true
 }
 
 function resolveRecordDate(record) {
     return String(record?.received_at || record?.created_at || '').slice(0, 10)
 }
 
-function matchesMonth(record, month) {
-    if (!month) {
+function matchesDateRange(record, from, to) {
+    const date = resolveRecordDate(record)
+
+    if (!date) {
         return true
     }
 
-    return resolveRecordDate(record).startsWith(month)
+    if (from && date < from) {
+        return false
+    }
+
+    if (to && date > to) {
+        return false
+    }
+
+    return true
 }
 
-function matchesExactDate(record, exactDate) {
-    if (!exactDate) {
+function matchesPeriod(record, periodKey) {
+    const period = PERIOD_FILTERS.find((filter) => filter.value === periodKey)
+
+    if (!period?.days) {
         return true
     }
 
-    return resolveRecordDate(record) === exactDate
-}
-
-function resolveRecordTime(record) {
     const baseValue = record?.received_at || record?.created_at
 
     if (!baseValue) {
-        return ''
-    }
-
-    const target = new Date(baseValue)
-
-    if (Number.isNaN(target.getTime())) {
-        return ''
-    }
-
-    const hours = String(target.getHours()).padStart(2, '0')
-    const minutes = String(target.getMinutes()).padStart(2, '0')
-
-    return `${hours}:${minutes}`
-}
-
-function matchesExactTime(record, exactTime) {
-    if (!exactTime) {
         return true
     }
 
-    return resolveRecordTime(record).startsWith(exactTime)
+    const target = new Date(baseValue)
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - Math.max(0, period.days - 1))
+
+    return target >= start
 }
 
 function matchesTimeSlot(record, timeSlot) {
@@ -165,6 +171,241 @@ function matchesTimeSlot(record, timeSlot) {
     return true
 }
 
+function matchesUnifiedSearch(record, normalizedSearch) {
+    if (!normalizedSearch) {
+        return true
+    }
+
+    return matchesTextSearchAny([
+        record.custom_name,
+        record.invoice_number,
+        record.invoice_series,
+        record.invoice_access_key,
+        record.document,
+        record.code,
+        record.supplier_name,
+        ...(record.items || []).map((item) => item.product_name),
+    ], normalizedSearch)
+}
+
+function findDocumentForRecord(record, documents) {
+    if (!record) {
+        return null
+    }
+
+    return documents.find((document) => (
+        String(document.purchase_id || '') === String(record.id)
+        || String(document.access_key || '') === String(record.invoice_access_key || '')
+        || String(document.number || '') === String(record.invoice_number || '')
+    )) || null
+}
+
+function stockEntryTitle(record) {
+    return record?.custom_name || record?.invoice_number || record?.code || `Entrada #${record?.id}`
+}
+
+function stockEntryDate(record) {
+    return record?.received_at || record?.created_at || record?.invoice_date || null
+}
+
+function documentItemFor(recordItem, document) {
+    if (!document?.items?.length) {
+        return null
+    }
+
+    return document.items.find((item) => (
+        String(item.product_id || '') === String(recordItem.product_id || '')
+        || normalizeTextSearch(item.product_name || item.description) === normalizeTextSearch(recordItem.product_name)
+    )) || null
+}
+
+function openMirror(document) {
+    if (!document?.id || !document?.danfe_available) {
+        return
+    }
+
+    window.open(`/api/purchases/incoming-nfe/${document.id}/danfe`, '_blank', 'noopener,noreferrer')
+}
+
+function DetailMetric({ label, value }) {
+    return (
+        <article className="stock-maintenance-detail-metric">
+            <span>{label}</span>
+            <strong>{value || '-'}</strong>
+        </article>
+    )
+}
+
+function StockEntryDetailsModal({
+    record,
+    document,
+    cancelDisabled,
+    onCancel,
+    onClose,
+    onMirror,
+}) {
+    const [fiscalOpen, setFiscalOpen] = useState(false)
+
+    if (!record) {
+        return null
+    }
+
+    const cfop = document?.items?.find((item) => item.cfop)?.cfop || '-'
+    const fiscalItems = document?.items || []
+    const financialItems = [
+        record.billing_barcode ? `Boleto ${record.billing_barcode}` : null,
+        record.billing_due_date ? `Venc. ${formatDate(record.billing_due_date)}` : null,
+        record.billing_amount ? formatMoney(record.billing_amount) : null,
+    ].filter(Boolean)
+
+    return (
+        <CompactModal
+            open
+            badge="Entrada"
+            className="stock-maintenance-detail-modal"
+            description={`${record.supplier_name || 'Fornecedor'} · ${stockEntryDate(record) ? formatDate(stockEntryDate(record)) : 'Sem data'}`}
+            icon="fa-file-invoice"
+            size="lg"
+            title={stockEntryTitle(record)}
+            onClose={onClose}
+            footer={(
+                <>
+                    <button type="button" className="ui-button-ghost" onClick={onClose}>
+                        Fechar
+                    </button>
+                    <button
+                        type="button"
+                        className="ui-button-ghost"
+                        disabled={!document?.danfe_available}
+                        onClick={onMirror}
+                    >
+                        <i className="fa-solid fa-print" />
+                        <span>Espelho NF</span>
+                    </button>
+                    <button
+                        type="button"
+                        className="ui-button-ghost danger"
+                        disabled={cancelDisabled}
+                        title={cancelDisabled ? 'Cancelamento indisponível por rastreabilidade.' : 'Cancelar entrada'}
+                        onClick={onCancel}
+                    >
+                        <i className="fa-solid fa-xmark" />
+                        <span>Cancelar entrada</span>
+                    </button>
+                </>
+            )}
+        >
+            <div className="stock-maintenance-detail-stack">
+                <section className="stock-maintenance-detail-head">
+                    <div>
+                        <h3>{stockEntryTitle(record)} · {record.supplier_name || 'Fornecedor'} · {stockEntryDate(record) ? formatDate(stockEntryDate(record)) : 'Sem data'}</h3>
+                    </div>
+                    <div className="stock-maintenance-detail-actions">
+                        <StatusBadge compact label={document?.fiscal_status || record.status || 'Recebida'} tone="success" />
+                        <button type="button" className="ui-button-ghost" disabled={!document?.danfe_available} onClick={onMirror}>
+                            <i className="fa-solid fa-print" />
+                            <span>Espelho</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="ui-button-ghost danger"
+                            disabled={cancelDisabled}
+                            title={cancelDisabled ? 'Cancelamento indisponível por rastreabilidade.' : 'Cancelar entrada'}
+                            onClick={onCancel}
+                        >
+                            <i className="fa-solid fa-xmark" />
+                            <span>Cancelar</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section className="stock-maintenance-detail-grid">
+                    <DetailMetric label="NF" value={record.invoice_number || document?.number} />
+                    <DetailMetric label="Série" value={record.invoice_series || document?.series} />
+                    <DetailMetric label="Data NF" value={record.invoice_date ? formatDate(record.invoice_date) : (document?.issued_at ? formatDate(document.issued_at) : '-')} />
+                    <DetailMetric label="Data entrada" value={stockEntryDate(record) ? formatDate(stockEntryDate(record)) : '-'} />
+                    <DetailMetric label="CFOP" value={cfop} />
+                    <DetailMetric label="Volumes" value={formatNumber(record.quantity_total || 0)} />
+                    <DetailMetric label="Itens" value={formatNumber(record.items_count || record.items?.length || 0)} />
+                    <DetailMetric label="Total" value={formatMoney(record.total || 0)} />
+                </section>
+
+                <section className="stock-maintenance-detail-section">
+                    <h3>Itens</h3>
+                    <div className="proc-ui-table-wrap">
+                        <table className="proc-ui-table stock-maintenance-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Cód. Barras</th>
+                                    <th>Qtd</th>
+                                    <th>Custo unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(record.items || []).length ? record.items.map((item, index) => {
+                                    const documentItem = documentItemFor(item, document)
+
+                                    return (
+                                        <tr key={`${record.id}-item-${item.id || index}`}>
+                                            <td>{item.product_name || documentItem?.description || '-'}</td>
+                                            <td>{documentItem?.barcode || '-'}</td>
+                                            <td>{formatNumber(item.quantity || 0)}</td>
+                                            <td>{formatMoney(item.unit_cost || documentItem?.unit_price || 0)}</td>
+                                            <td><strong>{formatMoney(item.total || documentItem?.total_price || 0)}</strong></td>
+                                        </tr>
+                                    )
+                                }) : (
+                                    <tr>
+                                        <td colSpan="5">
+                                            <div className="proc-ui-empty">
+                                                <strong>Nenhum item registrado</strong>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                {record.code || financialItems.length ? (
+                    <section className="stock-maintenance-detail-section">
+                        <h3>Financeiro</h3>
+                        <p>
+                            Pedido: <strong>{record.code || '-'}</strong>
+                            {financialItems.length ? <> · Parcelas geradas: <strong>{financialItems.join(' · ')}</strong></> : null}
+                        </p>
+                    </section>
+                ) : null}
+
+                <section className="stock-maintenance-detail-section">
+                    <button
+                        type="button"
+                        className="stock-maintenance-collapse"
+                        onClick={() => setFiscalOpen((current) => !current)}
+                    >
+                        <span>Fiscal</span>
+                        <i className={`fa-solid ${fiscalOpen ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                    </button>
+
+                    {fiscalOpen ? (
+                        <div className="stock-maintenance-fiscal-grid">
+                            <DetailMetric label="Chave NF-e" value={record.invoice_access_key || document?.access_key} />
+                            <DetailMetric label="Protocolo" value={document?.sefaz_protocol} />
+                            <DetailMetric
+                                label="CST"
+                                value={fiscalItems.map((item) => item.icms_cst_csosn || item.pis_cst || item.cofins_cst).filter(Boolean).slice(0, 4).join(', ')}
+                            />
+                        </div>
+                    ) : null}
+                </section>
+            </div>
+        </CompactModal>
+    )
+}
+
 export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de entradas', payload }) {
     const initialRecords = Array.isArray(payload?.records) ? payload.records : []
     const importedDocuments = Array.isArray(payload?.incoming_nfe_documents) ? payload.incoming_nfe_documents : []
@@ -173,74 +414,110 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
     const [draftFilters, setDraftFilters] = useState(() => readInitialFilters())
     const [appliedFilters, setAppliedFilters] = useState(createDraftFilters())
     const [selectedId, setSelectedId] = useState(null)
+    const [detailRecordId, setDetailRecordId] = useState(null)
     const [loading, setLoading] = useState(false)
     const [hasLoadedRecords, setHasLoadedRecords] = useState(initialRecords.length > 0)
     const [feedback, setFeedback] = useState(null)
 
-    const normalizedSupplier = normalizeTextSearch(appliedFilters.supplier)
-    const normalizedProduct = normalizeTextSearch(appliedFilters.product)
-    const normalizedNf = normalizeTextSearch(appliedFilters.nf)
+    const normalizedSearch = normalizeTextSearch(appliedFilters.search)
 
     const filteredRecords = useMemo(() => {
-        return records.filter((record) => {
-            if (!matchesPeriod(record, appliedFilters.period)) {
-                return false
-            }
+        return records
+            .filter((record) => (
+                matchesDateRange(record, appliedFilters.from, appliedFilters.to)
+                && matchesPeriod(record, appliedFilters.period)
+                && matchesTimeSlot(record, appliedFilters.timeSlot)
+                && matchesUnifiedSearch(record, normalizedSearch)
+            ))
+            .sort((left, right) => {
+                const leftTime = new Date(stockEntryDate(left) || 0).getTime()
+                const rightTime = new Date(stockEntryDate(right) || 0).getTime()
 
-            if (!matchesExactDate(record, appliedFilters.exactDate)) {
-                return false
-            }
-
-            if (!matchesMonth(record, appliedFilters.month)) {
-                return false
-            }
-
-            if (!matchesExactTime(record, appliedFilters.exactTime)) {
-                return false
-            }
-
-            if (!matchesTimeSlot(record, appliedFilters.timeSlot)) {
-                return false
-            }
-
-            if (normalizedSupplier && !matchesTextSearchAny([record.supplier_name], normalizedSupplier)) {
-                return false
-            }
-
-            if (normalizedNf && !matchesTextSearchAny([record.custom_name, record.invoice_number, record.document, record.code], normalizedNf)) {
-                return false
-            }
-
-            if (normalizedProduct) {
-                const productNames = (record.items || []).map((item) => item.product_name)
-
-                if (!matchesTextSearchAny(productNames, normalizedProduct)) {
-                    return false
-                }
-            }
-
-            return true
-        })
-    }, [appliedFilters, normalizedNf, normalizedProduct, normalizedSupplier, records])
+                return rightTime - leftTime || Number(right.id || 0) - Number(left.id || 0)
+            })
+    }, [appliedFilters, normalizedSearch, records])
 
     const selectedRecord = useMemo(
-        () => filteredRecords.find((record) => record.id === selectedId) || null,
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId)) || null,
         [filteredRecords, selectedId],
     )
 
-    const selectedDocument = useMemo(() => {
-        if (!selectedRecord) {
-            return null
-        }
+    const detailRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(detailRecordId)) || null,
+        [detailRecordId, filteredRecords],
+    )
 
-        return importedDocuments.find((document) => (
-            String(document.purchase_id || '') === String(selectedRecord.id)
-            || String(document.access_key || '') === String(selectedRecord.invoice_access_key || '')
-        )) || null
-    }, [importedDocuments, selectedRecord])
+    const selectedDocument = useMemo(() => findDocumentForRecord(selectedRecord, importedDocuments), [importedDocuments, selectedRecord])
+    const detailDocument = useMemo(() => findDocumentForRecord(detailRecord, importedDocuments), [detailRecord, importedDocuments])
+
+    const totalFiltered = useMemo(
+        () => filteredRecords.reduce((carry, record) => carry + Number(record.total || 0), 0),
+        [filteredRecords],
+    )
+
+    const columns = useMemo(() => [
+        {
+            key: 'nf',
+            label: 'NF',
+            width: '15%',
+            render: (record) => (
+                <div className="stock-maintenance-primary-cell">
+                    <strong>{record.invoice_number || record.custom_name || '-'}</strong>
+                    <span>{record.code || 'Sem pedido'}</span>
+                </div>
+            ),
+        },
+        {
+            key: 'supplier',
+            label: 'Fornecedor',
+            width: '22%',
+            render: (record) => record.supplier_name || '-',
+        },
+        {
+            key: 'received_at',
+            label: 'Data entrada',
+            width: '14%',
+            render: (record) => stockEntryDate(record) ? formatDate(stockEntryDate(record)) : '-',
+        },
+        {
+            key: 'items',
+            label: 'Itens',
+            align: 'right',
+            width: '9%',
+            render: (record) => formatNumber(record.items_count || record.items?.length || 0),
+        },
+        {
+            key: 'units',
+            label: 'Unidades',
+            align: 'right',
+            width: '10%',
+            render: (record) => formatNumber(record.quantity_total || 0),
+        },
+        {
+            key: 'total',
+            label: 'Total',
+            align: 'right',
+            width: '13%',
+            render: (record) => <strong>{formatMoney(record.total || 0)}</strong>,
+        },
+        {
+            key: 'purchase',
+            label: 'Pedido',
+            width: '13%',
+            render: (record) => record.code || '-',
+        },
+    ], [])
 
     function updateDraft(field, value) {
         setDraftFilters((current) => ({ ...current, [field]: value }))
+    }
+
+    function handlePeriodChange(value, filter) {
+        setDraftFilters((current) => ({
+            ...current,
+            period: value,
+            ...(filter?.days ? createRangeFromToday(filter.days) : {}),
+        }))
     }
 
     async function applyFilters() {
@@ -251,20 +528,18 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
             const response = await apiRequest(buildRecordsUrl('entrada-estoque'), {
                 params: {
                     applied: 1,
-                    nf: draftFilters.nf || undefined,
-                    supplier: draftFilters.supplier || undefined,
-                    product: draftFilters.product || undefined,
-                    date: draftFilters.exactDate || undefined,
-                    month: draftFilters.month || undefined,
-                    time: draftFilters.exactTime || undefined,
-                    time_slot: draftFilters.timeSlot || undefined,
+                    search: draftFilters.search || undefined,
+                    from: draftFilters.from || undefined,
+                    to: draftFilters.to || undefined,
                     period: draftFilters.period || undefined,
+                    time_slot: draftFilters.timeSlot || undefined,
                 },
             })
 
             setRecords(Array.isArray(response?.records) ? response.records : [])
-            setAppliedFilters(draftFilters)
+            setAppliedFilters({ ...draftFilters })
             setSelectedId(null)
+            setDetailRecordId(null)
             setHasLoadedRecords(true)
         } catch (error) {
             setRecords([])
@@ -280,286 +555,189 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
         setAppliedFilters(empty)
         setRecords([])
         setSelectedId(null)
+        setDetailRecordId(null)
         setLoading(false)
         setHasLoadedRecords(false)
         setFeedback(null)
     }
 
-    useEffect(() => {
-        const hasSelectedRecord = filteredRecords.some((record) => record.id === selectedId)
-        const nextSelectedId = hasSelectedRecord ? selectedId : (filteredRecords[0]?.id ?? null)
+    function selectRecord(record, openDetails = false) {
+        setSelectedId(record.id)
 
-        if (String(nextSelectedId || '') !== String(selectedId || '')) {
-            setSelectedId(nextSelectedId)
+        if (openDetails) {
+            setDetailRecordId(record.id)
         }
-    }, [filteredRecords, selectedId])
+    }
+
+    function handleNewEntry() {
+        window.location.href = '/entrada-estoque'
+    }
+
+    function handleCancelAttempt() {
+        setFeedback({
+            type: 'error',
+            text: 'Cancelamento indisponível nesta tela por rastreabilidade. Use o fluxo fiscal habilitado quando houver suporte ao estorno.',
+        })
+    }
+
+    const emptyMessage = loading
+        ? 'Buscando entradas...'
+        : hasLoadedRecords
+            ? 'Nenhuma entrada encontrada'
+            : 'Aplique os filtros para listar as entradas'
 
     return (
         <AppLayout title={moduleTitle}>
-            <div className="proc-ui-page compact">
-                <section className="proc-ui-section-card proc-ui-filter-panel">
-                    <div className="proc-ui-card-toolbar">
-                        <div className="proc-ui-section-title">
-                            <h3>{moduleTitle}</h3>
+            <div className="proc-ui-page stock-maintenance-page">
+                <section className="proc-ui-section-card purchases-list-card stock-maintenance-list-card">
+                    <div className="ui-list-page-shell" style={{ padding: 0 }}>
+                        <div className="ui-list-page-main">
+                            <PageHeader
+                                title={moduleTitle}
+                                search={{
+                                    placeholder: 'Buscar por NF, fornecedor ou produto...',
+                                    value: draftFilters.search,
+                                    onChange: (value) => updateDraft('search', value),
+                                }}
+                                filters={PERIOD_FILTERS.map((filter) => ({
+                                    ...filter,
+                                    count: filter.value === ''
+                                        ? records.length
+                                        : records.filter((record) => matchesPeriod(record, filter.value)).length,
+                                }))}
+                                activeFilter={draftFilters.period}
+                                onFilterChange={handlePeriodChange}
+                                dateRange={{
+                                    from: draftFilters.from,
+                                    to: draftFilters.to,
+                                    onChange: (nextRange) => setDraftFilters((current) => ({
+                                        ...current,
+                                        from: nextRange.from,
+                                        to: nextRange.to,
+                                        period: '',
+                                    })),
+                                }}
+                                quickDateOptions={TIME_FILTERS.map((filter) => ({
+                                    ...filter,
+                                    active: draftFilters.timeSlot === filter.key,
+                                    onClick: () => updateDraft('timeSlot', draftFilters.timeSlot === filter.key ? '' : filter.key),
+                                }))}
+                                quickDates
+                                applyLabel={loading ? 'Buscando...' : 'Filtrar'}
+                                onApply={() => void applyFilters()}
+                                onReset={clearFilters}
+                            />
+
+                            {feedback ? (
+                                <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                    <span>{feedback.text}</span>
+                                </div>
+                            ) : null}
+
+                            <section className="ui-list-page-table-card">
+                                <DataTable
+                                    className="stock-maintenance-records-table"
+                                    columns={columns}
+                                    rows={filteredRecords}
+                                    selectedRowKey={selectedId}
+                                    onRowClick={(record) => selectRecord(record, true)}
+                                    emptyIcon="fa-box-open"
+                                    emptyMessage={emptyMessage}
+                                    actions={(record) => {
+                                        const document = findDocumentForRecord(record, importedDocuments)
+
+                                        return [
+                                            {
+                                                key: 'view',
+                                                icon: 'fa-eye',
+                                                label: 'Ver detalhes',
+                                                tone: 'primary',
+                                                onClick: () => selectRecord(record, true),
+                                            },
+                                            {
+                                                key: 'mirror',
+                                                icon: 'fa-print',
+                                                label: 'Espelho NF',
+                                                disabled: !document?.danfe_available,
+                                                selectRow: false,
+                                                onClick: () => {
+                                                    selectRecord(record)
+                                                    openMirror(document)
+                                                },
+                                            },
+                                            {
+                                                key: 'cancel',
+                                                icon: 'fa-xmark',
+                                                label: 'Cancelar',
+                                                tone: 'danger',
+                                                selectRow: false,
+                                                onClick: () => {
+                                                    selectRecord(record)
+                                                    handleCancelAttempt()
+                                                },
+                                            },
+                                        ]
+                                    }}
+                                />
+                            </section>
+
+                            {hasLoadedRecords ? (
+                                <footer className="purchases-table-footer stock-maintenance-table-footer">
+                                    <span>Total de entradas: <strong>{formatNumber(filteredRecords.length)}</strong></span>
+                                    <span>Total filtrado: <strong>{formatMoney(totalFiltered)}</strong></span>
+                                </footer>
+                            ) : null}
                         </div>
 
-                        <div className="proc-ui-statusline">
-                            <button type="button" className="ui-button-ghost" onClick={clearFilters}>
-                                <i className="fa-solid fa-rotate-left" />
-                                <span>Limpar</span>
-                            </button>
-                            <button type="button" className="ui-button" disabled={loading} onClick={() => void applyFilters()}>
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <span>{loading ? 'Buscando...' : 'Buscar'}</span>
-                            </button>
-                            <Link className="ui-button-ghost" href="/entrada-estoque">
-                                <i className="fa-solid fa-plus" />
-                                <span>Nova entrada</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div className="proc-ui-field-grid proc-ui-maintenance-grid">
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-hashtag" /> NF</span>
-                                <input value={draftFilters.nf} onChange={(event) => updateDraft('nf', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-building" /> Fornecedor</span>
-                                <input value={draftFilters.supplier} onChange={(event) => updateDraft('supplier', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-box" /> Produto</span>
-                                <input value={draftFilters.product} onChange={(event) => updateDraft('product', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-calendar-day" /> Data</span>
-                                <input type="date" value={draftFilters.exactDate} onChange={(event) => updateDraft('exactDate', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-calendar" /> Mes</span>
-                                <input type="month" value={draftFilters.month} onChange={(event) => updateDraft('month', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field">
-                            <label>
-                                <span><i className="fa-solid fa-clock" /> Horario</span>
-                                <input type="time" value={draftFilters.exactTime} onChange={(event) => updateDraft('exactTime', event.target.value)} />
-                            </label>
-                        </div>
-                        <div className="proc-ui-field full">
-                            <div className="proc-ui-filter-row">
-                                <div className="proc-ui-filter-group">
-                                    {PERIOD_FILTERS.map((filter) => (
-                                        <button
-                                            key={filter.key || 'free'}
-                                            type="button"
-                                            className={`proc-ui-chip ${draftFilters.period === filter.key ? 'active' : ''}`}
-                                            onClick={() => updateDraft('period', filter.key)}
-                                        >
-                                            <i className={`fa-solid ${filter.icon}`} />
-                                            <span>{filter.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="proc-ui-filter-group">
-                                    {TIME_FILTERS.map((filter) => (
-                                        <button
-                                            key={filter.key || 'any'}
-                                            type="button"
-                                            className={`proc-ui-chip ${draftFilters.timeSlot === filter.key ? 'active' : ''}`}
-                                            onClick={() => updateDraft('timeSlot', filter.key)}
-                                        >
-                                            <i className={`fa-solid ${filter.icon}`} />
-                                            <span>{filter.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                        <ActionSidebar
+                            storageKey="stock-entry-maintenance"
+                            persistCollapsed={false}
+                            actions={[
+                                {
+                                    key: 'create',
+                                    icon: 'fa-plus',
+                                    label: 'Nova entrada',
+                                    tone: 'primary',
+                                    onClick: handleNewEntry,
+                                },
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    disabled: !selectedRecord,
+                                    onClick: () => selectedRecord && setDetailRecordId(selectedRecord.id),
+                                },
+                                {
+                                    key: 'mirror',
+                                    icon: 'fa-print',
+                                    label: 'Espelho NF',
+                                    disabled: !selectedRecord || !selectedDocument?.danfe_available,
+                                    onClick: () => openMirror(selectedDocument),
+                                },
+                                {
+                                    key: 'cancel',
+                                    icon: 'fa-xmark',
+                                    label: 'Cancelar',
+                                    tone: 'danger',
+                                    dividerBefore: true,
+                                    disabled: !selectedRecord,
+                                    onClick: handleCancelAttempt,
+                                },
+                            ]}
+                        />
                     </div>
                 </section>
-
-                {feedback ? (
-                    <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                        <span>{feedback.text}</span>
-                    </div>
-                ) : null}
-
-                <div className="proc-ui-shell">
-                    <section className="proc-ui-main-card">
-                        <div className="proc-ui-main-header">
-                            <div>
-                                <h2>{selectedRecord ? (selectedRecord.custom_name || `NF ${selectedRecord.invoice_number || selectedRecord.code}`) : 'Detalhes'}</h2>
-                                {selectedRecord?.supplier_name ? <span className="proc-ui-muted">{selectedRecord.supplier_name}</span> : null}
-                            </div>
-
-                            <div className="proc-ui-inline-meta">
-                                <span>{filteredRecords.length} notas</span>
-                                <span>{formatMoney(filteredRecords.reduce((carry, record) => carry + Number(record.total || 0), 0))}</span>
-                            </div>
-                        </div>
-
-                        {selectedRecord ? (
-                            <div className="proc-ui-stage">
-                                <div className="proc-ui-summary-grid">
-                                    <article className="proc-ui-summary-card">
-                                        <span>NF</span>
-                                        <strong>{selectedRecord.invoice_number || '-'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Fornecedor</span>
-                                        <strong>{selectedRecord.supplier_name || '-'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Recebimento</span>
-                                        <strong>{selectedRecord.received_at ? formatDate(selectedRecord.received_at) : '-'}</strong>
-                                    </article>
-                                    <article className="proc-ui-summary-card">
-                                        <span>Total</span>
-                                        <strong>{formatMoney(selectedRecord.total || 0)}</strong>
-                                    </article>
-                                </div>
-
-                                <section className="proc-ui-review-card">
-                                    <div className="proc-ui-card-toolbar">
-                                        <StatusBadge compact label={selectedRecord.supplier_name || 'Entrada'} tone="info" />
-
-                                        <div className="proc-ui-statusline">
-                                            <button
-                                                type="button"
-                                                className="ui-button-ghost"
-                                                disabled={!selectedDocument?.danfe_available}
-                                                onClick={() => {
-                                                    if (selectedDocument?.id) {
-                                                        window.open(`/api/purchases/incoming-nfe/${selectedDocument.id}/danfe`, '_blank', 'noopener,noreferrer')
-                                                    }
-                                                }}
-                                            >
-                                                <i className="fa-solid fa-print" />
-                                                <span>Espelho</span>
-                                            </button>
-                                            <button type="button" className="ui-button-ghost" disabled title="Cancelamento indisponível por rastreabilidade.">
-                                                <i className="fa-solid fa-xmark" />
-                                                <span>Cancelar</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="proc-ui-two-grid">
-                                        <div className="proc-ui-mini-card">
-                                            <span>Serie</span>
-                                            <strong>{selectedRecord.invoice_series || '-'}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Data NF</span>
-                                            <strong>{selectedRecord.invoice_date ? formatDate(selectedRecord.invoice_date) : '-'}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Volumes</span>
-                                            <strong>{formatNumber(selectedRecord.quantity_total || 0)}</strong>
-                                        </div>
-                                        <div className="proc-ui-mini-card">
-                                            <span>Itens</span>
-                                            <strong>{formatNumber(selectedRecord.items_count || 0)}</strong>
-                                        </div>
-                                    </div>
-                                </section>
-
-                                <section className="proc-ui-section-card">
-                                    <div className="proc-ui-section-title">
-                                        <h3>Itens</h3>
-                                    </div>
-
-                                    <div className="proc-ui-table-wrap">
-                                        <table className="proc-ui-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Produto</th>
-                                                    <th>Qtd</th>
-                                                    <th>Custo</th>
-                                                    <th>Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(selectedRecord.items || []).length ? selectedRecord.items.map((item, index) => (
-                                                    <tr key={`${selectedRecord.id}-item-${index}`}>
-                                                        <td>
-                                                            <div className="proc-ui-record-card-copy">
-                                                                <strong>{item.product_name}</strong>
-                                                                <span>{item.product_id ? `Produto #${item.product_id}` : '-'}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>{formatNumber(item.quantity || 0)}</td>
-                                                        <td>{formatMoney(item.unit_cost || 0)}</td>
-                                                        <td><strong>{formatMoney(item.total || 0)}</strong></td>
-                                                    </tr>
-                                                )) : (
-                                                    <tr>
-                                                        <td colSpan="4">
-                                                            <div className="proc-ui-empty">
-                                                                <strong>Sem itens</strong>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </section>
-                            </div>
-                        ) : (
-                            <div className="proc-ui-empty">
-                                <strong>{loading ? 'Buscando entradas...' : hasLoadedRecords ? 'Sem entradas registradas' : 'Clique em Buscar para listar'}</strong>
-                            </div>
-                        )}
-                    </section>
-
-                    <aside className="proc-ui-sidebar">
-                        <div className="proc-ui-sidebar-section">
-                            <div className="proc-ui-card-toolbar">
-                                <strong>Resultados</strong>
-                                <span className="proc-ui-muted">{filteredRecords.length}</span>
-                            </div>
-                        </div>
-
-                        <div className="proc-ui-sidebar-list">
-                            {filteredRecords.length ? filteredRecords.map((record) => (
-                                <button key={record.id} type="button" className={`proc-ui-record-card ${record.id === selectedId ? 'active' : ''}`} onClick={() => setSelectedId(record.id)}>
-                                    <div className="proc-ui-record-card-top">
-                                        <strong>{record.custom_name || record.invoice_number || record.code}</strong>
-                                        <StatusBadge compact label={record.supplier_name || 'Entrada'} tone="info" />
-                                    </div>
-
-                                    <div className="proc-ui-record-card-copy">
-                                        <strong>{formatMoney(record.total || 0)}</strong>
-                                        <span>{record.code || 'Sem código'} - {record.received_at ? formatDate(record.received_at) : 'Sem data'}</span>
-                                    </div>
-
-                                    <div className="proc-ui-inline-meta">
-                                        <span>{formatNumber(record.quantity_total || 0)} un</span>
-                                        <span>{formatNumber(record.items_count || 0)} itens</span>
-                                    </div>
-                                </button>
-                            )) : (
-                                <div className="proc-ui-empty">
-                                    <strong>{loading ? 'Buscando...' : hasLoadedRecords ? 'Sem notas' : 'Aguardando busca'}</strong>
-                                </div>
-                            )}
-                        </div>
-                    </aside>
-                </div>
             </div>
+
+            <StockEntryDetailsModal
+                record={detailRecord}
+                document={detailDocument}
+                cancelDisabled={!detailRecord}
+                onCancel={handleCancelAttempt}
+                onClose={() => setDetailRecordId(null)}
+                onMirror={() => openMirror(detailDocument)}
+            />
         </AppLayout>
     )
 }

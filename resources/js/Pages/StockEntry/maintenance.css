@@ -1,0 +1,206 @@
+.stock-maintenance-page {
+    display: grid;
+}
+
+.stock-maintenance-list-card {
+    gap: 0.75rem;
+    padding: 0.75rem;
+}
+
+.stock-maintenance-records-table .ui-data-table th,
+.stock-maintenance-records-table .ui-data-table td {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.stock-maintenance-records-table.ui-data-table-empty {
+    width: 100%;
+    min-height: 24rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.stock-maintenance-primary-cell {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.stock-maintenance-primary-cell strong,
+.stock-maintenance-primary-cell span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stock-maintenance-primary-cell span {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.stock-maintenance-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 0.35rem 0.1rem 0;
+    color: #4f6675;
+    font-size: 0.84rem;
+}
+
+.ui-page-header-quick-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ui-page-header-quick-date.active {
+    border-color: rgba(47, 124, 246, 0.18);
+    background: rgba(47, 124, 246, 0.08);
+    color: var(--app-primary-dark);
+}
+
+.stock-maintenance-detail-modal {
+    width: min(100%, 768px);
+}
+
+.stock-maintenance-detail-stack {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.stock-maintenance-detail-head,
+.stock-maintenance-detail-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+
+.stock-maintenance-detail-head h3 {
+    margin: 0;
+    color: #101826;
+    font-size: 0.98rem;
+    line-height: 1.3;
+}
+
+.stock-maintenance-detail-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.stock-maintenance-detail-grid,
+.stock-maintenance-fiscal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.stock-maintenance-detail-metric,
+.stock-maintenance-detail-section {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+    background: rgba(248, 250, 252, 0.74);
+}
+
+.stock-maintenance-detail-metric {
+    display: grid;
+    gap: 0.22rem;
+    min-width: 0;
+    padding: 0.65rem;
+}
+
+.stock-maintenance-detail-metric span {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.stock-maintenance-detail-metric strong {
+    min-width: 0;
+    overflow: hidden;
+    color: #101826;
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stock-maintenance-detail-section {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.72rem;
+}
+
+.stock-maintenance-detail-section h3,
+.stock-maintenance-detail-section p {
+    margin: 0;
+}
+
+.stock-maintenance-detail-section h3 {
+    color: #101826;
+    font-size: 0.88rem;
+}
+
+.stock-maintenance-detail-section p {
+    color: #516076;
+    font-size: 0.84rem;
+}
+
+.stock-maintenance-items-table {
+    min-width: 760px;
+}
+
+.stock-maintenance-items-table th,
+.stock-maintenance-items-table td {
+    padding-top: 0.48rem;
+    padding-bottom: 0.48rem;
+}
+
+.stock-maintenance-collapse {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #101826;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .stock-maintenance-detail-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .stock-maintenance-detail-actions {
+        justify-content: flex-start;
+    }
+
+    .stock-maintenance-detail-grid,
+    .stock-maintenance-fiscal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .stock-maintenance-list-card {
+        padding: 0.65rem;
+    }
+
+    .stock-maintenance-detail-grid,
+    .stock-maintenance-fiscal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stock-maintenance-table-footer {
+        flex-direction: column;
+    }
+}

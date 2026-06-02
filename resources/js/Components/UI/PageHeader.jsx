@@ -235,9 +235,10 @@ export default function PageHeader({
                         <button
                             key={option.key || option.label}
                             type="button"
-                            className="ui-page-header-quick-date"
+                            className={`ui-page-header-quick-date ${option.active ? 'active' : ''}`}
                             onClick={() => handleQuickDateClick(option)}
                         >
+                            {option.icon ? <i className={`fa-solid ${option.icon}`} /> : null}
                             {option.label}
                         </button>
                     ))}
