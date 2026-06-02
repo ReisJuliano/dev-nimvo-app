@@ -295,7 +295,7 @@ function getPendingSaleSignature(pendingSale) {
         return null
     }
 
-    return `${pendingSale.id}:${pendingSale.updated_at || pendingSale.restored_at || 'na'}`
+    return String(pendingSale.id)
 }
 
 function readDismissedPendingSaleSignature(tenantId, userId) {
@@ -342,6 +342,10 @@ function clearDismissedPendingSaleSignature(tenantId, userId) {
 }
 
 function resolveVisiblePendingSale(tenantId, userId, pendingSale) {
+    if (!pendingSale || (Array.isArray(pendingSale.cart) && pendingSale.cart.length === 0)) {
+        return null
+    }
+
     const signature = getPendingSaleSignature(pendingSale)
     const dismissedSignature = readDismissedPendingSaleSignature(tenantId, userId)
 
@@ -483,6 +487,7 @@ export default function PosIndex({
 
     const productSearchInputRef = useRef(null)
     const cashRegisterReportRef = useRef(openRegister || null)
+    const isResettingRef = useRef(false)
     const searchTerm = productSearchControl.draftValue
     const appliedSearchTerm = productSearchControl.value
     const customerSearch = customerSearchControl.draftValue
@@ -1221,6 +1226,7 @@ export default function PosIndex({
     useEffect(() => {
         if (!supportsPendingSales) return undefined
         if (!pendingSaleResolved || submitting) return undefined
+        if (isResettingRef.current && cart.length) return undefined
 
         const timeout = setTimeout(async () => {
             const offlinePayload = {
@@ -1245,6 +1251,8 @@ export default function PosIndex({
             }
 
             if (!cart.length) {
+                isResettingRef.current = false
+
                 if (pendingSaleServerState) {
                     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                         discardOfflinePendingSale(tenantId, auth?.user?.id)
@@ -1450,6 +1458,7 @@ export default function PosIndex({
     }
 
     function resetSale() {
+        isResettingRef.current = true
         setCart([])
         setSelectedCartItemId(null)
         setSelectedCustomer('')
@@ -1525,7 +1534,12 @@ export default function PosIndex({
         setPendingSaleServerState(syncPendingSaleVisibility(pendingSale))
         setPendingSaleResolved(true)
         setPendingSalePromptOpen(false)
-        showFeedback('success', 'Venda pendente restaurada com sucesso.')
+
+        if (pendingSale?.has_dropped_items) {
+            showFeedback('warning', 'Venda restaurada. Alguns produtos foram removidos por não estarem mais disponíveis.')
+        } else {
+            showFeedback('success', 'Venda pendente restaurada com sucesso.')
+        }
     }
 
     async function refreshPendingOrderDrafts({ quiet = false } = {}) {
@@ -2585,6 +2599,7 @@ export default function PosIndex({
             const response = await apiRequest('/api/pdv/pending-sale/restore', {
                 method: 'post',
             })
+            discardOfflinePendingSale(tenantId, auth?.user?.id)
             applyPendingSale(response.pending_sale)
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
