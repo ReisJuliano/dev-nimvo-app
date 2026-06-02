@@ -445,11 +445,12 @@ export default function ConditionalSalesPage({
     }
 
     return (
-        <AppLayout title="A Prazo">
+        <AppLayout title="Venda Condicional">
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
                     <PageHeader
-                        title="A Prazo"
+                        title="Venda Condicional"
+                        subtitle="Gestão de vendas condicionais"
                         search={{
                             placeholder: 'Buscar cliente por nome',
                             value: search,
