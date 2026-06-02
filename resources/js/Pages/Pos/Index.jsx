@@ -378,6 +378,12 @@ export default function PosIndex({
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
     const supportsPendingSales = posCapabilities.pending_sales !== false
     const supportsCompanies = posCapabilities.companies !== false
+    const allowOversell = Boolean(
+        moduleState.settings?.allow_oversell
+        ?? moduleState.settings?.pos?.allow_oversell
+        ?? moduleState.capabilities?.allow_oversell
+        ?? false,
+    )
     const requireCashClosingConference = (
         cashRegisterSettings?.cash_closing?.require_conference
         ?? moduleState.settings?.cash_closing?.require_conference
@@ -1608,9 +1614,21 @@ export default function PosIndex({
             const existing = current.find((item) => item.id === product.id)
 
             if (existing) {
-                return current.map((item) => (
-                    item.id === product.id ? { ...item, qty: Number(item.qty) + 1 } : item
-                ))
+                return current.map((item) => {
+                    if (item.id !== product.id) {
+                        return item
+                    }
+
+                    const nextQty = Number(item.qty) + 1
+                    const stockLimit = Number(item.stock_quantity ?? 0)
+
+                    if (!allowOversell && stockLimit > 0 && nextQty > stockLimit) {
+                        showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+                        return item
+                    }
+
+                    return { ...item, qty: nextQty }
+                })
             }
 
             return [...current, normalizeCartItem({ ...product, qty: 1 })]
@@ -1618,8 +1636,23 @@ export default function PosIndex({
     }
 
     function handleQuantityChange(productId, value) {
-        const qty = Math.max(0.001, Number(value || 0.001))
-        setCart((current) => current.map((item) => (item.id === productId ? { ...item, qty } : item)))
+        setCart((current) => current.map((item) => {
+            if (item.id !== productId) {
+                return item
+            }
+
+            const stockLimit = Number(item.stock_quantity ?? 0)
+            const typedQty = Number(value || 0.001)
+            const qty = allowOversell
+                ? Math.max(0.001, typedQty)
+                : Math.max(0.001, Math.min(typedQty, stockLimit > 0 ? stockLimit : Infinity))
+
+            if (!allowOversell && stockLimit > 0 && typedQty > stockLimit) {
+                showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+            }
+
+            return { ...item, qty }
+        }))
     }
 
     function handleStepQuantity(productId, direction) {
@@ -1633,6 +1666,13 @@ export default function PosIndex({
 
             if (nextQty <= 0) {
                 return []
+            }
+
+            const stockLimit = Number(item.stock_quantity ?? 0)
+
+            if (!allowOversell && stockLimit > 0 && nextQty > stockLimit) {
+                showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+                return [item]
             }
 
             return [{
@@ -3533,6 +3573,7 @@ export default function PosIndex({
         selectedCartItemId,
         onSelectItem: setSelectedCartItemId,
         onAdjustItemQuantity: handleStepQuantity,
+        allowOversell,
         onRemoveItem: handleRemove,
         totals,
         shortcutButtons: footerShortcutHints,
@@ -4253,6 +4294,7 @@ function PosWorkspace({
     selectedCartItemId,
     onSelectItem,
     onAdjustItemQuantity,
+    allowOversell,
     onRemoveItem,
     totals,
     shortcutButtons,
@@ -4509,6 +4551,7 @@ function PosWorkspace({
                                         <button
                                             type="button"
                                             className="pos-item-qty-button"
+                                            disabled={!allowOversell && Number(item.stock_quantity ?? 0) > 0 && Number(item.qty ?? 0) >= Number(item.stock_quantity ?? 0)}
                                             onClick={(event) => {
                                                 event.stopPropagation()
                                                 onAdjustItemQuantity(item.id, 1)
