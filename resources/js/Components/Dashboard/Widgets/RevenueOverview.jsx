@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import DashboardChartTooltip from '@/Components/Dashboard/DashboardChartTooltip'
 import { formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import {
@@ -20,6 +21,40 @@ function compactLabel(value = '') {
     }
 
     return `${value.slice(0, 12)}...`
+}
+
+function ChartWrapper({ children }) {
+    const ref = useRef(null)
+    const [ready, setReady] = useState(false)
+
+    useEffect(() => {
+        const element = ref.current
+
+        if (!element) {
+            return undefined
+        }
+
+        const updateReady = () => {
+            setReady(element.offsetWidth > 0 && element.offsetHeight > 0)
+        }
+
+        updateReady()
+
+        if (typeof ResizeObserver === 'undefined') {
+            return undefined
+        }
+
+        const observer = new ResizeObserver(updateReady)
+        observer.observe(element)
+
+        return () => observer.disconnect()
+    }, [])
+
+    return (
+        <div ref={ref} style={{ width: '100%', height: '100%' }}>
+            {ready ? children : null}
+        </div>
+    )
 }
 
 export default function RevenueOverview({
@@ -46,44 +81,46 @@ export default function RevenueOverview({
                 { label: 'Delta', value: `${summary.month_growth >= 0 ? '+' : ''}${formatPercent(summary.month_growth)}` },
             ],
             chart: (
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={salesTrend}>
-                        <defs>
-                            <linearGradient id="dashboardRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.28} />
-                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} stroke="#94a3b8" />
-                        <YAxis hide />
-                        <Tooltip
-                            cursor={false}
-                            content={(props) => (
-                                <DashboardChartTooltip
-                                    {...props}
-                                    valueTypes={{ total: 'money', profit: 'money' }}
-                                />
-                            )}
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="total"
-                            name="Receita"
-                            stroke="#2563eb"
-                            strokeWidth={3}
-                            fill="url(#dashboardRevenueFill)"
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="profit"
-                            name="Lucro"
-                            stroke="#14b8a6"
-                            strokeWidth={2}
-                            dot={false}
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
+                <ChartWrapper>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={salesTrend}>
+                            <defs>
+                                <linearGradient id="dashboardRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.28} />
+                                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.02} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                            <XAxis dataKey="label" axisLine={false} tickLine={false} stroke="#94a3b8" />
+                            <YAxis hide />
+                            <Tooltip
+                                cursor={false}
+                                content={(props) => (
+                                    <DashboardChartTooltip
+                                        {...props}
+                                        valueTypes={{ total: 'money', profit: 'money' }}
+                                    />
+                                )}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="total"
+                                name="Receita"
+                                stroke="#2563eb"
+                                strokeWidth={3}
+                                fill="url(#dashboardRevenueFill)"
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="profit"
+                                name="Lucro"
+                                stroke="#14b8a6"
+                                strokeWidth={2}
+                                dot={false}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </ChartWrapper>
             ),
         },
         today: {
@@ -95,30 +132,32 @@ export default function RevenueOverview({
                 { label: 'Vendas', value: formatNumber(summary.today_sales_qty) },
             ],
             chart: (
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={hourlySales}>
-                        <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
-                        <XAxis dataKey="label" axisLine={false} tickLine={false} stroke="#94a3b8" />
-                        <YAxis hide />
-                        <Tooltip
-                            cursor={false}
-                            content={(props) => (
-                                <DashboardChartTooltip
-                                    {...props}
-                                    valueTypes={{ total: 'money', qty: 'number' }}
-                                />
-                            )}
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="total"
-                            name="Receita"
-                            stroke="#0f766e"
-                            strokeWidth={3}
-                            dot={false}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
+                <ChartWrapper>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={hourlySales}>
+                            <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.18)" vertical={false} />
+                            <XAxis dataKey="label" axisLine={false} tickLine={false} stroke="#94a3b8" />
+                            <YAxis hide />
+                            <Tooltip
+                                cursor={false}
+                                content={(props) => (
+                                    <DashboardChartTooltip
+                                        {...props}
+                                        valueTypes={{ total: 'money', qty: 'number' }}
+                                    />
+                                )}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="total"
+                                name="Receita"
+                                stroke="#0f766e"
+                                strokeWidth={3}
+                                dot={false}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </ChartWrapper>
             ),
         },
         inventory: {
@@ -130,31 +169,33 @@ export default function RevenueOverview({
                 { label: 'Saude', value: formatPercent(summary.inventory_health) },
             ],
             chart: (
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={productChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
-                        <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.16)" horizontal={false} />
-                        <XAxis type="number" hide />
-                        <YAxis
-                            type="category"
-                            dataKey="label"
-                            axisLine={false}
-                            tickLine={false}
-                            stroke="#64748b"
-                            width={88}
-                        />
-                        <Tooltip
-                            cursor={false}
-                            content={(props) => (
-                                <DashboardChartTooltip
-                                    {...props}
-                                    valueTypes={{ qty_sold: 'number', total_sold: 'money' }}
-                                    resolveLabel={(payload) => payload?.[0]?.payload?.name ?? ''}
-                                />
-                            )}
-                        />
-                        <Bar dataKey="qty_sold" name="Qtd." radius={[0, 14, 14, 0]} fill="#7c3aed" maxBarSize={22} />
-                    </BarChart>
-                </ResponsiveContainer>
+                <ChartWrapper>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={productChartData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                            <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.16)" horizontal={false} />
+                            <XAxis type="number" hide />
+                            <YAxis
+                                type="category"
+                                dataKey="label"
+                                axisLine={false}
+                                tickLine={false}
+                                stroke="#64748b"
+                                width={88}
+                            />
+                            <Tooltip
+                                cursor={false}
+                                content={(props) => (
+                                    <DashboardChartTooltip
+                                        {...props}
+                                        valueTypes={{ qty_sold: 'number', total_sold: 'money' }}
+                                        resolveLabel={(payload) => payload?.[0]?.payload?.name ?? ''}
+                                    />
+                                )}
+                            />
+                            <Bar dataKey="qty_sold" name="Qtd." radius={[0, 14, 14, 0]} fill="#7c3aed" maxBarSize={22} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartWrapper>
             ),
         },
     }
