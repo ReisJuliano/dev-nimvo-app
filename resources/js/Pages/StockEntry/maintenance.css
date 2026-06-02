@@ -13,6 +13,33 @@
     padding-bottom: 0.5rem;
 }
 
+.stock-maintenance-records-table .ui-data-table {
+    min-width: 980px;
+}
+
+.stock-maintenance-records-table .ui-data-table tbody tr:hover,
+.stock-maintenance-records-table .ui-data-table tbody tr.is-selected {
+    background: transparent;
+}
+
+.stock-maintenance-records-table .ui-data-table tbody tr:hover td,
+.stock-maintenance-records-table .ui-data-table tbody tr.is-selected td {
+    background: rgba(47, 124, 246, 0.05);
+}
+
+.stock-maintenance-records-table .ui-data-table tbody tr.is-selected td:first-child {
+    box-shadow: inset 2px 0 0 var(--app-primary);
+}
+
+.stock-maintenance-records-table .ui-data-table-actions-cell {
+    z-index: 3;
+}
+
+.stock-maintenance-records-table .ui-data-table-actions {
+    position: relative;
+    z-index: 4;
+}
+
 .stock-maintenance-records-table.ui-data-table-empty {
     width: 100%;
     min-height: 24rem;

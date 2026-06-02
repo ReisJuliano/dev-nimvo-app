@@ -219,12 +219,26 @@ function documentItemFor(recordItem, document) {
     )) || null
 }
 
-function openMirror(document) {
-    if (!document?.id || !document?.danfe_available) {
+function buildMirrorUrl(record, document) {
+    if (document?.id && document?.danfe_available) {
+        return `/api/purchases/incoming-nfe/${document.id}/danfe`
+    }
+
+    if (record?.id) {
+        return `/api/purchases/${record.id}/report`
+    }
+
+    return null
+}
+
+function openMirror(record, document) {
+    const url = buildMirrorUrl(record, document)
+
+    if (!url) {
         return
     }
 
-    window.open(`/api/purchases/incoming-nfe/${document.id}/danfe`, '_blank', 'noopener,noreferrer')
+    window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 function DetailMetric({ label, value }) {
@@ -252,6 +266,7 @@ function StockEntryDetailsModal({
 
     const cfop = document?.items?.find((item) => item.cfop)?.cfop || '-'
     const fiscalItems = document?.items || []
+    const mirrorUrl = buildMirrorUrl(record, document)
     const financialItems = [
         record.billing_barcode ? `Boleto ${record.billing_barcode}` : null,
         record.billing_due_date ? `Venc. ${formatDate(record.billing_due_date)}` : null,
@@ -276,7 +291,7 @@ function StockEntryDetailsModal({
                     <button
                         type="button"
                         className="ui-button-ghost"
-                        disabled={!document?.danfe_available}
+                        disabled={!mirrorUrl}
                         onClick={onMirror}
                     >
                         <i className="fa-solid fa-print" />
@@ -302,7 +317,7 @@ function StockEntryDetailsModal({
                     </div>
                     <div className="stock-maintenance-detail-actions">
                         <StatusBadge compact label={document?.fiscal_status || record.status || 'Recebida'} tone="success" />
-                        <button type="button" className="ui-button-ghost" disabled={!document?.danfe_available} onClick={onMirror}>
+                        <button type="button" className="ui-button-ghost" disabled={!mirrorUrl} onClick={onMirror}>
                             <i className="fa-solid fa-print" />
                             <span>Espelho</span>
                         </button>
@@ -646,6 +661,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
                                     emptyMessage={emptyMessage}
                                     actions={(record) => {
                                         const document = findDocumentForRecord(record, importedDocuments)
+                                        const mirrorUrl = buildMirrorUrl(record, document)
 
                                         return [
                                             {
@@ -659,11 +675,11 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
                                                 key: 'mirror',
                                                 icon: 'fa-print',
                                                 label: 'Espelho NF',
-                                                disabled: !document?.danfe_available,
+                                                disabled: !mirrorUrl,
                                                 selectRow: false,
                                                 onClick: () => {
                                                     selectRecord(record)
-                                                    openMirror(document)
+                                                    openMirror(record, document)
                                                 },
                                             },
                                             {
@@ -712,8 +728,8 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
                                     key: 'mirror',
                                     icon: 'fa-print',
                                     label: 'Espelho NF',
-                                    disabled: !selectedRecord || !selectedDocument?.danfe_available,
-                                    onClick: () => openMirror(selectedDocument),
+                                    disabled: !buildMirrorUrl(selectedRecord, selectedDocument),
+                                    onClick: () => openMirror(selectedRecord, selectedDocument),
                                 },
                                 {
                                     key: 'cancel',
@@ -736,7 +752,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
                 cancelDisabled={!detailRecord}
                 onCancel={handleCancelAttempt}
                 onClose={() => setDetailRecordId(null)}
-                onMirror={() => openMirror(detailDocument)}
+                onMirror={() => openMirror(detailRecord, detailDocument)}
             />
         </AppLayout>
     )
