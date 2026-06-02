@@ -527,7 +527,7 @@ export default function PosIndex({
     const appliedSearchTerm = productSearchControl.value
     const customerSearch = customerSearchControl.draftValue
     const recipientSearch = recipientSearchControl.draftValue
-    const deferredCustomerSearch = useDeferredValue(customerSearchControl.value)
+    const deferredCustomerSearch = useDeferredValue(customerSearch)
     const deferredRecipientSearch = useDeferredValue(recipientSearchControl.value)
 
     useEffect(() => {
@@ -1100,11 +1100,11 @@ export default function PosIndex({
 
     const filteredCustomers = useMemo(() => {
         const normalizedTerm = normalizeTextSearch(deferredCustomerSearch)
-        if (!normalizedTerm) return customers.slice(0, 20)
+        if (normalizedTerm.length < 2) return []
 
         return customers.filter((customer) =>
             matchesTextSearchAny([customer.name, customer.phone, customer.document], normalizedTerm),
-        )
+        ).slice(0, 25)
     }, [customers, deferredCustomerSearch])
 
     const filteredRecipientCustomers = useMemo(() => {
@@ -3949,7 +3949,7 @@ export default function PosIndex({
                                 <i className="fa-solid fa-user-slash" />
                                 Nao identificado
                             </button>
-                            <span>{filteredCustomers.length} cliente(s) encontrado(s)</span>
+                            <span>{normalizeTextSearch(customerSearch).length >= 2 ? `${filteredCustomers.length} cliente(s) encontrado(s)` : 'Digite ao menos 2 caracteres'}</span>
                         </div>
 
                         <div className="pos-customer-picker-list">
@@ -3965,7 +3965,7 @@ export default function PosIndex({
                                         <span className="pos-customer-picker-item-action">{isActive ? 'Selecionado' : 'Selecionar'}</span>
                                     </button>
                                 )
-                            }) : <div className="pos-empty-state">Nenhum cliente encontrado para essa busca.</div>}
+                            }) : <div className="pos-empty-state">{normalizeTextSearch(customerSearch).length >= 2 ? 'Nenhum cliente encontrado para essa busca.' : 'Digite nome, telefone ou CPF para buscar um cliente.'}</div>}
                         </div>
                     </div>
                 </div>
