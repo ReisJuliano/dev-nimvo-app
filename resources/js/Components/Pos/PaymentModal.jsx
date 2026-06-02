@@ -23,6 +23,8 @@ export default function PaymentModal({
     cashShortfall,
     selectedCustomerData,
     creditStatus,
+    onOpenCustomerPicker,
+    onQuickCustomer,
     busy = false,
 }) {
     if (!open) {
@@ -144,6 +146,16 @@ export default function PaymentModal({
                         <div>
                             <span>Cliente</span>
                             <strong>{selectedCustomerData?.name || 'Selecione um cliente'}</strong>
+                        </div>
+                        <div className="pos-quick-customer-actions">
+                            <button className="pos-inline-button compact" type="button" onClick={onOpenCustomerPicker}>
+                                <i className="fa-solid fa-magnifying-glass" />
+                                {selectedCustomerData ? 'Trocar cliente' : 'Selecionar cliente'}
+                            </button>
+                            <button className="pos-inline-button compact" type="button" onClick={onQuickCustomer}>
+                                <i className="fa-solid fa-user-plus" />
+                                Novo cliente
+                            </button>
                         </div>
                         <label className="pos-field">
                             <span>Data limite</span>

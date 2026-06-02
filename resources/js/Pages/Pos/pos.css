@@ -1408,7 +1408,7 @@
 .pos-quick-customer {
     position: fixed;
     inset: 0;
-    z-index: 70;
+    z-index: 1500;
     display: grid;
     place-items: center;
     padding: 1rem;

@@ -4132,6 +4132,8 @@ export default function PosIndex({
                 cashShortfall={cashShortfall}
                 selectedCustomerData={selectedCustomerData}
                 creditStatus={creditStatus}
+                onOpenCustomerPicker={openCustomerPicker}
+                onQuickCustomer={handleOpenQuickCustomer}
                 busy={submitting}
             />
 
