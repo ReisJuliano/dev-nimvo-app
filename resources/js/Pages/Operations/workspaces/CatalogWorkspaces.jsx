@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
+import { requiredMessage, validateEmail } from '@/lib/formValidation'
+import { maskDocument, validateCpfOrCnpj } from '@/lib/validation'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
@@ -1080,8 +1082,25 @@ export function CustomersWorkspace({ moduleKey, payload }) {
 
     async function handleSubmit(event) {
         event.preventDefault()
-        setSaving(true)
         setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome do cliente')
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        if (form.document && !validateCpfOrCnpj(form.document)) {
+            setFeedback({ type: 'warning', text: 'CPF ou CNPJ inválido. Verifique os dígitos informados.' })
+            return
+        }
+
+        if (!validateEmail(form.email)) {
+            setFeedback({ type: 'warning', text: 'Informe um endereço de e-mail válido.' })
+            return
+        }
+
+        setSaving(true)
         try {
             const payloadData = {
                 ...form,
@@ -1277,18 +1296,18 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                     </>
                 )}
             >
-                <form id="customer-modal-form" className="ops-customer-modal-shell" onSubmit={handleSubmit}>
+                <form id="customer-modal-form" className="ops-customer-modal-shell" onSubmit={handleSubmit} noValidate>
                     <SectionTabs tabs={CUSTOMER_MODAL_TABS} activeTab={activeModalTab} onChange={setActiveModalTab} />
 
                     {activeModalTab === 'registration' ? (
                         <div className="ops-workspace-form-grid">
                             <label>
                                 <FieldLabel icon="fa-user" text="Nome" />
-                                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                                <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                             </label>
                             <label>
                                 <FieldLabel icon="fa-id-card" text="CPF ou CNPJ" />
-                                <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} />
+                                <input value={form.document} onChange={(event) => setForm((current) => ({ ...current, document: maskDocument(event.target.value) }))} />
                             </label>
                             <label>
                                 <FieldLabel icon="fa-phone" text="Telefone" />
