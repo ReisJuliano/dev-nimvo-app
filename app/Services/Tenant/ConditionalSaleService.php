@@ -74,8 +74,7 @@ class ConditionalSaleService
                 : null,
             'customers' => $this->customersPayload(),
             'products' => $this->productsPayload(),
-            'paymentMethods' => collect(PaymentMethod::all())
-                ->reject(fn (string $method) => $method === PaymentMethod::MIXED)
+            'paymentMethods' => collect(PaymentMethod::settlementMethods())
                 ->map(fn (string $method) => [
                     'value' => $method,
                     'label' => PaymentMethod::label($method),

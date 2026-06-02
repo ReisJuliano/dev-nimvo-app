@@ -239,6 +239,14 @@ class OrderDraftService
         ])->save();
     }
 
+    public function markAsCompletedWithoutSale(OrderDraft $draft): void
+    {
+        $draft->forceFill([
+            'status' => OrderDraft::STATUS_COMPLETED,
+            'completed_at' => now(),
+        ])->save();
+    }
+
     public function destroy(OrderDraft $draft): void
     {
         if ($draft->status === OrderDraft::STATUS_COMPLETED || $draft->sale_id) {

@@ -31,6 +31,7 @@ class FinalizeSaleRequest extends FormRequest
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'cash_received' => ['nullable', 'numeric', 'min:0'],
+            'conditional_due_at' => ['nullable', 'date'],
             'fiscal_decision' => ['nullable', 'string', Rule::in(['close', 'emit'])],
             'requested_document_model' => ['nullable', 'string', Rule::in(['55', '65'])],
             'recipient_payload' => ['nullable', 'array'],

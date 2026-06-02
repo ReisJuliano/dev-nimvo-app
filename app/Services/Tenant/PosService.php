@@ -8,6 +8,7 @@ use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Support\Tenant\PaymentMethod;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +24,7 @@ class PosService
         protected TenantSettingsService $settingsService,
         protected InventoryMovementService $inventoryMovementService,
         protected PendingSaleService $pendingSaleService,
+        protected ConditionalSaleService $conditionalSaleService,
     ) {
     }
 
@@ -170,6 +172,15 @@ class PosService
                 return ['method' => $payment['method'], 'amount' => (float) $payment['amount']];
             });
 
+            $isConditionalPayment = $resolvedPayments->count() === 1
+                && $resolvedPayments->first()['method'] === PaymentMethod::CONDITIONAL;
+
+            if ($resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CONDITIONAL) && ! $isConditionalPayment) {
+                throw ValidationException::withMessages([
+                    'payments' => 'Venda condicional deve ser usada como forma unica de pagamento.',
+                ]);
+            }
+
             if ($resolvedPayments->count() > 1 && $resolvedPayments->pluck('method')->unique()->count() < 2) {
                 throw ValidationException::withMessages([
                     'payments' => 'Use ao menos duas formas para registrar pagamento misto.',
@@ -190,6 +201,72 @@ class PosService
                 throw ValidationException::withMessages([
                     'payments' => 'A soma dos pagamentos precisa ser igual ao total da venda.',
                 ]);
+            }
+
+            $recipientPayload = $this->normalizeRecipientPayload($payload['recipient_payload'] ?? null);
+            $customerId = $payload['customer_id'] ?? $recipientPayload['customer_id'] ?? $orderDraft?->customer_id;
+            $companyId = $this->hasTable('companies')
+                ? ($payload['company_id'] ?? $recipientPayload['company_id'] ?? null)
+                : null;
+            $requestedDocumentModel = (string) ($payload['requested_document_model'] ?? '65');
+            $fiscalDecision = $payload['fiscal_decision'] ?? null;
+
+            if ($isConditionalPayment) {
+                if (! $this->settingsService->isModuleEnabled('prazo')) {
+                    throw ValidationException::withMessages([
+                        'payments' => 'Venda condicional esta desativada para esta operacao.',
+                    ]);
+                }
+
+                if (! $customerId) {
+                    throw ValidationException::withMessages([
+                        'customer_id' => 'Selecione um cliente para registrar venda condicional.',
+                    ]);
+                }
+
+                if (blank($payload['conditional_due_at'] ?? null)) {
+                    throw ValidationException::withMessages([
+                        'conditional_due_at' => 'Informe a data limite da condicional.',
+                    ]);
+                }
+
+                $conditionalSale = $this->conditionalSaleService->create([
+                    'customer_id' => $customerId,
+                    'withdrawn_at' => now()->toIso8601String(),
+                    'due_at' => Carbon::parse((string) $payload['conditional_due_at'])->toDateString(),
+                    'notes' => $this->buildConditionalNotes($payload['notes'] ?? null, $orderDraft),
+                    'items' => $items->map(function (array $entry) {
+                        $quantity = (float) $entry['quantity'];
+                        $lineTotal = round(max(0, $entry['lineSubtotal'] - $entry['lineDiscount']), 2);
+                        $unitPrice = $quantity > 0
+                            ? round($lineTotal / $quantity, 2)
+                            : round((float) ($entry['unitPrice'] ?? 0), 2);
+
+                        return [
+                            'product_id' => $entry['product']->id,
+                            'quantity' => $quantity,
+                            'unit_price' => $unitPrice,
+                        ];
+                    })->values()->all(),
+                ], $userId);
+
+                if ($orderDraft) {
+                    $this->orderDraftService->markAsCompletedWithoutSale($orderDraft);
+                }
+
+                $this->pendingSaleService->discard($userId);
+
+                return [
+                    'type' => 'conditional',
+                    'conditional_sale_id' => $conditionalSale->id,
+                    'conditional_code' => $conditionalSale->code,
+                    'total' => (float) $conditionalSale->subtotal,
+                    'subtotal' => (float) $conditionalSale->subtotal,
+                    'discount' => (float) $discount,
+                    'payment_method' => PaymentMethod::CONDITIONAL,
+                    'fiscal_decision' => null,
+                    'payments' => $resolvedPayments->values()->all(),
+                ];
             }
 
             $cashAmount = round((float) $resolvedPayments
@@ -215,13 +292,6 @@ class PosService
 
             $paymentMethods = $resolvedPayments->pluck('method')->unique()->values();
             $paymentMethod = $paymentMethods->count() === 1 ? $paymentMethods->first() : PaymentMethod::MIXED;
-            $recipientPayload = $this->normalizeRecipientPayload($payload['recipient_payload'] ?? null);
-            $customerId = $payload['customer_id'] ?? $recipientPayload['customer_id'] ?? $orderDraft?->customer_id;
-            $companyId = $this->hasTable('companies')
-                ? ($payload['company_id'] ?? $recipientPayload['company_id'] ?? null)
-                : null;
-            $requestedDocumentModel = (string) ($payload['requested_document_model'] ?? '65');
-            $fiscalDecision = $payload['fiscal_decision'] ?? null;
             $hasCredit = $resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CREDIT);
 
             if ($hasCredit && ! $customerId) {
@@ -353,6 +423,7 @@ class PosService
             $this->pendingSaleService->discard($userId);
 
             return [
+                'type' => 'sale',
                 'sale_id' => $sale->id,
                 'sale_number' => $sale->sale_number,
                 'total' => (float) $sale->total,
@@ -370,6 +441,21 @@ class PosService
                 'payments' => $resolvedPayments->values()->all(),
             ];
         });
+    }
+
+    protected function buildConditionalNotes(?string $notes, ?OrderDraft $orderDraft): ?string
+    {
+        $segments = ['Gerado pelo PDV como venda condicional.'];
+
+        if ($orderDraft?->reference) {
+            $segments[] = "Origem: pedido {$orderDraft->reference}.";
+        }
+
+        if (filled($notes)) {
+            $segments[] = trim((string) $notes);
+        }
+
+        return implode(' ', $segments);
     }
 
     protected function normalizeRecipientPayload(mixed $payload): ?array

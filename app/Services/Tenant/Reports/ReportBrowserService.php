@@ -355,7 +355,7 @@ class ReportBrowserService
             'from' => $from,
             'to' => $to,
             'query' => $query !== '' ? $query : null,
-            'payment_method' => $this->normalizeSelection($filters['payment_method'] ?? null, PaymentMethod::all()),
+            'payment_method' => $this->normalizeSelection($filters['payment_method'] ?? null, PaymentMethod::saleMethods()),
             'operator_id' => $this->normalizePositiveInt($filters['operator_id'] ?? null),
             'customer_id' => $this->normalizePositiveInt($filters['customer_id'] ?? null),
             'category_id' => $this->normalizePositiveInt($filters['category_id'] ?? null),
@@ -603,7 +603,7 @@ class ReportBrowserService
     protected function reportFilterOptions(): array
     {
         return [
-            'payment_methods' => collect(PaymentMethod::all())
+            'payment_methods' => collect(PaymentMethod::saleMethods())
                 ->map(fn (string $method) => [
                     'value' => $method,
                     'label' => PaymentMethod::label($method),

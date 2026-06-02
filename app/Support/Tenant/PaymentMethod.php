@@ -9,6 +9,7 @@ class PaymentMethod
     public const DEBIT_CARD = 'debit_card';
     public const CREDIT_CARD = 'credit_card';
     public const CREDIT = 'credit';
+    public const CONDITIONAL = 'conditional';
     public const MIXED = 'mixed';
 
     public static function normalize(?string $method): string
@@ -18,6 +19,7 @@ class PaymentMethod
             'cartao_debito' => self::DEBIT_CARD,
             'cartao_credito' => self::CREDIT_CARD,
             'fiado', 'a_prazo', 'a-prazo', 'a prazo' => self::CREDIT,
+            'condicional', 'venda_condicional', 'venda-condicional' => self::CONDITIONAL,
             'misto' => self::MIXED,
             null, '' => self::CASH,
             default => (string) $method,
@@ -32,6 +34,7 @@ class PaymentMethod
             self::DEBIT_CARD => 'Cartao de debito',
             self::CREDIT_CARD => 'Cartao de credito',
             self::CREDIT => 'A Prazo',
+            self::CONDITIONAL => 'Venda Condicional',
             self::MIXED => 'Misto',
             default => ucfirst(str_replace('_', ' ', (string) $method)),
         };
@@ -45,7 +48,31 @@ class PaymentMethod
             self::DEBIT_CARD,
             self::CREDIT_CARD,
             self::CREDIT,
+            self::CONDITIONAL,
             self::MIXED,
+        ];
+    }
+
+    public static function saleMethods(): array
+    {
+        return [
+            self::CASH,
+            self::PIX,
+            self::DEBIT_CARD,
+            self::CREDIT_CARD,
+            self::CREDIT,
+            self::MIXED,
+        ];
+    }
+
+    public static function settlementMethods(): array
+    {
+        return [
+            self::CASH,
+            self::PIX,
+            self::DEBIT_CARD,
+            self::CREDIT_CARD,
+            self::CREDIT,
         ];
     }
 }

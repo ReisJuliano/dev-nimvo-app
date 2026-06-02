@@ -10,6 +10,8 @@ export default function CheckoutPanel({
     onOpenDiscountModal,
     paymentMethod,
     onPaymentChange,
+    conditionalDueAt,
+    onConditionalDueAtChange,
     mixedPayments,
     mixedDraft,
     mixedRemaining,
@@ -228,7 +230,7 @@ export default function CheckoutPanel({
                             onChange={(event) => onMixedDraftChange('method', event.target.value)}
                         >
                             {paymentOptions
-                                .filter((option) => option.value !== 'mixed')
+                                .filter((option) => option.value !== 'mixed' && option.value !== 'conditional')
                                 .map((option) => (
                                     <option key={option.value} value={option.value}>
                                         {option.label}
@@ -271,6 +273,24 @@ export default function CheckoutPanel({
                             <div className="pos-empty-state">Adicione as parcelas para distribuir o recebimento.</div>
                         )}
                     </div>
+                </div>
+            ) : null}
+
+            {paymentMethod === 'conditional' ? (
+                <div className="pos-credit-card">
+                    <div>
+                        <span>Cliente</span>
+                        <strong>{selectedCustomerData?.name || 'Selecione um cliente'}</strong>
+                    </div>
+                    <label>
+                        <span>Data limite</span>
+                        <input
+                            className="ui-input"
+                            type="date"
+                            value={conditionalDueAt}
+                            onChange={(event) => onConditionalDueAtChange(event.target.value)}
+                        />
+                    </label>
                 </div>
             ) : null}
 

@@ -308,7 +308,7 @@ class PosApiController extends Controller
         $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
         $printResult = null;
 
-        if (($sale['fiscal_decision'] ?? null) === 'close') {
+        if (($sale['fiscal_decision'] ?? null) === 'close' && ! empty($sale['sale_id'])) {
             $saleModel = Sale::query()->find($sale['sale_id']);
 
             if ($saleModel) {
@@ -326,7 +326,9 @@ class PosApiController extends Controller
         $request->session()->forget('pos.discount_authorizations');
 
         return response()->json([
-            'message' => 'Venda finalizada com sucesso.',
+            'message' => ($sale['type'] ?? null) === 'conditional'
+                ? 'Venda condicional registrada com sucesso.'
+                : 'Venda finalizada com sucesso.',
             'sale' => $sale,
             'local_agent_print' => $printResult,
         ]);

@@ -114,6 +114,22 @@ const initialManualRecipient = {
 const initialCustomerLinkForm = { name: '', document: '', email: '' }
 const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
 const cashPanelCollapseStoragePrefix = 'nimvo:pos:cash-panel:collapsed'
+const conditionalPaymentMethod = 'conditional'
+
+function formatDateInputValue(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function defaultConditionalDueDate() {
+    const date = new Date()
+    date.setDate(date.getDate() + 7)
+
+    return formatDateInputValue(date)
+}
 
 function buildCashPanelCollapseStorageKey(tenantId) {
     if (!tenantId) {
@@ -432,6 +448,7 @@ export default function PosIndex({
     const [paymentModalOpen, setPaymentModalOpen] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState('cash')
     const [cashReceived, setCashReceived] = useState('')
+    const [conditionalDueAt, setConditionalDueAt] = useState(defaultConditionalDueDate)
     const [mixedPayments, setMixedPayments] = useState([])
     const [mixedDraft, setMixedDraft] = useState({ method: 'cash', amount: '' })
     const [paymentReady, setPaymentReady] = useState(false)
@@ -507,8 +524,9 @@ export default function PosIndex({
                 { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card' },
                 { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card' },
                 { value: 'credit', label: 'A Prazo', icon: 'fa-handshake' },
+                { value: conditionalPaymentMethod, label: 'Condicional', icon: 'fa-tags' },
                 { value: 'mixed', label: 'Misto', icon: 'fa-layer-group' },
-            ].filter((option) => supportsDeferredPayment || option.value !== 'credit'),
+            ].filter((option) => supportsDeferredPayment || !['credit', conditionalPaymentMethod].includes(option.value)),
         [supportsDeferredPayment],
     )
     const currentUserCanAuthorizeDiscountOffline = ['admin', 'manager'].includes(auth?.user?.role || '')
@@ -944,14 +962,14 @@ export default function PosIndex({
     useEffect(() => {
         if (supportsDeferredPayment) return
 
-        if (paymentMethod === 'credit') {
+        if (paymentMethod === 'credit' || paymentMethod === conditionalPaymentMethod) {
             setPaymentMethod('cash')
         }
 
-        setMixedPayments((current) => current.filter((payment) => payment.method !== 'credit'))
+        setMixedPayments((current) => current.filter((payment) => payment.method !== 'credit' && payment.method !== conditionalPaymentMethod))
         setMixedDraft((current) => ({
             ...current,
-            method: current.method === 'credit' ? 'cash' : current.method,
+            method: ['credit', conditionalPaymentMethod].includes(current.method) ? 'cash' : current.method,
         }))
         setCreditStatus(null)
     }, [paymentMethod, supportsDeferredPayment])
@@ -971,7 +989,7 @@ export default function PosIndex({
 
     useEffect(() => {
         setPaymentReady(false)
-    }, [paymentMethod, cashReceived, mixedPayments, mixedDraft, totalsKey(cart, selectedCustomer, notes, discountConfig)])
+    }, [paymentMethod, cashReceived, conditionalDueAt, mixedPayments, mixedDraft, totalsKey(cart, selectedCustomer, notes, discountConfig)])
 
     const selectedCartItem = useMemo(
         () => cart.find((item) => item.id === selectedCartItemId) ?? null,
@@ -1094,7 +1112,7 @@ export default function PosIndex({
         } catch {
             return []
         }
-    }, [paymentMethod, paymentOptions, mixedPayments, totals.total])
+    }, [paymentMethod, paymentOptions, mixedPayments, totals.total, conditionalDueAt, selectedCustomer])
 
     useEffect(() => {
         let ignore = false
@@ -1189,6 +1207,7 @@ export default function PosIndex({
             { value: 'cash', label: 'Dinheiro', icon: 'cash' },
             { value: 'pix', label: 'Pix', icon: 'pix' },
             supportsDeferredPayment ? { value: 'credit', label: 'A Prazo', icon: 'wallet' } : null,
+            supportsDeferredPayment ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'wallet' } : null,
             { value: 'mixed', label: 'Dividir', icon: 'split' },
         ].filter(Boolean),
         [supportsDeferredPayment],
@@ -1245,6 +1264,7 @@ export default function PosIndex({
                 payment: {
                     payment_method: paymentMethod,
                     cash_received: cashReceived === '' ? null : Number(cashReceived),
+                    conditional_due_at: paymentMethod === conditionalPaymentMethod ? conditionalDueAt : null,
                     mixed_payments: mixedPayments,
                     mixed_draft: mixedDraft,
                 },
@@ -1311,6 +1331,7 @@ export default function PosIndex({
         discountAuthorizer,
         paymentMethod,
         cashReceived,
+        conditionalDueAt,
         mixedPayments,
         mixedDraft,
         selectedCustomer,
@@ -1469,6 +1490,7 @@ export default function PosIndex({
         setDiscountAuthorizationForm(initialAuthorizationForm)
         setPaymentMethod('cash')
         setCashReceived('')
+        setConditionalDueAt(defaultConditionalDueDate())
         setMixedPayments([])
         setMixedDraft({ method: 'cash', amount: '' })
         setPaymentReady(false)
@@ -1503,6 +1525,7 @@ export default function PosIndex({
         setDiscountDraft(buildDiscountDraft({ type: 'none' }, String(orderItems[0]?.id ?? '')))
         setPaymentMethod('cash')
         setCashReceived('')
+        setConditionalDueAt(defaultConditionalDueDate())
         setMixedPayments([])
         setMixedDraft({ method: 'cash', amount: '' })
         setNotes(orderDraft.notes || '')
@@ -1527,6 +1550,7 @@ export default function PosIndex({
         setDiscountDraft(buildDiscountDraft(pendingSale?.discount?.config || { type: 'none' }, String(pendingItems[0]?.id ?? '')))
         setPaymentMethod(pendingSale?.payment?.payment_method || 'cash')
         setCashReceived(pendingSale?.payment?.cash_received == null ? '' : String(pendingSale.payment.cash_received))
+        setConditionalDueAt(pendingSale?.payment?.conditional_due_at || defaultConditionalDueDate())
         setMixedPayments(pendingSale?.payment?.mixed_payments || [])
         setMixedDraft(pendingSale?.payment?.mixed_draft || { method: 'cash', amount: '' })
         setNotes(pendingSale?.notes || '')
@@ -1705,8 +1729,8 @@ export default function PosIndex({
     }
 
     function handlePaymentMethodChange(value) {
-        if (!supportsDeferredPayment && value === 'credit') {
-            showFeedback('warning', 'O pagamento a prazo esta desativado nesta conta.')
+        if (!supportsDeferredPayment && (value === 'credit' || value === conditionalPaymentMethod)) {
+            showFeedback('warning', 'O modulo de prazo/condicional esta desativado nesta conta.')
             return
         }
 
@@ -2704,6 +2728,10 @@ export default function PosIndex({
                 throw new Error('Revise os valores do pagamento misto antes de continuar.')
             }
 
+            if (mixedPayments.some((payment) => payment.method === conditionalPaymentMethod)) {
+                throw new Error('Venda condicional nao pode ser usada dentro de pagamento misto.')
+            }
+
             if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
                 throw new Error('Selecione um cliente para usar A Prazo no pagamento misto.')
             }
@@ -2720,6 +2748,16 @@ export default function PosIndex({
 
         if (paymentMethod === 'credit' && !selectedCustomer) {
             throw new Error('Selecione um cliente para registrar a venda a prazo.')
+        }
+
+        if (paymentMethod === conditionalPaymentMethod) {
+            if (!selectedCustomer) {
+                throw new Error('Selecione um cliente para registrar a venda condicional.')
+            }
+
+            if (!conditionalDueAt) {
+                throw new Error('Informe a data limite da condicional.')
+            }
         }
 
         if (paymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) {
@@ -2760,6 +2798,11 @@ export default function PosIndex({
             return
         }
 
+        if (paymentMethod === conditionalPaymentMethod) {
+            showFeedback('warning', 'Venda condicional nao gera documento fiscal agora. Finalize para registrar na tela de Condicionais.')
+            return
+        }
+
         setInvoiceModalOpen(true)
     }
 
@@ -2768,7 +2811,12 @@ export default function PosIndex({
             buildPaymentsPayload()
             setPaymentReady(true)
             setPaymentModalOpen(false)
-            showFeedback('success', 'Pagamento validado. Voce ja pode finalizar ou emitir o documento.')
+            showFeedback(
+                'success',
+                paymentMethod === conditionalPaymentMethod
+                    ? 'Condicional validada. Finalize para registrar a retirada.'
+                    : 'Pagamento validado. Voce ja pode finalizar ou emitir o documento.',
+            )
         } catch (error) {
             showFeedback('warning', error.message)
         }
@@ -2787,6 +2835,11 @@ export default function PosIndex({
 
         if (!paymentReady) {
             openPaymentStep()
+            return
+        }
+
+        if (paymentMethod === conditionalPaymentMethod) {
+            void handleCloseSaleWithoutFiscal()
             return
         }
 
@@ -2973,12 +3026,17 @@ export default function PosIndex({
             discount: totals.discount,
             notes: notes || null,
             cash_received: paymentMethod === 'cash' && cashReceived !== '' ? Number(cashReceived) : null,
+            conditional_due_at: paymentMethod === conditionalPaymentMethod ? conditionalDueAt : null,
             fiscal_decision: fiscalDecision,
             requested_document_model: requestedDocumentModel,
             recipient_payload: recipientPayload,
             items: buildSaleItemsPayload(),
             payments,
             total: totals.total,
+        }
+
+        if (paymentMethod === conditionalPaymentMethod && typeof navigator !== 'undefined' && navigator.onLine === false) {
+            throw new Error('Venda condicional precisa de conexao para registrar a retirada e baixar estoque em tempo real.')
         }
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -3041,6 +3099,11 @@ export default function PosIndex({
                     await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
                 }
             })
+
+            if (response.sale?.type === 'conditional') {
+                showFeedback('success', `Condicional ${response.sale.conditional_code} registrada e enviada para a tela de Condicionais.`)
+                return
+            }
 
             const printMessage = response.local_agent_print?.message
                 ? ` ${response.local_agent_print.message}`
@@ -3641,6 +3704,8 @@ export default function PosIndex({
         paymentGridOptions,
         paymentMethod,
         onPaymentChange: handlePaymentMethodChange,
+        conditionalDueAt,
+        onConditionalDueAtChange: setConditionalDueAt,
         cashReceived,
         onCashReceivedChange: setCashReceived,
         cashChange,
@@ -4047,6 +4112,8 @@ export default function PosIndex({
                 paymentOptions={paymentOptions}
                 paymentMethod={paymentMethod}
                 onPaymentChange={handlePaymentMethodChange}
+                conditionalDueAt={conditionalDueAt}
+                onConditionalDueAtChange={setConditionalDueAt}
                 mixedPayments={mixedPayments}
                 mixedDraft={mixedDraft}
                 mixedRemaining={mixedRemaining}
@@ -4362,6 +4429,8 @@ function PosWorkspace({
     paymentGridOptions,
     paymentMethod,
     onPaymentChange,
+    conditionalDueAt,
+    onConditionalDueAtChange,
     cashReceived,
     onCashReceivedChange,
     cashChange,
@@ -4414,9 +4483,9 @@ function PosWorkspace({
         { key: 'customer', label: 'Cliente', icon: 'user', onClick: openCustomerPicker, disabled: submitting },
         ...(supportsOrders ? [{ key: 'drafts', label: 'Comandas', icon: 'cart', onClick: openCashierDraftsModal, disabled: submitting }] : []),
         { key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting },
-        { key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting },
+        { key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting || paymentMethod === conditionalPaymentMethod },
         { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
-        { key: 'finalize', label: submitting ? 'Finalizando...' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
+        { key: 'finalize', label: submitting ? 'Finalizando...' : paymentMethod === conditionalPaymentMethod ? 'Registrar Condicional' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
     ]
     const shortcutHandlers = {
         products: onProductsShortcut,
@@ -4766,6 +4835,27 @@ function PosWorkspace({
                     </div>
                 ) : null}
 
+                {paymentMethod === conditionalPaymentMethod ? (
+                    <div className="pos-modal-section">
+                        <div className="pos-inline-summary">
+                            <span>Registro</span>
+                            <strong>{selectedCustomerData ? selectedCustomerData.name : 'Selecione um cliente'}</strong>
+                        </div>
+                        <label className="pos-field">
+                            <span>Data limite para retorno</span>
+                            <input
+                                className="pos-field-input"
+                                type="date"
+                                value={conditionalDueAt}
+                                onChange={(event) => onConditionalDueAtChange(event.target.value)}
+                            />
+                        </label>
+                        <div className="pos-inline-empty">
+                            Ao confirmar, os itens saem do estoque como condicional e aparecem na tela de Condicionais.
+                        </div>
+                    </div>
+                ) : null}
+
                 {paymentMethod === 'mixed' ? (
                     <div className="pos-modal-section">
                         <div className="pos-inline-summary">
@@ -4778,7 +4868,7 @@ function PosWorkspace({
                                 value={mixedDraft.method}
                                 onChange={(event) => onMixedDraftChange('method', event.target.value)}
                             >
-                                {paymentOptions.filter((option) => option.value !== 'mixed').map((option) => (
+                                {paymentOptions.filter((option) => option.value !== 'mixed' && option.value !== conditionalPaymentMethod).map((option) => (
                                     <option key={option.value} value={option.value}>
                                         {option.label}
                                     </option>

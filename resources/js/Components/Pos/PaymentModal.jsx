@@ -7,6 +7,8 @@ export default function PaymentModal({
     paymentOptions,
     paymentMethod,
     onPaymentChange,
+    conditionalDueAt,
+    onConditionalDueAtChange,
     mixedPayments,
     mixedDraft,
     mixedRemaining,
@@ -56,7 +58,7 @@ export default function PaymentModal({
                         <strong>{formatMoney(totals.total)}</strong>
                     </article>
                     <article>
-                        <span>{paymentMethod === 'cash' ? 'Troco' : 'Recebido'}</span>
+                        <span>{paymentMethod === 'cash' ? 'Troco' : paymentMethod === 'conditional' ? 'Em aberto' : 'Recebido'}</span>
                         <strong>{paymentMethod === 'cash' ? formatMoney(cashChange) : formatMoney(totals.total)}</strong>
                     </article>
                 </div>
@@ -91,7 +93,7 @@ export default function PaymentModal({
                                 onChange={(event) => onMixedDraftChange('method', event.target.value)}
                             >
                                 {paymentOptions
-                                    .filter((option) => option.value !== 'mixed')
+                                    .filter((option) => option.value !== 'mixed' && option.value !== 'conditional')
                                     .map((option) => (
                                         <option key={option.value} value={option.value}>
                                             {option.label}
@@ -134,6 +136,25 @@ export default function PaymentModal({
                                 <div className="pos-empty-state">Adicione as parcelas para distribuir o recebimento.</div>
                             )}
                         </div>
+                    </div>
+                ) : null}
+
+                {paymentMethod === 'conditional' ? (
+                    <div className="pos-credit-card pos-modal-section">
+                        <div>
+                            <span>Cliente</span>
+                            <strong>{selectedCustomerData?.name || 'Selecione um cliente'}</strong>
+                        </div>
+                        <label className="pos-field">
+                            <span>Data limite</span>
+                            <input
+                                className="ui-input"
+                                type="date"
+                                value={conditionalDueAt}
+                                onChange={(event) => onConditionalDueAtChange(event.target.value)}
+                            />
+                        </label>
+                        <small>Os itens serao enviados para a tela de Condicionais e baixados do estoque como retirada.</small>
                     </div>
                 ) : null}
 

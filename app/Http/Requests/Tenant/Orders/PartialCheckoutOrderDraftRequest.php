@@ -24,9 +24,8 @@ class PartialCheckoutOrderDraftRequest extends FormRequest
             'items.*.qty' => ['required', 'numeric', 'gt:0'],
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'payments' => ['required', 'array', 'min:1'],
-            'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::all())],
+            'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::saleMethods())],
             'payments.*.amount' => ['nullable', 'numeric', 'gt:0'],
         ];
     }
 }
-
