@@ -360,7 +360,8 @@
         linear-gradient(180deg, rgba(10, 18, 31, 0.38), rgba(10, 18, 31, 0.6));
     backdrop-filter: blur(7px);
     display: grid;
-    place-items: center;
+    align-items: flex-start;
+    justify-items: center;
     padding: 1rem;
     overflow-y: auto;
     z-index: 1060;
@@ -369,6 +370,8 @@
 .products-modal {
     width: min(1120px, calc(100vw - 2rem));
     max-height: calc(100dvh - 2rem);
+    align-self: flex-start;
+    margin: 2rem auto;
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr);
     border-radius: 26px;
@@ -478,6 +481,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
     align-content: start;
+}
+
+.products-editor-tab-content {
+    min-height: 420px;
 }
 
 .products-editor-grid-compact {

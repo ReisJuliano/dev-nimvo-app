@@ -489,7 +489,7 @@ export default function ProductFormModal({
                 <form className="products-editor-form" onSubmit={handleSubmit} noValidate>
                     <div className="products-editor-body">
                         {activeTab === 'general' ? (
-                            <section className="products-editor-grid">
+                            <section className="products-editor-grid products-editor-tab-content">
                                 <label className={`products-editor-field span-2 ${errors.name ? 'has-error' : ''}`}>
                                     <span>Nome do produto *</span>
                                     <div className="products-editor-input-wrap">
@@ -609,7 +609,7 @@ export default function ProductFormModal({
                         ) : null}
 
                         {activeTab === 'pricing' ? (
-                            <section className="products-editor-grid products-editor-grid-compact">
+                            <section className="products-editor-grid products-editor-grid-compact products-editor-tab-content">
                                 <label className={`products-editor-field ${errors.cost_price ? 'has-error' : ''}`}>
                                     <span>Custo *</span>
                                     <div className="products-editor-input-wrap">
@@ -635,7 +635,7 @@ export default function ProductFormModal({
                         ) : null}
 
                         {activeTab === 'stock' ? (
-                            <section className="products-editor-grid products-editor-grid-compact">
+                            <section className="products-editor-grid products-editor-grid-compact products-editor-tab-content">
                                 <article className="products-editor-card">
                                     <h3>Saldo via entrada</h3>
                                     <small>Use movimentacoes para adicionar estoque.</small>
@@ -652,7 +652,7 @@ export default function ProductFormModal({
                         ) : null}
 
                         {activeTab === 'fiscal' ? (
-                            <section className="products-editor-grid">
+                            <section className="products-editor-grid products-editor-tab-content">
                                 <label className="products-editor-field span-2">
                                     <span>Produto fiscal?</span>
                                     <div className="products-editor-toggle-row">
