@@ -1012,7 +1012,7 @@ export default function OrdersIndex({
         const typedName = String(name || '').trim()
         if (!typedName) return
         if (hasTextSearchWildcard(typedName)) {
-            showFeedback('error', 'Use % apenas para pesquisar. Para criar cliente, digite o nome sem curinga.')
+            showFeedback('warning', 'Use % apenas para pesquisar. Para criar cliente, digite o nome sem curinga.')
             return
         }
 
@@ -1148,7 +1148,7 @@ export default function OrdersIndex({
     }
 
     function handleAddProduct(product, quantity = 1) {
-        if (!currentDraft) return showFeedback('error', 'Crie ou selecione um atendimento antes de adicionar produtos.')
+        if (!currentDraft) return showFeedback('warning', 'Crie ou selecione um atendimento antes de adicionar produtos.')
         const normalizedQty = normalizeQuantity(quantity, 1)
         setFeedback(null)
         setSelectedItemId(product.id)
@@ -1228,7 +1228,7 @@ export default function OrdersIndex({
         }
 
         if (Number(draft.items_count || 0) <= 0) {
-            showFeedback('error', 'Adicione ao menos um produto antes de avancar o status do pedido.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de avancar o status do pedido.')
             return
         }
 
@@ -1388,7 +1388,7 @@ export default function OrdersIndex({
     async function handlePrintDraft() {
         if (!currentDraft) return
         const printWindow = window.open('', '_blank', 'width=760,height=900')
-        if (!printWindow) return showFeedback('error', 'O navegador bloqueou a janela de impressao.')
+        if (!printWindow) return showFeedback('warning', 'O navegador bloqueou a janela de impressao.')
 
         setPrintingDraft(true)
         try {
@@ -1486,9 +1486,9 @@ export default function OrdersIndex({
     }
 
     async function handleFinalizeCheckout() {
-        if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
-        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
-        if (resolvedPaymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total do atendimento.')
+        if (!currentDraft?.items.length) return showFeedback('warning', 'Adicione ao menos um produto antes de finalizar o pedido.')
+        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('warning', 'Selecione um cliente para registrar o atendimento a prazo.')
+        if (resolvedPaymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) return showFeedback('warning', 'O valor em dinheiro precisa cobrir o total do atendimento.')
 
         setSubmittingCheckout(true)
         setFeedback(null)
@@ -1598,13 +1598,13 @@ export default function OrdersIndex({
     }
 
     async function handleFinalizePartialCheckout({ resolvedPaymentMethod: method, cashShortfall: shortfall, cashReceived: received, pricing: partialPricing, items }) {
-        if (!currentDraft?.items.length) return showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')
-        if (!items?.length || partialPricing.total <= 0) return showFeedback('error', 'Selecione ao menos um item para cobrar.')
-        if (method === 'credit' && !selectedCustomer) return showFeedback('error', 'Selecione um cliente para registrar o atendimento a prazo.')
-        if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('error', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
+        if (!currentDraft?.items.length) return showFeedback('warning', 'Adicione ao menos um produto antes de finalizar o pedido.')
+        if (!items?.length || partialPricing.total <= 0) return showFeedback('warning', 'Selecione ao menos um item para cobrar.')
+        if (method === 'credit' && !selectedCustomer) return showFeedback('warning', 'Selecione um cliente para registrar o atendimento a prazo.')
+        if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('warning', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            return showFeedback('error', 'Pagamento parcial exige conexao para manter o atendimento consistente.')
+            return showFeedback('warning', 'Pagamento parcial exige conexao para manter o atendimento consistente.')
         }
 
         setSubmittingPartialCheckout(true)
@@ -1639,7 +1639,7 @@ export default function OrdersIndex({
         if (!currentDraft) return
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            return showFeedback('error', 'Delivery a partir da comanda exige conexao ativa.')
+            return showFeedback('warning', 'Delivery a partir da comanda exige conexao ativa.')
         }
 
         setSubmittingDelivery(true)
@@ -1678,7 +1678,7 @@ export default function OrdersIndex({
 
         if (discountDraft.mode === 'percent') {
             const percent = Number(discountDraft.percent || 0)
-            if (percent <= 0 || percent > 100) return showFeedback('error', 'Informe um percentual valido entre 0,01 e 100.')
+            if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual valido entre 0,01 e 100.')
             setDiscountConfig({ type: 'percent', percent: roundCurrency(percent) })
             setDiscountModalOpen(false)
             return showFeedback('success', 'Desconto percentual aplicado no atendimento.')
@@ -1686,7 +1686,7 @@ export default function OrdersIndex({
 
         if (discountDraft.mode === 'target_total') {
             const targetTotal = roundCurrency(discountDraft.targetTotal)
-            if (targetTotal < 0 || targetTotal >= pricing.subtotal) return showFeedback('error', 'Informe um valor final menor que o subtotal atual do atendimento.')
+            if (targetTotal < 0 || targetTotal >= pricing.subtotal) return showFeedback('warning', 'Informe um valor final menor que o subtotal atual do atendimento.')
             setDiscountConfig({ type: 'target_total', targetTotal })
             setDiscountModalOpen(false)
             return showFeedback('success', 'Desconto por valor final aplicado no atendimento.')
@@ -1694,19 +1694,19 @@ export default function OrdersIndex({
 
         if (discountDraft.mode === 'item') {
             const item = currentDraft.items.find((entry) => String(entry.id) === String(discountDraft.itemId))
-            if (!item) return showFeedback('error', 'Selecione um item valido para aplicar o desconto.')
+            if (!item) return showFeedback('warning', 'Selecione um item valido para aplicar o desconto.')
             const itemSubtotal = roundCurrency(Number(item.sale_price) * Number(item.qty))
 
             if (discountDraft.itemDiscountType === 'percent') {
                 const percent = Number(discountDraft.itemPercent || 0)
-                if (percent <= 0 || percent > 100) return showFeedback('error', 'Informe um percentual valido para o desconto do item.')
+                if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual valido para o desconto do item.')
                 setDiscountConfig({ type: 'item', itemId: String(item.id), itemDiscountType: 'percent', value: roundCurrency(percent) })
                 setDiscountModalOpen(false)
                 return showFeedback('success', `Desconto aplicado ao item ${item.name}.`)
             }
 
             const amount = roundCurrency(discountDraft.itemValue)
-            if (amount <= 0 || amount > itemSubtotal) return showFeedback('error', 'Informe um desconto menor ou igual ao total do item selecionado.')
+            if (amount <= 0 || amount > itemSubtotal) return showFeedback('warning', 'Informe um desconto menor ou igual ao total do item selecionado.')
             setDiscountConfig({ type: 'item', itemId: String(item.id), itemDiscountType: 'value', value: amount })
             setDiscountModalOpen(false)
             showFeedback('success', `Desconto aplicado ao item ${item.name}.`)
@@ -1871,11 +1871,11 @@ export default function OrdersIndex({
                         sendingDraft={sendingDraft}
                         deletingDraft={deletingDraft}
                         onClose={() => setDraftModalOpen(false)}
-                        onOpenProductsModal={() => currentDraft ? setProductsModalOpen(true) : showFeedback('error', 'Crie ou selecione um atendimento antes de abrir os produtos.')}
-                        onOpenQuantityModal={() => selectedItem ? (setQuantityDraft(String(selectedItem.qty)), setQuantityModalOpen(true)) : showFeedback('error', 'Selecione um item do atendimento para ajustar a quantidade.')}
+                        onOpenProductsModal={() => currentDraft ? setProductsModalOpen(true) : showFeedback('warning', 'Crie ou selecione um atendimento antes de abrir os produtos.')}
+                        onOpenQuantityModal={() => selectedItem ? (setQuantityDraft(String(selectedItem.qty)), setQuantityModalOpen(true)) : showFeedback('warning', 'Selecione um item do atendimento para ajustar a quantidade.')}
                         onOpenTransferModal={() => currentDraft && (setTransferForm({ type: currentDraft.type, reference: currentDraft.reference, customerId: currentDraft.customerId, notes: currentDraft.notes }), setTransferModalOpen(true))}
-                        onOpenDiscountModal={() => currentDraft?.items?.length ? (setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft.items[0]?.id ?? ''))), setDiscountModalOpen(true)) : showFeedback('error', 'Adicione ao menos um produto antes de aplicar desconto.')}
-                        onOpenCheckoutModal={() => currentDraft?.items?.length ? setCheckoutModalOpen(true) : showFeedback('error', 'Adicione ao menos um produto antes de finalizar o pedido.')}
+                        onOpenDiscountModal={() => currentDraft?.items?.length ? (setDiscountDraft(buildDiscountDraft(discountConfig, String(selectedItemId ?? currentDraft.items[0]?.id ?? ''))), setDiscountModalOpen(true)) : showFeedback('warning', 'Adicione ao menos um produto antes de aplicar desconto.')}
+                        onOpenCheckoutModal={() => currentDraft?.items?.length ? setCheckoutModalOpen(true) : showFeedback('warning', 'Adicione ao menos um produto antes de finalizar o pedido.')}
                         onOpenDeliveryModal={() => setDeliveryModalOpen(true)}
                         onPrintDraft={handlePrintDraft}
                         onSendToCashier={handleSendToCashier}

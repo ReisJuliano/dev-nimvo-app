@@ -599,7 +599,7 @@ export default function PosIndex({
 
     function openCashMovementModal(type) {
         if (!cashRegisterState) {
-            showFeedback('error', 'Abra o caixa antes de registrar uma movimentacao.')
+            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentacao.')
             return
         }
 
@@ -1561,12 +1561,12 @@ export default function PosIndex({
 
     async function handleLoadOrderDraft(orderDraftId) {
         if (!supportsOrders) {
-            showFeedback('error', 'Pedidos estao desativados nesta conta.')
+            showFeedback('warning', 'Pedidos estao desativados nesta conta.')
             return
         }
 
         if (cart.length && Number(activeOrderDraftId) !== Number(orderDraftId)) {
-            showFeedback('error', 'Finalize ou limpe a venda atual antes de carregar outro pedido.')
+            showFeedback('warning', 'Finalize ou limpe a venda atual antes de carregar outro pedido.')
             return
         }
 
@@ -1603,7 +1603,7 @@ export default function PosIndex({
 
     function openCashierDraftsModal() {
         if (!supportsOrders) {
-            showFeedback('error', 'Pedidos estao desativados nesta conta.')
+            showFeedback('warning', 'Pedidos estao desativados nesta conta.')
             return
         }
 
@@ -1692,7 +1692,7 @@ export default function PosIndex({
 
     function handlePaymentMethodChange(value) {
         if (!supportsDeferredPayment && value === 'credit') {
-            showFeedback('error', 'O pagamento a prazo esta desativado nesta conta.')
+            showFeedback('warning', 'O pagamento a prazo esta desativado nesta conta.')
             return
         }
 
@@ -1718,12 +1718,12 @@ export default function PosIndex({
         const resolvedAmount = amount > 0 ? amount : mixedRemaining
 
         if (resolvedAmount <= 0) {
-            showFeedback('error', 'Informe um valor valido para adicionar ao pagamento misto.')
+            showFeedback('warning', 'Informe um valor valido para adicionar ao pagamento misto.')
             return
         }
 
         if (resolvedAmount > mixedRemaining + 0.001) {
-            showFeedback('error', 'A soma das parcelas nao pode ultrapassar o total da venda.')
+            showFeedback('warning', 'A soma das parcelas nao pode ultrapassar o total da venda.')
             return
         }
 
@@ -1760,7 +1760,7 @@ export default function PosIndex({
 
     function openDiscountModal(itemId = null) {
         if (!cart.length) {
-            showFeedback('error', 'Adicione ao menos um produto antes de aplicar desconto.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de aplicar desconto.')
             return
         }
 
@@ -1859,7 +1859,7 @@ export default function PosIndex({
         const preview = resolvePricing(cart, previewConfig, selectedCartItem)
 
         if (preview.discount <= 0) {
-            showFeedback('error', 'Informe um desconto valido antes de autorizar.')
+            showFeedback('warning', 'Informe um desconto valido antes de autorizar.')
             return
         }
 
@@ -1872,7 +1872,7 @@ export default function PosIndex({
             }
 
             if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
-                showFeedback('error', 'Selecione um gerente e informe a senha de autorizacao.')
+                showFeedback('warning', 'Selecione um gerente e informe a senha de autorizacao.')
                 return
             }
 
@@ -1952,7 +1952,7 @@ export default function PosIndex({
         const term = normalizeDraftSearchValue(searchTerm).trim()
 
         if (!term) {
-            showFeedback('error', 'Informe um codigo ou nome de produto antes de adicionar.')
+            showFeedback('warning', 'Informe um codigo ou nome de produto antes de adicionar.')
             return
         }
 
@@ -1980,7 +1980,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('error', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
                     return
                 }
 
@@ -1996,7 +1996,7 @@ export default function PosIndex({
             const match = resolveProductMatch(response.products || [], term)
 
             if (!match) {
-                showFeedback('error', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
                 return
             }
 
@@ -2014,7 +2014,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('error', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
                 } else {
                     handleAddProduct(fallbackMatch)
                     setSelectedCartItemId(fallbackMatch.id)
@@ -2071,7 +2071,7 @@ export default function PosIndex({
         }
 
         if (!name || !normalizedDocument) {
-            showFeedback('error', 'Informe nome e CPF/CNPJ do consumidor antes de salvar.')
+            showFeedback('warning', 'Informe nome e CPF/CNPJ do consumidor antes de salvar.')
             return
         }
 
@@ -2208,12 +2208,12 @@ export default function PosIndex({
         const isWithdrawal = cashMovementModalType === 'withdrawal'
 
         if (amount <= 0) {
-            showFeedback('error', 'Informe um valor maior que zero para continuar.')
+            showFeedback('warning', 'Informe um valor maior que zero para continuar.')
             return
         }
 
         if (!reason) {
-            showFeedback('error', 'Informe o motivo desta movimentacao antes de confirmar.')
+            showFeedback('warning', 'Informe o motivo desta movimentacao antes de confirmar.')
             return
         }
 
@@ -2350,7 +2350,7 @@ export default function PosIndex({
 
     function handleRevealCloseCashRegister() {
         if (!closeCashRegisterRows.length || closeCashRegisterRows.some((row) => row.informed === null)) {
-            showFeedback('error', 'Preencha todos os valores informados antes de revelar o sistema.')
+            showFeedback('warning', 'Preencha todos os valores informados antes de revelar o sistema.')
             return
         }
 
@@ -2373,7 +2373,7 @@ export default function PosIndex({
         }
 
         if (!supervisors.length) {
-            showFeedback('error', 'Cadastre ao menos um usuario como supervisor para liberar a edicao apos a conferencia.')
+            showFeedback('warning', 'Cadastre ao menos um usuario como supervisor para liberar a edicao apos a conferencia.')
             return
         }
 
@@ -2486,7 +2486,7 @@ export default function PosIndex({
         if (!cashRegisterState || !closeCashRegisterModal) return
 
         if (closeCashRegisterModal.form.amounts.cash === '') {
-            showFeedback('error', 'Informe o valor contado em dinheiro antes de fechar o caixa.')
+            showFeedback('warning', 'Informe o valor contado em dinheiro antes de fechar o caixa.')
             return
         }
 
@@ -2716,12 +2716,12 @@ export default function PosIndex({
 
     function openPaymentStep() {
         if (!cart.length) {
-            showFeedback('error', 'Adicione ao menos um produto antes de seguir para o pagamento.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de seguir para o pagamento.')
             return
         }
 
         if (!cashRegisterState) {
-            showFeedback('error', 'Abra o caixa antes de tentar vender.')
+            showFeedback('warning', 'Abra o caixa antes de tentar vender.')
             return
         }
 
@@ -2730,17 +2730,17 @@ export default function PosIndex({
 
     function openInvoiceStep() {
         if (!cart.length) {
-            showFeedback('error', 'Adicione ao menos um produto antes de definir a emissao.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emissao.')
             return
         }
 
         if (!cashRegisterState) {
-            showFeedback('error', 'Abra o caixa antes de tentar vender.')
+            showFeedback('warning', 'Abra o caixa antes de tentar vender.')
             return
         }
 
         if (!paymentReady) {
-            showFeedback('error', 'Confirme o pagamento antes de emitir ou finalizar a venda.')
+            showFeedback('warning', 'Confirme o pagamento antes de emitir ou finalizar a venda.')
             setPaymentModalOpen(true)
             return
         }
@@ -2755,18 +2755,18 @@ export default function PosIndex({
             setPaymentModalOpen(false)
             showFeedback('success', 'Pagamento validado. Voce ja pode finalizar ou emitir o documento.')
         } catch (error) {
-            showFeedback('error', error.message)
+            showFeedback('warning', error.message)
         }
     }
 
     function openFinalizeStep() {
         if (!cart.length) {
-            showFeedback('error', 'Adicione ao menos um produto antes de finalizar a venda.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de finalizar a venda.')
             return
         }
 
         if (!cashRegisterState) {
-            showFeedback('error', 'Abra o caixa antes de finalizar a venda.')
+            showFeedback('warning', 'Abra o caixa antes de finalizar a venda.')
             return
         }
 
@@ -2816,7 +2816,7 @@ export default function PosIndex({
                 showFeedback('success', 'Cancelamento solicitado com sucesso.')
             },
             onError: (errors) => {
-                showFeedback('error', Object.values(errors || {})[0] || 'Nao foi possivel cancelar a venda.')
+                showFeedback('warning', Object.values(errors || {})[0] || 'Nao foi possivel cancelar a venda.')
             },
             onFinish: () => setPendingNfceBusyId(null),
         })
@@ -2824,7 +2824,7 @@ export default function PosIndex({
 
     function openPendingNfceFile(url) {
         if (!url || typeof window === 'undefined') {
-            showFeedback('error', 'Arquivo fiscal indisponivel para esta NFC-e.')
+            showFeedback('warning', 'Arquivo fiscal indisponivel para esta NFC-e.')
             return
         }
 
@@ -3153,12 +3153,12 @@ export default function PosIndex({
 
     async function handleQuickCompanyCreate() {
         if (!supportsCompanies) {
-            showFeedback('error', 'O cadastro de empresas ainda nao esta disponivel neste tenant. Aplique as migrations pendentes para habilitar esse fluxo.')
+            showFeedback('warning', 'O cadastro de empresas ainda nao esta disponivel neste tenant. Aplique as migrations pendentes para habilitar esse fluxo.')
             return
         }
 
         if (!quickCompanyForm.name.trim()) {
-            showFeedback('error', 'Informe a razao social da empresa antes de cadastrar.')
+            showFeedback('warning', 'Informe a razao social da empresa antes de cadastrar.')
             return
         }
 
