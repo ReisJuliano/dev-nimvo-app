@@ -809,6 +809,8 @@ export default function PosIndex({
         const hasBlockingModal = Boolean(
             paymentModalOpen
             || discountModalOpen
+            || customerPickerOpen
+            || quickCustomerOpen
             || customerModalOpen
             || cashierDraftsModalOpen
             || invoiceModalOpen
@@ -834,6 +836,8 @@ export default function PosIndex({
     }, [
         paymentModalOpen,
         discountModalOpen,
+        customerPickerOpen,
+        quickCustomerOpen,
         customerModalOpen,
         cashierDraftsModalOpen,
         invoiceModalOpen,
@@ -3982,7 +3986,7 @@ export default function PosIndex({
                                 <strong>{selectedCustomerData?.name || 'Não identificado'}</strong>
                                 <small>{selectedCustomerData?.document || selectedCustomerData?.phone || 'Selecione um cliente quando precisar de credito ou identificação.'}</small>
                                 <div className="pos-review-actions">
-                                    <button type="button" className="pos-inline-button" onClick={() => setCustomerPickerOpen(true)}>
+                                    <button type="button" className="pos-inline-button" onClick={openCustomerPicker}>
                                         <i className="fa-solid fa-user-magnifying-glass" />
                                         Selecionar cliente
                                     </button>
