@@ -656,7 +656,8 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de e
                                     columns={columns}
                                     rows={filteredRecords}
                                     selectedRowKey={selectedId}
-                                    onRowClick={(record) => selectRecord(record, true)}
+                                    onRowClick={(record) => selectRecord(record)}
+                                    onRowDoubleClick={(record) => selectRecord(record, true)}
                                     emptyIcon="fa-box-open"
                                     emptyMessage={emptyMessage}
                                     actions={(record) => {

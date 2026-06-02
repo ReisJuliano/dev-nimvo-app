@@ -406,6 +406,10 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             rows={filteredRecords}
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
+                            onRowDoubleClick={(record) => {
+                                setSelectedId(record.id)
+                                setDetailModalOpen(true)
+                            }}
                             emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(record) => [
                                 {

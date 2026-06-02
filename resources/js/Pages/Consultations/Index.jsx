@@ -455,6 +455,10 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             rowKey="uid"
                             selectedRowKey={selectedUid}
                             onRowClick={(record) => setSelectedUid(record.uid)}
+                            onRowDoubleClick={(record) => {
+                                setSelectedUid(record.uid)
+                                setDetailsOpen(true)
+                            }}
                             emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(record) => [
                                 {

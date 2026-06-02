@@ -415,6 +415,10 @@ export default function CreditOverview({ module }) {
                             rowKey="id"
                             selectedRowKey={selectedCustomerId}
                             onRowClick={(customer) => setSelectedCustomerId(customer.id)}
+                            onRowDoubleClick={(customer) => {
+                                setSelectedCustomerId(customer.id)
+                                setActiveCustomerId(customer.id)
+                            }}
                             emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon="fa-user-slash"
                             actions={(customer) => [

@@ -552,6 +552,11 @@ export default function ConditionalSalesPage({
                             rowKey="id"
                             selectedRowKey={selectedRecordId}
                             onRowClick={(conditionalSale) => setSelectedRecordId(conditionalSale.id)}
+                            onRowDoubleClick={(conditionalSale) => {
+                                setSelectedRecordId(conditionalSale.id)
+                                setDetailPanel('overview')
+                                setOpenedRecordId(conditionalSale.id)
+                            }}
                             emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(conditionalSale) => [
                                 {

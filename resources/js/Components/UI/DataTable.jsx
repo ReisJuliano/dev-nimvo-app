@@ -35,12 +35,14 @@ export default function DataTable({
     rowKey = 'id',
     selectedRowKey = null,
     onRowClick = null,
+    onRowDoubleClick = null,
     actions = [],
     emptyMessage = 'Nenhum registro encontrado',
     emptyIcon = 'fa-inbox',
     className = '',
 }) {
     const hasActions = typeof actions === 'function' || (Array.isArray(actions) && actions.length > 0)
+    const hasRowInteraction = Boolean(onRowClick || onRowDoubleClick)
 
     if (!rows.length) {
         return (
@@ -82,9 +84,10 @@ export default function DataTable({
                                 key={key}
                                 className={[
                                     isSelected ? 'is-selected' : '',
-                                    onRowClick ? 'is-clickable' : '',
+                                    hasRowInteraction ? 'is-clickable' : '',
                                 ].filter(Boolean).join(' ')}
                                 onClick={onRowClick ? () => onRowClick(row, key) : undefined}
+                                onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row, key) : undefined}
                             >
                                 {columns.map((column) => (
                                     <td
@@ -116,6 +119,9 @@ export default function DataTable({
                                                             onRowClick(row, key)
                                                         }
                                                         action.onClick?.(row, event)
+                                                    },
+                                                    onDoubleClick: (event) => {
+                                                        event.stopPropagation()
                                                     },
                                                 }
 

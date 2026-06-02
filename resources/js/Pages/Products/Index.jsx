@@ -575,6 +575,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                             rowKey="id"
                             selectedRowKey={selectedProductId}
                             onRowClick={(product) => setSelectedProductId(product.id)}
+                            onRowDoubleClick={(product) => handleEdit(product)}
                             emptyMessage={hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon="fa-box-open"
                             actions={(product) => [

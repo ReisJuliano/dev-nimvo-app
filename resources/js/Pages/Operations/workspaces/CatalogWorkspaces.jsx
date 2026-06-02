@@ -496,6 +496,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             rowKey="id"
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
+                            onRowDoubleClick={(record) => openRecordModal(record)}
                             emptyMessage={loading ? 'Buscando categorias' : hasLoadedRecords ? 'Nenhuma categoria encontrada' : 'Clique em Filtrar para buscar'}
                             emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-layer-group'}
                             actions={(record) => [
@@ -819,6 +820,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                             rowKey="id"
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
+                            onRowDoubleClick={(record) => openRecordModal(record)}
                             emptyMessage={loading ? 'Buscando fornecedores' : hasLoadedRecords ? 'Nenhum fornecedor encontrado' : 'Clique em Filtrar para buscar'}
                             emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-building'}
                             actions={(record) => [
@@ -1251,6 +1253,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             rowKey="id"
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
+                            onRowDoubleClick={(record) => handleSelectRecord(record)}
                             emptyMessage={loading ? 'Buscando clientes' : hasSearch ? 'Nenhum cliente encontrado' : 'Busque um cliente pelo nome'}
                             emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-user-group'}
                             actions={(record) => [

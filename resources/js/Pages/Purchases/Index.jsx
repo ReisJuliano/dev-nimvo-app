@@ -1475,6 +1475,12 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     rows={filteredRecords}
                                     selectedRowKey={selectedListId}
                                     onRowClick={(record) => setSelectedListId(record.id)}
+                                    onRowDoubleClick={(record) => {
+                                        setSelectedListId(record.id)
+                                        return record.status === 'draft'
+                                            ? void openDraftEditor(record)
+                                            : void openDetailsModal(record)
+                                    }}
                                     emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                                     actions={(record) => [
                                         {

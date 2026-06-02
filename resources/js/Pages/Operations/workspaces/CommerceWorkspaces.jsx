@@ -406,6 +406,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         rowKey="id"
                         selectedRowKey={selectedId}
                         onRowClick={(record) => setSelectedId(record.id)}
+                        onRowDoubleClick={(record) => openRecordDrawer(record)}
                         emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                         actions={(record) => [
                             {

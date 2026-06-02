@@ -1808,6 +1808,10 @@ export default function OrdersIndex({
                                 rowKey="id"
                                 selectedRowKey={selectedListDraftId}
                                 onRowClick={(draft) => setSelectedListDraftId(draft.id)}
+                                onRowDoubleClick={(draft) => {
+                                    setSelectedListDraftId(draft.id)
+                                    openDraft(draft.id)
+                                }}
                                 emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                                 actions={(draft) => [
                                     {
