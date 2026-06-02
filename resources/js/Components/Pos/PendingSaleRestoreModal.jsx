@@ -1,12 +1,30 @@
 import { formatMoney } from '@/lib/format'
 
+function resolveLineTotal(item) {
+    if (item.lineTotal != null) {
+        return Number(item.lineTotal)
+    }
+
+    return (Number(item.sale_price || 0) * Number(item.qty || 0)) - Number(item.lineDiscount || 0)
+}
+
 export default function PendingSaleRestoreModal({ open, pendingSale, busy = false, onRestore, onDiscard }) {
     if (!open || !pendingSale) {
         return null
     }
 
     const itemsCount = (pendingSale.cart || []).length
-    const total = (pendingSale.cart || []).reduce((accumulator, item) => accumulator + Number(item.lineTotal || Number(item.sale_price || 0) * Number(item.qty || 0)), 0)
+    const total = (pendingSale.cart || []).reduce((accumulator, item) => accumulator + resolveLineTotal(item), 0)
+
+    if (import.meta.env.DEV) {
+        pendingSale.cart?.forEach((item) => {
+            const expected = (Number(item.sale_price || 0) * Number(item.qty || 0)) - Number(item.lineDiscount || 0)
+
+            if (Math.abs(Number(item.lineTotal) - expected) > 0.01) {
+                console.warn('[PendingSale] lineTotal mismatch', item)
+            }
+        })
+    }
 
     return (
         <div className="pos-quick-customer">
@@ -24,7 +42,7 @@ export default function PendingSaleRestoreModal({ open, pendingSale, busy = fals
                         <strong>{itemsCount}</strong>
                     </article>
                     <article>
-                        <span>Total estimado</span>
+                        <span>Total da venda</span>
                         <strong>{formatMoney(total)}</strong>
                     </article>
                     <article>

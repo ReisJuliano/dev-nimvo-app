@@ -455,16 +455,22 @@ function normalizePendingSale(pendingSale) {
         company_id: pendingSale.company_id == null || pendingSale.company_id === '' ? null : Number(pendingSale.company_id),
         order_draft_id: pendingSale.order_draft_id == null || pendingSale.order_draft_id === '' ? null : Number(pendingSale.order_draft_id),
         cart: Array.isArray(pendingSale.cart)
-            ? pendingSale.cart.map((item) => ({
-                ...item,
-                id: Number(item.id),
-                qty: normalizeNumber(item.qty, 1),
-                cost_price: normalizeNumber(item.cost_price, 0),
-                sale_price: normalizeNumber(item.sale_price, 0),
-                stock_quantity: normalizeNumber(item.stock_quantity, 0),
-                lineDiscount: normalizeNumber(item.lineDiscount, 0),
-                lineTotal: normalizeNumber(item.lineTotal, normalizeNumber(item.sale_price, 0) * normalizeNumber(item.qty, 1)),
-            }))
+            ? pendingSale.cart.map((item) => {
+                const qty = normalizeNumber(item.qty, 1)
+                const salePrice = normalizeNumber(item.sale_price, 0)
+                const lineDiscount = normalizeNumber(item.lineDiscount, 0)
+
+                return {
+                    ...item,
+                    id: Number(item.id),
+                    qty,
+                    cost_price: normalizeNumber(item.cost_price, 0),
+                    sale_price: salePrice,
+                    stock_quantity: normalizeNumber(item.stock_quantity, 0),
+                    lineDiscount,
+                    lineTotal: (salePrice * qty) - lineDiscount,
+                }
+            })
             : [],
         discount: pendingSale.discount || { config: { type: 'none' }, authorizer: null },
         payment: pendingSale.payment || { payment_method: 'cash', mixed_payments: [], mixed_draft: { method: 'cash', amount: '' } },

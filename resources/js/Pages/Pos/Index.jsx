@@ -1230,7 +1230,11 @@ export default function PosIndex({
                 company_id: selectedCompany || null,
                 notes: notes || null,
                 status: 'draft',
-                cart: pricing.items.map((item) => ({ ...item, qty: Number(item.qty) })),
+                cart: pricing.items.map((item) => ({
+                    ...item,
+                    qty: Number(item.qty),
+                    lineTotal: (Number(item.sale_price) * Number(item.qty)) - Number(item.lineDiscount || 0),
+                })),
                 discount: { config: discountConfig, authorizer: discountAuthorizer },
                 payment: {
                     payment_method: paymentMethod,
