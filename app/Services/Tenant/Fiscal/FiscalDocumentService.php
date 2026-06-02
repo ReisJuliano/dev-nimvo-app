@@ -573,14 +573,6 @@ class FiscalDocumentService
             }
         }
 
-        if ($this->supportsCompanyRecipients() && $sale->company && filled($sale->company->document)) {
-            return $this->normalizeCompanyRecipient($sale->company, $manualRecipient);
-        }
-
-        if ($sale->customer && filled($sale->customer->document)) {
-            return $this->normalizeCustomerRecipient($sale->customer, $manualRecipient);
-        }
-
         return $manualRecipient;
     }
 

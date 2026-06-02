@@ -1070,11 +1070,6 @@ export default function PosIndex({
         () => customers.find((customer) => String(customer.id) === String(selectedCustomer)) ?? null,
         [customers, selectedCustomer],
     )
-    const selectedCompanyData = useMemo(
-        () => companies.find((company) => String(company.id) === String(selectedCompany)) ?? null,
-        [companies, selectedCompany],
-    )
-
     const closeCashRegisterRows = useMemo(() => {
         if (!closeCashRegisterModal?.report) return []
         return buildCloseCashRegisterRows(closeCashRegisterModal, requireCashClosingConference)
@@ -2103,9 +2098,9 @@ export default function PosIndex({
 
     function openConsumerModal() {
         setCustomerLinkForm({
-            name: manualRecipient.name || selectedCustomerData?.name || '',
-            document: manualRecipient.document || selectedCustomerData?.document || '',
-            email: manualRecipient.email || selectedCustomerData?.email || '',
+            name: manualRecipient.name || '',
+            document: manualRecipient.document || '',
+            email: manualRecipient.email || '',
         })
         setCustomerModalOpen(true)
     }
@@ -2964,30 +2959,6 @@ export default function PosIndex({
                 : payload
         }
 
-        if (selectedCustomerData?.document) {
-            const fallbackEmail = customerLinkForm.email.trim()
-
-            if (requireEmail && !selectedCustomerData.email && !fallbackEmail) {
-                throw new Error('Informe um e-mail do cliente antes de enviar o comprovante por e-mail.')
-            }
-
-            if (!selectedCustomerData.email && fallbackEmail) {
-                return {
-                    type: 'document',
-                    name: selectedCustomerData.name,
-                    document: normalizeDocument(selectedCustomerData.document),
-                    email: fallbackEmail,
-                    ...(documentModel === '65' ? { consumer_final: true } : {}),
-                }
-            }
-
-            return {
-                type: 'customer',
-                customer_id: selectedCustomerData.id,
-                ...(documentModel === '65' ? { consumer_final: true } : {}),
-            }
-        }
-
         const name = customerLinkForm.name.trim()
         const document = normalizeDocument(customerLinkForm.document)
         const email = customerLinkForm.email.trim()
@@ -3211,17 +3182,10 @@ export default function PosIndex({
             return
         }
 
-        if (selectedCustomerData?.document) {
-            setRecipientSelectionMode('customer')
-        } else if (selectedCompanyData?.document) {
-            setRecipientSelectionMode('company')
-        } else {
+        if (recipientDocumentModel === '65') {
             setRecipientSelectionMode('consumer_final')
-            setManualRecipient((current) => ({
-                name: current.name || selectedCustomerData?.name || '',
-                document: current.document || selectedCustomerData?.document || '',
-                email: current.email || selectedCustomerData?.email || '',
-            }))
+        } else {
+            setRecipientSelectionMode('document')
         }
     }
 
