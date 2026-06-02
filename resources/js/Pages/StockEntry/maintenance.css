@@ -32,7 +32,14 @@
 }
 
 .stock-maintenance-records-table .ui-data-table-actions-cell {
+    width: 112px;
+    min-width: 112px;
     z-index: 3;
+}
+
+.stock-maintenance-records-table .ui-data-table-actions-head {
+    width: 112px;
+    min-width: 112px;
 }
 
 .stock-maintenance-records-table .ui-data-table-actions {
