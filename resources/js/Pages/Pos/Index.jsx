@@ -2669,23 +2669,21 @@ export default function PosIndex({
     }
 
     async function discardPersistedPendingSale() {
+        discardOfflinePendingSale(tenantId, auth?.user?.id)
+
         if (!supportsPendingSales) {
-            discardOfflinePendingSale(tenantId, auth?.user?.id)
             return 'disabled'
         }
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            discardOfflinePendingSale(tenantId, auth?.user?.id)
             return 'offline'
         }
 
         try {
             await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
-            discardOfflinePendingSale(tenantId, auth?.user?.id)
             return 'online'
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
-                discardOfflinePendingSale(tenantId, auth?.user?.id)
                 return 'offline'
             }
 
@@ -2694,10 +2692,14 @@ export default function PosIndex({
     }
 
     async function handleDiscardPendingSale() {
+        const pendingSaleToDiscard = pendingSaleServerState
+        rememberDismissedPendingSale(pendingSaleToDiscard)
+        discardOfflinePendingSale(tenantId, auth?.user?.id)
+        setPendingSaleServerState(null)
+        setPendingSaleResolved(true)
+        setPendingSalePromptOpen(false)
+
         if (!supportsPendingSales) {
-            setPendingSaleServerState(null)
-            setPendingSaleResolved(true)
-            setPendingSalePromptOpen(false)
             return
         }
 
@@ -2705,10 +2707,6 @@ export default function PosIndex({
 
         try {
             const discardMode = await discardPersistedPendingSale()
-            rememberDismissedPendingSale(pendingSaleServerState)
-            setPendingSaleServerState(null)
-            setPendingSaleResolved(true)
-            setPendingSalePromptOpen(false)
             showFeedback(
                 discardMode === 'offline' ? 'warning' : 'success',
                 discardMode === 'offline'

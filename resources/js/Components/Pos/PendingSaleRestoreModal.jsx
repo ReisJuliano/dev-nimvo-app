@@ -93,7 +93,7 @@ export default function PendingSaleRestoreModal({ open, pendingSale, busy = fals
                 <div className="pos-quick-customer-actions">
                     <button className="ui-button-ghost" type="button" onClick={onDiscard} disabled={busy}>
                         <i className="fa-solid fa-trash-can" />
-                        Descartar
+                        {busy ? 'Descartando...' : 'Descartar'}
                     </button>
                     <button className="pos-finalize-button" type="button" onClick={onRestore} disabled={busy}>
                         <i className="fa-solid fa-rotate-left" />
