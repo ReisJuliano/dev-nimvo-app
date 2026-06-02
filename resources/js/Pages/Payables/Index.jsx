@@ -24,6 +24,13 @@ function todayInput() {
     return new Date().toISOString().slice(0, 10)
 }
 
+function currentMonthRange() {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return { from: firstDay.toISOString().slice(0, 10), to: todayInput() }
+}
+
 function createLaunchForm() {
     return {
         id: null,
@@ -94,6 +101,7 @@ function buildPaymentDraft(record) {
 }
 
 export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload }) {
+    const defaultRange = useMemo(() => currentMonthRange(), [])
     const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const categories = Array.isArray(payload?.categories) ? payload.categories : []
     const paymentMethods = Array.isArray(payload?.payment_methods) ? payload.payment_methods : []
@@ -102,8 +110,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('open')
     const [appliedFilter, setAppliedFilter] = useState('open')
-    const [range, setRange] = useState({ from: '', to: '' })
-    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
+    const [range, setRange] = useState(defaultRange)
+    const [appliedRange, setAppliedRange] = useState(defaultRange)
     const [selectedId, setSelectedId] = useState((payload?.records || [])[0]?.id ?? null)
     const [detailModalOpen, setDetailModalOpen] = useState(false)
     const [launchModalOpen, setLaunchModalOpen] = useState(false)
@@ -349,8 +357,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         searchControl.clear()
         setActiveFilter('open')
         setAppliedFilter('open')
-        setRange({ from: '', to: '' })
-        setAppliedRange({ from: '', to: '' })
+        setRange(defaultRange)
+        setAppliedRange(defaultRange)
         setRecords([])
         setSelectedId(null)
         setHasLoadedRecords(false)
@@ -397,13 +405,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             rows={filteredRecords}
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
-                            emptyMessage={
-                                busy
-                                    ? 'Buscando contas'
-                                    : hasLoadedRecords
-                                        ? 'Nenhuma conta encontrada'
-                                        : 'Clique em Filtrar para buscar'
-                            }
+                            emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(record) => [
                                 {
                                     key: 'view',

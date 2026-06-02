@@ -126,6 +126,17 @@ function resolveOrdersVisitApplied(rawUrl) {
     return params.has('applied') || params.has('draft')
 }
 
+function dateInput(value = new Date()) {
+    return new Date(value).toISOString().slice(0, 10)
+}
+
+function currentMonthRange() {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return { from: dateInput(firstDay), to: dateInput(today) }
+}
+
 export default function OrdersIndex({
     categories = [],
     customers = [],
@@ -140,11 +151,12 @@ export default function OrdersIndex({
     const { auth, tenant, localAgentBridge } = page.props
     const moduleState = useModules()
     const hasAppliedFilters = resolveOrdersVisitApplied(page.url)
+    const defaultListRange = useMemo(() => currentMonthRange(), [])
     const initialDraftState = hasAppliedFilters && initialDraft ? mapOrderToDraft(initialDraft) : null
     const tenantId = tenant?.id
     const resolvedListSearch = hasAppliedFilters ? (filters?.search || '') : ''
-    const resolvedListFrom = hasAppliedFilters ? (filters?.from || '') : ''
-    const resolvedListTo = hasAppliedFilters ? (filters?.to || '') : ''
+    const resolvedListFrom = hasAppliedFilters ? (filters?.from || '') : defaultListRange.from
+    const resolvedListTo = hasAppliedFilters ? (filters?.to || '') : defaultListRange.to
     const resolvedListRange = useMemo(
         () => ({ from: resolvedListFrom, to: resolvedListTo }),
         [resolvedListFrom, resolvedListTo],
@@ -250,8 +262,8 @@ export default function OrdersIndex({
                     applied: false,
                     search: '',
                     status: 'open',
-                    from: '',
-                    to: '',
+                    from: defaultListRange.from,
+                    to: defaultListRange.to,
                 },
             },
         }), '/pedidos')
@@ -259,7 +271,7 @@ export default function OrdersIndex({
         if (!currentPage || isEncryptedPage) {
             window.history.replaceState(currentState, '', '/pedidos')
         }
-    }, [])
+    }, [defaultListRange.from, defaultListRange.to])
 
     useResetPageHistoryOnLeave(resetHistoryEntry)
 
@@ -1474,8 +1486,8 @@ export default function OrdersIndex({
         listSearchControl.clear()
         setListFilter('open')
         setAppliedListFilter('open')
-        setListRange({ from: '', to: '' })
-        setAppliedListRange({ from: '', to: '' })
+        setListRange(defaultListRange)
+        setAppliedListRange(defaultListRange)
         setHasLoadedList(false)
         setSelectedListDraftId(null)
 
@@ -1795,7 +1807,7 @@ export default function OrdersIndex({
                                 rowKey="id"
                                 selectedRowKey={selectedListDraftId}
                                 onRowClick={(draft) => setSelectedListDraftId(draft.id)}
-                                emptyMessage={hasLoadedList ? 'Nenhum pedido encontrado' : 'Clique em Filtrar para buscar'}
+                                emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                                 actions={(draft) => [
                                     {
                                         key: 'view',

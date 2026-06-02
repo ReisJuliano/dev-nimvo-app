@@ -15,6 +15,17 @@ import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import '../Operations/backoffice-workspace.css'
 
+function dateInput(value = new Date()) {
+    return new Date(value).toISOString().slice(0, 10)
+}
+
+function currentMonthRange() {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return { from: dateInput(firstDay), to: dateInput(today) }
+}
+
 function summaryIcon(type) {
     switch (type) {
         case 'sale':
@@ -192,10 +203,11 @@ function resolvePrintUrl(record) {
 
 export default function ConsultationsIndex({ recordTypes, records, filters = {} }) {
     const hasAppliedFilters = Boolean(filters?.applied)
+    const defaultRange = useMemo(() => currentMonthRange(), [])
     const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeType, setActiveType] = useState('all')
-    const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
-    const [appliedRange, setAppliedRange] = useState(Boolean(filters?.applied) ? { from: filters?.from || '', to: filters?.to || '' } : { from: '', to: '' })
+    const [range, setRange] = useState(hasAppliedFilters ? { from: filters?.from || '', to: filters?.to || '' } : defaultRange)
+    const [appliedRange, setAppliedRange] = useState(hasAppliedFilters ? { from: filters?.from || '', to: filters?.to || '' } : defaultRange)
     const [selectedUid, setSelectedUid] = useState(null)
     const [detailsOpen, setDetailsOpen] = useState(false)
     const [busyAction, setBusyAction] = useState(null)
@@ -215,13 +227,13 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                 filters: {
                     applied: false,
                     period: 'custom',
-                    from: '',
-                    to: '',
+                    from: defaultRange.from,
+                    to: defaultRange.to,
                     search: '',
                 },
             },
         }), '/consultas-cancelamentos')
-    }, [])
+    }, [defaultRange.from, defaultRange.to])
 
     useResetPageHistoryOnLeave(resetHistoryEntry)
 
@@ -386,8 +398,8 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
 
     function handleResetFilters() {
         searchControl.clear()
-        setRange({ from: '', to: '' })
-        setAppliedRange({ from: '', to: '' })
+        setRange(defaultRange)
+        setAppliedRange(defaultRange)
         setActiveType('all')
         setSelectedUid(null)
         setDetailsOpen(false)
@@ -443,7 +455,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             rowKey="uid"
                             selectedRowKey={selectedUid}
                             onRowClick={(record) => setSelectedUid(record.uid)}
-                            emptyMessage={hasAppliedFilters ? 'Sem registros nesse recorte' : 'Clique em Filtrar para buscar'}
+                            emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(record) => [
                                 {
                                     key: 'view',

@@ -35,6 +35,17 @@ function FieldLabel({ icon, text }) {
     )
 }
 
+function toDateInput(value = new Date()) {
+    return new Date(value).toISOString().slice(0, 10)
+}
+
+function currentMonthRange() {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return { from: toDateInput(firstDay), to: toDateInput(today) }
+}
+
 function PurchaseItemsEditor({ products, items, onChange }) {
     const [draft, setDraft] = useState({ product_id: '', quantity: '1', unit_cost: '0' })
 
@@ -86,13 +97,14 @@ function PurchaseItemsEditor({ products, items, onChange }) {
 
 export function DeliveryWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, customer_id: '', reference: '', status: 'pending', channel: 'delivery', recipient_name: '', phone: '', courier_name: '', address: '', neighborhood: '', delivery_fee: '0', order_total: '0', scheduled_for: '', notes: '' }
+    const defaultRange = useMemo(() => currentMonthRange(), [])
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('pending')
     const [appliedTab, setAppliedTab] = useState('pending')
     const searchControl = useConfirmedSearch('')
     const [appliedSearch, setAppliedSearch] = useState('')
-    const [range, setRange] = useState({ from: '', to: '' })
-    const [appliedRange, setAppliedRange] = useState({ from: '', to: '' })
+    const [range, setRange] = useState(defaultRange)
+    const [appliedRange, setAppliedRange] = useState(defaultRange)
     const [selectedId, setSelectedId] = useState(null)
     const [form, setForm] = useState(emptyForm)
     const [drawerOpen, setDrawerOpen] = useState(false)
@@ -255,8 +267,8 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
         setActiveTab('pending')
         setAppliedTab('pending')
         setAppliedSearch('')
-        setRange({ from: '', to: '' })
-        setAppliedRange({ from: '', to: '' })
+        setRange(defaultRange)
+        setAppliedRange(defaultRange)
         setRecords([])
         setSelectedId(null)
         setHasLoadedRecords(false)
@@ -394,13 +406,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         rowKey="id"
                         selectedRowKey={selectedId}
                         onRowClick={(record) => setSelectedId(record.id)}
-                        emptyMessage={
-                            loading
-                                ? 'Buscando entregas'
-                                : hasLoadedRecords
-                                    ? 'Nenhuma entrega encontrada'
-                                    : 'Clique em Filtrar para buscar'
-                        }
+                        emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                         actions={(record) => [
                             {
                                 key: 'view',

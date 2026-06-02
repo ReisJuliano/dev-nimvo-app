@@ -29,6 +29,13 @@ function toLocalDateValue(value = new Date()) {
     return normalized.toISOString().slice(0, 10)
 }
 
+function currentMonthRange() {
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    return { from: toLocalDateValue(firstDay), to: toLocalDateValue(today) }
+}
+
 function buildCreateDefaults() {
     return {
         customer_id: '',
@@ -136,13 +143,14 @@ export default function ConditionalSalesPage({
 }) {
     const initialSearch = filters?.search || ''
     const initialApplied = Boolean(filters?.applied)
+    const defaultRange = useMemo(() => currentMonthRange(), [])
     const [createOpen, setCreateOpen] = useState(false)
     const [search, setSearch] = useState(initialSearch)
     const [activeFilter, setActiveFilter] = useState('all')
-    const [range, setRange] = useState({ from: filters?.from || '', to: filters?.to || '' })
+    const [range, setRange] = useState(initialApplied ? { from: filters?.from || '', to: filters?.to || '' } : defaultRange)
     const [appliedSearch, setAppliedSearch] = useState(initialApplied ? initialSearch : '')
     const [appliedFilter, setAppliedFilter] = useState('all')
-    const [appliedRange, setAppliedRange] = useState(initialApplied ? { from: filters?.from || '', to: filters?.to || '' } : { from: '', to: '' })
+    const [appliedRange, setAppliedRange] = useState(initialApplied ? { from: filters?.from || '', to: filters?.to || '' } : defaultRange)
     const [hasAppliedFilters, setHasAppliedFilters] = useState(initialApplied)
     const [selectedRecordId, setSelectedRecordId] = useState(null)
     const [openedRecordId, setOpenedRecordId] = useState(null)
@@ -183,13 +191,13 @@ export default function ConditionalSalesPage({
                     applied: false,
                     status: 'open',
                     search: '',
-                    from: '',
-                    to: '',
+                    from: defaultRange.from,
+                    to: defaultRange.to,
                     conditional: null,
                 },
             },
         }), '/venda-condicional')
-    }, [])
+    }, [defaultRange.from, defaultRange.to])
 
     useResetPageHistoryOnLeave(resetHistoryEntry)
 
@@ -481,11 +489,11 @@ export default function ConditionalSalesPage({
                         onApply={applyFilters}
                         onReset={() => {
                             setSearch('')
-                            setRange({ from: '', to: '' })
+                            setRange(defaultRange)
                             setActiveFilter('all')
                             setAppliedSearch('')
                             setAppliedFilter('all')
-                            setAppliedRange({ from: '', to: '' })
+                            setAppliedRange(defaultRange)
                             setHasAppliedFilters(false)
                             setSelectedRecordId(null)
                             setOpenedRecordId(null)
@@ -544,7 +552,7 @@ export default function ConditionalSalesPage({
                             rowKey="id"
                             selectedRowKey={selectedRecordId}
                             onRowClick={(conditionalSale) => setSelectedRecordId(conditionalSale.id)}
-                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Clique em Filtrar para buscar'}
+                            emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                             actions={(conditionalSale) => [
                                 {
                                     key: 'view',

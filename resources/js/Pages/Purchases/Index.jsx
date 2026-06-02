@@ -41,10 +41,11 @@ function createEmptyForm() {
 
 function createListFilters() {
     const today = createTodayInputValue()
+    const firstDay = createMonthStartInputValue()
 
     return {
         search: '',
-        from: today,
+        from: firstDay,
         to: today,
     }
 }
@@ -58,11 +59,20 @@ function createTodayInputValue() {
 
 function createAppliedPeriod() {
     const today = createTodayInputValue()
+    const firstDay = createMonthStartInputValue()
 
     return {
-        from: today,
+        from: firstDay,
         to: today,
     }
+}
+
+function createMonthStartInputValue() {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+    const timezoneOffset = firstDay.getTimezoneOffset() * 60000
+
+    return new Date(firstDay.getTime() - timezoneOffset).toISOString().slice(0, 10)
 }
 
 function normalizeRecord(record) {
@@ -1465,15 +1475,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     rows={filteredRecords}
                                     selectedRowKey={selectedListId}
                                     onRowClick={(record) => setSelectedListId(record.id)}
-                                    emptyMessage={
-                                        recordsLoading
-                                            ? 'Carregando pedidos...'
-                                            : !hasLoadedRecords
-                                                ? 'Que tal filtrar algo?'
-                                                : periodDirty
-                                                    ? 'Periodo alterado'
-                                                    : 'Nenhum pedido encontrado'
-                                    }
+                                    emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
                                     actions={(record) => [
                                         {
                                             key: 'view',
