@@ -38,15 +38,39 @@ textarea {
     font: inherit;
 }
 
+.error-page-shell {
+    position: relative;
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 35%, rgb(255 255 255 / 0.95), rgb(239 243 248 / 0.72) 42%, #eff3f8 78%),
+        #eff3f8;
+    isolation: isolate;
+}
+
+.error-page-watermark {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: min(58vw, 520px);
+    max-width: calc(100vw - 3rem);
+    opacity: 0.08;
+    transform: translate(-50%, -50%);
+    user-select: none;
+    pointer-events: none;
+    z-index: -1;
+}
+
 .error-page-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
     gap: 1rem;
     text-align: center;
     padding: 2rem;
+    width: min(100%, 560px);
 }
 
 .error-page-code {

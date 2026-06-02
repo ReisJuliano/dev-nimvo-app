@@ -1,5 +1,4 @@
 import { Head, Link } from '@inertiajs/react'
-import AppLayout from '@/Layouts/AppLayout'
 
 export default function Error({ status }) {
     const messages = {
@@ -20,8 +19,14 @@ export default function Error({ status }) {
     const { title, description } = messages[status] ?? messages[500]
 
     return (
-        <AppLayout title={`${status} - ${title}`}>
+        <main className="error-page-shell">
             <Head title={`${status} - ${title}`} />
+            <img
+                className="error-page-watermark"
+                src="/assets/img/logo.png"
+                alt=""
+                aria-hidden="true"
+            />
             <div className="error-page-container">
                 <div className="error-page-code">{status}</div>
                 <h1 className="error-page-title">{title}</h1>
@@ -30,6 +35,6 @@ export default function Error({ status }) {
                     Voltar ao início
                 </Link>
             </div>
-        </AppLayout>
+        </main>
     )
 }
