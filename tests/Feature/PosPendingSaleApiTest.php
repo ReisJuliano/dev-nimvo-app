@@ -33,11 +33,12 @@ class PosPendingSaleApiTest extends TestCase
     public function test_it_discards_the_saved_pending_sale(): void
     {
         $user = $this->actingOperator();
+        $product = $this->createProduct();
 
         $this->postJson('/api/pdv/pending-sale', [
             'cart_payload' => [
                 [
-                    'id' => 123,
+                    'id' => $product->id,
                     'qty' => 1,
                 ],
             ],
@@ -114,6 +115,21 @@ class PosPendingSaleApiTest extends TestCase
         $this->assertSame(25.0, (float) data_get($pendingSale->cart_payload, '0.lineTotal'));
     }
 
+    public function test_it_rejects_empty_pending_sale_carts(): void
+    {
+        $user = $this->actingOperator();
+
+        $this->postJson('/api/pdv/pending-sale', [
+            'cart_payload' => [],
+            'status' => 'draft',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('cart_payload');
+
+        $this->assertDatabaseMissing('pending_sales', [
+            'user_id' => $user->id,
+        ]);
+    }
+
     public function test_it_hydrates_existing_pending_sales_with_product_snapshot_fallback(): void
     {
         $user = $this->actingOperator();
@@ -143,6 +159,39 @@ class PosPendingSaleApiTest extends TestCase
             ->assertJsonPath('pending_sale.cart.0.sale_price', 7.5)
             ->assertJsonPath('pending_sale.cart.0.lineSubtotal', 15)
             ->assertJsonPath('pending_sale.cart.0.lineTotal', 15);
+
+        $this->assertDatabaseMissing('pending_sales', [
+            'user_id' => $user->id,
+        ]);
+    }
+
+    public function test_it_drops_deleted_product_items_without_snapshot_and_reports_warning(): void
+    {
+        $user = $this->actingOperator();
+
+        PendingSale::query()->create([
+            'user_id' => $user->id,
+            'cart_payload' => [
+                [
+                    'id' => 999999,
+                    'qty' => 1,
+                ],
+                [
+                    'id' => 888888,
+                    'qty' => 2,
+                    'name' => 'Produto com snapshot',
+                    'sale_price' => 11.5,
+                ],
+            ],
+            'status' => 'draft',
+        ]);
+
+        $this->getJson('/api/pdv/pending-sale')
+            ->assertOk()
+            ->assertJsonPath('pending_sale.has_dropped_items', true)
+            ->assertJsonCount(1, 'pending_sale.cart')
+            ->assertJsonPath('pending_sale.cart.0.name', 'Produto com snapshot')
+            ->assertJsonPath('pending_sale.cart.0.lineTotal', 23);
     }
 
     protected function actingOperator(): User

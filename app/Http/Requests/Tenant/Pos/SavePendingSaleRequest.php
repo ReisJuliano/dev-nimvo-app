@@ -20,7 +20,7 @@ class SavePendingSaleRequest extends FormRequest
             'company_id' => ['nullable', 'integer', 'exists:companies,id'],
             'notes' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'max:20'],
-            'cart_payload' => ['required', 'array'],
+            'cart_payload' => ['required', 'array', 'min:1'],
             'cart_payload.*.id' => ['required', 'integer'],
             'cart_payload.*.qty' => ['required', 'numeric', 'gt:0'],
             'cart_payload.*.code' => ['nullable', 'string', 'max:255'],

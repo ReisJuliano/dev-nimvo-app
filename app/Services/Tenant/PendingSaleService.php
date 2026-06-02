@@ -30,7 +30,18 @@ class PendingSaleService
             return null;
         }
 
+        $cartPayload = $payload['cart_payload'] ?? [];
+
+        if (empty($cartPayload)) {
+            return null;
+        }
+
         $normalizedPayload = $this->normalizePayload($payload);
+
+        if (empty($normalizedPayload['cart_payload'])) {
+            return null;
+        }
+
         $pendingSale = PendingSale::query()->firstOrNew(['user_id' => $userId]);
 
         $pendingSale->fill([
@@ -76,13 +87,17 @@ class PendingSaleService
             return null;
         }
 
+        $originalCount = count($pendingSale->cart_payload ?? []);
+        $normalizedCart = $this->normalizeCartPayload($pendingSale->cart_payload ?? []);
+
         return [
             'id' => $pendingSale->id,
             'customer_id' => $pendingSale->customer_id,
             'company_id' => $pendingSale->company_id,
             'order_draft_id' => $pendingSale->order_draft_id,
             'cash_register_id' => $pendingSale->cash_register_id,
-            'cart' => $this->normalizeCartPayload($pendingSale->cart_payload ?? []),
+            'cart' => $normalizedCart,
+            'has_dropped_items' => count($normalizedCart) < $originalCount,
             'discount' => $pendingSale->discount_payload,
             'payment' => $pendingSale->payment_payload,
             'notes' => $pendingSale->notes,
@@ -146,6 +161,11 @@ class PendingSaleService
 
         /** @var Product|null $product */
         $product = $products[$productId] ?? null;
+
+        if ($product === null && empty(trim((string) ($item['name'] ?? '')))) {
+            return null;
+        }
+
         $qty = max(0.001, $this->normalizeNumber($item['qty'] ?? null, 1, 3));
         $costPrice = max(0, $this->normalizeNumber($item['cost_price'] ?? null, (float) ($product?->cost_price ?? 0), 2));
         $salePrice = max(0, $this->normalizeNumber($item['sale_price'] ?? null, (float) ($product?->sale_price ?? 0), 2));

@@ -277,11 +277,12 @@ class PosApiController extends Controller
             ]);
         }
 
-        $pendingSale = $pendingSaleService->markRestored($pendingSale);
+        $serialized = $pendingSaleService->serialize($pendingSale);
+        $pendingSaleService->discard((int) auth()->id());
 
         return response()->json([
             'message' => 'Venda pendente restaurada com sucesso.',
-            'pending_sale' => $pendingSaleService->serialize($pendingSale),
+            'pending_sale' => $serialized,
         ]);
     }
 
