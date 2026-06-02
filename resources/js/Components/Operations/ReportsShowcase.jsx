@@ -15,7 +15,7 @@ function ReportCategoryButton({ category, active, onClick }) {
             </span>
             <span className="operations-report-category-copy">
                 <strong>{category.label}</strong>
-                <small>{category.report_count} relatorios</small>
+                <small>{category.report_count} relatórios</small>
             </span>
         </button>
     )
@@ -80,7 +80,7 @@ export default function ReportsShowcase({ module }) {
             <section className="operations-report-preview-hero">
                 <div>
                     <span className="operations-section-kicker">Relatorios</span>
-                    <h2>Nenhum relatorio disponivel</h2>
+                    <h2>Nenhum relatório disponível</h2>
                 </div>
             </section>
         )
@@ -114,7 +114,7 @@ export default function ReportsShowcase({ module }) {
                             event.preventDefault()
                             searchControl.apply()
                         }}
-                        placeholder="Buscar relatorio"
+                        placeholder="Buscar relatório"
                     />
                     <button type="button" className="report-icon-button wide" onClick={() => searchControl.apply()}>
                         <i className="fa-solid fa-magnifying-glass" />
@@ -139,7 +139,7 @@ export default function ReportsShowcase({ module }) {
                         <ReportOpenCard key={report.key} report={report} />
                     ))
                 ) : (
-                    <div className="operations-empty-state">Sem relatorios</div>
+                    <div className="operations-empty-state">Sem relatórios</div>
                 )}
             </section>
         </div>

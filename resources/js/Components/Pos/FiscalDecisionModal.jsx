@@ -10,8 +10,8 @@ export default function FiscalDecisionModal({ open, onClose, onCloseSale, onEmit
             <div className="pos-quick-customer-card pos-fiscal-decision-card" onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>
-                        <h2>Finalizacao fiscal</h2>
-                        <p>Escolha se a venda sera encerrada silenciosamente ou se deve seguir para emissao fiscal.</p>
+                        <h2>Finalização fiscal</h2>
+                        <p>Escolha se a venda será encerrada silenciosamente ou se deve seguir para emissão fiscal.</p>
                     </div>
                     <button className="ui-button-ghost" type="button" onClick={onClose}>
                         Fechar
@@ -43,7 +43,7 @@ export default function FiscalDecisionModal({ open, onClose, onCloseSale, onEmit
                     <button type="button" className="pos-fiscal-decision-option active" onClick={onEmitCoupon} disabled={busy}>
                         <i className="fa-solid fa-file-invoice" />
                         <strong>Emitir cupom</strong>
-                        <span>Segue para a identificacao do destinatario e para a etapa fiscal normal.</span>
+                        <span>Segue para a identificação do destinatário e para a etapa fiscal normal.</span>
                     </button>
                 </div>
             </div>

@@ -11,7 +11,7 @@ export default function CentralAdminPlaceholder({ title, icon }) {
                 <PageContainer
                     sidebar={(
                         <RightSidebarPanel>
-                            <RightSidebarSection title="Acoes" subtitle="Navegacao rapida">
+                            <RightSidebarSection title="Acoes" subtitle="Navegação rapida">
                                 <Link href="/admin/clientes" className="action-button tone-ghost">
                                     <i className="fa-solid fa-buildings" />
                                     <span>Tenants</span>

@@ -15,7 +15,7 @@ export default function OperationsWorkspace({ moduleKey, moduleTitle, payload })
                 {moduleKey === 'delivery' ? <DeliveryWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'compras' ? <PurchasesWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'entrada-estoque' ? <StockInboundWorkspace moduleKey={moduleKey} payload={payload} /> : null}
-                {moduleKey === 'movimentacao-estoque' ? <StockMovementsWorkspace moduleKey={moduleKey} payload={payload} /> : null}
+                {moduleKey === 'movimentação-estoque' ? <StockMovementsWorkspace moduleKey={moduleKey} payload={payload} /> : null}
                 {moduleKey === 'usuarios' ? <UsersWorkspace moduleKey={moduleKey} payload={payload} /> : null}
             </div>
         </AppLayout>

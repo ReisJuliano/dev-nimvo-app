@@ -1,5 +1,5 @@
 const PROFILE_FIELDS = [
-    { name: 'environment', label: 'Ambiente', icon: 'fa-flask', type: 'select', options: [{ value: '2', label: 'Homologacao' }, { value: '1', label: 'Producao' }] },
+    { name: 'environment', label: 'Ambiente', icon: 'fa-flask', type: 'select', options: [{ value: '2', label: 'Homologação' }, { value: '1', label: 'Produção' }] },
     { name: 'crt', label: 'CRT', icon: 'fa-scale-balanced', type: 'select', options: [{ value: '1', label: '1 Simples' }, { value: '2', label: '2 Excesso' }, { value: '4', label: '4 MEI' }] },
     { name: 'operation_nature', label: 'Natureza', icon: 'fa-receipt', placeholder: 'VENDA NFC-E', full: true, required: true },
     { name: 'series', label: 'Serie', icon: 'fa-layer-group', type: 'number', min: 1, max: 999, required: true },
@@ -10,8 +10,8 @@ const ISSUER_FIELDS = [
     { name: 'company_name', label: 'Razao social', icon: 'fa-building', placeholder: 'Empresa LTDA', full: true, required: true },
     { name: 'trade_name', label: 'Fantasia', icon: 'fa-store', placeholder: 'Nome fantasia', full: true },
     { name: 'cnpj', label: 'CNPJ', icon: 'fa-id-card', placeholder: '12345678000123', required: true },
-    { name: 'ie', label: 'IE', icon: 'fa-file-signature', placeholder: 'Inscricao estadual', required: true },
-    { name: 'im', label: 'IM', icon: 'fa-building-circle-check', placeholder: 'Inscricao municipal' },
+    { name: 'ie', label: 'IE', icon: 'fa-file-signature', placeholder: 'Inscrição estadual', required: true },
+    { name: 'im', label: 'IM', icon: 'fa-building-circle-check', placeholder: 'Inscrição municipal' },
     { name: 'cnae', label: 'CNAE', icon: 'fa-sitemap', placeholder: '4781400' },
     { name: 'phone', label: 'Telefone', icon: 'fa-phone', placeholder: '11999999999' },
 ]
@@ -51,7 +51,7 @@ function AdminSwitch({ checked, onChange, ariaLabel }) {
 
 function formatCertificateDate(value) {
     if (!value) {
-        return 'Nao informado'
+        return 'Não informado'
     }
 
     const date = new Date(value)
@@ -140,7 +140,7 @@ export default function TenantFiscalModal({
     const hasProfile = Boolean(fiscal?.has_nfce_profile)
     const canPersist = fiscal?.status !== 'missing_table'
     const pendingCount = Array.isArray(fiscal?.missing_fields) ? fiscal.missing_fields.length : 0
-    const environmentLabel = fiscal?.environment === 1 ? 'Producao' : fiscal?.environment === 2 ? 'Homologacao' : 'Nao informado'
+    const environmentLabel = fiscal?.environment === 1 ? 'Produção' : fiscal?.environment === 2 ? 'Homologação' : 'Não informado'
     const hasCertificateSummary = Boolean(certificate?.cnpj || certificate?.company_name || certificate?.valid_to)
     const autofillCount = Array.isArray(autofillMeta?.filled_fields) ? autofillMeta.filled_fields.length : 0
     const autofillMissingCount = Array.isArray(autofillMeta?.missing_fields) ? autofillMeta.missing_fields.length : 0
@@ -177,7 +177,7 @@ export default function TenantFiscalModal({
                                 <div className="central-admin-agent-list">
                                     <div className="central-admin-agent-item">
                                         <strong>Empresa</strong>
-                                        <span>{fiscal?.company_name || 'Nao informado'}</span>
+                                        <span>{fiscal?.company_name || 'Não informado'}</span>
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Ambiente</strong>
@@ -185,7 +185,7 @@ export default function TenantFiscalModal({
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Proximo</strong>
-                                        <span>{fiscal?.next_number || 'Nao informado'}</span>
+                                        <span>{fiscal?.next_number || 'Não informado'}</span>
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Pendencias</strong>
@@ -193,15 +193,15 @@ export default function TenantFiscalModal({
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Atualizado</strong>
-                                        <span>{fiscal?.updated_label || 'Nao informado'}</span>
+                                        <span>{fiscal?.updated_label || 'Não informado'}</span>
                                     </div>
                                 </div>
 
                                 <p className="central-admin-field-note">
                                     {fiscal?.status === 'missing_table'
-                                        ? 'Esse tenant ainda nao recebeu as migrations fiscais. Sem a tabela fiscal nao ha como salvar o emitente.'
+                                        ? 'Esse tenant ainda não recebeu as migrations fiscais. Sem a tabela fiscal não ha como salvar o emitente.'
                                         : hasProfile
-                                            ? 'Os dados sao gravados no banco do proprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                            ? 'Os dados sao gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
                                             : 'Ao salvar este formulario, o painel cria o perfil fiscal NFC-e 65 diretamente no banco do tenant.'}
                                 </p>
                             </article>
@@ -217,15 +217,15 @@ export default function TenantFiscalModal({
                                 <div className="central-admin-agent-list">
                                     <div className="central-admin-agent-item">
                                         <strong>CSC ID</strong>
-                                        <span>{fiscal?.csc_id || 'Nao informado'}</span>
+                                        <span>{fiscal?.csc_id || 'Não informado'}</span>
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Token</strong>
-                                        <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Nao configurado'}</span>
+                                        <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Não configurado'}</span>
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>RespTec</strong>
-                                        <span>{fiscal?.technical_contact_name || 'Nao informado'}</span>
+                                        <span>{fiscal?.technical_contact_name || 'Não informado'}</span>
                                     </div>
                                     <div className="central-admin-agent-item">
                                         <strong>Perfil</strong>
@@ -234,7 +234,7 @@ export default function TenantFiscalModal({
                                 </div>
 
                                 <p className="central-admin-field-note">
-                                    Deixe o token em branco para manter o valor atual. Se apagar o CSC ID e deixar o token vazio, a configuracao do CSC sera limpa.
+                                    Deixe o token em branco para manter o valor atual. Se apagar o CSC ID e deixar o token vazio, a configuração do CSC será limpa.
                                 </p>
                             </article>
                         </div>
@@ -279,11 +279,11 @@ export default function TenantFiscalModal({
                                         <div className="central-admin-agent-list">
                                             <div className="central-admin-agent-item">
                                                 <strong>Empresa</strong>
-                                                <span>{certificate?.company_name || 'Nao informado'}</span>
+                                                <span>{certificate?.company_name || 'Não informado'}</span>
                                             </div>
                                             <div className="central-admin-agent-item">
                                                 <strong>CNPJ</strong>
-                                                <span>{certificate?.cnpj || 'Nao informado'}</span>
+                                                <span>{certificate?.cnpj || 'Não informado'}</span>
                                             </div>
                                             <div className="central-admin-agent-item">
                                                 <strong>Valido ate</strong>
@@ -305,7 +305,7 @@ export default function TenantFiscalModal({
                                         <div className="central-admin-agent-list">
                                             <div className="central-admin-agent-item">
                                                 <strong>CNPJ</strong>
-                                                <span>{autofillMeta?.cnpj || 'Nao informado'}</span>
+                                                <span>{autofillMeta?.cnpj || 'Não informado'}</span>
                                             </div>
                                             <div className="central-admin-agent-item">
                                                 <strong>Campos</strong>

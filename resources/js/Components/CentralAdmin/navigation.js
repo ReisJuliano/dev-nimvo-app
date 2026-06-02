@@ -1,6 +1,6 @@
 export const CENTRAL_ADMIN_NAVIGATION = [
     {
-        section: 'Administracao',
+        section: 'Administração',
         items: [
             { href: '/admin/painel', label: 'Home', icon: 'fa-house' },
             { href: '/admin/clientes', label: 'Tenants', icon: 'fa-buildings' },

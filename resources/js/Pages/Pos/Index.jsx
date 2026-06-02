@@ -599,7 +599,7 @@ export default function PosIndex({
 
     function openCashMovementModal(type) {
         if (!cashRegisterState) {
-            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentacao.')
+            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentação.')
             return
         }
 
@@ -1174,7 +1174,7 @@ export default function PosIndex({
             return 'Pressione Pesquisar ou Enter para consultar o produto digitado.'
         }
 
-        return 'Bipe o codigo de barras ou digite o nome do produto e pressione Enter.'
+        return 'Bipe o código de barras ou digite o nome do produto e pressione Enter.'
     }, [loadingProducts, products, searchTerm])
 
     const paymentGridOptions = useMemo(
@@ -1212,7 +1212,7 @@ export default function PosIndex({
             { key: 'products', label: 'Produtos', done: cart.length > 0, active: cart.length > 0 && !paymentModalOpen && !fiscalDecisionOpen && !recipientModalOpen },
             { key: 'review', label: 'Revisao', done: cart.length > 0, active: cart.length > 0 && !paymentModalOpen && !fiscalDecisionOpen && !recipientModalOpen },
             { key: 'payment', label: 'Pagamento', done: paymentReady, active: paymentModalOpen },
-            { key: 'fiscal', label: 'Decisao fiscal', done: false, active: fiscalDecisionOpen },
+            { key: 'fiscal', label: 'Decisão fiscal', done: false, active: fiscalDecisionOpen },
             { key: 'issue', label: recipientDocumentModel === '55' ? 'NF-e / DANFE' : 'Emissao', done: false, active: recipientModalOpen },
         ],
         [cart.length, paymentReady, paymentModalOpen, fiscalDecisionOpen, recipientModalOpen, recipientDocumentModel],
@@ -1321,13 +1321,13 @@ export default function PosIndex({
 
     function buildOfflineDiscountAuthorizer() {
         if (!auth?.user?.id || !currentUserCanAuthorizeDiscountOffline) {
-            throw new Error('No modo offline, apenas o gerente logado nesta maquina pode autorizar descontos.')
+            throw new Error('No modo offline, apenas o gerente logado nesta máquina pode autorizar descontos.')
         }
 
         const selectedAuthorizerId = discountAuthorizationForm.authorizer_user_id || String(auth.user.id)
 
         if (String(selectedAuthorizerId) !== String(auth.user.id)) {
-            throw new Error('No modo offline, selecione o proprio gerente logado para autorizar o desconto.')
+            throw new Error('No modo offline, selecione o próprio gerente logado para autorizar o desconto.')
         }
 
         return {
@@ -1346,7 +1346,7 @@ export default function PosIndex({
         setDiscountAuthorizer(offlineAuthorizer)
         setDiscountModalOpen(false)
         setDiscountAuthorizationForm(initialAuthorizationForm)
-        showFeedback('warning', 'Desconto autorizado no modo offline pelo gerente logado nesta maquina.')
+        showFeedback('warning', 'Desconto autorizado no modo offline pelo gerente logado nesta máquina.')
     }
 
     function authorizeCloseCashSupervisorOffline() {
@@ -1357,7 +1357,7 @@ export default function PosIndex({
         if (!auth?.user?.id || !currentUserCanAuthorizeCloseCashOffline) {
             setCloseCashRegisterModal((current) => (
                 current
-                    ? { ...current, supervisorError: 'No modo offline, a liberacao depende do supervisor logado nesta maquina.' }
+                    ? { ...current, supervisorError: 'No modo offline, a liberação depende do supervisor logado nesta máquina.' }
                     : current
             ))
             return false
@@ -1368,7 +1368,7 @@ export default function PosIndex({
         if (String(selectedSupervisorId) !== String(auth.user.id)) {
             setCloseCashRegisterModal((current) => (
                 current
-                    ? { ...current, supervisorError: 'No modo offline, selecione o proprio supervisor logado para liberar a edicao.' }
+                    ? { ...current, supervisorError: 'No modo offline, selecione o próprio supervisor logado para liberar a edição.' }
                     : current
             ))
             return false
@@ -1388,7 +1388,7 @@ export default function PosIndex({
                 }
                 : current
         ))
-        showFeedback('warning', 'Edicao liberada no modo offline pelo supervisor logado nesta maquina.')
+        showFeedback('warning', 'Edição liberada no modo offline pelo supervisor logado nesta máquina.')
         return true
     }
 
@@ -1575,7 +1575,7 @@ export default function PosIndex({
         try {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const offlineOrder = getOfflineOrderDetail(tenantId, orderDraftId)
-                if (!offlineOrder) throw new Error('Pedido nao encontrado no cache offline.')
+                if (!offlineOrder) throw new Error('Pedido não encontrado no cache offline.')
                 applyOrderDraftToSale(offlineOrder)
                 setCashierDraftsModalOpen(false)
                 return
@@ -1718,12 +1718,12 @@ export default function PosIndex({
         const resolvedAmount = amount > 0 ? amount : mixedRemaining
 
         if (resolvedAmount <= 0) {
-            showFeedback('warning', 'Informe um valor valido para adicionar ao pagamento misto.')
+            showFeedback('warning', 'Informe um valor válido para adicionar ao pagamento misto.')
             return
         }
 
         if (resolvedAmount > mixedRemaining + 0.001) {
-            showFeedback('warning', 'A soma das parcelas nao pode ultrapassar o total da venda.')
+            showFeedback('warning', 'A soma das parcelas não pode ultrapassar o total da venda.')
             return
         }
 
@@ -1859,7 +1859,7 @@ export default function PosIndex({
         const preview = resolvePricing(cart, previewConfig, selectedCartItem)
 
         if (preview.discount <= 0) {
-            showFeedback('warning', 'Informe um desconto valido antes de autorizar.')
+            showFeedback('warning', 'Informe um desconto válido antes de autorizar.')
             return
         }
 
@@ -1872,7 +1872,7 @@ export default function PosIndex({
             }
 
             if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
-                showFeedback('warning', 'Selecione um gerente e informe a senha de autorizacao.')
+                showFeedback('warning', 'Selecione um gerente e informe a senha de autorização.')
                 return
             }
 
@@ -1952,7 +1952,7 @@ export default function PosIndex({
         const term = normalizeDraftSearchValue(searchTerm).trim()
 
         if (!term) {
-            showFeedback('warning', 'Informe um codigo ou nome de produto antes de adicionar.')
+            showFeedback('warning', 'Informe um código ou nome de produto antes de adicionar.')
             return
         }
 
@@ -1980,7 +1980,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                     return
                 }
 
@@ -1996,7 +1996,7 @@ export default function PosIndex({
             const match = resolveProductMatch(response.products || [], term)
 
             if (!match) {
-                showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                 return
             }
 
@@ -2014,7 +2014,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse codigo ou descricao.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                 } else {
                     handleAddProduct(fallbackMatch)
                     setSelectedCartItemId(fallbackMatch.id)
@@ -2082,7 +2082,7 @@ export default function PosIndex({
         })
         setCustomerLinkForm(initialCustomerLinkForm)
         setCustomerModalOpen(false)
-        showFeedback('success', 'Consumidor definido para a emissao fiscal.')
+        showFeedback('success', 'Consumidor definido para a emissão fiscal.')
     }
 
     function closeCashReportModal() {
@@ -2142,7 +2142,7 @@ export default function PosIndex({
                 })
                 syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister)
                 setOpenCashRegisterModal(null)
-                showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
+                showFeedback('warning', 'Caixa aberto no modo offline. A sincronização será feita quando a internet voltar.')
                 return
             }
 
@@ -2187,7 +2187,7 @@ export default function PosIndex({
                 })
                 syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister)
                 setOpenCashRegisterModal(null)
-                showFeedback('warning', 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.')
+                showFeedback('warning', 'Caixa aberto no modo offline. A sincronização será feita quando a internet voltar.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -2213,7 +2213,7 @@ export default function PosIndex({
         }
 
         if (!reason) {
-            showFeedback('warning', 'Informe o motivo desta movimentacao antes de confirmar.')
+            showFeedback('warning', 'Informe o motivo desta movimentação antes de confirmar.')
             return
         }
 
@@ -2233,8 +2233,8 @@ export default function PosIndex({
                 showFeedback(
                     'warning',
                     isWithdrawal
-                        ? 'Sangria registrada no modo offline. A sincronizacao sera feita quando a internet voltar.'
-                        : 'Suprimento registrado no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                        ? 'Sangria registrada no modo offline. A sincronização será feita quando a internet voltar.'
+                        : 'Suprimento registrado no modo offline. A sincronização será feita quando a internet voltar.',
                 )
                 return
             }
@@ -2250,7 +2250,7 @@ export default function PosIndex({
 
             await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
             closeCashMovementModal()
-            showFeedback('success', response.message || 'Movimentacao registrada com sucesso.')
+            showFeedback('success', response.message || 'Movimentação registrada com sucesso.')
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 registerOfflineCashMovement(tenantId, cashRegisterState.id, {
@@ -2265,8 +2265,8 @@ export default function PosIndex({
                 showFeedback(
                     'warning',
                     isWithdrawal
-                        ? 'Sangria registrada no modo offline. A sincronizacao sera feita quando a internet voltar.'
-                        : 'Suprimento registrado no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                        ? 'Sangria registrada no modo offline. A sincronização será feita quando a internet voltar.'
+                        : 'Suprimento registrado no modo offline. A sincronização será feita quando a internet voltar.',
                 )
             } else {
                 showFeedback('error', error.message)
@@ -2289,7 +2289,7 @@ export default function PosIndex({
                 })
 
                 if (!offlineReport) {
-                    throw new Error('Nao foi possivel montar o resumo offline deste caixa.')
+                    throw new Error('Não foi possível montar o resumo offline deste caixa.')
                 }
 
                 setCloseCashRegisterModal(buildCloseCashRegisterModal(offlineReport))
@@ -2373,7 +2373,7 @@ export default function PosIndex({
         }
 
         if (!supervisors.length) {
-            showFeedback('warning', 'Cadastre ao menos um usuario como supervisor para liberar a edicao apos a conferencia.')
+            showFeedback('warning', 'Cadastre ao menos um usuario como supervisor para liberar a edição apos a conferência.')
             return
         }
 
@@ -2428,7 +2428,7 @@ export default function PosIndex({
         if (!closeCashRegisterModal.supervisorUserId || !closeCashRegisterModal.supervisorPassword) {
             setCloseCashRegisterModal((current) => (
                 current
-                    ? { ...current, supervisorError: 'Selecione o supervisor e informe a senha para liberar a edicao.' }
+                    ? { ...current, supervisorError: 'Selecione o supervisor e informe a senha para liberar a edição.' }
                     : current
             ))
             return
@@ -2462,7 +2462,7 @@ export default function PosIndex({
                     }
                     : current
             ))
-            showFeedback('success', response.message || 'Edicao liberada pelo supervisor.')
+            showFeedback('success', response.message || 'Edição liberada pelo supervisor.')
         } catch (error) {
             if (tenantId && isNetworkApiError(error) && authorizeCloseCashSupervisorOffline()) {
                 return
@@ -2652,7 +2652,7 @@ export default function PosIndex({
                 discardMode === 'offline' ? 'warning' : 'success',
                 discardMode === 'offline'
                     ? 'Venda pendente descartada no modo offline.'
-                    : 'Venda pendente descartada com seguranca.',
+                    : 'Venda pendente descartada com segurança.',
             )
         } catch (error) {
             showFeedback('error', error.message)
@@ -2730,7 +2730,7 @@ export default function PosIndex({
 
     function openInvoiceStep() {
         if (!cart.length) {
-            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emissao.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emissão.')
             return
         }
 
@@ -2816,7 +2816,7 @@ export default function PosIndex({
                 showFeedback('success', 'Cancelamento solicitado com sucesso.')
             },
             onError: (errors) => {
-                showFeedback('warning', Object.values(errors || {})[0] || 'Nao foi possivel cancelar a venda.')
+                showFeedback('warning', Object.values(errors || {})[0] || 'Não foi possível cancelar a venda.')
             },
             onFinish: () => setPendingNfceBusyId(null),
         })
@@ -2824,7 +2824,7 @@ export default function PosIndex({
 
     function openPendingNfceFile(url) {
         if (!url || typeof window === 'undefined') {
-            showFeedback('warning', 'Arquivo fiscal indisponivel para esta NFC-e.')
+            showFeedback('warning', 'Arquivo fiscal indisponível para esta NFC-e.')
             return
         }
 
@@ -2857,7 +2857,7 @@ export default function PosIndex({
 
         if (manualName && manualDocument) {
             if (requireEmail && !manualEmail) {
-                throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
+                throw new Error('Informe um e-mail do consumidor antes de usar essa opção.')
             }
 
             const payload = buildManualRecipientPayload(manualRecipient)
@@ -2867,7 +2867,7 @@ export default function PosIndex({
                 const hasAllFields = requiredFields.every((field) => Boolean(payload[field]))
 
                 if (!hasAllFields) {
-                    throw new Error('Informe o endereco completo do destinatario antes de emitir NF-e.')
+                    throw new Error('Informe o endereco completo do destinatário antes de emitir NF-e.')
                 }
             }
 
@@ -2916,11 +2916,11 @@ export default function PosIndex({
         }
 
         if (documentModel === '55') {
-            throw new Error('Use a etapa de destinatario da NF-e para informar endereco completo do recebedor.')
+            throw new Error('Use a etapa de destinatário da NF-e para informar endereco completo do recebedor.')
         }
 
         if (requireEmail && !email) {
-            throw new Error('Informe um e-mail do consumidor antes de usar essa opcao.')
+            throw new Error('Informe um e-mail do consumidor antes de usar essa opção.')
         }
 
         return {
@@ -3070,7 +3070,7 @@ export default function PosIndex({
 
             if (response.sale?.sale_id < 0) {
                 await concludeFinalizedSale(finalizedOrderDraftId)
-                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissao fiscal sera tentada quando a conexao voltar.`)
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissão fiscal será tentada quando a conexão voltar.`)
                 return
             }
 
@@ -3091,10 +3091,10 @@ export default function PosIndex({
             showFeedback(
                 'success',
                 requestedDocumentModel === '55'
-                    ? `Venda ${response.sale.sale_number} enviada para emissao de NF-e / DANFE.`
+                    ? `Venda ${response.sale.sale_number} enviada para emissão de NF-e / DANFE.`
                     : invoiceChoice === 'email'
-                        ? `Venda ${response.sale.sale_number} enviada para emissao com contato por e-mail.`
-                        : `Venda ${response.sale.sale_number} enviada para emissao fiscal.`,
+                        ? `Venda ${response.sale.sale_number} enviada para emissão com contato por e-mail.`
+                        : `Venda ${response.sale.sale_number} enviada para emissão fiscal.`,
             )
         } catch (error) {
             showFeedback('error', error.message)
@@ -3153,12 +3153,12 @@ export default function PosIndex({
 
     async function handleQuickCompanyCreate() {
         if (!supportsCompanies) {
-            showFeedback('warning', 'O cadastro de empresas ainda nao esta disponivel neste tenant. Aplique as migrations pendentes para habilitar esse fluxo.')
+            showFeedback('warning', 'O cadastro de empresas ainda não esta disponível neste tenant. Aplique as migrations pendentes para habilitar esse fluxo.')
             return
         }
 
         if (!quickCompanyForm.name.trim()) {
-            showFeedback('warning', 'Informe a razao social da empresa antes de cadastrar.')
+            showFeedback('warning', 'Informe a razão social da empresa antes de cadastrar.')
             return
         }
 
@@ -3169,7 +3169,7 @@ export default function PosIndex({
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizacao.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
                 return
             }
 
@@ -3181,13 +3181,13 @@ export default function PosIndex({
             ])
             setSelectedCompany(String(response.company.id))
             setQuickCompanyForm(initialQuickCompanyForm)
-            showFeedback('success', 'Empresa cadastrada e pronta para reutilizacao.')
+            showFeedback('success', 'Empresa cadastrada e pronta para reutilização.')
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizacao.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -3199,7 +3199,7 @@ export default function PosIndex({
     function buildRecipientPayload() {
         if (recipientSelectionMode === 'consumer_final') {
             if (recipientDocumentModel !== '65') {
-                throw new Error('Consumidor final nao identificado esta disponivel apenas para NFC-e.')
+                throw new Error('Consumidor final não identificado esta disponível apenas para NFC-e.')
             }
 
             return {
@@ -3210,7 +3210,7 @@ export default function PosIndex({
 
         if (recipientSelectionMode === 'customer') {
             const customer = customers.find((entry) => String(entry.id) === String(selectedCustomer))
-            if (!customer) throw new Error('Selecione um cliente valido para emitir o documento fiscal.')
+            if (!customer) throw new Error('Selecione um cliente válido para emitir o documento fiscal.')
             return {
                 type: 'customer',
                 customer_id: customer.id,
@@ -3220,7 +3220,7 @@ export default function PosIndex({
 
         if (recipientSelectionMode === 'company') {
             if (!supportsCompanies) {
-                throw new Error('O cadastro de empresas ainda nao esta disponivel neste tenant.')
+                throw new Error('O cadastro de empresas ainda não esta disponível neste tenant.')
             }
 
             const company = companies.find((entry) => String(entry.id) === String(selectedCompany))
@@ -3236,10 +3236,10 @@ export default function PosIndex({
         const document = manualRecipient.document.replace(/\D/g, '')
         if (!name || !document) {
             if (recipientDocumentModel === '65') {
-                throw new Error('Informe nome e CPF/CNPJ do destinatario ou selecione o consumidor final nao identificado.')
+                throw new Error('Informe nome e CPF/CNPJ do destinatário ou selecione o consumidor final não identificado.')
             }
 
-            throw new Error('Informe nome e CPF/CNPJ do destinatario antes de continuar.')
+            throw new Error('Informe nome e CPF/CNPJ do destinatário antes de continuar.')
         }
 
         if (recipientDocumentModel === '55') {
@@ -3247,8 +3247,8 @@ export default function PosIndex({
                 ['street', 'logradouro'],
                 ['number', 'numero'],
                 ['district', 'bairro'],
-                ['city_name', 'municipio'],
-                ['city_code', 'codigo IBGE do municipio'],
+                ['city_name', 'município'],
+                ['city_code', 'código IBGE do município'],
                 ['state', 'UF'],
                 ['zip_code', 'CEP'],
             ]
@@ -3256,7 +3256,7 @@ export default function PosIndex({
             const missingField = requiredFields.find(([field]) => !String(manualRecipient[field] || '').trim())
 
             if (missingField) {
-                throw new Error(`Informe ${missingField[1]} do destinatario para emitir NF-e.`)
+                throw new Error(`Informe ${missingField[1]} do destinatário para emitir NF-e.`)
             }
         }
 
@@ -3282,7 +3282,7 @@ export default function PosIndex({
 
             if (response.sale?.sale_id < 0) {
                 await concludeFinalizedSale(finalizedOrderDraftId)
-                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissao fiscal sera tentada quando a conexao voltar.`)
+                showFeedback('warning', `Venda ${response.sale.sale_number} registrada no modo offline. A emissão fiscal será tentada quando a conexão voltar.`)
                 return
             }
 
@@ -3304,8 +3304,8 @@ export default function PosIndex({
                 showFeedback(
                     'success',
                     recipientDocumentModel === '55'
-                        ? `Venda ${response.sale.sale_number} enviada para emissao de NF-e / DANFE.`
-                        : `Venda ${response.sale.sale_number} enviada para emissao fiscal.`,
+                        ? `Venda ${response.sale.sale_number} enviada para emissão de NF-e / DANFE.`
+                        : `Venda ${response.sale.sale_number} enviada para emissão fiscal.`,
                 )
             } catch (error) {
                 await concludeFinalizedSale(finalizedOrderDraftId, async () => {
@@ -3313,7 +3313,7 @@ export default function PosIndex({
                         await refreshCashRegisterPanel(cashRegisterState.id, cashRegisterReport)
                     }
                 })
-                showFeedback('error', `Venda ${response.sale.sale_number} concluida, mas a etapa fiscal falhou: ${error.message}`)
+                showFeedback('error', `Venda ${response.sale.sale_number} concluída, mas a etapa fiscal falhou: ${error.message}`)
             }
         } catch (error) {
             showFeedback('error', error.message)
@@ -3704,8 +3704,8 @@ export default function PosIndex({
 
             <CompactModal
                 open={Boolean(cashMovementModalType && cashMovementModalConfig)}
-                title={cashMovementModalConfig?.title || 'Movimentacao'}
-                description={cashMovementModalConfig?.description || 'Registrar movimentacao manual.'}
+                title={cashMovementModalConfig?.title || 'Movimentação'}
+                description={cashMovementModalConfig?.description || 'Registrar movimentação manual.'}
                 icon={cashMovementModalConfig?.icon || 'fa-arrow-right-arrow-left'}
                 badge={cashMovementModalConfig?.badge || null}
                 onClose={closeCashMovementModal}
@@ -3747,7 +3747,7 @@ export default function PosIndex({
                             rows="3"
                             value={cashMovementForm.reason}
                             onChange={(event) => handleCashMovementFieldChange('reason', event.target.value)}
-                            placeholder="Descreva rapidamente o motivo da movimentacao"
+                            placeholder="Descreva rapidamente o motivo da movimentação"
                         />
                     </label>
                 </form>
@@ -3779,7 +3779,7 @@ export default function PosIndex({
                         </label>
 
                         <label className="pos-field">
-                            <span>Observacao</span>
+                            <span>Observação</span>
                             <textarea className="pos-field-input textarea" rows="3" value={openCashRegisterModal.openingNotes} onChange={(event) => handleOpenCashRegisterFieldChange('openingNotes', event.target.value)} />
                         </label>
 
@@ -3825,7 +3825,7 @@ export default function PosIndex({
                                         {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
                                     <h1>Caixa modular</h1>
-                                    <p>Produtos, revisao, pagamento e fiscal organizados por etapa para reduzir ruido operacional.</p>
+                                    <p>Produtos, revisão, pagamento e fiscal organizados por etapa para reduzir ruido operacional.</p>
                                     <div className="pos-hero-shortcuts">
                                         <span className="pos-hero-shortcuts-title">Atalhos</span>
                                         <div className="pos-shortcut-list">
@@ -3853,7 +3853,7 @@ export default function PosIndex({
                         <div className="pos-card-header">
                             <div>
                                 <h2>Etapas do caixa</h2>
-                                <p>O fluxo agora avanca por revisao, pagamento e decisao fiscal em modais separados.</p>
+                                <p>O fluxo agora avanca por revisão, pagamento e decisao fiscal em modais separados.</p>
                             </div>
                         </div>
                         <div className="pos-stage-list">
@@ -3879,7 +3879,7 @@ export default function PosIndex({
                         loading={loadingProducts}
                         onAddProduct={handleAddProduct}
                         title="Selecao de produtos"
-                        subtitle="Busque por nome, codigo ou EAN e adicione direto na venda."
+                        subtitle="Busque por nome, código ou EAN e adicione direto na venda."
                         actions={
                             <button type="button" className="ui-button-ghost" onClick={openPaymentStep}>
                                 <i className="fa-solid fa-credit-card" />
@@ -3899,8 +3899,8 @@ export default function PosIndex({
                         <div className="pos-review-grid">
                             <article className="pos-review-highlight">
                                 <span>Cliente da venda</span>
-                                <strong>{selectedCustomerData?.name || 'Nao identificado'}</strong>
-                                <small>{selectedCustomerData?.document || selectedCustomerData?.phone || 'Selecione um cliente quando precisar de credito ou identificacao.'}</small>
+                                <strong>{selectedCustomerData?.name || 'Não identificado'}</strong>
+                                <small>{selectedCustomerData?.document || selectedCustomerData?.phone || 'Selecione um cliente quando precisar de credito ou identificação.'}</small>
                                 <div className="pos-review-actions">
                                     <button type="button" className="pos-inline-button" onClick={() => setCustomerPickerOpen(true)}>
                                         <i className="fa-solid fa-user-magnifying-glass" />
@@ -3915,7 +3915,7 @@ export default function PosIndex({
 
                             <article className="pos-review-highlight">
                                 <span>Pagamento</span>
-                                <strong>{paymentReady ? 'Pronto para finalizar' : 'Aguardando confirmacao'}</strong>
+                                <strong>{paymentReady ? 'Pronto para finalizar' : 'Aguardando confirmação'}</strong>
                                 <small>
                                     {paymentMethod === 'mixed'
                                         ? `${mixedPayments.length} parcela(s) configurada(s)`
@@ -3933,7 +3933,7 @@ export default function PosIndex({
                                 <span>Rascunho da venda</span>
                                 <strong>
                                     {!supportsPendingSales
-                                        ? 'Venda pendente indisponivel'
+                                        ? 'Venda pendente indisponível'
                                         : pendingSaleServerState
                                             ? 'Salvando automaticamente'
                                             : 'Sem pendencia remota'}
@@ -3943,7 +3943,7 @@ export default function PosIndex({
                                         ? `Pedido carregado: #${activeOrderDraftId}`
                                         : supportsPendingSales
                                             ? 'A venda atual pode ser restaurada se a pagina recarregar.'
-                                            : 'A restauracao automatica depende das migrations novas deste tenant.'}
+                                            : 'A restauração automatica depende das migrations novas deste tenant.'}
                                 </small>
                                 <div className="pos-review-actions">
                                     <button type="button" className="pos-inline-button" onClick={() => openDiscountModal()} disabled={!cart.length}>
@@ -4113,7 +4113,7 @@ export default function PosIndex({
                         </label>
 
                         <label className="pos-discount-form-field">
-                            Observacao
+                            Observação
                             <textarea className="ui-input" rows="3" value={openCashRegisterModal.openingNotes} onChange={(event) => handleOpenCashRegisterFieldChange('openingNotes', event.target.value)} />
                         </label>
 
@@ -4161,7 +4161,7 @@ export default function PosIndex({
                         </div>
 
                         <label className="pos-discount-form-field">
-                            Observacao do fechamento
+                            Observação do fechamento
                             <textarea className="ui-input pos-cash-close-notes" rows="3" value={closeCashRegisterModal.form.notes} onChange={(event) => handleCloseCashRegisterNotesChange(event.target.value)} />
                         </label>
 
@@ -4214,7 +4214,7 @@ export default function PosIndex({
                         <div className="pos-customer-picker-toolbar">
                             <button type="button" className={`pos-customer-picker-ghost ${selectedCustomer ? '' : 'active'}`} onClick={handleClearCustomer}>
                                 <i className="fa-solid fa-user-slash" />
-                                Nao identificado
+                                Não identificado
                             </button>
                             <span>{filteredCustomers.length} cliente(s) encontrado(s)</span>
                         </div>
@@ -4460,7 +4460,7 @@ function PosWorkspace({
                             value={searchTerm}
                             onChange={(event) => onSearchChange(event.target.value)}
                             onKeyDown={onSearchKeyDown}
-                            placeholder="Codigo de barras ou nome do produto"
+                            placeholder="Código de barras ou nome do produto"
                             autoFocus
                         />
                         <button type="button" className="ui-button-ghost" onClick={() => onSearchSubmit?.()}>
@@ -4483,13 +4483,13 @@ function PosWorkspace({
                                     >
                                         <span className="pos-suggestion-main">
                                             <strong>{product.name}</strong>
-                                            <small>{product.barcode || product.code || 'Sem codigo'}</small>
+                                            <small>{product.barcode || product.code || 'Sem código'}</small>
                                         </span>
                                         <span className="pos-suggestion-price">{formatMoney(product.sale_price)}</span>
                                     </button>
                                 ))
                             ) : (
-                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descricao.</div>
+                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descrição.</div>
                             )}
                         </div>
                     ) : null}
@@ -4507,7 +4507,7 @@ function PosWorkspace({
 
                     <div className="pos-toolbar-status">
                         <span>{barcodeHelperText}</span>
-                        <span>{paymentReady ? 'Pagamento confirmado. Escolha a emissao para concluir.' : cashRegisterState ? 'Pagamento pendente.' : 'Abra o caixa com Shift + X.'}</span>
+                        <span>{paymentReady ? 'Pagamento confirmado. Escolha a emissão para concluir.' : cashRegisterState ? 'Pagamento pendente.' : 'Abra o caixa com Shift + X.'}</span>
                     </div>
 
                     <div className="pos-item-list" role="list">
@@ -4590,7 +4590,7 @@ function PosWorkspace({
                             <div className="pos-empty-sale">
                                 <PosIcon name="basket" />
                                 <strong>Nenhum item na venda</strong>
-                                <span>Bipe um codigo ou digite o nome do produto e pressione Enter para comecar.</span>
+                                <span>Bipe um código ou digite o nome do produto e pressione Enter para começar.</span>
                             </div>
                         )}
                     </div>
@@ -4991,7 +4991,7 @@ function PosWorkspace({
 
             <PosModal open={cancelModalOpen} title="Cancelar venda" onClose={onCloseCancelModal} tone="danger">
                 <div className="pos-cancel-copy">
-                    Todos os itens, descontos e pagamentos preparados nesta venda serao removidos.
+                    Todos os itens, descontos e pagamentos preparados nesta venda seráo removidos.
                 </div>
 
                 <div className="pos-modal-actions">
@@ -5024,7 +5024,7 @@ function PendingNfceModal({
         <CompactModal
             open={open}
             title="NFC-e pendentes"
-            description="Documentos fiscais que ainda precisam de acao ou regularizacao."
+            description="Documentos fiscais que ainda precisam de ação ou regularização."
             icon="fa-file-circle-exclamation"
             size="lg"
             onClose={onClose}
@@ -5136,7 +5136,7 @@ function PosCashTurnPanel({
             },
             {
                 key: 'history',
-                label: 'Historico',
+                label: 'Histórico',
                 icon: 'fa-clock-rotate-left',
                 onClick: onOpenCashHistory,
             },
@@ -5167,7 +5167,7 @@ function PosCashTurnPanel({
             },
             {
                 key: 'history',
-                label: 'Historico',
+                label: 'Histórico',
                 icon: 'fa-clock-rotate-left',
                 onClick: onOpenCashHistory,
             },
@@ -5259,7 +5259,7 @@ function PosCashTurnPanel({
                 </div>
             ) : (
                 <>
-                    <div className="pos-sale-action-stack" aria-label="Ferramentas de finalizacao da venda">
+                    <div className="pos-sale-action-stack" aria-label="Ferramentas de finalização da venda">
                         {checkoutActions.map((action) => (
                             <button
                                 key={action.key}
@@ -5282,7 +5282,7 @@ function PosCashTurnPanel({
                             </button>
 
                             <div className="pos-turn-panel-empty">
-                                O checkout fica bloqueado ate iniciar o turno com o valor de abertura.
+                                O checkout fica bloqueado até iniciar o turno com o valor de abertura.
                             </div>
                         </section>
                     ) : null}
@@ -5316,7 +5316,7 @@ function PosCashActivityDrawer({
     return (
         <ActionDrawer
             open={open}
-            title={cashRegisterState ? 'Historico do turno' : 'Historico de caixas'}
+            title={cashRegisterState ? 'Histórico do turno' : 'Histórico de caixas'}
             description={
                 cashRegisterState
                     ? 'Vendas, sangrias e suprimentos do caixa atual em ordem cronologica.'
@@ -5507,13 +5507,13 @@ function PosCashCloseModal({
 
                     {!systemVisible && closeModal.supervisorName ? (
                         <div className="pos-cash-close-edit-note">
-                            Edicao liberada por {closeModal.supervisorName}.
+                            Edição liberada por {closeModal.supervisorName}.
                         </div>
                     ) : null}
 
                     {!supervisors.length ? (
                         <div className="pos-cash-close-edit-note muted">
-                            Cadastre um usuario como supervisor em Usuarios para liberar a edicao apos a conferencia.
+                            Cadastre um usuario como supervisor em Usuários para liberar a edição apos a conferência.
                         </div>
                     ) : null}
 
@@ -5544,7 +5544,7 @@ function PosCashCloseModal({
                                     <strong>{formatMoney(totalInformed)}</strong>
                                 </div>
                                 <div className="pos-cash-close-summary-row total">
-                                    <span>Pronto para conferencia</span>
+                                    <span>Pronto para conferência</span>
                                     <small>Clique em revelar sistema</small>
                                 </div>
                             </>
@@ -5581,7 +5581,7 @@ function PosCashCloseModal({
                         <div className="pos-cash-close-prompt-card" onClick={(event) => event.stopPropagation()}>
                             <div className="pos-cash-close-prompt-title">Senha de supervisor</div>
                             <div className="pos-cash-close-prompt-subtitle">
-                                Escolha o supervisor e informe a senha para liberar a edicao apos a conferencia.
+                                Escolha o supervisor e informe a senha para liberar a edição apos a conferência.
                             </div>
 
                             <label className="pos-field">

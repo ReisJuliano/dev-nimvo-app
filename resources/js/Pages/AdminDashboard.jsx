@@ -286,7 +286,7 @@ export default function AdminDashboard({
     }
 
     const sidebarItems = [
-        { key: 'create', label: 'Criacao de tenant', icon: 'fa-plus-circle', meta: 'Novo cadastro' },
+        { key: 'create', label: 'Criação de tenant', icon: 'fa-plus-circle', meta: 'Novo cadastro' },
         {
             key: 'configs',
             label: 'Configs por tenant',
@@ -310,7 +310,7 @@ export default function AdminDashboard({
                         <div className="admin-card-head compact">
                             <div>
                                 <div className="admin-card-kicker">Menu</div>
-                                <h2>Navegacao</h2>
+                                <h2>Navegação</h2>
                             </div>
                         </div>
 
@@ -342,9 +342,9 @@ export default function AdminDashboard({
                         <>
                             <section className="admin-card admin-section-hero">
                                 <div>
-                                    <div className="admin-card-kicker">Criacao de tenant</div>
+                                    <div className="admin-card-kicker">Criação de tenant</div>
                                     <h2>Novo cadastro</h2>
-                                    <p>Area exclusiva para cadastrar novos tenants e deixar pronto para operacao.</p>
+                                    <p>Area exclusiva para cadastrar novos tenants e deixar pronto para operação.</p>
                                 </div>
 
                                 {tenantSummaries.length > 0 ? (
@@ -426,7 +426,7 @@ export default function AdminDashboard({
                                             </div>
                                             <AdminSwitch
                                                 checked={createForm.active}
-                                                ariaLabel="Ativar tenant na criacao"
+                                                ariaLabel="Ativar tenant na criação"
                                                 onChange={() => handleCreateFieldChange('active', !createForm.active)}
                                             />
                                         </div>

@@ -272,7 +272,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <header className="fiscal-sales-panel-head">
                                 <div>
                                     <strong>Vendas e cancelamentos</strong>
-                                    <span>{sales.total} registro(s) em {range.from} ate {range.to}</span>
+                                    <span>{sales.total} registro(s) em {range.from} até {range.to}</span>
                                 </div>
                                 <StatusBadge compact icon="fa-receipt" label={`${sales.current_page}/${sales.last_page}`} tone="warning" />
                             </header>
@@ -419,7 +419,7 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                                 ['Nome', sale.recipient.label || 'Consumidor final'],
                                 ['Doc', sale.recipient.document || '--'],
                                 ['Contato', sale.recipient.phone || sale.recipient.email || '--'],
-                                ['Endereco', sale.recipient.address || '--'],
+                                ['Endereço', sale.recipient.address || '--'],
                             ]}
                         />
                     </section>
@@ -519,8 +519,8 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
 
                 <form className="fiscal-detail-actions" onSubmit={onCancelSubmit}>
                     <div className="fiscal-cancel-signal fiscal-cancel-signal-stack compact">
-                        <span><i className="fa-solid fa-circle-info" />{sale.cancel_hint || 'Sem cancelamento disponivel'}</span>
-                        <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingencia disponivel'}</span>
+                        <span><i className="fa-solid fa-circle-info" />{sale.cancel_hint || 'Sem cancelamento disponível'}</span>
+                        <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingencia disponível'}</span>
                     </div>
 
                     <textarea

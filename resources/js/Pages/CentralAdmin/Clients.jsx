@@ -208,7 +208,7 @@ function getLocalAgentLabel(status) {
 
 function formatDateTime(value) {
     if (!value) {
-        return 'Nao informado'
+        return 'Não informado'
     }
 
     const date = new Date(value)
@@ -458,14 +458,14 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
         <ModalFrame
             open={open}
             icon="fa-file-invoice-dollar"
-            title={tenant ? `Licenca de ${tenant.name}` : 'Licenca'}
+            title={tenant ? `Licença de ${tenant.name}` : 'Licença'}
             onClose={onClose}
         >
             <form onSubmit={onSubmit}>
                 <div className="central-admin-modal-body">
                     <div className="central-admin-form-grid">
                         <label className="central-admin-field">
-                            <span className="central-admin-field-label">Inicio da licenca</span>
+                            <span className="central-admin-field-label">Início da licenca</span>
                             <span className="central-admin-field-shell">
                                 <span className="central-admin-field-icon">
                                     <i className="fa-solid fa-calendar-day" />
@@ -596,7 +596,7 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
                     ) : (
                         <div className="central-admin-note-card central-admin-license-card">
                             <h3>Fatura atual</h3>
-                            <p>A fatura sera gerada automaticamente assim que a licenca for salva.</p>
+                            <p>A fatura será gerada automaticamente assim que a licenca for salva.</p>
                         </div>
                     )}
                 </div>
@@ -676,30 +676,30 @@ function LocalAgentModal({
                             </div>
                             <p>
                                 {hasAgent
-                                    ? 'Esse registro central controla a ativacao e a configuracao sincronizada do agente instalado no cliente.'
-                                    : 'Salve este cadastro para gerar o primeiro codigo de ativacao do agente fiscal deste tenant.'}
+                                    ? 'Esse registro central controla a ativação e a configuração sincronizada do agente instalado no cliente.'
+                                    : 'Salve este cadastro para gerar o primeiro código de ativação do agente fiscal deste tenant.'}
                             </p>
                         </article>
 
                         <article className="central-admin-license-card central-admin-agent-card">
                             <div className="central-admin-license-card-top">
-                                <h3>Codigo de ativacao</h3>
+                                <h3>Código de ativação</h3>
                                 <span className={`central-admin-status-pill ${agent?.activation?.pending ? 'is-active' : agent?.activation?.activated_at ? 'is-info' : 'is-muted'}`}>
-                                    {agent?.activation?.pending ? 'Pendente' : agent?.activation?.activated_at ? 'Usado' : 'Nao gerado'}
+                                    {agent?.activation?.pending ? 'Pendente' : agent?.activation?.activated_at ? 'Usado' : 'Não gerado'}
                                 </span>
                             </div>
                             <p>
-                                Gere um codigo temporario e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse codigo por
-                                credenciais internas e segue com a configuracao da impressora na propria maquina do cliente.
+                                Gere um código temporario e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse código por
+                                credenciais internas e segue com a configuração da impressora na propria máquina do cliente.
                             </p>
                             {hasActivationPreview ? (
                                 <div className="central-admin-note-card" style={{ marginBottom: 16 }}>
                                     <h3>
-                                        <i className="fa-solid fa-key" /> Codigo atual
+                                        <i className="fa-solid fa-key" /> Código atual
                                     </h3>
                                     <p className="central-admin-path-copy">{activationPreview.code}</p>
                                     <p>
-                                        Backend: {activationPreview.backend_url || 'Nao informado'}
+                                        Backend: {activationPreview.backend_url || 'Não informado'}
                                         <br />
                                         Expira em: {formatDateTime(activationPreview.expires_at)}
                                     </p>
@@ -713,7 +713,7 @@ function LocalAgentModal({
                                     onClick={onGenerateActivationCode}
                                 >
                                     <i className="fa-solid fa-key" />
-                                    <span>{activationBusy ? 'Gerando...' : agent?.activation?.pending ? 'Gerar novo codigo' : 'Gerar codigo'}</span>
+                                    <span>{activationBusy ? 'Gerando...' : agent?.activation?.pending ? 'Gerar novo código' : 'Gerar código'}</span>
                                 </button>
                                 <button
                                     type="button"
@@ -722,12 +722,12 @@ function LocalAgentModal({
                                     onClick={onCopyActivationCode}
                                 >
                                     <i className="fa-solid fa-copy" />
-                                    <span>Copiar codigo</span>
+                                    <span>Copiar código</span>
                                 </button>
                             </div>
                             {hasAgent && agent?.activation?.pending ? (
                                 <p className="central-admin-field-note">
-                                    O codigo fica valido ate {formatDateTime(agent?.activation?.expires_at)}. Se expirar, gere um novo codigo e rode o setup novamente no cliente.
+                                    O código fica válido até {formatDateTime(agent?.activation?.expires_at)}. Se expirar, gere um novo código e rode o setup novamente no cliente.
                                 </p>
                             ) : null}
                         </article>
@@ -736,7 +736,7 @@ function LocalAgentModal({
                     <div className="central-admin-agent-device-grid">
                         <article className="central-admin-license-card central-admin-agent-card">
                             <div className="central-admin-license-card-top">
-                                <h3>Ultima maquina conectada</h3>
+                                <h3>Última máquina conectada</h3>
                                 <span className="central-admin-badge is-info">
                                     <i className="fa-solid fa-display" />
                                     <span>{agent?.device?.machine_name || 'Sem heartbeat'}</span>
@@ -745,19 +745,19 @@ function LocalAgentModal({
                             <div className="central-admin-agent-list">
                                 <div className="central-admin-agent-item">
                                     <strong>Usuario</strong>
-                                    <span>{agent?.device?.machine_user || 'Nao informado'}</span>
+                                    <span>{agent?.device?.machine_user || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
-                                    <strong>Ultima sincronizacao</strong>
+                                    <strong>Última sincronização</strong>
                                     <span>{formatDateTime(agent?.device?.last_sync_at)}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Bridge fiscal</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.bridge_root || 'Nao informado'}</span>
+                                    <span className="central-admin-path-copy">{agent?.device?.bridge_root || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>PHP</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.php_path || 'Nao informado'}</span>
+                                    <span className="central-admin-path-copy">{agent?.device?.php_path || 'Não informado'}</span>
                                 </div>
                             </div>
                         </article>
@@ -773,11 +773,11 @@ function LocalAgentModal({
                             <div className="central-admin-agent-list">
                                 <div className="central-admin-agent-item">
                                     <strong>Certificado</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.certificate_path || 'Nao informado'}</span>
+                                    <span className="central-admin-path-copy">{agent?.device?.certificate_path || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Conector</strong>
-                                    <span>{agent?.device?.printer_connector || 'Nao informado'}</span>
+                                    <span>{agent?.device?.printer_connector || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Impressao local</strong>
@@ -785,16 +785,16 @@ function LocalAgentModal({
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Config local</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.config_path || 'Nao informado'}</span>
+                                    <span className="central-admin-path-copy">{agent?.device?.config_path || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>API local</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Nao informado'}</span>
+                                    <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Não informado'}</span>
                                 </div>
                             </div>
                             <p className="central-admin-field-note">
                                 Esses dados sao sincronizados pelo agente instalado. O setup do terminal ja solicita o caminho do certificado A1 e a
-                                senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na maquina do cliente.
+                                senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na máquina do cliente.
                             </p>
                             <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
                                 <button
@@ -804,7 +804,7 @@ function LocalAgentModal({
                                     onClick={onTestPrint}
                                 >
                                     <i className="fa-solid fa-print" />
-                                    <span>{printBusy ? 'Testando...' : 'Testar impressao'}</span>
+                                    <span>{printBusy ? 'Testando...' : 'Testar impressão'}</span>
                                 </button>
                             </div>
                         </article>
@@ -861,11 +861,11 @@ function LocalAgentModal({
                         </div>
 
                         <div className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Escopo da configuracao</span>
+                            <span className="central-admin-field-label">Escopo da configuração</span>
                             <div className="central-admin-list-row">
                                 <div className="central-admin-list-copy">
                                     <strong>Central: nome, status e polling</strong>
-                                    <small>Impressora, certificado, logo do cupom e API local ficam na maquina e sao definidos pelo instalador do agente.</small>
+                                    <small>Impressora, certificado, logo do cupom e API local ficam na máquina e sao definidos pelo instalador do agente.</small>
                                 </div>
                             </div>
                         </div>
@@ -889,7 +889,7 @@ function LocalAgentModal({
 function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) {
     const fiscal = tenant?.fiscal
     const hasProfile = Boolean(fiscal?.has_nfce_profile)
-    const environmentLabel = fiscal?.environment === 1 ? 'Producao' : fiscal?.environment === 2 ? 'Homologacao' : 'Nao informado'
+    const environmentLabel = fiscal?.environment === 1 ? 'Produção' : fiscal?.environment === 2 ? 'Homologação' : 'Não informado'
 
     return (
         <ModalFrame
@@ -912,7 +912,7 @@ function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) 
                             <div className="central-admin-agent-list">
                                 <div className="central-admin-agent-item">
                                     <strong>Empresa</strong>
-                                    <span>{fiscal?.company_name || 'Nao informado'}</span>
+                                    <span>{fiscal?.company_name || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Ambiente</strong>
@@ -920,22 +920,22 @@ function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) 
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>CSC atual</strong>
-                                    <span>{fiscal?.csc_id || 'Nao informado'}</span>
+                                    <span>{fiscal?.csc_id || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Token</strong>
-                                    <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Nao configurado'}</span>
+                                    <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Não configurado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
                                     <strong>Atualizado</strong>
-                                    <span>{fiscal?.updated_label || 'Nao informado'}</span>
+                                    <span>{fiscal?.updated_label || 'Não informado'}</span>
                                 </div>
                             </div>
 
                             <p className="central-admin-field-note">
                                 {hasProfile
-                                    ? 'Esses dados sao gravados no banco do proprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
-                                    : 'Esse tenant ainda nao possui um perfil fiscal NFC-e 65 para receber CSC. Cadastre o perfil fiscal primeiro.'}
+                                    ? 'Esses dados sao gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                    : 'Esse tenant ainda não possui um perfil fiscal NFC-e 65 para receber CSC. Cadastre o perfil fiscal primeiro.'}
                             </p>
                         </article>
                     </div>
@@ -1022,7 +1022,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicen
                                 <th>ID</th>
                                 <th>Status</th>
                                 <th>NFC-e</th>
-                                <th>Licenca</th>
+                                <th>Licença</th>
                                 <th>Agente fiscal</th>
                                 <th>Acoes</th>
                             </tr>
@@ -1069,7 +1069,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicen
                                             </button>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onManageLicense(tenant)}>
                                                 <i className="fa-solid fa-file-invoice-dollar" />
-                                                <span>Licenca</span>
+                                                <span>Licença</span>
                                             </button>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onEdit(tenant)}>
                                                 <i className="fa-solid fa-pen" />
@@ -1651,9 +1651,9 @@ export default function CentralAdminClients({
 
         try {
             await navigator.clipboard.writeText(activationPreview.code)
-            setFeedback({ type: 'success', text: 'Codigo de ativacao copiado.' })
+            setFeedback({ type: 'success', text: 'Código de ativação copiado.' })
         } catch (error) {
-            setFeedback({ type: 'error', text: 'Nao foi possivel copiar o codigo de ativacao automaticamente.' })
+            setFeedback({ type: 'error', text: 'Não foi possível copiar o código de ativação automaticamente.' })
         }
     }
 

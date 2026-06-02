@@ -61,7 +61,7 @@ export default function CartPanel({
                                 </div>
                                 {selectedItem.code ? (
                                     <div>
-                                        <small>Codigo</small>
+                                        <small>Código</small>
                                         <strong>{selectedItem.code}</strong>
                                     </div>
                                 ) : null}

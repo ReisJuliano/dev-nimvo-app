@@ -129,7 +129,7 @@ export default function OrderTransferModal({ form, setForm, customers, creatingC
                             type="button"
                             className="orders-edit-terminal-sidebar-icon"
                             onClick={onClose}
-                            aria-label="Cancelar edicao"
+                            aria-label="Cancelar edição"
                             title="Cancelar"
                         >
                             <i className="fa-solid fa-xmark" />
@@ -138,7 +138,7 @@ export default function OrderTransferModal({ form, setForm, customers, creatingC
                         <button
                             type="submit"
                             className="orders-edit-terminal-sidebar-icon confirm"
-                            aria-label="Salvar alteracoes"
+                            aria-label="Salvar alterações"
                             title="Salvar"
                         >
                             <i className="fa-solid fa-check" />

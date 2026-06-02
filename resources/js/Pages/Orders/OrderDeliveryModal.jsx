@@ -24,7 +24,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
         ? {
               icon: 'fa-bag-shopping',
               label: 'Retirada',
-              description: 'Separe o pedido para retirada no balcao com identificacao clara do cliente.',
+              description: 'Separe o pedido para retirada no balcão com identificação clara do cliente.',
             kicker: 'Fluxo de retirada',
         }
         : {
@@ -56,7 +56,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                 onSubmit({
                         ...form,
                         courier_name: isPickup ? '' : form.courier_name,
-                        address: isPickup ? 'Retirada no balcao' : form.address,
+                        address: isPickup ? 'Retirada no balcão' : form.address,
                         neighborhood: isPickup ? '' : form.neighborhood,
                         delivery_fee: isPickup ? '0' : form.delivery_fee,
                     })
@@ -83,7 +83,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                     >
                         <i className="fa-solid fa-bag-shopping" />
                         <span>Retirada</span>
-                        <small>Registrar como retirada no balcao sem taxa de entrega.</small>
+                        <small>Registrar como retirada no balcão sem taxa de entrega.</small>
                     </button>
                 </div>
 
@@ -136,10 +136,10 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                                 <input
                                     className="ui-input"
                                     value={form.address}
-                                    placeholder="Endereco"
+                                    placeholder="Endereço"
                                     onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))}
                                     required
-                                    aria-label="Endereco"
+                                    aria-label="Endereço"
                                 />
                             </label>
 
@@ -172,7 +172,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                         <div className="orders-delivery-inline-note wide">
                             <i className="fa-solid fa-store" />
                             <div>
-                                <strong>Retirada no balcao</strong>
+                                <strong>Retirada no balcão</strong>
                                 <p>O sistema vai registrar um endereco interno padrao para manter o fluxo consistente.</p>
                             </div>
                         </div>
@@ -183,7 +183,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                         <textarea
                             className="ui-textarea"
                             value={form.notes}
-                            placeholder="Observacoes para entrega, retirada ou conferencia"
+                            placeholder="Observacoes para entrega, retirada ou conferência"
                             onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                             aria-label="Observacoes"
                             rows={3}

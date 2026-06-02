@@ -16,7 +16,7 @@ export default function ProductSearchPanel({
     subtitle = '',
     actions = null,
     categoryPlaceholder = 'Todas as categorias',
-    searchPlaceholder = 'Busque por nome, codigo, EAN ou descricao',
+    searchPlaceholder = 'Busque por nome, código, EAN ou descrição',
     emptyMessage = 'Digite algo para buscar produtos',
     noResultsMessage = 'Nenhum produto encontrado para essa pesquisa.',
 }) {

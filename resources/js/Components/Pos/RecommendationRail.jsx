@@ -6,7 +6,7 @@ function resolveWindowLabel(context, fallbackLabel) {
     }
 
     if (context.mode === 'all_time') {
-        return 'Historico geral'
+        return 'Histórico geral'
     }
 
     if (context.window_days) {
@@ -17,7 +17,7 @@ function resolveWindowLabel(context, fallbackLabel) {
 }
 
 function resolveProductCode(product) {
-    return product.barcode || product.code || 'Sem codigo'
+    return product.barcode || product.code || 'Sem código'
 }
 
 function resolveTopSellerInsight(product) {
@@ -40,7 +40,7 @@ function resolveCustomerHistoryInsight(product) {
 }
 
 function resolveCustomerHistoryMeta(product) {
-    return product.last_customer_sale_at ? 'Ultima compra registrada' : 'Historico do cliente'
+    return product.last_customer_sale_at ? 'Última compra registrada' : 'Histórico do cliente'
 }
 
 export default function RecommendationRail({
@@ -69,7 +69,7 @@ export default function RecommendationRail({
                     onAddProduct={onAddProduct}
                     renderInsight={resolveTopSellerInsight}
                     renderMeta={(product) => resolveProductCode(product)}
-                    emptyMessage="Ainda nao ha historico suficiente para montar os acessos rapidos."
+                    emptyMessage="Ainda não ha historico suficiente para montar os acessos rápidos."
                 />
             </section>
         )
@@ -80,7 +80,7 @@ export default function RecommendationRail({
             {showCustomerHistory ? (
                 loading && customerRecommendations.length === 0 ? (
                     <RecommendationLane
-                        title={`Historico de ${customerContext.customer_name}`}
+                        title={`Histórico de ${customerContext.customer_name}`}
                         subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
                         icon="customer"
                         tone="customer"
@@ -93,7 +93,7 @@ export default function RecommendationRail({
                     />
                 ) : customerRecommendations.length ? (
                     <RecommendationLane
-                        title={`Historico de ${customerContext.customer_name}`}
+                        title={`Histórico de ${customerContext.customer_name}`}
                         subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
                         icon="customer"
                         tone="customer"
@@ -112,7 +112,7 @@ export default function RecommendationRail({
                             <strong>Sem historico suficiente desse cliente</strong>
                             <p>
                                 Assim que <span>{customerContext.customer_name}</span> acumular compras finalizadas,
-                                os acessos rapidos vao destacar os itens recorrentes aqui.
+                                os acessos rápidos vao destacar os itens recorrentes aqui.
                             </p>
                         </div>
                     </div>
@@ -129,7 +129,7 @@ export default function RecommendationRail({
                 onAddProduct={onAddProduct}
                 renderInsight={resolveTopSellerInsight}
                 renderMeta={(product) => resolveProductCode(product)}
-                emptyMessage="Ainda nao ha historico suficiente para destacar os mais vendidos."
+                emptyMessage="Ainda não ha historico suficiente para destacar os mais vendidos."
             />
 
             {showAssociations ? (
@@ -166,7 +166,7 @@ export default function RecommendationRail({
                         <div>
                             <strong>Sem combinacoes fortes ainda</strong>
                             <p>
-                                O item <span>{associationContext.anchor_product_name}</span> ainda nao tem historico
+                                O item <span>{associationContext.anchor_product_name}</span> ainda não tem historico
                                 suficiente para sugerir um combo confiavel.
                             </p>
                         </div>

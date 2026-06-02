@@ -150,7 +150,7 @@ function CreditCustomerModal({ customer, sales, onClose }) {
                             <strong>{customer.last_credit_at ? formatDateTime(customer.last_credit_at) : 'Sem registro'}</strong>
                         </article>
                         <article className="credit-highlight-card">
-                            <span>Historico</span>
+                            <span>Histórico</span>
                             <strong>{formatMoney(historyTotal)}</strong>
                             <small>{formatNumber(customer.credit_sales_count || 0)} lancamentos</small>
                         </article>
@@ -159,7 +159,7 @@ function CreditCustomerModal({ customer, sales, onClose }) {
                     <section className="credit-modal-history">
                         <header className="credit-panel-header">
                             <div>
-                                <h3>Historico recente</h3>
+                                <h3>Histórico recente</h3>
                                 <span>{sales.length} registros no periodo</span>
                             </div>
                         </header>

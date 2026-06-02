@@ -252,7 +252,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
         const product = findProductByScan(filteredProducts, scanCode)
 
         if (!product) {
-            setFeedback({ type: 'error', text: 'Produto nao encontrado para o codigo informado.' })
+            setFeedback({ type: 'error', text: 'Produto não encontrado para o código informado.' })
             return
         }
 
@@ -424,7 +424,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                                 <form className="ops-scan-form" onSubmit={handleScanSubmit}>
                                     <label>
                                         <FieldLabel icon="fa-barcode" text="Bipar produto" />
-                                        <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou codigo" autoComplete="off" />
+                                        <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou código" autoComplete="off" />
                                     </label>
                                     <button type="submit" className="ui-button">
                                         <i className="fa-solid fa-plus" />
@@ -460,7 +460,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                             <FeedbackHeader title="Boleto" subtitle={formatMoney(billingPreview || subtotalPreview)} />
                             <div className="ops-workspace-form-grid">
                                 <label className="span-2">
-                                    <FieldLabel icon="fa-barcode" text="Codigo" />
+                                    <FieldLabel icon="fa-barcode" text="Código" />
                                     <input value={form.billing_barcode} onChange={(event) => setForm((current) => ({ ...current, billing_barcode: event.target.value }))} placeholder="Linha digitavel" />
                                 </label>
                                 <label>
@@ -472,7 +472,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                                     <input type="date" value={form.billing_due_date} onChange={(event) => setForm((current) => ({ ...current, billing_due_date: event.target.value }))} />
                                 </label>
                                 <label className="span-2">
-                                    <FieldLabel icon="fa-note-sticky" text="Observacao" />
+                                    <FieldLabel icon="fa-note-sticky" text="Observação" />
                                     <textarea rows="3" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
                                 </label>
                             </div>
@@ -593,7 +593,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         const product = findProductByScan(products, scanCode)
 
         if (!product) {
-            setFeedback({ type: 'error', text: 'Produto nao encontrado para o codigo informado.' })
+            setFeedback({ type: 'error', text: 'Produto não encontrado para o código informado.' })
             return
         }
 
@@ -698,14 +698,14 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         <div className="ops-workspace-stack ops-stock-movement-workspace">
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel ops-compact-panel">
-                    <FeedbackHeader title="Movimentacao" subtitle={selectedProduct ? selectedProduct.name : 'Bipagem'} />
+                    <FeedbackHeader title="Movimentação" subtitle={selectedProduct ? selectedProduct.name : 'Bipagem'} />
                     <Feedback feedback={feedback} />
 
                     <div className="ops-scan-shell">
                         <form className="ops-scan-form" onSubmit={handleScanSubmit}>
                             <label>
                                 <FieldLabel icon="fa-barcode" text="Bipar produto" />
-                                <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou codigo" autoComplete="off" />
+                                <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou código" autoComplete="off" />
                             </label>
                         </form>
 
@@ -717,7 +717,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                                     value={productSearch}
                                     onChange={(event) => setProductSearch(event.target.value)}
                                     onKeyDown={handleProductSearchKeyDown}
-                                    placeholder="Digite nome, codigo ou EAN"
+                                    placeholder="Digite nome, código ou EAN"
                                     autoComplete="off"
                                 />
                             </label>
@@ -728,7 +728,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                         <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                             <div className="ops-stock-focus-card span-2">
                                 <div><small>Produto</small><strong>{selectedProduct.name}</strong></div>
-                                <div><small>Codigo</small><strong>{formatProductScanCode(selectedProduct)}</strong></div>
+                                <div><small>Código</small><strong>{formatProductScanCode(selectedProduct)}</strong></div>
                                 <div><small>Estoque atual</small><strong>{formatNumber(selectedProduct.stock_quantity || 0)}</strong></div>
                             </div>
 
@@ -742,7 +742,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                             </label>
 
                             <label className="span-2">
-                                <FieldLabel icon="fa-note-sticky" text="Observacao" />
+                                <FieldLabel icon="fa-note-sticky" text="Observação" />
                                 <textarea rows="3" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
                             </label>
 
@@ -784,7 +784,7 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
                 <section className="ops-workspace-panel ops-compact-panel">
                     <PageHeader
-                        title={`Historico (${records.length})`}
+                        title={`Histórico (${records.length})`}
                         search={{
                             placeholder: 'Buscar produto, motivo ou usuario',
                             value: historySearchControl.draftValue,

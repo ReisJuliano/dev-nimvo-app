@@ -134,7 +134,7 @@ export function resolvePricing(items, config, selectedItem) {
     let discountedItems = baseItems
     let summary = {
         title: 'Sem desconto aplicado',
-        description: 'O atendimento segue com o total cheio ate que voce aplique um abatimento.',
+        description: 'O atendimento segue com o total cheio até que voce aplique um abatimento.',
         itemHint: selectedItem ? `Item em foco: ${selectedItem.name}` : null,
     }
 
@@ -344,7 +344,7 @@ export function getOrderStatusMeta(status) {
     return {
         label: 'Aberto',
         badge: 'info',
-        description: 'Edicao ativa com salvamento automatico.',
+        description: 'Edição ativa com salvamento automatico.',
     }
 }
 
@@ -455,11 +455,11 @@ export function buildPrintMarkup({ draft, customer, statusLabel }) {
                         </div>
                         <div class="meta-card">
                             <span>Referencia</span>
-                            <strong>${escapeHtml(draft.reference || 'Sem referencia')}</strong>
+                            <strong>${escapeHtml(draft.reference || 'Sem referência')}</strong>
                         </div>
                         <div class="meta-card">
                             <span>Cliente</span>
-                            <strong>${escapeHtml(customer?.name || 'Nao identificado')}</strong>
+                            <strong>${escapeHtml(customer?.name || 'Não identificado')}</strong>
                         </div>
                         <div class="meta-card">
                             <span>Atualizado em</span>

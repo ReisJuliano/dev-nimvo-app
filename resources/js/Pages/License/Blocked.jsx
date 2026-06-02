@@ -22,11 +22,11 @@ export default function LicenseBlocked({ license }) {
                 <div className="license-blocked-grid">
                     <article>
                         <span>Vencimento</span>
-                        <strong>{license?.due_date || 'Nao informado'}</strong>
+                        <strong>{license?.due_date || 'Não informado'}</strong>
                     </article>
                     <article>
                         <span>Tolerancia ate</span>
-                        <strong>{license?.grace_ends_at || 'Nao informado'}</strong>
+                        <strong>{license?.grace_ends_at || 'Não informado'}</strong>
                     </article>
                     <article>
                         <span>Status</span>

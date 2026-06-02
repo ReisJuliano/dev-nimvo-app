@@ -28,7 +28,7 @@ export default function ConditionalSearchPanel({
                     <input
                         className="products-input"
                         type="search"
-                        placeholder="Cliente, codigo ou operador"
+                        placeholder="Cliente, código ou operador"
                         value={filterForm.data.search}
                         onChange={(event) => filterForm.setData('search', event.target.value)}
                     />

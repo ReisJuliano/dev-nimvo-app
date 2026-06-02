@@ -39,7 +39,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
                 key: 'dispatched',
                 title: 'Em rota',
                 kicker: 'Saiu para entrega',
-                description: 'Pedidos em deslocamento ou aguardando confirmacao final.',
+                description: 'Pedidos em deslocamento ou aguardando confirmação final.',
                 icon: 'fa-motorcycle',
                 emptyTitle: 'Nenhuma entrega em rota',
                 emptyText: 'Atualize um pedido para acompanhar o trajeto.',
@@ -49,9 +49,9 @@ export default function OrderDeliveriesModal({ open, onClose }) {
                 key: 'delivered',
                 title: 'Entregues',
                 kicker: 'Fluxo concluido',
-                description: 'Historico recente das entregas finalizadas.',
+                description: 'Histórico recente das entregas finalizadas.',
                 icon: 'fa-circle-check',
-                emptyTitle: 'Sem entregas concluidas',
+                emptyTitle: 'Sem entregas concluídas',
                 emptyText: 'Assim que finalizar um pedido ele aparece aqui.',
                 rows: delivered,
             },
@@ -112,7 +112,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
                     <div className={`ui-alert ${feedback.type} orders-modal-inline-alert`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>
@@ -149,7 +149,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
                                 <div className="orders-delivery-list">
                                     {col.rows.length ? (
                                         col.rows.map((order) => {
-                                            const displayAddress = order.channel === 'retirada' ? 'Retirada no balcao' : order.address || 'Endereco nao informado'
+                                            const displayAddress = order.channel === 'retirada' ? 'Retirada no balcão' : order.address || 'Endereço não informado'
                                             const contactLabel = order.customer_name || order.recipient_name || 'Sem cliente'
 
                                             return (

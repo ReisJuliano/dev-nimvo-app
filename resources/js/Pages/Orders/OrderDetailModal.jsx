@@ -35,7 +35,7 @@ export default function OrderDetailModal({
 
     const sentToCashier = draft.status === 'sent_to_cashier'
     const elapsedLabel = formatElapsedTime(draft.updatedAt, clock)
-    const customerName = selectedCustomer?.name || 'Nao identificado'
+    const customerName = selectedCustomer?.name || 'Não identificado'
     const referenceLabel = draft.reference?.trim() || getDraftNumberLabel(draft)
     const detailCards = [
         { icon: 'fa-layer-group', label: 'Tipo', value: getOrderTypeLabel(draft.type) },
@@ -75,7 +75,7 @@ export default function OrderDetailModal({
                     <div className={`ui-alert ${feedback.type} orders-modal-inline-alert`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>
@@ -148,7 +148,7 @@ export default function OrderDetailModal({
                                 {pricing.items.length ? (
                                     <div className="orders-terminal-item-table">
                                         <div className="orders-terminal-item-columns" aria-hidden="true">
-                                            <span>Descricao</span>
+                                            <span>Descrição</span>
                                             <span>EAN</span>
                                             <span>Preco un.</span>
                                             <span>Quantidade</span>

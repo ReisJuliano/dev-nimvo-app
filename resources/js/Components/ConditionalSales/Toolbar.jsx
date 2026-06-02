@@ -9,7 +9,7 @@ export default function Toolbar({ filterForm, onSubmit, onReset }) {
                     <input
                         type="search"
                         aria-label="Buscar condicional"
-                        placeholder="Buscar cliente ou codigo"
+                        placeholder="Buscar cliente ou código"
                         value={filterForm.data.search}
                         onChange={(event) => filterForm.setData('search', event.target.value)}
                     />

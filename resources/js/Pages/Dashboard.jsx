@@ -9,7 +9,7 @@ import { formatPercent } from '@/lib/format'
 import './dashboard.css'
 
 const focusModes = [
-    { key: 'trend', icon: 'fa-chart-column', label: 'Tendencia' },
+    { key: 'trend', icon: 'fa-chart-column', label: 'Tendência' },
     { key: 'today', icon: 'fa-clock', label: 'Hoje' },
     { key: 'inventory', icon: 'fa-box-open', label: 'Produtos' },
 ]

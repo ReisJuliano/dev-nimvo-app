@@ -26,7 +26,7 @@ export default function MetricGrid({ metrics }) {
                         <i className={`fa-solid ${metric.icon || 'fa-chart-column'}`} />
                     </div>
                     <strong>{renderValue(metric)}</strong>
-                    <small>{metric.caption || 'Sem observacao'}</small>
+                    <small>{metric.caption || 'Sem observação'}</small>
                 </article>
             ))}
         </section>

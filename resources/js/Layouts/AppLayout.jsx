@@ -14,7 +14,7 @@ const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app-sidebar-collapsed'
 
 export default function AppLayout({
     children,
-    title = 'Inicio',
+    title = 'Início',
     settingsOverride = null,
     showTopbar = true,
     contentClassName = '',
@@ -124,15 +124,15 @@ export default function AppLayout({
         ? 'Modo offline ativo'
         : offlineStatus.pendingCount > 0
             ? 'Reconectado com fila pendente'
-            : 'Sincronizacao requer revisao'
+            : 'Sincronização requer revisão'
     const offlineBannerText = offlineStatus.isOffline
-        ? `As alteracoes ficam salvas nesta maquina e serao sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
+        ? `As alterações ficam salvas nesta máquina e seráo sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
         : offlineStatus.pendingCount > 0
-            ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronizacao com o servidor.`
-            : offlineStatus.lastSyncError || 'Existe uma sincronizacao que precisa de atencao.'
+            ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronização com o servidor.`
+            : offlineStatus.lastSyncError || 'Existe uma sincronização que precisa de atenção.'
     const offlineBannerMeta = offlineStatus.lastSyncAt
-        ? `Ultima sincronizacao concluida em ${formatDateTime(offlineStatus.lastSyncAt)}.`
-        : 'Ainda nao houve uma sincronizacao concluida nesta maquina.'
+        ? `Última sincronização concluída em ${formatDateTime(offlineStatus.lastSyncAt)}.`
+        : 'Ainda não houve uma sincronização concluída nesta máquina.'
     const isSidebarCollapsed = collapsed
 
     return (
@@ -189,7 +189,7 @@ export default function AppLayout({
                                     <i className={`fa-solid ${license.status === 'blocked' ? 'fa-lock' : 'fa-triangle-exclamation'}`} />
                                 </div>
                                 <div className="app-license-banner-copy">
-                                    <strong>{license.status === 'blocked' ? 'Licenca bloqueada' : 'Licenca requer atencao'}</strong>
+                                    <strong>{license.status === 'blocked' ? 'Licença bloqueada' : 'Licença requer atenção'}</strong>
                                     <span>{license.message}</span>
                                 </div>
                             </section>

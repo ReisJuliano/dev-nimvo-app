@@ -214,7 +214,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                         <i className="fa-solid fa-magnifying-glass" />
                         <input
                             type="search"
-                            placeholder="Buscar por nome, referencia, colecao, cor ou tamanho"
+                            placeholder="Buscar por nome, referência, coleção, cor ou tamanho"
                             value={searchControl.draftValue}
                             onChange={(event) => searchControl.setDraftValue(event.target.value)}
                         />
@@ -287,7 +287,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                                 disabled={!product.in_stock}
                                                 onClick={() => addToCart(product)}
                                             >
-                                                {product.in_stock ? 'Adicionar' : 'Indisponivel'}
+                                                {product.in_stock ? 'Adicionar' : 'Indisponível'}
                                             </button>
                                         </div>
                                     </div>
@@ -296,7 +296,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                         ) : (
                             <section className="shop-empty-state">
                                 <strong>Nenhum item encontrado</strong>
-                                <p>Ajuste a busca ou a colecao.</p>
+                                <p>Ajuste a busca ou a coleção.</p>
                             </section>
                         )}
                     </div>

@@ -50,7 +50,7 @@ const SUPPLIER_PRODUCT_FILTERS = [
 const CUSTOMER_MODAL_TABS = [
     { key: 'registration', label: 'Cadastro', icon: 'fa-address-card' },
     { key: 'fiscal', label: 'Fiscal', icon: 'fa-file-invoice' },
-    { key: 'address', label: 'Endereco', icon: 'fa-map-location-dot' },
+    { key: 'address', label: 'Endereço', icon: 'fa-map-location-dot' },
     { key: 'limits', label: 'Limites', icon: 'fa-wallet' },
 ]
 
@@ -140,7 +140,7 @@ function sortSuppliers(records) {
 function supplierLocationLabel(record) {
     const location = [record.city_name, record.state].filter(Boolean).join(' / ')
 
-    return location || 'Sem localizacao'
+    return location || 'Sem localização'
 }
 
 function supplierSearchValues(record) {
@@ -460,8 +460,8 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                                 },
                                 {
                                     key: 'description',
-                                    label: 'Descricao',
-                                    render: (record) => record.description || 'Sem descricao',
+                                    label: 'Descrição',
+                                    render: (record) => record.description || 'Sem descrição',
                                 },
                                 {
                                     key: 'products_count',
@@ -548,7 +548,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                             </ActionButton>
                         ) : <span />}
                         <ActionButton form="category-modal-form" type="submit" disabled={saving}>
-                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar categoria'}
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar categoria'}
                         </ActionButton>
                     </>
                 )}
@@ -566,7 +566,7 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                         </select>
                     </label>
                     <label>
-                        <FieldLabel icon="fa-align-left" text="Descricao" />
+                        <FieldLabel icon="fa-align-left" text="Descrição" />
                         <textarea rows="4" value={form.description || ''} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
                     </label>
                 </form>
@@ -768,7 +768,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                 {
                                     key: 'document',
                                     label: 'Documento',
-                                    render: (record) => record.document || 'Nao informado',
+                                    render: (record) => record.document || 'Não informado',
                                 },
                                 {
                                     key: 'location',
@@ -859,7 +859,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                             </ActionButton>
                         ) : <span />}
                         <ActionButton form="supplier-modal-form" type="submit" disabled={saving}>
-                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar fornecedor'}
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar fornecedor'}
                         </ActionButton>
                     </>
                 )}
@@ -878,7 +878,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                         <input value={form.trade_name || ''} onChange={(event) => setForm((current) => ({ ...current, trade_name: event.target.value }))} />
                     </label>
                     <label>
-                        <FieldLabel icon="fa-receipt" text="Inscricao estadual" />
+                        <FieldLabel icon="fa-receipt" text="Inscrição estadual" />
                         <input value={form.state_registration || ''} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
                     </label>
                     <label>
@@ -1200,7 +1200,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 {
                                     key: 'document',
                                     label: 'Documento',
-                                    render: (record) => record.document || 'Nao informado',
+                                    render: (record) => record.document || 'Não informado',
                                 },
                                 {
                                     key: 'contact',
@@ -1291,7 +1291,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             </ActionButton>
                         ) : <span />}
                         <ActionButton form="customer-modal-form" type="submit" disabled={saving}>
-                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar cliente'}
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar cliente'}
                         </ActionButton>
                     </>
                 )}
@@ -1333,11 +1333,11 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 <FieldLabel icon="fa-user-check" text="Consumidor final" />
                                 <select value={form.consumer_final ? 'yes' : 'no'} onChange={(event) => setForm((current) => ({ ...current, consumer_final: event.target.value === 'yes' }))}>
                                     <option value="yes">Sim</option>
-                                    <option value="no">Nao</option>
+                                    <option value="no">Não</option>
                                 </select>
                             </label>
                             <label>
-                                <FieldLabel icon="fa-file-lines" text="Inscricao estadual" />
+                                <FieldLabel icon="fa-file-lines" text="Inscrição estadual" />
                                 <input value={form.state_registration} onChange={(event) => setForm((current) => ({ ...current, state_registration: event.target.value }))} />
                             </label>
                         </div>
@@ -1366,7 +1366,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 <input value={form.city_name} onChange={(event) => setForm((current) => ({ ...current, city_name: event.target.value }))} />
                             </label>
                             <label>
-                                <FieldLabel icon="fa-map-pin" text="Codigo IBGE" />
+                                <FieldLabel icon="fa-map-pin" text="Código IBGE" />
                                 <input value={form.city_code} onChange={(event) => setForm((current) => ({ ...current, city_code: event.target.value }))} />
                             </label>
                             <label>

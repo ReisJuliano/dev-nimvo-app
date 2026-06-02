@@ -54,7 +54,7 @@ export default function FilterBar({ filters }) {
                             name="product"
                             type="search"
                             defaultValue={filters.product || ''}
-                            placeholder="Buscar por nome, codigo ou EAN"
+                            placeholder="Buscar por nome, código ou EAN"
                         />
                     </div>
                 </label>

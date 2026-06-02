@@ -382,13 +382,13 @@ export default function IncomingNfeWorkspace({ payload }) {
         <div className="ops-workspace-stack">
             <div className="ops-workspace-grid two-columns">
                 <section className="ops-workspace-panel">
-                    <FeedbackHeader title="Consulta e importacao" subtitle="SEFAZ ou XML" />
+                    <FeedbackHeader title="Consulta e importação" subtitle="SEFAZ ou XML" />
                     <Feedback feedback={feedback} />
                     <div className="ops-nfe-status-card">
-                        <strong>{integrationStatus.configured ? 'Integracao fiscal pronta' : 'Integracao fiscal pendente'}</strong>
+                        <strong>{integrationStatus.configured ? 'Integração fiscal pronta' : 'Integração fiscal pendente'}</strong>
                         <p>{integrationStatus.message || 'Configure o certificado A1.'}</p>
                         <div className="ops-workspace-list-card-meta">
-                            <span>{integrationStatus.recipient_name || 'Perfil fiscal nao informado'}</span>
+                            <span>{integrationStatus.recipient_name || 'Perfil fiscal não informado'}</span>
                             <span>{integrationStatus.recipient_document || 'Sem CNPJ ativo'}</span>
                         </div>
                     </div>
@@ -441,7 +441,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     onClick={() => setSelectedId(record.id)}
                                     title={`NF-e ${record.number || '-'} / ${record.series || '-'}`}
                                     badge={<Badge tone={record.status === 'processed' ? 'success' : record.status === 'ready' ? 'info' : 'warning'}>{record.status}</Badge>}
-                                    description={record.supplier_name || 'Fornecedor nao identificado'}
+                                    description={record.supplier_name || 'Fornecedor não identificado'}
                                     meta={[
                                         record.issued_at ? String(record.issued_at).slice(0, 10) : 'Sem data',
                                         formatMoney(record.invoice_total || 0),
@@ -459,7 +459,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                         <>
                             <FeedbackHeader
                                 title={`NF-e ${selectedRecord.number || '-'} / ${selectedRecord.series || '-'}`}
-                                subtitle={selectedRecord.supplier_name || 'Fornecedor nao identificado'}
+                                subtitle={selectedRecord.supplier_name || 'Fornecedor não identificado'}
                                 action={(
                                     <div className="ops-nfe-detail-actions">
                                         {selectedRecord.xml_available ? <a className="ui-button-ghost" href={`/api/purchases/incoming-nfe/${selectedRecord.id}/xml`} target="_blank" rel="noreferrer">XML</a> : null}
@@ -473,7 +473,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                 <span>{selectedRecord.recipient_document}</span>
                             </div>
                             <div className="ops-nfe-status-card">
-                                <strong>Fornecedor e validacao</strong>
+                                <strong>Fornecedor e validação</strong>
                                 <p>{matchedSupplier ? matchedSupplier.name : 'Sem fornecedor vinculado'}</p>
                                 <div className="ops-workspace-form-grid">
                                     <label>
@@ -483,7 +483,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <label>
                                         <FieldLabel icon="fa-building" text="Fornecedor no cadastro" />
                                         <select value={supplierLinkId} onChange={(event) => setSupplierLinkId(event.target.value)}>
-                                            <option value="">Nao vinculado</option>
+                                            <option value="">Não vinculado</option>
                                             {suppliers.map((supplier) => (
                                                 <option key={supplier.id} value={supplier.id}>
                                                     {supplier.name}{supplier.document ? ` - ${supplier.document}` : ''}
@@ -508,7 +508,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <label>
                                         <FieldLabel icon="fa-cart-shopping" text="Pedido de compra" />
                                         <select value={purchaseLinkId} onChange={(event) => setPurchaseLinkId(event.target.value)}>
-                                            <option value="">Nao vinculado</option>
+                                            <option value="">Não vinculado</option>
                                             {purchaseOptions.map((purchase) => (
                                                 <option key={purchase.id} value={purchase.id}>
                                                     {purchase.code} - {purchase.supplier_name || 'Sem fornecedor'} - {purchase.status}
@@ -574,7 +574,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <strong>{selectedRecord.authenticity_status || 'pendente'}</strong>
                                 </article>
                                 <article>
-                                    <span>Escrituracao</span>
+                                    <span>Escrituração</span>
                                     <strong>{selectedRecord.bookkeeping_status || 'pendente'}</strong>
                                 </article>
                                 <article>
@@ -584,7 +584,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                             </div>
                             {selectedRecord.summary_only ? <div className="ops-workspace-inline-alert">NF-e em resumo. Reprocesse para buscar o XML completo.</div> : null}
                             <div className="ops-nfe-status-card">
-                                <strong>SEFAZ e manifestacao</strong>
+                                <strong>SEFAZ e manifestação</strong>
                                 <p>{selectedRecord.sefaz_status_reason || 'Sem consulta recente na SEFAZ.'}</p>
                                 <div className="ops-workspace-list-card-meta">
                                     <span>{selectedRecord.sefaz_status_code || 'Sem cStat'}</span>
@@ -596,9 +596,9 @@ export default function IncomingNfeWorkspace({ payload }) {
                                         <FieldLabel icon="fa-eye" text="Evento" />
                                         <select value={manifestEvent} onChange={(event) => setManifestEvent(event.target.value)}>
                                             <option value="science">Ciencia</option>
-                                            <option value="confirm">Confirmacao</option>
+                                            <option value="confirm">Confirmação</option>
                                             <option value="unknown">Desconhecimento</option>
-                                            <option value="not_realized">Nao realizada</option>
+                                            <option value="not_realized">Não realizada</option>
                                         </select>
                                     </label>
                                     <label>
@@ -666,7 +666,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                             <Badge tone={item.match_status === 'matched' ? 'success' : 'warning'}>{item.match_status === 'matched' ? 'Vinculado' : 'Pendente'}</Badge>
                                         </div>
                                         <div className="ops-workspace-list-card-meta">
-                                            <span>{item.supplier_code || 'Sem codigo do fornecedor'}</span>
+                                            <span>{item.supplier_code || 'Sem código do fornecedor'}</span>
                                             <span>{item.barcode || 'Sem GTIN'}</span>
                                             <span>{item.ncm || 'Sem NCM'}</span>
                                             <span>{item.cfop || 'Sem CFOP'}</span>
@@ -712,7 +712,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                             </div>
                             <div className="ops-workspace-form-grid">
                                 <label>
-                                    <FieldLabel icon="fa-scale-balanced" text="Atualizacao de custo" />
+                                    <FieldLabel icon="fa-scale-balanced" text="Atualização de custo" />
                                     <select value={costMethod} onChange={(event) => setCostMethod(event.target.value)}>
                                         {(payload.cost_methods || []).map((option) => (
                                             <option key={option.value} value={option.value}>{option.label}</option>
@@ -732,7 +732,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     {busyAction === 'reprocess' ? 'Reprocessando...' : 'Reprocessar NF-e'}
                                 </button>
                                 <button type="button" className="ui-button" onClick={handleConfirm} disabled={busyAction === 'confirm' || selectedRecord.summary_only || selectedRecord.status === 'processed'}>
-                                    {busyAction === 'confirm' ? 'Confirmando...' : selectedRecord.status === 'processed' ? 'Entrada concluida' : 'Confirmar entrada'}
+                                    {busyAction === 'confirm' ? 'Confirmando...' : selectedRecord.status === 'processed' ? 'Entrada concluída' : 'Confirmar entrada'}
                                 </button>
                             </div>
                         </>

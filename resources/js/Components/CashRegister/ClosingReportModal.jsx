@@ -60,17 +60,17 @@ export default function ClosingReportModal({ report, onClose }) {
                                         </div>
                                         <div>
                                             <small>Informado</small>
-                                            <strong>{row.informed === null ? 'Nao informado' : formatMoney(row.informed)}</strong>
+                                            <strong>{row.informed === null ? 'Não informado' : formatMoney(row.informed)}</strong>
                                         </div>
                                         <div className={Math.abs(row.difference || 0) > 0.009 ? 'alert' : ''}>
                                             <small>Diferenca</small>
-                                            <strong>{row.difference === null ? 'Nao conferido' : formatMoney(row.difference)}</strong>
+                                            <strong>{row.difference === null ? 'Não conferido' : formatMoney(row.difference)}</strong>
                                         </div>
                                     </div>
                                 </article>
                             ))
                         ) : (
-                            <div className="closing-report-modal-empty">Nenhuma conferencia detalhada foi salva neste fechamento.</div>
+                            <div className="closing-report-modal-empty">Nenhuma conferência detalhada foi salva neste fechamento.</div>
                         )}
                     </div>
                 </div>
@@ -79,7 +79,7 @@ export default function ClosingReportModal({ report, onClose }) {
                     <div className="closing-report-modal-section">
                         <div className="closing-report-modal-section-title">
                             <i className="fa-solid fa-note-sticky" />
-                            <h3>Observacao do fechamento</h3>
+                            <h3>Observação do fechamento</h3>
                         </div>
 
                         <div className="closing-report-modal-note">{report.cashRegister.closing_notes}</div>

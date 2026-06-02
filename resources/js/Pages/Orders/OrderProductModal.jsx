@@ -125,7 +125,7 @@ export default function OrderProductModal({
                             className="ui-input orders-product-compact-search-input"
                             type="search"
                             value={searchTerm}
-                            placeholder="Nome, codigo ou EAN"
+                            placeholder="Nome, código ou EAN"
                             onChange={(event) => setSearchTerm(event.target.value)}
                             onKeyDown={(event) => {
                                 if (event.key !== 'Enter') {

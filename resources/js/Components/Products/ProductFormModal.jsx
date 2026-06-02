@@ -87,12 +87,12 @@ const originOptions = [
     { value: '0', label: '0 - Nacional' },
     { value: '1', label: '1 - Estrangeira direta' },
     { value: '2', label: '2 - Estrangeira adquirida no mercado interno' },
-    { value: '3', label: '3 - Nacional com conteudo de importacao acima de 40%' },
-    { value: '4', label: '4 - Nacional com processo produtivo basico' },
-    { value: '5', label: '5 - Nacional com conteudo de importacao ate 40%' },
+    { value: '3', label: '3 - Nacional com conteúdo de importação acima de 40%' },
+    { value: '4', label: '4 - Nacional com processo produtivo básico' },
+    { value: '5', label: '5 - Nacional com conteúdo de importação até 40%' },
     { value: '6', label: '6 - Estrangeira direta sem similar nacional' },
     { value: '7', label: '7 - Estrangeira adquirida no mercado interno sem similar nacional' },
-    { value: '8', label: '8 - Nacional com conteudo de importacao acima de 70%' },
+    { value: '8', label: '8 - Nacional com conteúdo de importação acima de 70%' },
 ]
 
 const icmsOptions = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900']
@@ -165,16 +165,16 @@ function validateForm(form) {
     Object.entries(numericFieldLabels).forEach(([field, label]) => {
         const numericValue = getNumberValue(form[field])
         if (Number.isNaN(numericValue)) {
-            errors[field] = `${label} precisa ser um numero valido.`
+            errors[field] = `${label} precisa ser um numero válido.`
             return
         }
 
         if (numericValue !== null && numericValue < 0) {
-            errors[field] = `${label} nao pode ser negativo.`
+            errors[field] = `${label} não pode ser negativo.`
         }
 
         if (numericValue !== null && ['icms_rate', 'pis_rate', 'cofins_rate', 'ipi_rate'].includes(field) && numericValue > 100) {
-            errors[field] = `${label} nao pode ser maior que 100%.`
+            errors[field] = `${label} não pode ser maior que 100%.`
         }
     })
 
@@ -336,7 +336,7 @@ export default function ProductFormModal({
         try {
             await onSubmit(form)
         } catch (error) {
-            const message = error.message || 'Nao foi possivel salvar o produto.'
+            const message = error.message || 'Não foi possível salvar o produto.'
             setSubmitError(message)
             showErrorPopup(message)
         }
@@ -440,7 +440,7 @@ export default function ProductFormModal({
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Descartar alteracoes',
+            title: 'Descartar alterações',
             message: 'Fechar sem salvar este produto?',
             confirmLabel: 'Descartar',
             cancelLabel: 'Continuar',
@@ -499,7 +499,7 @@ export default function ProductFormModal({
                                     {renderFieldError('name')}
                                 </label>
                                 <label className="products-editor-field">
-                                    <span>Codigo / SKU</span>
+                                    <span>Código / SKU</span>
                                     <div className="products-editor-input-wrap">
                                         <i className="fa-solid fa-hashtag" />
                                         <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} />
@@ -553,7 +553,7 @@ export default function ProductFormModal({
                                         <h3>Nova categoria</h3>
                                         <div className="products-inline-create-grid">
                                             <input placeholder="Nome" value={quickCategory.name} onChange={(event) => setQuickCategory((current) => ({ ...current, name: event.target.value }))} />
-                                            <input placeholder="Descricao" value={quickCategory.description} onChange={(event) => setQuickCategory((current) => ({ ...current, description: event.target.value }))} />
+                                            <input placeholder="Descrição" value={quickCategory.description} onChange={(event) => setQuickCategory((current) => ({ ...current, description: event.target.value }))} />
                                         </div>
                                         {quickCategoryError ? <span className="products-editor-error">{quickCategoryError}</span> : null}
                                         <div className="products-inline-create-actions">
@@ -598,7 +598,7 @@ export default function ProductFormModal({
                                     </div>
                                 </article>
                                 <label className="products-editor-field span-2">
-                                    <span>Descricao</span>
+                                    <span>Descrição</span>
                                     <textarea rows="5" value={form.description ?? ''} onChange={(event) => updateField('description', event.target.value)} />
                                 </label>
                                 <label className="products-editor-field span-2">
@@ -668,7 +668,7 @@ export default function ProductFormModal({
                                             className={`products-editor-toggle ${!form.fiscal_enabled ? 'active' : ''}`}
                                             onClick={() => updateField('fiscal_enabled', false)}
                                         >
-                                            Nao fiscal
+                                            Não fiscal
                                         </button>
                                     </div>
                                 </label>
@@ -831,7 +831,7 @@ export default function ProductFormModal({
                         ) : attemptedSubmit && Object.keys(errors).length > 0 ? (
                             <span className="products-editor-submit-error">Revise os campos destacados para concluir o cadastro.</span>
                         ) : (
-                            <span className="products-editor-submit-hint">Campos com * sao obrigatorios.</span>
+                            <span className="products-editor-submit-hint">Campos com * sao obrigatórios.</span>
                         )}
                         <div className="products-editor-action-buttons">
                             <button className="ui-button-ghost" type="button" onClick={requestClose}>Cancelar</button>

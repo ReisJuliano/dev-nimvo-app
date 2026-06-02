@@ -45,7 +45,7 @@ export default function DiscountModal({
             <form className="pos-quick-customer-card pos-discount-modal-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>
-                        <h2>Desconto com autorizacao</h2>
+                        <h2>Desconto com autorização</h2>
                         <p>Selecione a regra do desconto e valide com a senha de um gerente.</p>
                     </div>
                     <button className="ui-button-ghost" type="button" onClick={onClose}>

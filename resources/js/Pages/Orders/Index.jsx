@@ -649,13 +649,13 @@ export default function OrdersIndex({
     const cashShortfall = useMemo(() => (cashReceived === '' ? 0 : Math.max(0, roundCurrency(pricing.total - cashReceivedAmount))), [cashReceived, cashReceivedAmount, pricing.total])
     const currentDraftSaveText = currentDraft
         ? (savingDraft
-            ? 'Salvando alteracoes...'
+            ? 'Salvando alterações...'
             : currentDraft.updatedAt
-                ? `Ultima atualizacao em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(currentDraft.updatedAt))}`
+                ? `Última atualização em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(currentDraft.updatedAt))}`
                 : currentDraftStatus?.description || 'Atendimento pronto para editar')
-        : 'Selecione ou crie um atendimento para comecar.'
+        : 'Selecione ou crie um atendimento para começar.'
     const canOpenReports =
-        moduleState.isCapabilityEnabled('relatorios')
+        moduleState.isCapabilityEnabled('relatórios')
         || moduleState.isCapabilityEnabled('vendas')
         || moduleState.isCapabilityEnabled('demanda')
 
@@ -947,7 +947,7 @@ export default function OrdersIndex({
             if (currentDraft) await saveDraftNow(currentDraft)
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const offlineOrder = getOfflineOrderDetail(tenantId, draftId)
-                if (!offlineOrder) throw new Error('Atendimento nao encontrado no cache offline.')
+                if (!offlineOrder) throw new Error('Atendimento não encontrado no cache offline.')
                 hydrateDraft(offlineOrder)
                 setDraftModalOpen(true)
                 setFeedback(null)
@@ -1223,7 +1223,7 @@ export default function OrdersIndex({
         }
 
         if (['sent_to_cashier', 'ready', 'delivered', 'cancelled', 'canceled'].includes(draft.status)) {
-            showFeedback('warning', 'Esse pedido ja esta na etapa mais avancada disponivel nesta tela.')
+            showFeedback('warning', 'Esse pedido ja esta na etapa mais avancada disponível nesta tela.')
             return
         }
 
@@ -1343,7 +1343,7 @@ export default function OrdersIndex({
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Cancelar pedido',
-            message: `O cancelamento sera tratado como exclusao para o pedido "${draft.label}". Deseja continuar?`,
+            message: `O cancelamento será tratado como exclusão para o pedido "${draft.label}". Deseja continuar?`,
             confirmLabel: 'Cancelar pedido',
             cancelLabel: 'Voltar',
         })
@@ -1388,7 +1388,7 @@ export default function OrdersIndex({
     async function handlePrintDraft() {
         if (!currentDraft) return
         const printWindow = window.open('', '_blank', 'width=760,height=900')
-        if (!printWindow) return showFeedback('warning', 'O navegador bloqueou a janela de impressao.')
+        if (!printWindow) return showFeedback('warning', 'O navegador bloqueou a janela de impressão.')
 
         setPrintingDraft(true)
         try {
@@ -1604,7 +1604,7 @@ export default function OrdersIndex({
         if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('warning', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            return showFeedback('warning', 'Pagamento parcial exige conexao para manter o atendimento consistente.')
+            return showFeedback('warning', 'Pagamento parcial exige conexão para manter o atendimento consistente.')
         }
 
         setSubmittingPartialCheckout(true)
@@ -1639,7 +1639,7 @@ export default function OrdersIndex({
         if (!currentDraft) return
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            return showFeedback('warning', 'Delivery a partir da comanda exige conexao ativa.')
+            return showFeedback('warning', 'Delivery a partir da comanda exige conexão ativa.')
         }
 
         setSubmittingDelivery(true)
@@ -1678,7 +1678,7 @@ export default function OrdersIndex({
 
         if (discountDraft.mode === 'percent') {
             const percent = Number(discountDraft.percent || 0)
-            if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual valido entre 0,01 e 100.')
+            if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual válido entre 0,01 e 100.')
             setDiscountConfig({ type: 'percent', percent: roundCurrency(percent) })
             setDiscountModalOpen(false)
             return showFeedback('success', 'Desconto percentual aplicado no atendimento.')
@@ -1694,12 +1694,12 @@ export default function OrdersIndex({
 
         if (discountDraft.mode === 'item') {
             const item = currentDraft.items.find((entry) => String(entry.id) === String(discountDraft.itemId))
-            if (!item) return showFeedback('warning', 'Selecione um item valido para aplicar o desconto.')
+            if (!item) return showFeedback('warning', 'Selecione um item válido para aplicar o desconto.')
             const itemSubtotal = roundCurrency(Number(item.sale_price) * Number(item.qty))
 
             if (discountDraft.itemDiscountType === 'percent') {
                 const percent = Number(discountDraft.itemPercent || 0)
-                if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual valido para o desconto do item.')
+                if (percent <= 0 || percent > 100) return showFeedback('warning', 'Informe um percentual válido para o desconto do item.')
                 setDiscountConfig({ type: 'item', itemId: String(item.id), itemDiscountType: 'percent', value: roundCurrency(percent) })
                 setDiscountModalOpen(false)
                 return showFeedback('success', `Desconto aplicado ao item ${item.name}.`)
@@ -1720,7 +1720,7 @@ export default function OrdersIndex({
                     <div className={`ui-alert ${feedback.type}`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>

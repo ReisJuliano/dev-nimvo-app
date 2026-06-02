@@ -27,8 +27,8 @@ export default function ProductToolbar({
                         type="search"
                         placeholder={
                             isFashionMode
-                                ? 'Buscar por nome, codigo, referencia, cor, tamanho ou colecao'
-                                : 'Buscar por nome, codigo ou EAN'
+                                ? 'Buscar por nome, código, referência, cor, tamanho ou coleção'
+                                : 'Buscar por nome, código ou EAN'
                         }
                         value={normalizedSearch}
                         onChange={(event) => onSearchChange(event.target.value)}

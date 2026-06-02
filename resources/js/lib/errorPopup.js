@@ -19,12 +19,12 @@ export const POPUP_TYPE_META = {
     warning: {
         kicker: 'Alerta',
         icon: 'fa-solid fa-circle-exclamation',
-        defaultTitle: 'Atencao',
-        confirmTitle: 'Confirme esta acao',
+        defaultTitle: 'Atenção',
+        confirmTitle: 'Confirme esta ação',
         actionClassName: 'ui-button-secondary',
     },
     info: {
-        kicker: 'Informacao',
+        kicker: 'Informação',
         icon: 'fa-solid fa-circle-info',
         defaultTitle: 'Aviso do sistema',
         confirmTitle: 'Confirme para continuar',

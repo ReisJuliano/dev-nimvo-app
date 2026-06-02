@@ -18,7 +18,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
             <section className="cash-register-card status">
                 <div className="cash-register-status-hero">
                     <div>
-                        <span className="cash-register-hero-chip">Caixa em operacao</span>
+                        <span className="cash-register-hero-chip">Caixa em operação</span>
                         <h2>{formatMoney(total_sales)}</h2>
                         <p>{sales_count} venda(s) registradas</p>
                     </div>
@@ -75,7 +75,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
             <section className="cash-register-card">
                 <div className="cash-register-section-header">
                     <div>
-                        <span className="cash-register-section-kicker">Operacao manual</span>
+                        <span className="cash-register-section-kicker">Operação manual</span>
                         <h2>Movimentacoes</h2>
                         <p>Registre entradas e retiradas.</p>
                     </div>
@@ -111,7 +111,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                             <div key={movement.id} className="cash-register-movement-row">
                                 <div>
                                     <strong>{movement.type === 'withdrawal' ? 'Sangria' : 'Suprimento'}</strong>
-                                    <span>{movement.reason || 'Sem observacao'}</span>
+                                    <span>{movement.reason || 'Sem observação'}</span>
                                 </div>
                                 <div>
                                     <strong>{formatMoney(movement.amount)}</strong>
@@ -120,7 +120,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                             </div>
                         ))
                     ) : (
-                        <div className="cash-register-empty">Nenhuma movimentacao registrada.</div>
+                        <div className="cash-register-empty">Nenhuma movimentação registrada.</div>
                     )}
                 </div>
             </section>
@@ -152,7 +152,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                             <input name="closing_amount" type="number" step="0.01" min="0" required />
                         </label>
                         <label>
-                            Observacao
+                            Observação
                             <textarea name="closing_notes" rows="3" />
                         </label>
                         <button className="cash-register-danger-button">

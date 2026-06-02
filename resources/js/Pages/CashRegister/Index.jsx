@@ -241,7 +241,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 setOpenModalVisible(false)
                 setFeedback({
                     type: 'warning',
-                    text: 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                    text: 'Caixa aberto no modo offline. A sincronização será feita quando a internet voltar.',
                 })
                 return
             }
@@ -258,7 +258,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 setOpenModalVisible(false)
                 setFeedback({
                     type: 'warning',
-                    text: 'Caixa aberto no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                    text: 'Caixa aberto no modo offline. A sincronização será feita quando a internet voltar.',
                 })
             } else {
                 setFeedback({
@@ -289,7 +289,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 setFeedback({
                     type: 'error',
-                    text: 'Movimentacoes manuais do caixa ainda exigem conexao ativa.',
+                    text: 'Movimentacoes manuais do caixa ainda exigem conexão ativa.',
                 })
                 return
             }
@@ -309,8 +309,8 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 setFeedback({
                     type: 'warning',
                     text: type === 'withdrawal'
-                        ? 'Sangria registrada no modo offline. A sincronizacao sera feita quando a internet voltar.'
-                        : 'Suprimento registrado no modo offline. A sincronizacao sera feita quando a internet voltar.',
+                        ? 'Sangria registrada no modo offline. A sincronização será feita quando a internet voltar.'
+                        : 'Suprimento registrado no modo offline. A sincronização será feita quando a internet voltar.',
                 })
             } else {
                 setFeedback({
@@ -439,7 +439,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             if (!offlineReport) {
                 setFeedback({
                     type: 'error',
-                    text: 'Esse relatorio ainda nao foi salvo nesta maquina para consulta offline.',
+                    text: 'Esse relatório ainda não foi salvo nesta máquina para consulta offline.',
                 })
                 return
             }
@@ -500,7 +500,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         {
             key: 'history',
             icon: 'fa-clock-rotate-left',
-            label: 'Historico',
+            label: 'Histórico',
             description: 'Movimentos do dia',
             tone: 'ghost',
             onClick: () => {
@@ -552,7 +552,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                     <div className={`ui-alert ${feedback.type}`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>
@@ -622,7 +622,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                     </button>
                                 )}
                                 icon="fa-vault"
-                                text="Nenhum caixa aberto no momento. Use apenas o valor inicial e siga com a operacao."
+                                text="Nenhum caixa aberto no momento. Use apenas o valor inicial e siga com a operação."
                                 title="Caixa fechado"
                             />
                         </section>
@@ -644,7 +644,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         <input className="ui-input" name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />
                     </label>
                     <label>
-                        <span>Observacao</span>
+                        <span>Observação</span>
                         <textarea className="ui-textarea" name="opening_notes" rows="3" />
                     </label>
                     <div className="cash-compact-form-actions">
@@ -686,7 +686,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
 
             <ActionDrawer
                 open={historyDrawerOpen}
-                title="Historico do caixa"
+                title="Histórico do caixa"
                 description="Movimentos manuais e fechamentos recentes."
                 icon="fa-clock-rotate-left"
                 size="lg"
@@ -747,7 +747,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                 {
                                     key: 'report',
                                     icon: 'fa-eye',
-                                    label: 'Ver relatorio',
+                                    label: 'Ver relatório',
                                     tone: 'primary',
                                     onClick: () => handleViewReport(row.id),
                                 },
@@ -798,7 +798,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         </div>
 
                         <label>
-                            <span>Observacao do fechamento</span>
+                            <span>Observação do fechamento</span>
                             <textarea
                                 className="ui-textarea"
                                 rows="3"

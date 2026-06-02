@@ -159,7 +159,7 @@ export default function ConditionalSaleDetailCard({
                     <div className="conditional-detail-copy">
                         <strong>{conditionalSale.code}</strong>
                         <span>{conditionalSale.customer.name}</span>
-                        <small>Operador {conditionalSale.operator_name || 'Nao informado'}</small>
+                        <small>Operador {conditionalSale.operator_name || 'Não informado'}</small>
                     </div>
                 </div>
 
@@ -202,7 +202,7 @@ export default function ConditionalSaleDetailCard({
                             <strong>Itens da condicional</strong>
                             <span>{conditionalSale.items.length} item(ns)</span>
                         </div>
-                        {conditionalSale.notes ? <StatusBadge label="Com observacao" tone="info" /> : null}
+                        {conditionalSale.notes ? <StatusBadge label="Com observação" tone="info" /> : null}
                     </div>
 
                     <DenseTable

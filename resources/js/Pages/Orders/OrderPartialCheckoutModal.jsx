@@ -115,7 +115,7 @@ export default function OrderPartialCheckoutModal({
                     <div className={`ui-alert ${feedback.type} orders-modal-inline-alert`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Nao foi possivel concluir a acao' : 'Atualizacao realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>
@@ -125,7 +125,7 @@ export default function OrderPartialCheckoutModal({
                     <div>
                         <span>Atendimento</span>
                         <strong>{draft.label}</strong>
-                        <small>{selectedCustomer?.name || 'Cliente nao identificado'}</small>
+                        <small>{selectedCustomer?.name || 'Cliente não identificado'}</small>
                     </div>
                     <div>
                         <span>Itens</span>
@@ -261,7 +261,7 @@ export default function OrderPartialCheckoutModal({
                             <div className="orders-inline-empty wide">
                                 <i className="fa-solid fa-user-tag" />
                                 <div>
-                                    <strong>Cliente obrigatorio para A Prazo</strong>
+                                    <strong>Cliente obrigatório para A Prazo</strong>
                                     <p>Vincule um cliente antes de concluir com esta forma de pagamento.</p>
                                 </div>
                             </div>

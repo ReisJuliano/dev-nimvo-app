@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
@@ -165,7 +165,7 @@ function PromotionsWorkspace({ payload }) {
                         {filteredPromotions.length ? filteredPromotions.map((promotion) => (
                             <button key={promotion.id} type="button" className={`fashion-list-card ${form.id === promotion.id ? 'active' : ''}`} onClick={() => setForm({ ...emptyForm, ...promotion })}>
                                 <div className="fashion-list-card-top"><strong>{promotion.name}</strong><PromotionStatusBadge promotion={promotion} /></div>
-                                <p>{promotion.description || 'Sem descricao.'}</p>
+                                <p>{promotion.description || 'Sem descrição.'}</p>
                                 <div className="fashion-list-card-meta"><span>{getPromotionDiscountLabel(promotion)}</span><span>{getPromotionScopeLabel(promotion)}</span></div>
                             </button>
                         )) : <EmptyState title="Sem promocoes" text="Nenhum registro neste filtro." />}
@@ -176,13 +176,13 @@ function PromotionsWorkspace({ payload }) {
                     <form className="fashion-form-grid" onSubmit={handleSubmit}>
                         <label><span>Nome</span><input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
                         <label><span>Tipo</span><select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}><option value="percent">Percentual</option><option value="fixed">Valor fixo</option><option value="price_override">Preco final</option></select></label>
-                        <label className="span-2"><span>Descricao</span><textarea rows="3" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label>
+                        <label className="span-2"><span>Descrição</span><textarea rows="3" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></label>
                         <label><span>Escopo</span><select value={form.scope} onChange={(event) => setForm((current) => ({ ...current, scope: event.target.value, product_id: '', category_id: '', collection: '' }))}><option value="all">Catalogo inteiro</option><option value="product">Produto</option><option value="category">Categoria</option><option value="collection">Colecao</option></select></label>
                         <label><span>Desconto</span><input type="number" step="0.01" value={form.discount_value} onChange={(event) => setForm((current) => ({ ...current, discount_value: event.target.value }))} required /></label>
                         {form.scope === 'product' ? <label className="span-2"><span>Produto alvo</span><select value={form.product_id} onChange={(event) => setForm((current) => ({ ...current, product_id: event.target.value }))}><option value="">Selecione</option>{payload.products.map((product) => <option key={product.id} value={product.id}>{getProductOptionLabel(product)}</option>)}</select></label> : null}
                         {form.scope === 'category' ? <label className="span-2"><span>Categoria alvo</span><select value={form.category_id} onChange={(event) => setForm((current) => ({ ...current, category_id: event.target.value }))}><option value="">Selecione</option>{payload.categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label> : null}
                         {form.scope === 'collection' ? <label className="span-2"><span>Colecao alvo</span><select value={form.collection} onChange={(event) => setForm((current) => ({ ...current, collection: event.target.value }))}><option value="">Selecione</option>{payload.collections.map((collection) => <option key={collection} value={collection}>{collection}</option>)}</select></label> : null}
-                        <label><span>Inicio</span><input type="datetime-local" value={form.start_at} onChange={(event) => setForm((current) => ({ ...current, start_at: event.target.value }))} /></label>
+                        <label><span>Início</span><input type="datetime-local" value={form.start_at} onChange={(event) => setForm((current) => ({ ...current, start_at: event.target.value }))} /></label>
                         <label><span>Fim</span><input type="datetime-local" value={form.end_at} onChange={(event) => setForm((current) => ({ ...current, end_at: event.target.value }))} /></label>
                         <label className="span-2"><span>Chamada comercial</span><input value={form.highlight_text} onChange={(event) => setForm((current) => ({ ...current, highlight_text: event.target.value }))} placeholder="Ex.: Semana do jeans" /></label>
                         <label className="fashion-inline-toggle span-2"><input type="checkbox" checked={Boolean(form.active)} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} /><span>Promocao ativa</span></label>
@@ -299,7 +299,7 @@ function ReturnsWorkspace({ payload }) {
                             <button key={record.id} type="button" className={`fashion-list-card ${form.id === record.id ? 'active' : ''}`} onClick={() => setForm({ ...emptyForm, ...record, customer_id: record.customer_id || '', product_id: record.product_id || '', sale_id: record.sale_id || '' })}>
                                 <div className="fashion-list-card-top"><strong>{record.product_name}</strong><span className="ui-badge warning">{record.status}</span></div>
                                 <p>{record.reason}</p>
-                                <div className="fashion-list-card-meta"><span>{record.customer_name || 'Cliente nao informado'}</span><span>{record.type}</span></div>
+                                <div className="fashion-list-card-meta"><span>{record.customer_name || 'Cliente não informado'}</span><span>{record.type}</span></div>
                             </button>
                         )) : <EmptyState title="Sem trocas" text="Nenhum atendimento nesta etapa." />}
                     </div>
@@ -307,12 +307,12 @@ function ReturnsWorkspace({ payload }) {
                 <section className="fashion-panel-card">
                     <header><h2>{form.id ? 'Editar atendimento' : 'Novo atendimento'}</h2><span>Fluxo real de loja</span></header>
                     <form className="fashion-form-grid" onSubmit={handleSubmit}>
-                        <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Nao informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
+                        <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Não informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
                         <label><span>Produto</span><select value={form.product_id} onChange={(event) => handleProductChange(event.target.value)}><option value="">Selecione</option>{payload.products.map((product) => <option key={product.id} value={product.id}>{getProductOptionLabel(product)}</option>)}</select></label>
                         <label><span>Tipo</span><select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}><option value="troca">Troca</option><option value="devolucao">Devolucao</option></select></label>
                         <label><span>Status</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="aberto">Aberto</option><option value="em_analise">Em analise</option><option value="concluido">Concluido</option><option value="cancelado">Cancelado</option></select></label>
                         <label><span>Produto atendido</span><input value={form.product_name} onChange={(event) => setForm((current) => ({ ...current, product_name: event.target.value }))} required /></label>
-                        <label><span>Codigo</span><input value={form.product_code} onChange={(event) => setForm((current) => ({ ...current, product_code: event.target.value }))} /></label>
+                        <label><span>Código</span><input value={form.product_code} onChange={(event) => setForm((current) => ({ ...current, product_code: event.target.value }))} /></label>
                         <label><span>Tamanho</span><input value={form.size} onChange={(event) => setForm((current) => ({ ...current, size: event.target.value }))} /></label>
                         <label><span>Cor</span><input value={form.color} onChange={(event) => setForm((current) => ({ ...current, color: event.target.value }))} /></label>
                         <label className="span-2"><span>Motivo</span><input value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} required /></label>
@@ -514,7 +514,7 @@ function OnlineOrdersWorkspace({ payload }) {
                         {filteredOrders.length ? filteredOrders.map((order) => (
                             <button key={order.id} type="button" className={`fashion-list-card ${form.id === order.id ? 'active' : ''}`} onClick={() => setForm(mapOrderToForm(order, order.channel))}>
                                 <div className="fashion-list-card-top"><strong>{order.label}</strong><span className={`ui-badge ${order.status === 'sent_to_cashier' ? 'info' : 'warning'}`}>{order.status === 'sent_to_cashier' ? 'No caixa' : 'Em aberto'}</span></div>
-                                <p>{order.customer?.name || 'Cliente nao informado'}</p>
+                                <p>{order.customer?.name || 'Cliente não informado'}</p>
                                 <div className="fashion-list-card-meta"><span>{formatMoney(order.total)}</span><span>{order.items?.length || 0} item(ns)</span></div>
                             </button>
                         )) : <EmptyState title="Sem pedidos" text="Nenhum pedido neste canal." />}
@@ -524,7 +524,7 @@ function OnlineOrdersWorkspace({ payload }) {
                     <header><h2>{form.id ? 'Editar pedido online' : 'Novo pedido online'}</h2><span>Canal {form.channel}</span></header>
                     <form className="fashion-form-grid" onSubmit={handleSubmit}>
                         <label><span>Canal</span><select value={form.channel} onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}><option value="site">Site</option><option value="whatsapp">WhatsApp</option></select></label>
-                        <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Nao informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
+                        <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Não informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
                         <label><span>Referencia</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
                         <label><span>Status</span><input value={form.status === 'sent_to_cashier' ? 'No caixa' : 'Em aberto'} readOnly /></label>
                         <label className="span-2"><span>Observacoes</span><textarea rows="3" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
@@ -592,7 +592,7 @@ function WhatsAppWorkspace({ payload }) {
 
     return (
         <div className="fashion-module-stack">
-            <SectionTabs tabs={[{ key: 'settings', label: 'Configuracao', icon: 'fa-gear' }, { key: 'preview', label: 'Preview', icon: 'fa-comment' }]} activeTab={activeTab} onChange={setActiveTab} />
+            <SectionTabs tabs={[{ key: 'settings', label: 'Configuração', icon: 'fa-gear' }, { key: 'preview', label: 'Preview', icon: 'fa-comment' }]} activeTab={activeTab} onChange={setActiveTab} />
             <Feedback feedback={feedback} />
             {activeTab === 'settings' ? (
                 <section className="fashion-panel-card">
@@ -600,7 +600,7 @@ function WhatsAppWorkspace({ payload }) {
                     <form className="fashion-form-grid" onSubmit={handleSubmit}>
                         <label><span>Numero</span><input value={settings.phone || ''} onChange={(event) => setSettings((current) => ({ ...current, phone: event.target.value }))} placeholder="5511999999999" /></label>
                         <label><span>Horario</span><input value={settings.business_hours || ''} onChange={(event) => setSettings((current) => ({ ...current, business_hours: event.target.value }))} /></label>
-                        <label className="span-2"><span>Saudacao</span><input value={settings.greeting || ''} onChange={(event) => setSettings((current) => ({ ...current, greeting: event.target.value }))} /></label>
+                        <label className="span-2"><span>Saudação</span><input value={settings.greeting || ''} onChange={(event) => setSettings((current) => ({ ...current, greeting: event.target.value }))} /></label>
                         <label className="span-2"><span>Template do checkout</span><textarea rows="6" value={settings.checkout_template || ''} onChange={(event) => setSettings((current) => ({ ...current, checkout_template: event.target.value }))} /></label>
                         <div className="fashion-actions span-2"><button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : 'Salvar configuracoes'}</button></div>
                     </form>

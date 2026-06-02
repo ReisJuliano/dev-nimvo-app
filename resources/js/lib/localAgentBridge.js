@@ -12,7 +12,7 @@ export function canUseLocalAgentBridge(bridge) {
 
 export async function requestLocalAgent(bridge, path, options = {}) {
     if (!canUseLocalAgentBridge(bridge)) {
-        throw new Error('O agente local de impressao nao esta disponivel nesta maquina.')
+        throw new Error('O agente local de impressão não esta disponível nesta máquina.')
     }
 
     const controller = new AbortController()
@@ -35,7 +35,7 @@ export async function requestLocalAgent(bridge, path, options = {}) {
         const payload = raw ? JSON.parse(raw) : {}
 
         if (!response.ok) {
-            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitacao.')
+            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitação.')
             localAgentError.status = response.status
             throw localAgentError
         }
@@ -47,7 +47,7 @@ export async function requestLocalAgent(bridge, path, options = {}) {
         }
 
         if (error instanceof SyntaxError) {
-            throw new Error('A API local do agente respondeu com um JSON invalido.')
+            throw new Error('A API local do agente respondeu com um JSON inválido.')
         }
 
         throw error

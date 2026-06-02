@@ -1281,7 +1281,7 @@ export function createOfflineCashRegister(tenantId, payload = {}, context = {}) 
 
     updateState(tenantId, (state) => {
         if (state.cashRegister?.status === 'open') {
-            throw new Error('Ja existe um caixa aberto nesta maquina.')
+            throw new Error('Ja existe um caixa aberto nesta máquina.')
         }
 
         const tempId = allocateTempId(state)
@@ -1358,7 +1358,7 @@ export function registerOfflineCashMovement(tenantId, cashRegisterId, payload = 
 
     updateState(tenantId, (state) => {
         if (!state.cashRegister || String(state.cashRegister.id) !== String(cashRegisterId)) {
-            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentacao.')
+            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentação.')
         }
 
         const queuedAction = {
@@ -1715,7 +1715,7 @@ export function queueOfflineSaleFinalize(tenantId, payload, context = {}) {
             const product = productsById[String(item.id)]
 
             if (!product) {
-                throw new Error('Um dos produtos desta venda nao esta mais disponivel no modo offline.')
+                throw new Error('Um dos produtos desta venda não esta mais disponível no modo offline.')
             }
 
             if (product.stock_quantity < item.qty) {
@@ -1931,7 +1931,7 @@ export function closeOfflineCashRegister(tenantId, cashRegisterId, payload = {},
         })
 
         if (!currentReport) {
-            throw new Error('Nao foi possivel montar o resumo offline do caixa para o fechamento.')
+            throw new Error('Não foi possível montar o resumo offline do caixa para o fechamento.')
         }
 
         const closedAt = context.closedAt || nowIso()
@@ -2070,7 +2070,7 @@ async function syncCashRegisterQueue(tenantId, state, request, allowedActions = 
         const remoteCashRegisterId = Number(resolveCashRegisterQueueTargetId(state, entry))
 
         if (!remoteCashRegisterId) {
-            throw new Error('Nao foi possivel resolver o caixa remoto para sincronizar a fila offline.')
+            throw new Error('Não foi possível resolver o caixa remoto para sincronizar a fila offline.')
         }
 
         if (entry.action === 'movement') {
@@ -2273,7 +2273,7 @@ async function syncSaleQueue(tenantId, state, request) {
                     },
                 })
             } catch {
-                state.meta.lastSyncError = `Venda ${response.sale.sale_number} sincronizada, mas a emissao fiscal precisa de revisao manual.`
+                state.meta.lastSyncError = `Venda ${response.sale.sale_number} sincronizada, mas a emissão fiscal precisa de revisão manual.`
                 writeState(tenantId, state)
             }
         }
@@ -2323,7 +2323,7 @@ export async function syncOfflineWorkspace(tenantId, request) {
 
             return buildSummary(state)
         } catch (error) {
-            state.meta.lastSyncError = error.message || 'Nao foi possivel sincronizar os dados offline.'
+            state.meta.lastSyncError = error.message || 'Não foi possível sincronizar os dados offline.'
             writeState(tenantId, state)
             throw error
         }

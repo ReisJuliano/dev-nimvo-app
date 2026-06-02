@@ -33,8 +33,8 @@ export default function FiscalRecipientModal({
             <form className="pos-quick-customer-card pos-recipient-modal-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>
-                        <h2>Destinatario e emissao</h2>
-                        <p>{documentModel === '55' ? 'Identifique o CPF/CNPJ e o endereco antes de concluir a etapa fiscal.' : 'Escolha entre identificar o consumidor ou emitir como consumidor final nao identificado.'}</p>
+                        <h2>Destinatario e emissão</h2>
+                        <p>{documentModel === '55' ? 'Identifique o CPF/CNPJ e o endereco antes de concluir a etapa fiscal.' : 'Escolha entre identificar o consumidor ou emitir como consumidor final não identificado.'}</p>
                     </div>
                     <button className="ui-button-ghost" type="button" onClick={onClose}>
                         Fechar
@@ -64,7 +64,7 @@ export default function FiscalRecipientModal({
                     {documentModel === '65' ? (
                         <button type="button" className={selectionMode === 'consumer_final' ? 'active' : ''} onClick={() => onSelectionModeChange('consumer_final')}>
                             <i className="fa-solid fa-user-secret" />
-                            Nao identificado
+                            Não identificado
                         </button>
                     ) : null}
                     {allowCompanySelection ? (
@@ -78,12 +78,12 @@ export default function FiscalRecipientModal({
                 {selectionMode === 'document' ? (
                     <div className="pos-recipient-form-grid">
                         <label className="pos-discount-form-field">
-                            Nome ou razao social
+                            Nome ou razão social
                             <input
                                 className="ui-input"
                                 value={manualRecipient.name}
                                 onChange={(event) => onManualRecipientChange('name', event.target.value)}
-                                placeholder="Digite o nome do destinatario"
+                                placeholder="Digite o nome do destinatário"
                             />
                         </label>
 
@@ -121,12 +121,12 @@ export default function FiscalRecipientModal({
                                 </label>
 
                                 <label className="pos-discount-form-field">
-                                    Inscricao estadual
+                                    Inscrição estadual
                                     <input
                                         className="ui-input"
                                         value={manualRecipient.state_registration}
                                         onChange={(event) => onManualRecipientChange('state_registration', event.target.value)}
-                                        placeholder="Nao contribuinte se vazio"
+                                        placeholder="Não contribuinte se vazio"
                                     />
                                 </label>
 
@@ -181,7 +181,7 @@ export default function FiscalRecipientModal({
                                 </label>
 
                                 <label className="pos-discount-form-field">
-                                    Codigo IBGE
+                                    Código IBGE
                                     <input
                                         className="ui-input"
                                         value={manualRecipient.city_code}
@@ -215,7 +215,7 @@ export default function FiscalRecipientModal({
                 ) : null}
 
                 {selectionMode === 'consumer_final' ? (
-                    <div className="pos-empty-state">Consumidor final sem identificacao.</div>
+                    <div className="pos-empty-state">Consumidor final sem identificação.</div>
                 ) : null}
 
                 {selectionMode === 'customer' ? (
@@ -354,7 +354,7 @@ export default function FiscalRecipientModal({
                             </label>
 
                             <label className="pos-discount-form-field">
-                                Inscricao estadual
+                                Inscrição estadual
                                 <input
                                     className="ui-input"
                                     value={quickCompanyForm.state_registration}
@@ -437,7 +437,7 @@ export default function FiscalRecipientModal({
                                     </label>
 
                                     <label className="pos-discount-form-field">
-                                        Codigo IBGE
+                                        Código IBGE
                                         <input
                                             className="ui-input"
                                             value={quickCompanyForm.city_code}

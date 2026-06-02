@@ -52,7 +52,7 @@ function recordPaymentSummary(record) {
         delivery: 'Delivery',
         credit: 'A prazo',
         fiscal: 'Documento fiscal',
-    }[record.type] || 'Nao informado'
+    }[record.type] || 'Não informado'
 }
 
 function recordTypeLabel(recordType, recordTypes) {
@@ -98,7 +98,7 @@ function resolveRecordColumns(activeType, recordTypes) {
             },
             {
                 key: 'status',
-                label: 'Situacao',
+                label: 'Situação',
                 render: (record) => <StatusBadge compact label={record.status_label} tone={record.status_tone} />,
             },
             {
@@ -482,7 +482,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             label: 'Inutilizar',
                             visible: selectedRecord?.type === 'fiscal' && selectedRecord.actions?.inutilize_supported !== false,
                             disabled: true,
-                            onClick: () => setFeedback({ type: 'error', text: 'Inutilizacao segue o fluxo fiscal proprio nesta versao.' }),
+                            onClick: () => setFeedback({ type: 'error', text: 'Inutilização segue o fluxo fiscal próprio nesta versao.' }),
                         },
                         {
                             key: 'print',
@@ -589,7 +589,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                                     <h3>Resumo da entrada</h3>
                                     <div className="proc-ui-summary-grid">
                                         <article className="proc-ui-summary-card"><span>Fornecedor</span><strong>{selectedRecord.details.supplier || '-'}</strong></article>
-                                        <article className="proc-ui-summary-card"><span>Codigo</span><strong>{selectedRecord.details.code || '-'}</strong></article>
+                                        <article className="proc-ui-summary-card"><span>Código</span><strong>{selectedRecord.details.code || '-'}</strong></article>
                                         <article className="proc-ui-summary-card"><span>Recebida em</span><strong>{selectedRecord.details.received_at ? formatDateTime(selectedRecord.details.received_at) : '-'}</strong></article>
                                         <article className="proc-ui-summary-card"><span>Total</span><strong>{formatMoney(selectedRecord.amount)}</strong></article>
                                     </div>

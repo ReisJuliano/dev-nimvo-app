@@ -5,7 +5,7 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
         <section className="cash-register-card">
             <div className="cash-register-section-header">
                 <div>
-                    <span className="cash-register-section-kicker">Historico</span>
+                    <span className="cash-register-section-kicker">Histórico</span>
                     <h2>Fechamentos</h2>
                 </div>
                 <span className="cash-register-count-chip">{history.length} registro(s)</span>
@@ -35,11 +35,11 @@ export default function RegisterHistoryTable({ history, onViewReport }) {
                                     <td>
                                         <button
                                             className="ui-tooltip"
-                                            data-tooltip="Abrir conferencia detalhada"
+                                            data-tooltip="Abrir conferência detalhada"
                                             onClick={() => onViewReport(register.id)}
                                         >
                                             <i className="fa-solid fa-file-lines" />
-                                            Ver relatorio
+                                            Ver relatório
                                         </button>
                                     </td>
                                 </tr>

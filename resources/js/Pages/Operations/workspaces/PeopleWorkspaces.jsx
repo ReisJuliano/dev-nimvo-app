@@ -47,7 +47,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
     const metrics = useMemo(
         () => [
             { label: 'Produtores', value: records.length, caption: 'Base total cadastrada' },
-            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Disponiveis para compras' },
+            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Disponíveis para compras' },
             { label: 'Com contato', value: records.filter((record) => record.phone || record.email).length, caption: 'Telefone ou e-mail preenchido' },
         ],
         [records],
@@ -138,7 +138,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                             <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
                         </label>
                         <label className="span-2">
-                            <FieldLabel icon="fa-location-dot" text="Regiao" />
+                            <FieldLabel icon="fa-location-dot" text="Região" />
                             <input value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))} />
                         </label>
                         <label className="span-2">
@@ -159,7 +159,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                                 </ActionButton>
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar produtor'}
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar produtor'}
                             </ActionButton>
                         </div>
                     </form>
@@ -218,9 +218,9 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
     const metrics = useMemo(
         () => [
-            { label: 'Usuarios', value: records.length, caption: 'Base total cadastrada' },
+            { label: 'Usuários', value: records.length, caption: 'Base total cadastrada' },
             { label: 'Gerentes', value: records.filter((record) => record.role === 'manager').length, caption: 'Podem autorizar descontos' },
-            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edicao do fechamento' },
+            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edição do fechamento' },
             { label: 'Com senha gerencial', value: records.filter((record) => record.has_discount_authorization_password).length, caption: 'Senha dedicada cadastrada' },
         ],
         [records],
@@ -312,7 +312,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                 ]}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                listTitle="Usuarios"
+                listTitle="Usuários"
                 listIcon="fa-user-check"
                 listCount={`${filteredRecords.length} registro(s)`}
                 createLabel="Novo usuario"
@@ -323,7 +323,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                     </ActionButton>
                 )}
                 summaryItems={metrics}
-                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuarios nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela nao carrega usuarios automaticamente.'} />}
+                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuarios nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela não carrega usuarios automaticamente.'} />}
                 formTitle={form.id ? 'Editar usuario' : 'Novo usuario'}
                 formSubtitle="Perfis e autorizacoes"
                 formChildren={(
@@ -356,7 +356,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                             />
                         </label>
                         <label className="span-2">
-                            <FieldLabel icon="fa-money-check-dollar" text="Senha de autorizacao gerencial" />
+                            <FieldLabel icon="fa-money-check-dollar" text="Senha de autorização gerencial" />
                             <input
                                 type="password"
                                 value={form.discount_authorization_password}
@@ -398,7 +398,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                                 </ActionButton>
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar usuario'}
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar usuario'}
                             </ActionButton>
                         </div>
                     </form>

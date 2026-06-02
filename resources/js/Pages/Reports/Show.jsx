@@ -243,11 +243,11 @@ function buildPeriodLabel(filters, schema) {
     }
 
     if (filters.scope === 'months') {
-        return `${filters.month_from} ate ${filters.month_to}`
+        return `${filters.month_from} até ${filters.month_to}`
     }
 
     if (filters.scope === 'range') {
-        return `${formatDate(filters.from)} ate ${formatDate(filters.to)}`
+        return `${formatDate(filters.from)} até ${formatDate(filters.to)}`
     }
 
     return filters.month

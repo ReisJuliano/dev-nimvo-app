@@ -12,13 +12,13 @@ export default function OrderSearchModal({ term, setTerm, onSearchSubmit, inputR
         >
             <div className="orders-modal-stack">
                 <label className="orders-form-field">
-                    <span>Buscar por numero, cliente ou referencia</span>
+                    <span>Buscar por numero, cliente ou referência</span>
                     <input
                         ref={inputRef}
                         className="ui-input"
                         type="search"
                         value={term}
-                        placeholder="Ex.: Joao, referencia 12, atendimento 5"
+                        placeholder="Ex.: Joao, referência 12, atendimento 5"
                         onChange={(event) => setTerm(event.target.value)}
                         onKeyDown={(event) => {
                             if (event.key !== 'Enter') {
@@ -44,8 +44,8 @@ export default function OrderSearchModal({ term, setTerm, onSearchSubmit, inputR
                                 <button key={draft.id} type="button" className="orders-search-result" onClick={() => onOpenDraft(draft)}>
                                     <div>
                                         <span>{draft.label}</span>
-                                        <strong>{draft.customer?.name || 'Cliente nao identificado'}</strong>
-                                        <small>{draft.updated_at ? formatDateTime(draft.updated_at) : 'Sem atualizacao'}</small>
+                                        <strong>{draft.customer?.name || 'Cliente não identificado'}</strong>
+                                        <small>{draft.updated_at ? formatDateTime(draft.updated_at) : 'Sem atualização'}</small>
                                     </div>
                                     <div className="orders-search-result-side">
                                         <span className={`ui-badge ${statusMeta.badge}`}>{statusMeta.label}</span>

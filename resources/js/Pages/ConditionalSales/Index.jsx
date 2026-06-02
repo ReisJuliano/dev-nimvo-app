@@ -503,7 +503,7 @@ export default function ConditionalSalesPage({
                                 {
                                     key: 'customer',
                                     label: 'Cliente',
-                                    render: (conditionalSale) => conditionalSale.customer?.name || 'Cliente nao informado',
+                                    render: (conditionalSale) => conditionalSale.customer?.name || 'Cliente não informado',
                                 },
                                 {
                                     key: 'purchase',
@@ -591,7 +591,7 @@ export default function ConditionalSalesPage({
             </div>
 
             <ModalForm
-                description="Preencha cliente, datas e itens. O estoque sera reservado na abertura."
+                description="Preencha cliente, datas e itens. O estoque será reservado na abertura."
                 icon="fa-shirt"
                 open={createOpen}
                 size="lg"

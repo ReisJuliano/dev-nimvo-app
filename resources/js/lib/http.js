@@ -14,7 +14,7 @@ function readCsrfToken() {
 
 function buildApiError(error) {
     if (error?.response?.status === 419) {
-        const sessionError = new Error('Sua sessao expirou ou o token de seguranca ficou invalido. Recarregue a tela e tente novamente.')
+        const sessionError = new Error('Sua sessao expirou ou o token de segurança ficou inválido. Recarregue a tela e tente novamente.')
         sessionError.status = 419
         sessionError.isNetworkError = false
         return sessionError
@@ -23,7 +23,7 @@ function buildApiError(error) {
     const message =
         error?.response?.data?.message ||
         Object.values(error?.response?.data?.errors || {})?.[0]?.[0] ||
-        (error?.response ? 'Nao foi possivel concluir a solicitacao.' : 'A conexao com o servidor foi interrompida.')
+        (error?.response ? 'Não foi possível concluir a solicitação.' : 'A conexão com o servidor foi interrompida.')
 
     const normalizedError = new Error(message)
     normalizedError.status = error?.response?.status ?? null

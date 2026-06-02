@@ -250,7 +250,7 @@ function PurchaseDetailsModal({
                         </article>
                         {record.expected_at ? (
                             <article className="proc-ui-summary-card">
-                                <span>Previsao</span>
+                                <span>Previsão</span>
                                 <strong>{formatDate(record.expected_at)}</strong>
                             </article>
                         ) : null}
@@ -628,8 +628,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
         return confirmPopup({
             type: 'warning',
-            title: 'Descartar alteracoes',
-            message: 'Existe um pedido com alteracoes nao salvas. Deseja descartar e continuar?',
+            title: 'Descartar alterações',
+            message: 'Existe um pedido com alterações não salvas. Deseja descartar e continuar?',
             confirmLabel: 'Descartar',
             cancelLabel: 'Continuar editando',
         })
@@ -659,7 +659,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return confirmPopup({
             type: 'warning',
             title: 'Atualizar lista',
-            message: 'Existe um pedido aberto com alteracoes nao salvas. Atualizar pode fechar esse pedido se ele sair do periodo atual. Deseja continuar?',
+            message: 'Existe um pedido aberto com alterações não salvas. Atualizar pode fechar esse pedido se ele sair do periodo atual. Deseja continuar?',
             confirmLabel: 'Atualizar mesmo',
             cancelLabel: 'Continuar editando',
         })
@@ -1008,8 +1008,8 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Descartar alteracoes',
-            message: `Deseja descartar as alteracoes do pedido ${getPurchaseDisplayName(activeDraftRecord)}?`,
+            title: 'Descartar alterações',
+            message: `Deseja descartar as alterações do pedido ${getPurchaseDisplayName(activeDraftRecord)}?`,
             confirmLabel: 'Descartar',
             cancelLabel: 'Continuar editando',
         })
@@ -1065,7 +1065,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         const confirmed = await confirmPopup({
             type: 'info',
             title: 'Registrar recebimento',
-            message: `Ao confirmar, o pedido ${record.code || `#${record.id}`} sera recebido e a entrada em estoque sera aplicada.`,
+            message: `Ao confirmar, o pedido ${record.code || `#${record.id}`} será recebido e a entrada em estoque será aplicada.`,
             confirmLabel: 'Registrar recebimento',
             cancelLabel: 'Voltar',
         })
@@ -1083,7 +1083,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
     async function handleCancelOrdered(record) {
         await handleDelete(record, {
             title: 'Cancelar pedido',
-            message: `O cancelamento deste pedido sera tratado como exclusao, porque o backend ainda nao possui um status cancelado para compras. Deseja continuar com ${record.code || `#${record.id}`}?`,
+            message: `O cancelamento deste pedido será tratado como exclusão, porque o backend ainda não possui um status cancelado para compras. Deseja continuar com ${record.code || `#${record.id}`}?`,
             confirmLabel: 'Cancelar pedido',
             type: 'warning',
         })
@@ -1146,7 +1146,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                 <button
                                     type="button"
                                     className="proc-ui-ghost-icon purchases-name-edit-button"
-                                    title={nameEditing ? 'Concluir edicao' : 'Editar nome'}
+                                    title={nameEditing ? 'Concluir edição' : 'Editar nome'}
                                     onClick={() => setNameEditing((current) => !current)}
                                 >
                                     <i className={`fa-solid ${nameEditing ? 'fa-check' : 'fa-pen'}`} />
@@ -1180,7 +1180,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     className="proc-ui-searchbox"
                                     aria-label="Buscar produto"
                                     disabled={!canEdit}
-                                    placeholder="Buscar produto por nome ou codigo de barras..."
+                                    placeholder="Buscar produto por nome ou código de barras..."
                                     type="search"
                                     value={productQuery}
                                     onChange={(event) => setProductQuery(event.target.value)}
@@ -1211,7 +1211,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                         <article key={option.id} className="purchases-product-result">
                                             <div className="purchases-product-result-copy">
                                                 <strong>{option.name}</strong>
-                                                <span>{option.barcode || option.code || 'Sem codigo'}</span>
+                                                <span>{option.barcode || option.code || 'Sem código'}</span>
                                                 <small>Custo atual: {formatMoney(option.cost_price || 0)}</small>
                                             </div>
 
@@ -1265,7 +1265,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                                 <td>
                                                     <div className="purchases-item-identity">
                                                         <strong>{getProductLabel(item, products)}</strong>
-                                                        <span>{productMeta?.barcode || productMeta?.code || 'Sem codigo'}</span>
+                                                        <span>{productMeta?.barcode || productMeta?.code || 'Sem código'}</span>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -1377,7 +1377,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                         disabled={!editorDirty || savingAction !== null}
                         onClick={() => void handleDiscardActiveChanges()}
                     >
-                        Descartar alteracoes
+                        Descartar alterações
                     </button>
                     <button
                         type="button"
@@ -1544,7 +1544,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                 open={createModalOpen}
                 badge="Novo pedido"
                 className="purchases-create-modal"
-                description="Salve o nome e continue a edicao em Em andamento."
+                description="Salve o nome e continue a edição em Em andamento."
                 icon="fa-cart-plus"
                 size="md"
                 title="Criar pedido"

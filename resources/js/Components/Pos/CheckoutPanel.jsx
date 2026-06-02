@@ -47,7 +47,7 @@ export default function CheckoutPanel({
                     <span className={`ui-badge ${cashRegister ? 'success' : 'warning'}`}>
                         {cashRegister ? 'Caixa aberto' : 'Caixa fechado'}
                     </span>
-                    <strong>{cashRegister ? 'Caixa pronto para vender' : 'Caixa indisponivel para vendas'}</strong>
+                    <strong>{cashRegister ? 'Caixa pronto para vender' : 'Caixa indisponível para vendas'}</strong>
                     <small>
                         {cashRegister
                             ? `Aberto em ${formatDateTime(cashRegister.opened_at)}`
@@ -117,7 +117,7 @@ export default function CheckoutPanel({
                     <div className="pos-customer-field-header">
                         <div>
                             <label>Cliente</label>
-                            <small>{selectedCustomer ? 'Venda vinculada a um cadastro' : 'Cliente nao identificado'}</small>
+                            <small>{selectedCustomer ? 'Venda vinculada a um cadastro' : 'Cliente não identificado'}</small>
                         </div>
 
                         {selectedCustomer ? (
@@ -137,7 +137,7 @@ export default function CheckoutPanel({
                                 <i className={`fa-solid ${selectedCustomerData ? 'fa-id-card' : 'fa-user-plus'}`} aria-hidden="true" />
                             </span>
                             <span className="pos-customer-trigger-copy">
-                                <strong>{selectedCustomerData?.name ?? 'Nao identificado'}</strong>
+                                <strong>{selectedCustomerData?.name ?? 'Não identificado'}</strong>
                                 <small>
                                     {selectedCustomerData?.phone
                                         ? selectedCustomerData.phone

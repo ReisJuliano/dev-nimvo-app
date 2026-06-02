@@ -16,7 +16,7 @@ export default function SalesSnapshot({ sales = [], summary }) {
         <section className="dashboard-surface dashboard-surface-list">
             <header className="dashboard-surface-header">
                 <div className="dashboard-surface-title">
-                    <strong>Ultimas vendas</strong>
+                    <strong>Últimas vendas</strong>
                     <span>{formatNumber(sales.length)}</span>
                 </div>
 

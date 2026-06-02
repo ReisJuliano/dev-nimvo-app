@@ -112,7 +112,7 @@ export default function AppSidebar({
             </div>
 
             <nav className="app-sidebar-nav" ref={navRef}>
-                <div className="app-sidebar-nav-kicker">Navegacao principal</div>
+                <div className="app-sidebar-nav-kicker">Navegação principal</div>
                 {navigationGroups.map((group) => (
                     <AppSidebarSection
                         key={group.section}

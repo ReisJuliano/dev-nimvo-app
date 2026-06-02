@@ -299,7 +299,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operacao local e entrara na fila de sincronizacao.`,
+                    message: `O produto "${product.name}" foi removido da operação local e entrara na fila de sincronização.`,
                 })
                 return
             }
@@ -326,7 +326,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operacao local e entrara na fila de sincronizacao.`,
+                    message: `O produto "${product.name}" foi removido da operação local e entrara na fila de sincronização.`,
                 })
             } else {
                 showErrorPopup(error.message)
@@ -379,7 +379,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${payload.name}" foi guardado nesta maquina e sera sincronizado quando a internet voltar.`,
+                    message: `O produto "${payload.name}" foi guardado nesta máquina e será sincronizado quando a internet voltar.`,
                 })
                 return
             }
@@ -431,7 +431,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${payload.name}" foi guardado nesta maquina e sera sincronizado quando a internet voltar.`,
+                    message: `O produto "${payload.name}" foi guardado nesta máquina e será sincronizado quando a internet voltar.`,
                 })
                 return
             }
@@ -444,7 +444,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
 
     async function handleQuickCreateCategory(data) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            throw new Error('Criacao rapida de categoria exige conexao ativa.')
+            throw new Error('Criação rapida de categoria exige conexão ativa.')
         }
 
         const response = await apiRequest('/api/operations/categorias/records', {
@@ -468,7 +468,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
 
     async function handleQuickCreateSupplier(data) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            throw new Error('Criacao rapida de fornecedor exige conexao ativa.')
+            throw new Error('Criação rapida de fornecedor exige conexão ativa.')
         }
 
         const response = await apiRequest('/api/operations/fornecedores/records', {
@@ -497,7 +497,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                     <PageHeader
                         title="Produtos"
                         search={{
-                            placeholder: 'Buscar por nome, codigo ou EAN',
+                            placeholder: 'Buscar por nome, código ou EAN',
                             value: searchControl.draftValue,
                             onChange: searchControl.setDraftValue,
                         }}

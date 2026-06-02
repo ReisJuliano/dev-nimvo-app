@@ -165,7 +165,7 @@ function matchesTimeSlot(record, timeSlot) {
     return true
 }
 
-export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de entradas', payload }) {
+export default function StockEntryMaintenance({ moduleTitle = 'Manutenção de entradas', payload }) {
     const initialRecords = Array.isArray(payload?.records) ? payload.records : []
     const importedDocuments = Array.isArray(payload?.incoming_nfe_documents) ? payload.incoming_nfe_documents : []
 
@@ -449,7 +449,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
                                                 <i className="fa-solid fa-print" />
                                                 <span>Espelho</span>
                                             </button>
-                                            <button type="button" className="ui-button-ghost" disabled title="Cancelamento indisponivel por rastreabilidade.">
+                                            <button type="button" className="ui-button-ghost" disabled title="Cancelamento indisponível por rastreabilidade.">
                                                 <i className="fa-solid fa-xmark" />
                                                 <span>Cancelar</span>
                                             </button>
@@ -543,7 +543,7 @@ export default function StockEntryMaintenance({ moduleTitle = 'Manutencao de ent
 
                                     <div className="proc-ui-record-card-copy">
                                         <strong>{formatMoney(record.total || 0)}</strong>
-                                        <span>{record.code || 'Sem codigo'} - {record.received_at ? formatDate(record.received_at) : 'Sem data'}</span>
+                                        <span>{record.code || 'Sem código'} - {record.received_at ? formatDate(record.received_at) : 'Sem data'}</span>
                                     </div>
 
                                     <div className="proc-ui-inline-meta">

@@ -16,7 +16,7 @@ const STEPS = [
 ]
 
 const CFOP_OPTIONS = [
-    { value: '1102', label: '1102 - Compra para comercializacao' },
+    { value: '1102', label: '1102 - Compra para comercialização' },
     { value: '2102', label: '2102 - Compra interestadual' },
     { value: '1403', label: '1403 - Zona franca' },
     { value: '1556', label: '1556 - Uso e consumo' },
@@ -24,7 +24,7 @@ const CFOP_OPTIONS = [
 
 const CST_OPTIONS = [
     { value: '102', label: '102 - Sem credito' },
-    { value: '400', label: '400 - Nao tributada' },
+    { value: '400', label: '400 - Não tributada' },
     { value: '500', label: '500 - ICMS ST anterior' },
 ]
 
@@ -577,7 +577,7 @@ export default function StockEntryIndex({ moduleTitle = 'Entrada de estoque', pa
                         <div className="proc-ui-statusline">
                             <Link className="ui-button-ghost" href="/entrada-estoque/manutencao">
                                 <i className="fa-solid fa-list" />
-                                <span>Manutencao</span>
+                                <span>Manutenção</span>
                             </Link>
                             <button type="button" className="ui-button-ghost" onClick={resetEditor}>
                                 <i className="fa-solid fa-rotate-left" />
@@ -790,8 +790,8 @@ export default function StockEntryIndex({ moduleTitle = 'Entrada de estoque', pa
                                                 <td>{item.barcode || item.code || '-'}</td>
                                                 <td>
                                                     <div className="proc-ui-record-card-copy">
-                                                        <strong>{item.product_name || 'Produto nao vinculado'}</strong>
-                                                        <span>{item.product_id ? `Produto #${item.product_id}` : 'Nao vinculado'}</span>
+                                                        <strong>{item.product_name || 'Produto não vinculado'}</strong>
+                                                        <span>{item.product_id ? `Produto #${item.product_id}` : 'Não vinculado'}</span>
                                                     </div>
                                                 </td>
                                                 <td>{formatNumber(item.quantity_nf)}</td>
@@ -947,7 +947,7 @@ export default function StockEntryIndex({ moduleTitle = 'Entrada de estoque', pa
                                     </div>
                                 ) : (
                                     <div className="proc-ui-empty">
-                                        <strong>Sem variacao relevante</strong>
+                                        <strong>Sem variação relevante</strong>
                                     </div>
                                 )}
                             </section>
@@ -1004,7 +1004,7 @@ export default function StockEntryIndex({ moduleTitle = 'Entrada de estoque', pa
                                         </div>
                                         <div className="proc-ui-field">
                                             <label>
-                                                <span>Codigo</span>
+                                                <span>Código</span>
                                                 <input value={form.boleto_draft.barcode} onChange={(event) => setForm((current) => ({ ...current, boleto_draft: { ...current.boleto_draft, barcode: event.target.value } }))} />
                                             </label>
                                         </div>

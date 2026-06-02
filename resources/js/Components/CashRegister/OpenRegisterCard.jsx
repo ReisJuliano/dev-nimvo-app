@@ -5,7 +5,7 @@ export default function OpenRegisterCard({ onSubmit, loading }) {
                 <div>
                     <span className="cash-register-section-kicker">Abertura</span>
                     <h2>Caixa fechado</h2>
-                    <p>Informe o valor inicial e siga com a operacao.</p>
+                    <p>Informe o valor inicial e siga com a operação.</p>
                 </div>
             </div>
 
@@ -15,7 +15,7 @@ export default function OpenRegisterCard({ onSubmit, loading }) {
                     <input name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />
                 </label>
                 <label>
-                    Observacao
+                    Observação
                     <textarea name="opening_notes" rows="3" />
                 </label>
                 <button className="cash-register-primary-button" disabled={loading}>

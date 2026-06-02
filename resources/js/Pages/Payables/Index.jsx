@@ -163,11 +163,11 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const tableColumns = useMemo(() => ([
         {
             key: 'description',
-            label: 'Descricao',
+            label: 'Descrição',
             render: (record) => (
                 <div className="proc-ui-record-card-copy">
                     <strong>{record.description}</strong>
-                    <span>{record.purchase_code || record.code || 'Sem referencia'}</span>
+                    <span>{record.purchase_code || record.code || 'Sem referência'}</span>
                 </div>
             ),
         },
@@ -185,7 +185,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         {
             key: 'due_date',
             label: 'Vencimento',
-            render: (record) => record.due_date ? formatDate(record.due_date) : 'Nao informado',
+            render: (record) => record.due_date ? formatDate(record.due_date) : 'Não informado',
         },
         {
             key: 'payment_method',
@@ -364,7 +364,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                     <PageHeader
                         title={moduleTitle}
                         search={{
-                            placeholder: 'Buscar por fornecedor ou descricao',
+                            placeholder: 'Buscar por fornecedor ou descrição',
                             value: searchControl.draftValue,
                             onChange: searchControl.setDraftValue,
                         }}
@@ -503,15 +503,15 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             <div className="proc-ui-two-grid">
                                 <div className="proc-ui-mini-card">
                                     <span>Vencimento</span>
-                                    <strong>{selectedRecord.due_date ? formatDate(selectedRecord.due_date) : 'Nao informado'}</strong>
+                                    <strong>{selectedRecord.due_date ? formatDate(selectedRecord.due_date) : 'Não informado'}</strong>
                                 </div>
                                 <div className="proc-ui-mini-card">
                                     <span>Forma</span>
-                                    <strong>{selectedRecord.payment_method || 'Nao definida'}</strong>
+                                    <strong>{selectedRecord.payment_method || 'Não definida'}</strong>
                                 </div>
                                 <div className="proc-ui-mini-card">
                                     <span>Banco / conta</span>
-                                    <strong>{selectedRecord.bank_name || 'Nao informado'}</strong>
+                                    <strong>{selectedRecord.bank_name || 'Não informado'}</strong>
                                 </div>
                                 <div className="proc-ui-mini-card">
                                     <span>Parcela</span>
@@ -529,7 +529,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
 
                         <section className="proc-ui-section-card">
                             <div className="proc-ui-section-title">
-                                <h3>Historico de pagamentos</h3>
+                                <h3>Histórico de pagamentos</h3>
                                 <p>Pagamentos registrados manualmente ficam listados abaixo.</p>
                             </div>
 
@@ -543,7 +543,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                                             </div>
                                             <div className="proc-ui-record-card-copy">
                                                 <strong>{payment.account || 'Sem conta'}</strong>
-                                                <span>{payment.notes || 'Sem observacao'}</span>
+                                                <span>{payment.notes || 'Sem observação'}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -570,7 +570,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                     <div className="proc-ui-field-grid">
                         <div className="proc-ui-field full">
                             <label>
-                                <span>Descricao</span>
+                                <span>Descrição</span>
                                 <input required value={launchForm.description} onChange={(event) => setLaunchForm((current) => ({ ...current, description: event.target.value }))} />
                             </label>
                         </div>
@@ -578,7 +578,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             <label>
                                 <span>Fornecedor</span>
                                 <select value={launchForm.supplier_id} onChange={(event) => setLaunchForm((current) => ({ ...current, supplier_id: event.target.value }))}>
-                                    <option value="">Nao vinculado</option>
+                                    <option value="">Não vinculado</option>
                                     {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
                                 </select>
                             </label>
@@ -633,13 +633,13 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="proc-ui-field full">
                             <label>
-                                <span>Codigo de barras</span>
+                                <span>Código de barras</span>
                                 <input value={launchForm.barcode} onChange={(event) => setLaunchForm((current) => ({ ...current, barcode: event.target.value }))} />
                             </label>
                         </div>
                         <div className="proc-ui-field full">
                             <label>
-                                <span>Observacao</span>
+                                <span>Observação</span>
                                 <textarea rows="4" value={launchForm.notes} onChange={(event) => setLaunchForm((current) => ({ ...current, notes: event.target.value }))} />
                             </label>
                         </div>
@@ -691,7 +691,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             </div>
                             <div className="proc-ui-field full">
                                 <label>
-                                    <span>Observacao</span>
+                                    <span>Observação</span>
                                     <textarea rows="4" value={paymentModal.notes} onChange={(event) => setPaymentModal((current) => ({ ...current, notes: event.target.value }))} />
                                 </label>
                             </div>

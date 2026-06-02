@@ -36,7 +36,7 @@ function openWorkspaceDatabase() {
         }
 
         request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error || new Error('Nao foi possivel abrir o IndexedDB offline.'))
+        request.onerror = () => reject(request.error || new Error('Não foi possível abrir o IndexedDB offline.'))
     })
 }
 
@@ -72,7 +72,7 @@ export async function loadIndexedDbWorkspaceSnapshot(tenantId) {
 
         request.onerror = () => {
             database.close()
-            reject(request.error || new Error('Nao foi possivel ler o IndexedDB offline.'))
+            reject(request.error || new Error('Não foi possível ler o IndexedDB offline.'))
         }
     })
 }
@@ -105,7 +105,7 @@ export async function saveIndexedDbWorkspaceSnapshot(tenantId, state) {
 
         request.onerror = () => {
             database.close()
-            reject(request.error || new Error('Nao foi possivel salvar o IndexedDB offline.'))
+            reject(request.error || new Error('Não foi possível salvar o IndexedDB offline.'))
         }
     })
 }
