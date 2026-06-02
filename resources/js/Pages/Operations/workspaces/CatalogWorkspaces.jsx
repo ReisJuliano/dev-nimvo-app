@@ -371,8 +371,15 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
 
     async function handleSubmit(event) {
         event.preventDefault()
-        setSaving(true)
         setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome da categoria')
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        setSaving(true)
         try {
             const response = form.id
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
@@ -553,10 +560,10 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                     </>
                 )}
             >
-                <form id="category-modal-form" className="ops-workspace-form-grid one-column" onSubmit={handleSubmit}>
+                <form id="category-modal-form" className="ops-workspace-form-grid one-column" onSubmit={handleSubmit} noValidate>
                     <label>
                         <FieldLabel icon="fa-layer-group" text="Nome" />
-                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                     </label>
                     <label>
                         <FieldLabel icon="fa-toggle-on" text="Status" />
@@ -674,8 +681,20 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
 
     async function handleSubmit(event) {
         event.preventDefault()
-        setSaving(true)
         setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome do fornecedor')
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        if (!validateEmail(form.email)) {
+            setFeedback({ type: 'warning', text: 'Informe um endereço de e-mail válido.' })
+            return
+        }
+
+        setSaving(true)
         try {
             const response = form.id
                 ? await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'put', data: form })
@@ -864,10 +883,10 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                     </>
                 )}
             >
-                <form id="supplier-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                <form id="supplier-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
                     <label>
                         <FieldLabel icon="fa-building" text="Nome" />
-                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                     </label>
                     <label>
                         <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />

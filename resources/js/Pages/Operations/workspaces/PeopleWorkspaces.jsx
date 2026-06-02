@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
+import { requiredMessage, validateEmail } from '@/lib/formValidation'
 import { apiRequest } from '@/lib/http'
 import ActionButton from '@/Components/UI/ActionButton'
 import {
@@ -55,8 +56,20 @@ export function ProducersWorkspace({ moduleKey, payload }) {
 
     async function handleSubmit(event) {
         event.preventDefault()
-        setSaving(true)
         setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome do produtor')
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        if (!validateEmail(form.email)) {
+            setFeedback({ type: 'warning', text: 'Informe um endereço de e-mail válido.' })
+            return
+        }
+
+        setSaving(true)
 
         try {
             const response = form.id
@@ -120,10 +133,10 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                 formTitle={form.id ? 'Editar produtor' : 'Novo produtor'}
                 formSubtitle="Contato e status"
                 formChildren={(
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
                         <label>
                             <FieldLabel icon="fa-signature" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                         </label>
                         <label>
                             <FieldLabel icon="fa-id-card" text="Documento" />
@@ -253,8 +266,17 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
     async function handleSubmit(event) {
         event.preventDefault()
-        setSaving(true)
         setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome do usuário')
+            || requiredMessage(form.username, 'o usuário de acesso')
+
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        setSaving(true)
 
         try {
             const response = form.id
@@ -282,8 +304,8 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Remover usuario',
-            message: `Remover o usuario "${form.name}"?`,
+            title: 'Remover usuário',
+            message: `Remover o usuário "${form.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
@@ -315,7 +337,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                 listTitle="Usuários"
                 listIcon="fa-user-check"
                 listCount={`${filteredRecords.length} registro(s)`}
-                createLabel="Novo usuario"
+                createLabel="Novo usuário"
                 onCreate={handleCreate}
                 listActions={(
                     <ActionButton icon="fa-magnifying-glass" onClick={() => void handleLoadRecords()} disabled={loading}>
@@ -323,18 +345,18 @@ export function UsersWorkspace({ moduleKey, payload }) {
                     </ActionButton>
                 )}
                 summaryItems={metrics}
-                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuarios nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela não carrega usuarios automaticamente.'} />}
-                formTitle={form.id ? 'Editar usuario' : 'Novo usuario'}
-                formSubtitle="Perfis e autorizacoes"
+                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuários nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela não carrega usuários automaticamente.'} />}
+                formTitle={form.id ? 'Editar usuário' : 'Novo usuário'}
+                formSubtitle="Perfis e autorizações"
                 formChildren={(
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
+                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
                         <label>
                             <FieldLabel icon="fa-user" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
+                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
                         </label>
                         <label>
-                            <FieldLabel icon="fa-at" text="Usuario" />
-                            <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required />
+                            <FieldLabel icon="fa-at" text="Usuário" />
+                            <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
                         </label>
                         <label>
                             <FieldLabel icon="fa-user-shield" text="Perfil" />
@@ -386,7 +408,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                                 checked={Boolean(form.must_change_password)}
                                 onChange={(event) => setForm((current) => ({ ...current, must_change_password: event.target.checked }))}
                             />
-                            <span>Exigir troca de senha no proximo login</span>
+                            <span>Exigir troca de senha no próximo login</span>
                         </label>
                         <div className="ops-workspace-actions span-2">
                             <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
@@ -398,7 +420,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                                 </ActionButton>
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar usuario'}
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar usuário'}
                             </ActionButton>
                         </div>
                     </form>
