@@ -37,3 +37,31 @@ select,
 textarea {
     font: inherit;
 }
+
+.error-page-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.error-page-code {
+    font-size: 6rem;
+    font-weight: 800;
+    color: var(--app-text-muted, #7e8ba0);
+    line-height: 1;
+}
+
+.error-page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.error-page-description {
+    color: var(--app-text-secondary);
+    max-width: 40ch;
+}
