@@ -16,6 +16,9 @@ use App\Support\Tenant\TenantContext;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('nimvo:prune-pending-sales --days=3')->daily();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
