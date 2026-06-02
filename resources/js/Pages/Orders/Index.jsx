@@ -144,6 +144,7 @@ export default function OrdersIndex({
     draftDetails = [],
     initialDraft,
     filters = {},
+    statusCounts = null,
     productCatalog = [],
     cashRegister = null,
 }) {
@@ -575,9 +576,9 @@ export default function OrdersIndex({
     const filterCounts = useMemo(
         () => ORDER_LIST_FILTERS.reduce((carry, filter) => ({
             ...carry,
-            [filter.key]: visibleListDrafts.filter((draft) => resolveOrdersFilter(draft.status) === filter.key).length,
+            [filter.key]: statusCounts?.[filter.key] ?? visibleListDrafts.filter((draft) => resolveOrdersFilter(draft.status) === filter.key).length,
         }), {}),
-        [visibleListDrafts],
+        [statusCounts, visibleListDrafts],
     )
     const filteredDrafts = useMemo(() => drafts.filter((draft) => {
         if (!hasLoadedList) {

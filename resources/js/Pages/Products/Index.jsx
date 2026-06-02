@@ -92,7 +92,7 @@ function getProductStatusMeta(product) {
     return { label: 'Ativo', tone: 'active' }
 }
 
-export default function ProductsIndex({ products, categories, suppliers, filters = {} }) {
+export default function ProductsIndex({ products, categories, suppliers, filters = {}, statusCounts = null }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const hasAppliedFilters = Boolean(filters?.applied)
@@ -237,11 +237,11 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     )
 
     const filterCounts = useMemo(() => ({
-        all: visibleCollectionItems.length,
-        active: visibleCollectionItems.filter((product) => product.active).length,
-        low_stock: visibleCollectionItems.filter((product) => isLowStock(product)).length,
-        inactive: visibleCollectionItems.filter((product) => !product.active).length,
-    }), [visibleCollectionItems])
+        all: statusCounts?.all ?? visibleCollectionItems.length,
+        active: statusCounts?.active ?? visibleCollectionItems.filter((product) => product.active).length,
+        low_stock: statusCounts?.low_stock ?? visibleCollectionItems.filter((product) => isLowStock(product)).length,
+        inactive: statusCounts?.inactive ?? visibleCollectionItems.filter((product) => !product.active).length,
+    }), [statusCounts, visibleCollectionItems])
 
     function handleCreate() {
         setSelectedProductId(null)

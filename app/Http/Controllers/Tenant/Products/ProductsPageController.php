@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant\Products;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Category;
+use App\Models\Tenant\Product;
 use App\Models\Tenant\Supplier;
 use App\Services\Tenant\ProductService;
 use Illuminate\Http\Request;
@@ -19,6 +20,14 @@ class ProductsPageController extends Controller
 
         return Inertia::render('Products/Index', [
             'products' => $applied ? $productService->activeCatalog() : [],
+            'statusCounts' => [
+                'all' => Product::query()->count(),
+                'active' => Product::query()->where('active', true)->count(),
+                'low_stock' => Product::query()
+                    ->whereColumn('stock_quantity', '<=', 'min_stock')
+                    ->count(),
+                'inactive' => Product::query()->where('active', false)->count(),
+            ],
             'categories' => Category::query()
                 ->where('active', true)
                 ->orderBy('name')

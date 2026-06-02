@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Category;
 use App\Models\Tenant\Customer;
+use App\Models\Tenant\OrderDraft;
 use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\ProductService;
 use Illuminate\Http\Request;
@@ -40,6 +41,13 @@ class OrdersPageController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'phone']),
             'drafts' => $activeDrafts,
+            'statusCounts' => [
+                'open' => OrderDraft::query()->where('status', OrderDraft::STATUS_DRAFT)->count(),
+                'preparing' => OrderDraft::query()->whereIn('status', ['preparing', 'in_progress'])->count(),
+                'ready' => OrderDraft::query()->whereIn('status', [OrderDraft::STATUS_SENT_TO_CASHIER, 'ready'])->count(),
+                'delivered' => OrderDraft::query()->where('status', 'delivered')->count(),
+                'cancelled' => OrderDraft::query()->whereIn('status', ['cancelled', 'canceled'])->count(),
+            ],
             'draftDetails' => $applied ? $orderDraftService->activeDraftsDetailed() : [],
             'initialDraft' => $initialDraft ? $orderDraftService->toDetail($initialDraft) : null,
             'filters' => [

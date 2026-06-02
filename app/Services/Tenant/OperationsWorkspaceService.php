@@ -340,6 +340,7 @@ class OperationsWorkspaceService
     {
         return [
             'records' => $includeRecords ? $this->payableRecords(['applied' => true]) : [],
+            'status_counts' => $this->payableStatusCounts(),
             'suppliers' => $this->supplierOptions(),
             'categories' => [
                 ['value' => 'supplier', 'label' => 'Fornecedor'],
@@ -358,6 +359,16 @@ class OperationsWorkspaceService
                 ['value' => 'monthly', 'label' => 'Mensal'],
                 ['value' => 'weekly', 'label' => 'Semanal'],
             ],
+        ];
+    }
+
+    protected function payableStatusCounts(): array
+    {
+        return [
+            'open' => Payable::query()->whereIn('status', ['open', 'overdue'])->count(),
+            'overdue' => Payable::query()->where('status', 'overdue')->count(),
+            'paid' => Payable::query()->where('status', 'paid')->count(),
+            'all' => Payable::query()->count(),
         ];
     }
 

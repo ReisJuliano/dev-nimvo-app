@@ -106,6 +106,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const categories = Array.isArray(payload?.categories) ? payload.categories : []
     const paymentMethods = Array.isArray(payload?.payment_methods) ? payload.payment_methods : []
     const recurrences = Array.isArray(payload?.recurrences) ? payload.recurrences : []
+    const backendStatusCounts = payload?.status_counts || null
     const [records, setRecords] = useState(Array.isArray(payload?.records) ? payload.records : [])
     const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('open')
@@ -162,11 +163,11 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     }), [records])
 
     const statusCounts = useMemo(() => ({
-        open: records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
-        overdue: records.filter((record) => record.status === 'overdue').length,
-        paid: records.filter((record) => record.status === 'paid').length,
-        all: records.length,
-    }), [records])
+        open: backendStatusCounts?.open ?? records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
+        overdue: backendStatusCounts?.overdue ?? records.filter((record) => record.status === 'overdue').length,
+        paid: backendStatusCounts?.paid ?? records.filter((record) => record.status === 'paid').length,
+        all: backendStatusCounts?.all ?? records.length,
+    }), [backendStatusCounts, records])
 
     const tableColumns = useMemo(() => ([
         {
