@@ -1455,14 +1455,16 @@
 }
 
 .pos-customer-picker-card {
-    width: min(560px, 100%);
+    width: min(640px, 100%);
     display: grid;
     gap: 12px;
     overflow: hidden;
+    padding: 16px;
 }
 
 .pos-customer-picker-header {
     margin-bottom: 0;
+    align-items: center;
 }
 
 .pos-customer-picker-top-actions,
@@ -1474,14 +1476,17 @@
 }
 
 .pos-customer-picker-top-actions {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
+    flex-shrink: 0;
 }
 
 .pos-customer-picker-search {
-    padding: 8px;
-    border-radius: 10px;
-    background: var(--pos-surface-alt);
+    padding: 6px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .pos-customer-picker-search > i {
@@ -1493,12 +1498,18 @@
 .pos-customer-picker-input {
     min-width: 0;
     flex: 1;
+    height: 38px;
+}
+
+.pos-customer-picker-search-button {
+    flex-shrink: 0;
 }
 
 .pos-customer-picker-toolbar {
     justify-content: space-between;
     color: var(--pos-text-muted);
     font-size: 12px;
+    min-height: 34px;
 }
 
 .pos-customer-picker-ghost {
@@ -1521,7 +1532,7 @@
 }
 
 .pos-customer-picker-list {
-    max-height: min(360px, 45dvh);
+    max-height: min(380px, 48dvh);
     overflow: auto;
     display: grid;
     gap: 6px;
@@ -1548,6 +1559,11 @@
 .pos-customer-picker-item.active {
     border-color: rgba(37, 99, 235, 0.35);
     background: rgba(37, 99, 235, 0.06);
+}
+
+.pos-customer-picker-item.active .pos-customer-picker-item-icon {
+    background: rgba(24, 95, 165, 0.12);
+    color: var(--pos-blue);
 }
 
 .pos-customer-picker-item-icon {
@@ -1587,6 +1603,16 @@
     color: var(--pos-blue);
     font-size: 12px;
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.pos-customer-picker-close {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+}
+
+.pos-customer-picker-create {
     white-space: nowrap;
 }
 

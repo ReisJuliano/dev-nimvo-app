@@ -2,7 +2,6 @@ import { Head, router, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
-import PendingSaleRestoreModal from '@/Components/Pos/PendingSaleRestoreModal'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
 import CompactModal from '@/Components/UI/CompactModal'
@@ -28,12 +27,10 @@ import {
     hasOfflineWorkspaceData,
     getOfflineOrderDetail,
     getOfflinePendingCheckoutSummaries,
-    getOfflinePendingSale,
     getOfflineWorkspaceSnapshot,
     hydrateOfflineWorkspace,
     queueOfflineSaleFinalize,
     resolveOfflineEntityId,
-    saveOfflinePendingSale,
     searchOfflineProducts,
     seedOfflineWorkspace,
     registerOfflineCashMovement,
@@ -426,10 +423,6 @@ export default function PosIndex({
         cashRegisterSettings?.cash_closing?.require_conference
         ?? moduleState.settings?.cash_closing?.require_conference
     ) !== false
-    const visibleInitialPendingSale = supportsPendingSales
-        ? resolveVisiblePendingSale(tenantId, auth?.user?.id, initialPendingSale)
-        : null
-
     const [feedback, setFeedback] = useState(null)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
@@ -442,7 +435,7 @@ export default function PosIndex({
     const [pendingNfces, setPendingNfces] = useState(initialPendingNfces || [])
     const [pendingNfcesModalOpen, setPendingNfcesModalOpen] = useState(false)
     const [pendingNfceBusyId, setPendingNfceBusyId] = useState(null)
-    const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? visibleInitialPendingSale?.order_draft_id ?? null)
+    const [activeOrderDraftId, setActiveOrderDraftId] = useState(preloadedOrderDraft?.id ?? null)
     const [loadingOrderDraftId, setLoadingOrderDraftId] = useState(null)
     const [refreshingPendingOrders, setRefreshingPendingOrders] = useState(false)
     const [selectedCategory, setSelectedCategory] = useState('')
@@ -489,10 +482,7 @@ export default function PosIndex({
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [closeCashRegisterModal, setCloseCashRegisterModal] = useState(null)
     const [cashReportModal, setCashReportModal] = useState(null)
-    const [pendingSaleServerState, setPendingSaleServerState] = useState(visibleInitialPendingSale)
-    const [pendingSalePromptOpen, setPendingSalePromptOpen] = useState(supportsPendingSales ? Boolean(visibleInitialPendingSale && !preloadedOrderDraft) : false)
-    const [pendingSaleResolved, setPendingSaleResolved] = useState(supportsPendingSales ? (!visibleInitialPendingSale || Boolean(preloadedOrderDraft)) : true)
-    const [pendingSaleActionBusy, setPendingSaleActionBusy] = useState(false)
+    const [pendingSaleServerState, setPendingSaleServerState] = useState(null)
     const [customerModalOpen, setCustomerModalOpen] = useState(false)
     const [cashierDraftsModalOpen, setCashierDraftsModalOpen] = useState(false)
     const [customerLinkForm, setCustomerLinkForm] = useState(initialCustomerLinkForm)
@@ -534,6 +524,23 @@ export default function PosIndex({
         setPendingNfces(initialPendingNfces || [])
     }, [initialPendingNfces])
 
+    useEffect(() => {
+        if (!supportsPendingSales) {
+            return undefined
+        }
+
+        discardOfflinePendingSale(tenantId, auth?.user?.id)
+        setPendingSaleServerState(null)
+
+        if (!initialPendingSale) {
+            return undefined
+        }
+
+        apiRequest('/api/pdv/pending-sale', { method: 'delete' }).catch(() => {})
+
+        return undefined
+    }, [supportsPendingSales, tenantId, auth?.user?.id, initialPendingSale?.id])
+
     const paymentOptions = useMemo(
         () =>
             [
@@ -549,25 +556,6 @@ export default function PosIndex({
     )
     const currentUserCanAuthorizeDiscountOffline = ['admin', 'manager'].includes(auth?.user?.role || '')
     const currentUserCanAuthorizeCloseCashOffline = supervisors.some((supervisor) => String(supervisor.id) === String(auth?.user?.id))
-
-    function rememberDismissedPendingSale(pendingSale) {
-        writeDismissedPendingSaleSignature(tenantId, auth?.user?.id, pendingSale)
-    }
-
-    function clearPendingSaleDismissal() {
-        clearDismissedPendingSaleSignature(tenantId, auth?.user?.id)
-    }
-
-    function syncPendingSaleVisibility(nextPendingSale) {
-        const nextSignature = getPendingSaleSignature(nextPendingSale)
-        const dismissedSignature = readDismissedPendingSaleSignature(tenantId, auth?.user?.id)
-
-        if (nextSignature && dismissedSignature && nextSignature !== dismissedSignature) {
-            clearPendingSaleDismissal()
-        }
-
-        return resolveVisiblePendingSale(tenantId, auth?.user?.id, nextPendingSale)
-    }
 
     function toggleCashPanelCollapsed() {
         setCashPanelCollapsed((current) => {
@@ -700,18 +688,8 @@ export default function PosIndex({
                 setCashRegisterReport(null)
             }
 
-            if (!supportsPendingSales) {
-                return
-            }
-
-            const offlinePendingSale = getOfflinePendingSale(tenantId, auth?.user?.id)
-            const visibleOfflinePendingSale = syncPendingSaleVisibility(offlinePendingSale)
-
-            if (visibleOfflinePendingSale) {
-                setPendingSaleServerState(visibleOfflinePendingSale)
-                setPendingSalePromptOpen(!preloadedOrderDraft)
-                setPendingSaleResolved(false)
-            }
+            discardOfflinePendingSale(tenantId, auth?.user?.id)
+            setPendingSaleServerState(null)
         }
 
         const handleOnline = () => {
@@ -741,7 +719,7 @@ export default function PosIndex({
                     cashRegister: openRegister?.cashRegister || cashRegister,
                     cashRegisterHistory: initialCashRegisterHistory,
                     pendingSaleUserId: auth?.user?.id,
-                    pendingSale: visibleInitialPendingSale,
+                    pendingSale: null,
                 })
 
                 if (openRegister) {
@@ -776,12 +754,9 @@ export default function PosIndex({
         initialCustomers,
         initialCashRegisterHistory,
         openRegister,
-        visibleInitialPendingSale,
         localAgentBridge,
         pendingOrderDraftDetails,
-        preloadedOrderDraft,
         productCatalog,
-        supportsPendingSales,
         tenantId,
     ])
 
@@ -838,8 +813,7 @@ export default function PosIndex({
             || cashReportModal
             || cashMovementModalType
             || historyDrawerOpen
-            || mobileCashPanelOpen
-            || pendingSalePromptOpen,
+            || mobileCashPanelOpen,
         )
 
         if (hasBlockingModal) {
@@ -866,7 +840,6 @@ export default function PosIndex({
         cashMovementModalType,
         historyDrawerOpen,
         mobileCashPanelOpen,
-        pendingSalePromptOpen,
     ])
 
     useEffect(() => {
@@ -1259,108 +1232,6 @@ export default function PosIndex({
         [cart.length, paymentReady, paymentModalOpen, fiscalDecisionOpen, recipientModalOpen, recipientDocumentModel],
     )
 
-    useEffect(() => {
-        if (!supportsPendingSales) return undefined
-        if (!pendingSaleResolved || submitting) return undefined
-        if (isResettingRef.current && cart.length) return undefined
-
-        const timeout = setTimeout(async () => {
-            const offlinePayload = {
-                cash_register_id: cashRegisterState?.id || null,
-                order_draft_id: activeOrderDraftId || null,
-                customer_id: selectedCustomer || null,
-                company_id: selectedCompany || null,
-                notes: notes || null,
-                status: 'draft',
-                cart: pricing.items.map((item) => ({
-                    ...item,
-                    qty: Number(item.qty),
-                    lineTotal: (Number(item.sale_price) * Number(item.qty)) - Number(item.lineDiscount || 0),
-                })),
-                discount: { config: discountConfig, authorizer: discountAuthorizer },
-                payment: {
-                    payment_method: paymentMethod,
-                    cash_received: cashReceived === '' ? null : Number(cashReceived),
-                    conditional_due_at: paymentMethod === conditionalPaymentMethod ? conditionalDueAt : null,
-                    mixed_payments: mixedPayments,
-                    mixed_draft: mixedDraft,
-                },
-            }
-
-            if (!cart.length) {
-                isResettingRef.current = false
-
-                if (pendingSaleServerState) {
-                    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-                        discardOfflinePendingSale(tenantId, auth?.user?.id)
-                        setPendingSaleServerState(null)
-                        return
-                    }
-
-                    try {
-                        await apiRequest('/api/pdv/pending-sale', { method: 'delete' })
-                        setPendingSaleServerState(null)
-                    } catch {
-                        discardOfflinePendingSale(tenantId, auth?.user?.id)
-                        setPendingSaleServerState(null)
-                    }
-                }
-                return
-            }
-
-            try {
-                if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-                    const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
-                    setPendingSaleServerState(syncPendingSaleVisibility(offlinePendingSale))
-                    return
-                }
-
-                const response = await apiRequest('/api/pdv/pending-sale', {
-                    method: 'post',
-                    data: {
-                        cash_register_id: cashRegisterState?.id || null,
-                        order_draft_id: activeOrderDraftId ? resolveOfflineEntityId(tenantId, 'orders', activeOrderDraftId) : null,
-                        customer_id: selectedCustomer ? resolveOfflineEntityId(tenantId, 'customers', selectedCustomer) : null,
-                        company_id: selectedCompany ? resolveOfflineEntityId(tenantId, 'companies', selectedCompany) : null,
-                        notes: offlinePayload.notes,
-                        status: 'draft',
-                        cart_payload: offlinePayload.cart,
-                        discount_payload: offlinePayload.discount,
-                        payment_payload: offlinePayload.payment,
-                    },
-                })
-
-                setPendingSaleServerState(syncPendingSaleVisibility(response.pending_sale))
-            } catch {
-                const offlinePendingSale = saveOfflinePendingSale(tenantId, auth?.user?.id, offlinePayload)
-                setPendingSaleServerState(syncPendingSaleVisibility(offlinePendingSale))
-            }
-        }, 700)
-
-        return () => clearTimeout(timeout)
-    }, [
-        supportsPendingSales,
-        pendingSaleResolved,
-        submitting,
-        cart,
-        pricing.items,
-        discountConfig,
-        discountAuthorizer,
-        paymentMethod,
-        cashReceived,
-        conditionalDueAt,
-        mixedPayments,
-        mixedDraft,
-        selectedCustomer,
-        selectedCompany,
-        notes,
-        cashRegisterState?.id,
-        activeOrderDraftId,
-        auth?.user?.id,
-        pendingSaleServerState,
-        tenantId,
-    ])
-
     function showFeedback(type, text) {
         setFeedback({ type, text })
     }
@@ -1548,14 +1419,13 @@ export default function PosIndex({
         setNotes(orderDraft.notes || '')
         setCreditStatus(null)
         setActiveOrderDraftId(orderDraft.id)
-        setPendingSaleResolved(true)
-        setPendingSalePromptOpen(false)
         setPendingSaleServerState(null)
         setFeedback(showLoadedFeedback ? { type: 'success', text: `${orderDraft.label} carregado para cobranca.` } : null)
     }
 
-    function applyPendingSale(pendingSale) {
-        const pendingItems = (pendingSale?.cart || []).map((item) => normalizeCartItem(item))
+    function applyPendingSale() {
+        return
+        const pendingItems = []
 
         clearPendingSaleDismissal()
         setCart(pendingItems)
@@ -2617,6 +2487,10 @@ export default function PosIndex({
     }
 
     async function handleRestorePendingSale() {
+        await discardPersistedPendingSale()
+        setPendingSaleServerState(null)
+        showFeedback('warning', 'Recuperacao de venda removida do PDV.')
+        return
         if (!supportsPendingSales) {
             setPendingSaleResolved(true)
             setPendingSalePromptOpen(false)
@@ -2687,6 +2561,10 @@ export default function PosIndex({
     }
 
     async function handleDiscardPendingSale() {
+        await discardPersistedPendingSale()
+        setPendingSaleServerState(null)
+        showFeedback('success', 'Venda pendente descartada.')
+        return
         const pendingSaleToDiscard = pendingSaleServerState
         rememberDismissedPendingSale(pendingSaleToDiscard)
         discardOfflinePendingSale(tenantId, auth?.user?.id)
@@ -2720,7 +2598,6 @@ export default function PosIndex({
 
         try {
             const discardMode = await discardPersistedPendingSale()
-            rememberDismissedPendingSale(pendingSaleServerState)
             resetSale()
 
             if (discardMode === 'offline') {
@@ -3497,10 +3374,9 @@ export default function PosIndex({
                 || cashierDraftsModalOpen
                 || invoiceModalOpen
                 || cancelModalOpen
-                || mobileCashPanelOpen
-                || pendingSalePromptOpen,
+                || mobileCashPanelOpen,
             )
-            const hasBlockingModal = Boolean(pendingSalePromptOpen)
+            const hasBlockingModal = false
             const shortcutAction = event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey
                 ? shortcutActionByCode[event.code]
                 : null
@@ -3599,7 +3475,6 @@ export default function PosIndex({
         invoiceModalOpen,
         cancelModalOpen,
         mobileCashPanelOpen,
-        pendingSalePromptOpen,
         cashRegisterState,
         cart.length,
         selectedCartItemId,
@@ -3748,14 +3623,6 @@ export default function PosIndex({
 
             <PosWorkspace {...workspaceProps} />
 
-            <PendingSaleRestoreModal
-                open={pendingSalePromptOpen}
-                pendingSale={pendingSaleServerState}
-                busy={pendingSaleActionBusy}
-                onRestore={handleRestorePendingSale}
-                onDiscard={handleDiscardPendingSale}
-            />
-
             <PendingNfceModal
                 busyId={pendingNfceBusyId}
                 documents={pendingNfces}
@@ -3884,11 +3751,13 @@ export default function PosIndex({
                                 <p>Pesquise por nome, telefone ou CPF e vincule a venda rapidamente.</p>
                             </div>
                             <div className="pos-customer-picker-top-actions">
-                                <button className="ui-button-ghost" type="button" onClick={handleOpenQuickCustomer}>
+                                <button className="pos-button info small pos-customer-picker-create" type="button" onClick={handleOpenQuickCustomer}>
                                     <i className="fa-solid fa-user-plus" />
                                     Novo cliente
                                 </button>
-                                <button className="ui-button-ghost" type="button" onClick={closeCustomerPicker}>Fechar</button>
+                                <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={closeCustomerPicker}>
+                                    <i className="fa-solid fa-xmark" />
+                                </button>
                             </div>
                         </div>
 
@@ -3902,7 +3771,7 @@ export default function PosIndex({
                                 event.preventDefault()
                                 applyCustomerSearch()
                             }} autoFocus />
-                            <button type="button" className="ui-button-ghost" onClick={() => applyCustomerSearch()}>
+                            <button type="button" className="pos-button info small pos-customer-picker-search-button" onClick={() => applyCustomerSearch()}>
                                 <i className="fa-solid fa-magnifying-glass" />
                                 Pesquisar
                             </button>
@@ -3943,15 +3812,17 @@ export default function PosIndex({
                                 <h2>Novo cliente</h2>
                                 <p>Cadastre rapidamente e selecione na venda.</p>
                             </div>
-                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Fechar</button>
+                            <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={() => setQuickCustomerOpen(false)}>
+                                <i className="fa-solid fa-xmark" />
+                            </button>
                         </div>
                         <input className="ui-input" placeholder="Nome do cliente" value={quickCustomerForm.name} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, name: event.target.value }))} />
                         <input className="ui-input" placeholder="Telefone" value={quickCustomerForm.phone} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, phone: event.target.value }))} />
                         <input className="ui-input" placeholder="CPF" value={quickCustomerForm.document} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, document: event.target.value }))} />
                         <input className="ui-input" placeholder="E-mail" type="email" value={quickCustomerForm.email} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, email: event.target.value }))} />
                         <div className="pos-quick-customer-actions">
-                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Cancelar</button>
-                            <button className="pos-finalize-button" type="submit">Salvar cliente</button>
+                            <button className="pos-button ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Cancelar</button>
+                            <button className="pos-button info" type="submit">Salvar cliente</button>
                         </div>
                     </form>
                 </div>
@@ -4228,8 +4099,6 @@ export default function PosIndex({
                 onSubmit={handleSubmitRecipient}
             />
 
-            <PendingSaleRestoreModal open={pendingSalePromptOpen} pendingSale={pendingSaleServerState} busy={pendingSaleActionBusy} onRestore={handleRestorePendingSale} onDiscard={handleDiscardPendingSale} />
-
             <DiscountModal
                 open={discountModalOpen}
                 onClose={closeDiscountModal}
@@ -4337,11 +4206,13 @@ export default function PosIndex({
                                 <p>Pesquise por nome, telefone ou CPF e vincule a venda rapidamente.</p>
                             </div>
                             <div className="pos-customer-picker-top-actions">
-                                <button className="ui-button-ghost" type="button" onClick={handleOpenQuickCustomer}>
+                                <button className="pos-button info small pos-customer-picker-create" type="button" onClick={handleOpenQuickCustomer}>
                                     <i className="fa-solid fa-user-plus" />
                                     Novo cliente
                                 </button>
-                                <button className="ui-button-ghost" type="button" onClick={closeCustomerPicker}>Fechar</button>
+                                <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={closeCustomerPicker}>
+                                    <i className="fa-solid fa-xmark" />
+                                </button>
                             </div>
                         </div>
 
@@ -4355,7 +4226,7 @@ export default function PosIndex({
                                 event.preventDefault()
                                 applyCustomerSearch()
                             }} autoFocus />
-                            <button type="button" className="ui-button-ghost" onClick={() => applyCustomerSearch()}>
+                            <button type="button" className="pos-button info small pos-customer-picker-search-button" onClick={() => applyCustomerSearch()}>
                                 <i className="fa-solid fa-magnifying-glass" />
                                 Pesquisar
                             </button>
@@ -4396,15 +4267,17 @@ export default function PosIndex({
                                 <h2>Novo cliente</h2>
                                 <p>Cadastre rapidamente e selecione na venda.</p>
                             </div>
-                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Fechar</button>
+                            <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={() => setQuickCustomerOpen(false)}>
+                                <i className="fa-solid fa-xmark" />
+                            </button>
                         </div>
                         <input className="ui-input" placeholder="Nome do cliente" value={quickCustomerForm.name} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, name: event.target.value }))} />
                         <input className="ui-input" placeholder="Telefone" value={quickCustomerForm.phone} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, phone: event.target.value }))} />
                         <input className="ui-input" placeholder="CPF" value={quickCustomerForm.document} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, document: event.target.value }))} />
                         <input className="ui-input" placeholder="E-mail" type="email" value={quickCustomerForm.email} onChange={(event) => setQuickCustomerForm((current) => ({ ...current, email: event.target.value }))} />
                         <div className="pos-quick-customer-actions">
-                            <button className="ui-button-ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Cancelar</button>
-                            <button className="pos-finalize-button" type="submit">Salvar cliente</button>
+                            <button className="pos-button ghost" type="button" onClick={() => setQuickCustomerOpen(false)}>Cancelar</button>
+                            <button className="pos-button info" type="submit">Salvar cliente</button>
                         </div>
                     </form>
                 </div>
