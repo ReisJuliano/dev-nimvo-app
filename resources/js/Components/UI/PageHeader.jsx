@@ -61,6 +61,7 @@ export default function PageHeader({
     const quickDateButtons = resolveQuickDates(quickDates, quickDateOptions)
     const hasDateRange = Boolean(dateRange)
     const hasApplyButton = Boolean(onApply || search?.onApply || hasDateRange)
+    const hasSecondaryTools = filters.length > 0 || quickDateButtons.length > 0
 
     function handleSearchChange(event) {
         search?.onChange?.(event.target.value, event)
@@ -203,47 +204,49 @@ export default function PageHeader({
                 </div>
             </div>
 
-            <div className="ui-page-header-row secondary">
-                <div className="ui-page-header-filters" role="tablist" aria-label={`${title || 'Lista'} filtros`}>
-                    {filters.map((filter) => {
-                        const isActive = Boolean(filter.active) || (activeFilter !== null && filter.value === activeFilter)
+            {hasSecondaryTools ? (
+                <div className="ui-page-header-row secondary">
+                    <div className="ui-page-header-filters" role="tablist" aria-label={`${title || 'Lista'} filtros`}>
+                        {filters.map((filter) => {
+                            const isActive = Boolean(filter.active) || (activeFilter !== null && filter.value === activeFilter)
 
-                        return (
+                            return (
+                                <button
+                                    key={filter.key || filter.value || filter.label}
+                                    type="button"
+                                    className={`ui-page-header-filter ${isActive ? 'active' : ''}`}
+                                    disabled={filter.disabled}
+                                    onClick={() => {
+                                        if (typeof filter.onClick === 'function') {
+                                            filter.onClick(filter.value, filter)
+                                            return
+                                        }
+
+                                        onFilterChange?.(filter.value, filter)
+                                    }}
+                                >
+                                    <span>{filter.label}</span>
+                                    {filter.count !== undefined ? <strong>{filter.count}</strong> : null}
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    <div className="ui-page-header-quick-dates">
+                        {quickDateButtons.map((option) => (
                             <button
-                                key={filter.key || filter.value || filter.label}
+                                key={option.key || option.label}
                                 type="button"
-                                className={`ui-page-header-filter ${isActive ? 'active' : ''}`}
-                                disabled={filter.disabled}
-                                onClick={() => {
-                                    if (typeof filter.onClick === 'function') {
-                                        filter.onClick(filter.value, filter)
-                                        return
-                                    }
-
-                                    onFilterChange?.(filter.value, filter)
-                                }}
+                                className={`ui-page-header-quick-date ${option.active ? 'active' : ''}`}
+                                onClick={() => handleQuickDateClick(option)}
                             >
-                                <span>{filter.label}</span>
-                                {filter.count !== undefined ? <strong>{filter.count}</strong> : null}
+                                {option.icon ? <i className={`fa-solid ${option.icon}`} /> : null}
+                                {option.label}
                             </button>
-                        )
-                    })}
+                        ))}
+                    </div>
                 </div>
-
-                <div className="ui-page-header-quick-dates">
-                    {quickDateButtons.map((option) => (
-                        <button
-                            key={option.key || option.label}
-                            type="button"
-                            className={`ui-page-header-quick-date ${option.active ? 'active' : ''}`}
-                            onClick={() => handleQuickDateClick(option)}
-                        >
-                            {option.icon ? <i className={`fa-solid ${option.icon}`} /> : null}
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            ) : null}
         </section>
     )
 }
