@@ -92,7 +92,7 @@ function getProductStatusMeta(product) {
     return { label: 'Ativo', tone: 'active' }
 }
 
-export default function ProductsIndex({ products, categories, suppliers, filters = {}, statusCounts = null }) {
+export default function ProductsIndex({ products, categories, suppliers, filters = {} }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const hasAppliedFilters = Boolean(filters?.applied)
@@ -237,11 +237,11 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     )
 
     const filterCounts = useMemo(() => ({
-        all: statusCounts?.all ?? visibleCollectionItems.length,
-        active: statusCounts?.active ?? visibleCollectionItems.filter((product) => product.active).length,
-        low_stock: statusCounts?.low_stock ?? visibleCollectionItems.filter((product) => isLowStock(product)).length,
-        inactive: statusCounts?.inactive ?? visibleCollectionItems.filter((product) => !product.active).length,
-    }), [statusCounts, visibleCollectionItems])
+        all: visibleCollectionItems.length,
+        active: visibleCollectionItems.filter((product) => product.active).length,
+        low_stock: visibleCollectionItems.filter((product) => isLowStock(product)).length,
+        inactive: visibleCollectionItems.filter((product) => !product.active).length,
+    }), [visibleCollectionItems])
 
     function handleCreate() {
         setSelectedProductId(null)
@@ -502,10 +502,10 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                             onChange: searchControl.setDraftValue,
                         }}
                         filters={[
-                            { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
-                            { key: 'active', value: 'active', label: 'Ativos', count: filterCounts.active },
-                            { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: filterCounts.low_stock },
-                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+                            { key: 'all', value: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : undefined },
+                            { key: 'active', value: 'active', label: 'Ativos', count: hasAppliedFilters ? filterCounts.active : undefined },
+                            { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
+                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: hasAppliedFilters ? filterCounts.inactive : undefined },
                         ]}
                         activeFilter={activeFilter}
                         onFilterChange={setActiveFilter}
