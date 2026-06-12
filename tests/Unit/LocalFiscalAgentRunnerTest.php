@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use App\Services\Central\LocalFiscalAgentRunner;
+use App\Support\LocalAgentReceiptPrinter;
+use App\Support\Pkcs12CertificateReader;
 use App\Support\SpedNfeNfceEmitter;
 use Tests\TestCase;
 
@@ -10,8 +12,11 @@ class LocalFiscalAgentRunnerTest extends TestCase
 {
     public function test_it_only_merges_central_polling_settings_and_preserves_local_printer_config(): void
     {
-        $runner = new class($this->createMock(SpedNfeNfceEmitter::class)) extends LocalFiscalAgentRunner
-        {
+        $runner = new class(
+            $this->createMock(SpedNfeNfceEmitter::class),
+            $this->createMock(LocalAgentReceiptPrinter::class),
+            $this->createMock(Pkcs12CertificateReader::class),
+        ) extends LocalFiscalAgentRunner {
             public function exposeMergeRuntimeConfig(array $localConfig, array $runtimeConfig): array
             {
                 return $this->mergeRuntimeConfig($localConfig, $runtimeConfig);

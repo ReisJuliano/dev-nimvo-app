@@ -1,89 +1,107 @@
-# Nimvo Multi-Tenant
+# Nimvo
 
-Base SaaS multi-tenant em Laravel + Inertia.js + React com separação explícita entre:
+Nimvo e um sistema SaaS multi-tenant para operacoes comerciais, PDV, vendas,
+estoque, compras, fiscal e gestao administrativa. O projeto combina Laravel,
+Inertia.js e React em uma arquitetura com painel central e areas isoladas por
+tenant.
 
-- contexto central
-- contexto tenant
-- banco central para clientes e tenants
-- banco isolado por tenant para dados operacionais, autenticação e sessões
+## O que o sistema entrega
+
+- Painel central para administracao de clientes, tenants, licencas e agente
+  fiscal local.
+- Aplicacao tenant com PDV, caixa, produtos, comandas, pedidos, delivery,
+  vendas condicionais, consultas fiscais, compras, contas a pagar, relatorios e
+  configuracoes.
+- Modulos operacionais reaproveitaveis para clientes, fornecedores, categorias,
+  estoque, usuarios e visoes gerenciais.
+- Emissao e acompanhamento fiscal com suporte a NFC-e/NF-e, contingencia,
+  cancelamentos, inutilizacao e armazenamento de XML.
+- Agente local em Go/PHP bridge para comunicacao com impressoras, certificados
+  A1 e rotinas fiscais locais.
+- Deploy por Git em VPS com script versionado de pos-pull.
+
+## Stack
+
+- Backend: PHP 8.3+, Laravel 13, stancl/tenancy.
+- Frontend: React 19, Inertia.js 3, Vite 8, Tailwind CSS 4.
+- Fiscal/impressoes: nfephp, sped-da, sped-pos e escpos-php.
+- Agente local: Go, bridge PHP e instalador Windows.
+- Banco: MariaDB/MySQL, com modo single-database para desenvolvimento e modo
+  multi-database para producao.
 
 ## Arquitetura
 
-### Banco central
+O projeto separa dois contextos principais:
 
-O banco central deve usar o nome `nimvo-central` e guarda:
+- Central: rotas em `routes/central.php`, banco central, administradores,
+  tenants, licencas e agentes locais.
+- Tenant: rotas em `routes/tenant.php`, autenticacao propria, dados comerciais,
+  operacionais e fiscais isolados por tenant.
 
-- `tenants`
-- `domains`
-- `clients`
+A inicializacao do tenant e feita por dominio em `bootstrap/app.php` usando
+`Stancl\Tenancy\Middleware\InitializeTenancyByDomain`. As opcoes principais de
+tenancy ficam em `config/tenancy.php`.
 
-Cada registro em `clients` aponta para um `tenant_id`.
+## Primeiros passos
 
-### Banco do tenant
-
-Cada tenant recebe:
-
-- domínio próprio
-- banco próprio
-- tabelas próprias
-- usuários próprios
-- sessões próprias
-
-Os dados do sistema nunca devem ser compartilhados entre tenants.
-
-## Rotas
-
-### Central
-
-Arquivo: `routes/central.php`
-
-- `/` no domínio central
-
-### Tenant
-
-Arquivo: `routes/tenant.php`
-
-- `/`
-- `/login`
-- `/logout`
-- `/change-password`
-- `/dashboard`
-
-Essas rotas usam inicialização de tenancy por domínio.
-
-## Provisionamento
-
-O serviço `App\Services\Central\ProvisionTenantService` é o ponto base para:
-
-- criar o tenant
-- registrar o domínio
-- registrar o cliente no banco central
-
-## Configuração local
-
-Ajuste o `.env` com algo próximo de:
-
-```env
-APP_URL=http://app.nimvo.test
-
-DB_CONNECTION=central
-
-CENTRAL_DB_CONNECTION=central
-CENTRAL_DB_DRIVER=mysql
-CENTRAL_DB_HOST=127.0.0.1
-CENTRAL_DB_PORT=3306
-CENTRAL_DB_DATABASE=nimvo-central
-CENTRAL_DB_USERNAME=root
-CENTRAL_DB_PASSWORD=
-
-TENANT_DB_TEMPLATE_CONNECTION=central
-TENANT_DB_PREFIX=nimvo_tenant_
-TENANT_DB_SUFFIX=
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+npm run build
 ```
 
-## Observações
+Depois ajuste o `.env` para o dominio central, banco e modo de tenancy desejado.
+Em desenvolvimento, `TENANT_DEV_SINGLE_DATABASE=true` simplifica o ambiente.
+Para isolamento real por banco de tenant, use `TENANT_DEV_SINGLE_DATABASE=false`
+e configure prefixo/sufixo dos bancos em `TENANT_DB_PREFIX` e
+`TENANT_DB_SUFFIX`.
 
-- o domínio central deve ficar listado em `config/tenancy.php`
-- cada domínio de tenant deve existir na tabela `domains`
-- o login da aplicação continua sendo por tenant
-- o seed do tenant cria um usuário inicial `admin`
+## Comandos uteis
+
+```bash
+composer test
+npm run build
+npm run dev
+php artisan migrate --force
+php artisan tenants:migrate --force
+```
+
+Para o agente local:
+
+```bash
+cd local-agent/go-agent
+go test ./...
+```
+
+## Deploy
+
+O deploy por Git esta documentado em `docs/VPS-GIT-DEPLOY.md`. O hook do VPS
+deve chamar:
+
+```bash
+bash scripts/post-pull-deploy.sh
+```
+
+Esse script instala dependencias quando necessario, limpa caches, compila assets,
+executa migracoes centrais e de tenants, cria o link de storage e reinicia filas.
+
+## Documentacao interna
+
+- `AGENTS.md`: guia rapido para agentes e desenvolvedores.
+- `docs/AGENT-KNOWLEDGE.md`: arquivo vivo para registrar contexto util durante
+  manutencoes futuras.
+- `docs/SYSTEM-REVIEW.md`: revisao tecnica atual do sistema e proximas
+  prioridades.
+- `docs/fiscal-emissor.md`: contexto fiscal.
+- `docs/VPS-GIT-DEPLOY.md`: rotina de deploy no VPS.
+
+## Cuidados operacionais
+
+- Nao versionar `.env`, certificados, chaves privadas, dumps ou backups.
+- Trocar credenciais padrao antes de ambientes reais.
+- Validar rotinas fiscais e de tenant com testes antes de deploy.
+- Revisar binarios versionados do agente local quando houver alteracao no Go ou
+  no bridge PHP.

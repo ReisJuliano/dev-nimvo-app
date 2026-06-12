@@ -6,6 +6,7 @@ use App\Services\Tenant\Operations\InventoryOverviewService;
 use App\Services\Tenant\Operations\SalesOverviewService;
 use App\Services\Tenant\Operations\UsersOverviewService;
 use App\Services\Tenant\OperationsOverviewService;
+use App\Services\Tenant\Reports\ReportBrowserService;
 use PHPUnit\Framework\TestCase;
 
 class OperationsOverviewServiceTest extends TestCase
@@ -16,6 +17,7 @@ class OperationsOverviewServiceTest extends TestCase
             $this->createMock(SalesOverviewService::class),
             $this->createMock(InventoryOverviewService::class),
             $this->createMock(UsersOverviewService::class),
+            $this->createMock(ReportBrowserService::class),
         );
 
         $module = $service->build('delivery', ['section' => 'operacao']);
