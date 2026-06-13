@@ -138,7 +138,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                     <div className="cash-register-form">
                         <div className="cash-register-inline-alert">
                             <strong>Conferencia guiada habilitada</strong>
-                            <span>Revise dinheiro, Pix, cartoes, A Prazo, sangrias e suprimentos antes de concluir.</span>
+                            <span>Revise dinheiro, Pix, cartoes, fiado, sangrias e suprimentos antes de concluir.</span>
                         </div>
                         <button className="cash-register-danger-button" type="button" onClick={onStartCloseConference}>
                             <i className="fa-solid fa-clipboard-check" />

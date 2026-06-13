@@ -245,7 +245,7 @@ class SalesOverviewService
 
         if (! $applied) {
             $page = $this->page(
-                'A Prazo',
+                'Fiado',
                 '',
                 [],
                 [],
@@ -263,8 +263,8 @@ class SalesOverviewService
                         ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
                         ['key' => 'customer_name', 'label' => 'Cliente'],
                         ['key' => 'user_name', 'label' => 'Operador'],
-                        ['key' => 'credit_amount', 'label' => 'A prazo', 'format' => 'money'],
-                    ], [], 'Clique em Filtrar para buscar.'),
+                        ['key' => 'credit_amount', 'label' => 'Fiado', 'format' => 'money'],
+                    ], [], 'Quando vender fiado, as cobrancas aparecerao aqui.'),
                 ],
                 $from,
                 $to,
@@ -356,7 +356,7 @@ class SalesOverviewService
             ->values();
 
         $page = $this->page(
-            'A Prazo',
+            'Fiado',
             '',
             [],
             [],
@@ -374,8 +374,8 @@ class SalesOverviewService
                     ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
                     ['key' => 'customer_name', 'label' => 'Cliente'],
                     ['key' => 'user_name', 'label' => 'Operador'],
-                    ['key' => 'credit_amount', 'label' => 'A prazo', 'format' => 'money'],
-                ], $recentSales, 'Nenhum lancamento a prazo no periodo.'),
+                    ['key' => 'credit_amount', 'label' => 'Fiado', 'format' => 'money'],
+                ], $recentSales, 'Quando vender fiado, as cobrancas aparecerao aqui.'),
             ],
             $from,
             $to,

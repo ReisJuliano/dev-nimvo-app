@@ -1606,3 +1606,16 @@
         align-items: flex-start;
     }
 }
+.products-quick-form .products-editor-body {
+    max-height: min(72vh, 760px);
+}
+
+.products-editor-section-title {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    padding-bottom: 8px;
+}
+
+.products-editor-section-title h3 {
+    font-size: 1rem;
+    margin: 0;
+}

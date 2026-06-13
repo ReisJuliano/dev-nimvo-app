@@ -36,14 +36,14 @@ class ConsultationsPageService
                     ['key' => 'sale', 'label' => 'Vendas'],
                     ['key' => 'entry', 'label' => 'Entradas'],
                     ['key' => 'delivery', 'label' => 'Entregas'],
-                    ['key' => 'credit', 'label' => 'A Prazo'],
+                    ['key' => 'credit', 'label' => 'Fiado'],
                     ['key' => 'fiscal', 'label' => 'NF-e Fiscais'],
                 ],
                 'summary' => [
                     ['key' => 'sales', 'label' => 'Vendas', 'value' => 0],
                     ['key' => 'entries', 'label' => 'Entradas', 'value' => 0],
                     ['key' => 'deliveries', 'label' => 'Entregas', 'value' => 0],
-                    ['key' => 'credit', 'label' => 'A prazo', 'value' => 0],
+                    ['key' => 'credit', 'label' => 'Fiado', 'value' => 0],
                     ['key' => 'fiscal', 'label' => 'NF-e', 'value' => 0],
                 ],
                 'records' => [],
@@ -144,14 +144,14 @@ class ConsultationsPageService
                 ['key' => 'sale', 'label' => 'Vendas'],
                 ['key' => 'entry', 'label' => 'Entradas'],
                 ['key' => 'delivery', 'label' => 'Entregas'],
-                ['key' => 'credit', 'label' => 'A Prazo'],
+                ['key' => 'credit', 'label' => 'Fiado'],
                 ['key' => 'fiscal', 'label' => 'NF-e Fiscais'],
             ],
             'summary' => [
                 ['key' => 'sales', 'label' => 'Vendas', 'value' => $sales->count()],
                 ['key' => 'entries', 'label' => 'Entradas', 'value' => $entries->count()],
                 ['key' => 'deliveries', 'label' => 'Entregas', 'value' => $deliveries->count()],
-                ['key' => 'credit', 'label' => 'A prazo', 'value' => $creditSales->count()],
+                ['key' => 'credit', 'label' => 'Fiado', 'value' => $creditSales->count()],
                 ['key' => 'fiscal', 'label' => 'NF-e', 'value' => $fiscalDocuments->count()],
             ],
             'records' => $records,
@@ -308,7 +308,7 @@ class ConsultationsPageService
         $recipient = $sale->company?->trade_name
             ?: $sale->company?->name
             ?: $sale->customer?->name
-            ?: 'Cliente a prazo';
+            ?: 'Cliente fiado';
 
         return [
             'uid' => sprintf('credit-%d', $sale->id),
@@ -319,7 +319,7 @@ class ConsultationsPageService
             'amount' => (float) $sale->total,
             'date' => $sale->created_at?->toIso8601String(),
             'date_sort' => $sale->created_at?->timestamp ?? 0,
-            'status_label' => 'A prazo',
+            'status_label' => 'Fiado',
             'status_tone' => 'warning',
             'tags' => ['Recebimento pendente'],
             'actions' => [

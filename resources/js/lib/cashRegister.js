@@ -3,7 +3,7 @@ export const CASH_REGISTER_PAYMENT_FIELDS = [
     { key: 'pix', label: 'Pix', icon: 'pix', tone: 'pix' },
     { key: 'debit_card', label: 'Cartao de debito', icon: 'card', tone: 'card' },
     { key: 'credit_card', label: 'Cartao de credito', icon: 'card', tone: 'card' },
-    { key: 'credit', label: 'A Prazo', icon: 'wallet', tone: 'credit' },
+    { key: 'credit', label: 'Fiado', icon: 'wallet', tone: 'credit' },
 ]
 
 export function createOpenCashRegisterForm() {

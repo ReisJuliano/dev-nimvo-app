@@ -164,7 +164,7 @@ class ReportBrowserService
                 'key' => 'receivables',
                 'label' => 'Receber',
                 'icon' => 'fa-credit-card',
-                'description' => 'Carteira a prazo com limite, saldo lancado e disponibilidade.',
+                'description' => 'Fiados em aberto com limite, saldo lancado e disponibilidade.',
             ],
             [
                 'key' => 'customers',
@@ -261,8 +261,8 @@ class ReportBrowserService
             [
                 'key' => 'receivables-open',
                 'category' => 'receivables',
-                'title' => 'Carteira a prazo',
-                'description' => 'Clientes com limite, saldo lancado a prazo e disponibilidade.',
+                'title' => 'Fiados em aberto',
+                'description' => 'Clientes com limite, saldo fiado e disponibilidade.',
                 'icon' => 'fa-file-invoice-dollar',
                 'tags' => ['Limite', 'Carteira', 'Credito'],
             ],
@@ -2001,8 +2001,8 @@ class ReportBrowserService
             ],
             rows: $paginator->items(),
             paginator: $paginator,
-            emptyText: 'Nenhum cliente com limite ou saldo a prazo encontrado.',
-            table: ['title' => 'Carteira'],
+            emptyText: 'Nenhum cliente com limite ou saldo fiado encontrado.',
+            table: ['title' => 'Fiado'],
         );
     }
 

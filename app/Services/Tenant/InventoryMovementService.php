@@ -21,7 +21,7 @@ class InventoryMovementService
 
         if (($context['allow_negative'] ?? false) !== true && $after < 0) {
             throw ValidationException::withMessages([
-                'stock' => "Estoque insuficiente para {$product->name}.",
+                'stock' => "Nao tem quantidade suficiente em estoque para {$product->name}.",
             ]);
         }
 

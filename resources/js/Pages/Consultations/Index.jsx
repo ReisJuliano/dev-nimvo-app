@@ -61,7 +61,7 @@ function recordPaymentSummary(record) {
         sale: 'Sem pagamento informado',
         entry: 'Entrada de estoque',
         delivery: 'Delivery',
-        credit: 'A prazo',
+        credit: 'Fiado',
         fiscal: 'Documento fiscal',
     }[record.type] || 'Não informado'
 }
@@ -631,7 +631,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
 
                         {selectedRecord.type === 'credit' ? (
                             <section className="proc-ui-modal-block">
-                                <h3>Venda a prazo</h3>
+                                <h3>Fiado</h3>
                                 <div className="proc-ui-summary-grid">
                                     <article className="proc-ui-summary-card"><span>Cliente</span><strong>{selectedRecord.details.recipient || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Documento</span><strong>{selectedRecord.details.document || '-'}</strong></article>

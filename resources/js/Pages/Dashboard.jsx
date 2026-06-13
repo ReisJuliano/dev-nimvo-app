@@ -1,135 +1,143 @@
-import { useMemo, useState } from 'react'
-import DashboardMetricCard from '@/Components/Dashboard/Widgets/DashboardMetricCard'
-import PaymentOverview from '@/Components/Dashboard/Widgets/PaymentOverview'
-import ProductAlerts from '@/Components/Dashboard/Widgets/ProductAlerts'
-import RevenueOverview from '@/Components/Dashboard/Widgets/RevenueOverview'
-import SalesSnapshot from '@/Components/Dashboard/Widgets/SalesSnapshot'
+import { Link } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
-import { formatPercent } from '@/lib/format'
+import { formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import './dashboard.css'
 
-const focusModes = [
-    { key: 'trend', icon: 'fa-chart-column', label: 'Tendência' },
-    { key: 'today', icon: 'fa-clock', label: 'Hoje' },
-    { key: 'inventory', icon: 'fa-box-open', label: 'Produtos' },
+const shortcuts = [
+    { href: '/caixa', label: 'Abrir caixa / Ver caixa', icon: 'fa-vault' },
+    { href: '/pdv', label: 'Vender agora', icon: 'fa-cash-register' },
+    { href: '/produtos', label: 'Cadastrar produto', icon: 'fa-box' },
+    { href: '/entrada-estoque', label: 'Recebi mercadoria', icon: 'fa-dolly' },
+    { href: '/fiado', label: 'Ver fiados', icon: 'fa-handshake' },
+    { href: '/caixa', label: 'Fechar caixa', icon: 'fa-lock' },
 ]
 
-function formatDelta(value) {
-    return `${value >= 0 ? '+' : ''}${formatPercent(value)}`
-}
-
-export default function Dashboard({
-    summary,
-    recentSales,
-    topProducts,
-    lowStockItems,
-    salesTrend,
-    hourlySales,
-    paymentBreakdown,
-}) {
-    const [focusMode, setFocusMode] = useState('trend')
-
-    const cards = useMemo(
-        () => [
-            {
-                title: 'Hoje',
-                value: summary.today_sales_total,
-                caption: `${summary.today_sales_qty} vendas`,
-                badge: formatDelta(summary.today_growth),
-                badgeTone: summary.today_growth >= 0 ? 'positive' : 'negative',
-                icon: 'fa-arrow-trend-up',
-                tone: 'primary',
-            },
-            {
-                title: 'Mes',
-                value: summary.month_sales_total,
-                caption: 'faturamento',
-                badge: formatDelta(summary.month_growth),
-                badgeTone: summary.month_growth >= 0 ? 'positive' : 'negative',
-                icon: 'fa-chart-line',
-                tone: 'sky',
-            },
-            {
-                title: 'Ticket',
-                value: summary.average_ticket,
-                caption: 'medio',
-                badge: `${formatPercent(summary.profit_margin)} margem`,
-                badgeTone: 'neutral',
-                icon: 'fa-wallet',
-                tone: 'teal',
-            },
-            {
-                title: 'Estoque',
-                value: summary.low_stock_count,
-                format: 'number',
-                caption: `${summary.total_products} ativos`,
-                badge: `${formatPercent(summary.inventory_health)} ok`,
-                badgeTone: summary.low_stock_count > 0 ? 'warning' : 'positive',
-                icon: 'fa-boxes-stacked',
-                tone: 'violet',
-            },
-        ],
-        [summary],
-    )
-
-    const activeMode = focusModes.find((mode) => mode.key === focusMode) ?? focusModes[0]
+export default function Dashboard({ summary, topProducts, lowStockItems, paymentBreakdown }) {
+    const cards = [
+        {
+            title: 'Vendido hoje',
+            value: formatMoney(summary.today_sales_total || 0),
+            note: `${formatNumber(summary.today_sales_qty || 0)} venda(s) hoje`,
+            icon: 'fa-receipt',
+        },
+        {
+            title: 'Lucro estimado hoje',
+            value: formatMoney(summary.today_profit || 0),
+            note: 'Com base no custo cadastrado',
+            icon: 'fa-chart-line',
+        },
+        {
+            title: 'Fiado em aberto',
+            value: formatMoney(summary.open_credit_total || 0),
+            note: 'Valores vendidos para receber depois',
+            icon: 'fa-handshake',
+        },
+        {
+            title: 'Produtos acabando',
+            value: formatNumber(summary.low_stock_count || 0),
+            note: summary.low_stock_count > 0 ? 'Precisa repor' : 'Tudo certo por enquanto.',
+            icon: 'fa-triangle-exclamation',
+        },
+        {
+            title: 'Caixa atual',
+            value: summary.open_cash_register_id ? 'Aberto' : 'Fechado',
+            note: summary.open_cash_register_id
+                ? `Aberto em ${formatDateTime(summary.open_cash_register_opened_at)}`
+                : 'Abra o caixa para comecar a vender.',
+            icon: 'fa-vault',
+        },
+    ]
 
     return (
-        <AppLayout title="Dashboard">
-            <div className="dashboard-page">
-                <section className="dashboard-toolbar">
-                    <div className="dashboard-toolbar-badge">
-                        <span className="dashboard-toolbar-dot" />
-                        <strong>{activeMode.label}</strong>
+        <AppLayout title="Resumo da loja">
+            <div className="dashboard-page store-summary-page">
+                <section className="store-summary-hero">
+                    <div>
+                        <h1>Resumo da loja</h1>
+                        <p>Veja como a loja esta hoje.</p>
                     </div>
-
-                    <div className="dashboard-icon-tabs" role="tablist" aria-label="Dashboard views">
-                        {focusModes.map((mode) => (
-                            <button
-                                key={mode.key}
-                                type="button"
-                                className={`dashboard-icon-tab ${focusMode === mode.key ? 'active' : ''}`}
-                                onClick={() => setFocusMode(mode.key)}
-                                aria-label={mode.label}
-                                title={mode.label}
-                            >
-                                <i className={`fa-solid ${mode.icon}`} />
-                            </button>
-                        ))}
-                    </div>
+                    <a className="store-summary-detail-link" href="#mais-detalhes">
+                        Ver mais detalhes
+                    </a>
                 </section>
 
-                <section className="dashboard-stats-grid">
-                    {cards.map((card) => (
-                        <DashboardMetricCard key={card.title} {...card} />
+                <section className="store-summary-shortcuts" aria-label="Atalhos principais">
+                    {shortcuts.map((shortcut) => (
+                        <Link key={shortcut.label} className="store-summary-shortcut" href={shortcut.href}>
+                            <i className={`fa-solid ${shortcut.icon}`} />
+                            <span>{shortcut.label}</span>
+                        </Link>
                     ))}
                 </section>
 
-                <section className="dashboard-main-grid">
-                    <div className="dashboard-grid-span-8">
-                        <RevenueOverview
-                            view={focusMode}
-                            salesTrend={salesTrend}
-                            hourlySales={hourlySales}
-                            topProducts={topProducts}
-                            summary={summary}
-                        />
-                    </div>
+                <section className="store-summary-cards">
+                    {cards.map((card) => (
+                        <article key={card.title} className="store-summary-card">
+                            <i className={`fa-solid ${card.icon}`} />
+                            <span>{card.title}</span>
+                            <strong>{card.value}</strong>
+                            <small>{card.note}</small>
+                        </article>
+                    ))}
+                </section>
 
-                    <div className="dashboard-grid-span-4">
-                        <PaymentOverview
-                            paymentBreakdown={paymentBreakdown}
-                            total={summary.month_sales_total}
-                        />
-                    </div>
+                <section id="mais-detalhes" className="store-summary-bottom">
+                    <article className="store-summary-panel">
+                        <header>
+                            <h2>Produtos acabando</h2>
+                            <Link href="/entrada-estoque">Recebi mais</Link>
+                        </header>
+                        {lowStockItems?.length ? (
+                            <div className="store-summary-list">
+                                {lowStockItems.slice(0, 5).map((product) => (
+                                    <div key={product.id} className="store-summary-list-row">
+                                        <span>{product.name}</span>
+                                        <strong>{formatNumber(product.stock_quantity)} {product.unit}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="store-summary-empty">Tudo certo por enquanto.</p>
+                        )}
+                    </article>
 
-                    <div className="dashboard-grid-span-6">
-                        <SalesSnapshot sales={recentSales} summary={summary} />
-                    </div>
+                    <article className="store-summary-panel">
+                        <header>
+                            <h2>Mais vendidos</h2>
+                            <a href="#mais-detalhes">Resumo</a>
+                        </header>
+                        {topProducts?.length ? (
+                            <div className="store-summary-list">
+                                {topProducts.slice(0, 5).map((product) => (
+                                    <div key={product.name} className="store-summary-list-row">
+                                        <span>{product.name}</span>
+                                        <strong>{formatMoney(product.total_sold)}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="store-summary-empty">Comece vendendo para ver os produtos mais vendidos aqui.</p>
+                        )}
+                    </article>
 
-                    <div className="dashboard-grid-span-6">
-                        <ProductAlerts lowStockItems={lowStockItems} summary={summary} />
-                    </div>
+                    <article className="store-summary-panel">
+                        <header>
+                            <h2>Formas de pagamento</h2>
+                            <Link href="/caixa">Caixa</Link>
+                        </header>
+                        {paymentBreakdown?.length ? (
+                            <div className="store-summary-list">
+                                {paymentBreakdown.slice(0, 5).map((payment) => (
+                                    <div key={payment.method} className="store-summary-list-row">
+                                        <span>{payment.label}</span>
+                                        <strong>{formatMoney(payment.total)}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="store-summary-empty">Abra o caixa e finalize vendas para acompanhar o dia.</p>
+                        )}
+                    </article>
                 </section>
             </div>
         </AppLayout>

@@ -30,6 +30,9 @@ class UpdateSettingsRequest extends FormRequest
             'modules.prazo' => ['required', 'boolean'],
             'modules.delivery' => ['required', 'boolean'],
             'modules.caixa' => ['required', 'boolean'],
+            'modules.fiscal_basico' => ['required', 'boolean'],
+            'modules.fiscal_avancado' => ['required', 'boolean'],
+            'modules.relatorios_basicos' => ['required', 'boolean'],
             'modules.relatorios_avancados' => ['required', 'boolean'],
             'modules.clientes' => ['required', 'boolean'],
             'modules.fornecedores' => ['required', 'boolean'],
@@ -38,6 +41,10 @@ class UpdateSettingsRequest extends FormRequest
             'modules.controle_validade' => ['required', 'boolean'],
             'modules.mesas' => ['required', 'boolean'],
             'modules.impressao_automatica' => ['required', 'boolean'],
+            'modules.catalogo_online' => ['required', 'boolean'],
+            'modules.pedidos_online' => ['required', 'boolean'],
+            'modules.whatsapp_pedidos' => ['required', 'boolean'],
+            'modules.moda' => ['required', 'boolean'],
         ];
     }
 }

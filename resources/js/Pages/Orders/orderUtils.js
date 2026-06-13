@@ -15,7 +15,7 @@ export const paymentTabs = [
     { key: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave' },
     { key: 'card', label: 'Cartao', icon: 'fa-credit-card' },
     { key: 'pix', label: 'Pix', icon: 'fa-qrcode' },
-    { key: 'credit', label: 'A Prazo', icon: 'fa-handshake' },
+    { key: 'credit', label: 'Fiado', icon: 'fa-handshake' },
 ]
 
 export const cardPaymentOptions = [

@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import ActionSidebar from '@/Components/UI/ActionSidebar'
@@ -8,6 +8,7 @@ import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent } from '@/lib/format'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
+import { apiRequest } from '@/lib/http'
 import './credit-overview.css'
 
 const customerFilters = [
@@ -85,13 +86,52 @@ function matchesCustomerFilter(customer, activeFilter) {
     return true
 }
 
-function CreditCustomerModal({ customer, sales, onClose }) {
+function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }) {
+    const [receiveForm, setReceiveForm] = useState({ amount: '', payment_method: 'pix', notes: '' })
+    const [receiving, setReceiving] = useState(false)
+    const [error, setError] = useState('')
+
     if (!customer) {
         return null
     }
 
     const status = getStatusMeta(customer.status)
     const historyTotal = sales.reduce((total, sale) => total + Number(sale.credit_amount || 0), 0)
+    const whatsappMessage = encodeURIComponent(
+        `Oi, ${customer.name}. Aqui e ${storeName || 'a loja'}. Seu fiado em aberto esta em ${formatMoney(customer.open_credit)}. Podemos combinar o pagamento?`,
+    )
+    const whatsappPhone = String(customer.phone || '').replace(/\D+/g, '')
+    const whatsappHref = `https://wa.me/${whatsappPhone || ''}?text=${whatsappMessage}`
+
+    async function handleReceiveSubmit(event) {
+        event.preventDefault()
+        setError('')
+
+        const amount = Number(receiveForm.amount || 0)
+
+        if (amount <= 0) {
+            setError('Informe o valor recebido.')
+            return
+        }
+
+        setReceiving(true)
+        try {
+            await apiRequest('/api/fiado/receber', {
+                method: 'post',
+                data: {
+                    customer_id: customer.id,
+                    amount,
+                    payment_method: receiveForm.payment_method,
+                    notes: receiveForm.notes.trim() || null,
+                },
+            })
+            onReceived?.()
+        } catch (receiveError) {
+            setError(receiveError.message || 'Nao foi possivel receber o fiado.')
+        } finally {
+            setReceiving(false)
+        }
+    }
 
     return (
         <div className="credit-modal-backdrop" onClick={onClose} role="presentation">
@@ -116,7 +156,7 @@ function CreditCustomerModal({ customer, sales, onClose }) {
                 <div className="credit-modal-body">
                     <section className="credit-modal-grid">
                         <article className="credit-focus-card">
-                            <span>Saldo</span>
+                            <span>Fiado em aberto</span>
                             <strong>{formatMoney(customer.open_credit)}</strong>
                         </article>
                         <article className="credit-focus-card">
@@ -133,6 +173,53 @@ function CreditCustomerModal({ customer, sales, onClose }) {
                         </article>
                     </section>
 
+                    <section className="credit-modal-grid compact">
+                        <a className="ui-button" href={whatsappHref} target="_blank" rel="noreferrer">
+                            <i className="fa-brands fa-whatsapp" />
+                            Cobrar no WhatsApp
+                        </a>
+                    </section>
+
+                    <form className="credit-receive-form" onSubmit={handleReceiveSubmit}>
+                        <header className="credit-panel-header">
+                            <div>
+                                <h3>Receber fiado</h3>
+                                <span>Registre pagamento parcial ou total.</span>
+                            </div>
+                        </header>
+                        <div className="credit-receive-grid">
+                            <input
+                                className="ui-input"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                placeholder="Valor recebido"
+                                value={receiveForm.amount}
+                                onChange={(event) => setReceiveForm((current) => ({ ...current, amount: event.target.value }))}
+                            />
+                            <select
+                                className="ui-select"
+                                value={receiveForm.payment_method}
+                                onChange={(event) => setReceiveForm((current) => ({ ...current, payment_method: event.target.value }))}
+                            >
+                                <option value="pix">Pix</option>
+                                <option value="cash">Dinheiro</option>
+                                <option value="debit_card">Cartao</option>
+                                <option value="credit_card">Cartao de credito</option>
+                            </select>
+                            <input
+                                className="ui-input"
+                                placeholder="Observacao opcional"
+                                value={receiveForm.notes}
+                                onChange={(event) => setReceiveForm((current) => ({ ...current, notes: event.target.value }))}
+                            />
+                            <button className="ui-button" type="submit" disabled={receiving}>
+                                {receiving ? 'Recebendo...' : 'Receber fiado'}
+                            </button>
+                        </div>
+                        {error ? <span className="products-editor-submit-error">{error}</span> : null}
+                    </form>
+
                     <section className="credit-modal-progress">
                         <div className="credit-focus-progress-copy">
                             <span>Consumo do limite</span>
@@ -146,13 +233,13 @@ function CreditCustomerModal({ customer, sales, onClose }) {
 
                     <section className="credit-modal-grid compact">
                         <article className="credit-highlight-card">
-                            <span>Ultimo lanc.</span>
+                            <span>Ultimo fiado</span>
                             <strong>{customer.last_credit_at ? formatDateTime(customer.last_credit_at) : 'Sem registro'}</strong>
                         </article>
                         <article className="credit-highlight-card">
                             <span>Histórico</span>
                             <strong>{formatMoney(historyTotal)}</strong>
-                            <small>{formatNumber(customer.credit_sales_count || 0)} lancamentos</small>
+                            <small>{formatNumber(customer.credit_sales_count || 0)} venda(s)</small>
                         </article>
                     </section>
 
@@ -188,7 +275,7 @@ function CreditCustomerModal({ customer, sales, onClose }) {
                         ) : (
                             <div className="credit-empty-state small">
                                 <i className="fa-solid fa-clock-rotate-left" />
-                                <span>Sem lancamentos</span>
+                                <span>Quando vender fiado, as cobrancas aparecerao aqui.</span>
                             </div>
                         )}
                     </section>
@@ -199,6 +286,7 @@ function CreditCustomerModal({ customer, sales, onClose }) {
 }
 
 export default function CreditOverview({ module }) {
+    const { tenant } = usePage().props
     const customers = useMemo(() => {
         const portfolio = Array.isArray(module.portfolio) ? module.portfolio : []
 
@@ -319,7 +407,7 @@ export default function CreditOverview({ module }) {
     }
 
     return (
-        <AppLayout title={module.title}>
+        <AppLayout title="Fiado">
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
                     <PageHeader
@@ -419,7 +507,7 @@ export default function CreditOverview({ module }) {
                                 setSelectedCustomerId(customer.id)
                                 setActiveCustomerId(customer.id)
                             }}
-                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Clique em Filtrar para buscar'}
+                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Quando vender fiado, as cobrancas aparecerao aqui.'}
                             emptyIcon="fa-user-slash"
                             actions={(customer) => [
                                 {
@@ -437,7 +525,7 @@ export default function CreditOverview({ module }) {
                     </section>
 
                     <div className="proc-ui-footer-totals">
-                        <span>Carteira em aberto: <strong>{formatMoney(customers.reduce((total, customer) => total + Number(customer.open_credit || 0), 0))}</strong></span>
+                        <span>Fiado em aberto: <strong>{formatMoney(customers.reduce((total, customer) => total + Number(customer.open_credit || 0), 0))}</strong></span>
                         <span>Limite total: <strong>{formatMoney(module.portfolio_summary?.total_limit || 0)}</strong></span>
                     </div>
                 </div>
@@ -469,7 +557,13 @@ export default function CreditOverview({ module }) {
                 />
             </div>
 
-            <CreditCustomerModal customer={activeCustomer} sales={activeCustomerSales} onClose={() => setActiveCustomerId(null)} />
+            <CreditCustomerModal
+                customer={activeCustomer}
+                sales={activeCustomerSales}
+                storeName={tenant?.name}
+                onClose={() => setActiveCustomerId(null)}
+                onReceived={() => router.reload({ preserveScroll: true })}
+            />
         </AppLayout>
     )
 }

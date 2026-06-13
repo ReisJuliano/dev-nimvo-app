@@ -84,7 +84,7 @@ class PosService
 
                 if ((float) $product->stock_quantity < $quantity) {
                     throw ValidationException::withMessages([
-                        'items' => "Estoque insuficiente para {$product->name}.",
+                        'items' => "Nao tem quantidade suficiente em estoque para {$product->name}.",
                     ]);
                 }
 
@@ -192,7 +192,7 @@ class PosService
                 && !$this->settingsService->isModuleEnabled('prazo')
             ) {
                 throw ValidationException::withMessages([
-                    'payments' => 'O pagamento a prazo esta desativado para esta operacao.',
+                    'payments' => 'O fiado nao esta ativado nesta loja.',
                 ]);
             }
 
@@ -296,7 +296,7 @@ class PosService
 
             if ($hasCredit && ! $customerId) {
                 throw ValidationException::withMessages([
-                    'customer_id' => 'Selecione um cliente para venda a prazo.',
+                    'customer_id' => 'Escolha quem vai ficar devendo.',
                 ]);
             }
 
@@ -318,7 +318,7 @@ class PosService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor a prazo ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor do fiado ultrapassa o limite disponivel deste cliente.',
                     ]);
                 }
             }

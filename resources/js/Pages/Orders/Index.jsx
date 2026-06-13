@@ -1500,7 +1500,7 @@ export default function OrdersIndex({
 
     async function handleFinalizeCheckout() {
         if (!currentDraft?.items.length) return showFeedback('warning', 'Adicione ao menos um produto antes de finalizar o pedido.')
-        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('warning', 'Selecione um cliente para registrar o atendimento a prazo.')
+        if (resolvedPaymentMethod === 'credit' && !selectedCustomer) return showFeedback('warning', 'Escolha quem vai ficar devendo.')
         if (resolvedPaymentMethod === 'cash' && cashReceived !== '' && cashShortfall > 0.009) return showFeedback('warning', 'O valor em dinheiro precisa cobrir o total do atendimento.')
 
         setSubmittingCheckout(true)
@@ -1613,7 +1613,7 @@ export default function OrdersIndex({
     async function handleFinalizePartialCheckout({ resolvedPaymentMethod: method, cashShortfall: shortfall, cashReceived: received, pricing: partialPricing, items }) {
         if (!currentDraft?.items.length) return showFeedback('warning', 'Adicione ao menos um produto antes de finalizar o pedido.')
         if (!items?.length || partialPricing.total <= 0) return showFeedback('warning', 'Selecione ao menos um item para cobrar.')
-        if (method === 'credit' && !selectedCustomer) return showFeedback('warning', 'Selecione um cliente para registrar o atendimento a prazo.')
+        if (method === 'credit' && !selectedCustomer) return showFeedback('warning', 'Escolha quem vai ficar devendo.')
         if (method === 'cash' && received !== '' && shortfall > 0.009) return showFeedback('warning', 'O valor em dinheiro precisa cobrir o total parcial selecionado.')
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {

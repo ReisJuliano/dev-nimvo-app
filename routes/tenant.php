@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
+use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
@@ -92,7 +93,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware([EnsurePasswordIsChanged::class, 'tenant.license', 'module.enabled'])->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/pdv', PosPageController::class)->name('pos.index');
-        Route::get('/caixa', fn () => redirect()->route('pos.index'))->name('cash-register.index');
+        Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
@@ -168,6 +169,7 @@ Route::middleware('auth')->group(function () {
             ->name('fiscal.consultations.contingency.retry');
         Route::prefix('/api')->group(function () {
             Route::get('/pdv/products', [PosApiController::class, 'searchProducts'])->name('api.pos.products');
+            Route::post('/pdv/products/quick', [PosApiController::class, 'quickProduct'])->name('api.pos.products.quick');
             Route::get('/pdv/recommendations', [PosApiController::class, 'recommendations'])->name('api.pos.recommendations');
             Route::get('/pdv/customers/{customer}/credit', [PosApiController::class, 'customerCredit'])->name('api.pos.customers.credit');
             Route::post('/pdv/customers/quick', [PosApiController::class, 'quickCustomer'])->name('api.pos.customers.quick');
@@ -199,6 +201,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/cash-registers/supervisor-authorize', [CashRegisterApiController::class, 'authorizeSupervisor'])->name('api.cash-registers.supervisor-authorize');
             Route::post('/cash-registers/{cashRegister}/close', [CashRegisterApiController::class, 'close'])->name('api.cash-registers.close');
             Route::get('/cash-registers/{cashRegister}/report', [CashRegisterApiController::class, 'report'])->name('api.cash-registers.report');
+            Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
 
             Route::post('/products', [ProductsApiController::class, 'store'])->name('api.products.store');
             Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');
@@ -213,6 +216,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/orders/{orderDraft}/send-to-cashier', [OrdersApiController::class, 'sendToCashier'])->name('api.orders.send-to-cashier');
             Route::post('/orders/{orderDraft}/partial-checkout', [OrdersApiController::class, 'partialCheckout'])->name('api.orders.partial-checkout');
             Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');
+            Route::post('/fiado/receber', [OperationsApiController::class, 'receiveCreditPayment'])->name('api.credit.receive');
 
             Route::prefix('fashion')->group(function () {
                 Route::post('/promotions', [FashionModuleApiController::class, 'storePromotion'])->name('api.fashion.promotions.store');

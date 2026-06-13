@@ -18,7 +18,7 @@ const CASH_REGISTER_PAYMENT_LABELS = {
     pix: 'Pix',
     debit_card: 'Cartao de debito',
     credit_card: 'Cartao de credito',
-    credit: 'A Prazo',
+    credit: 'Fiado',
 }
 
 function nowIso() {
@@ -1719,7 +1719,7 @@ export function queueOfflineSaleFinalize(tenantId, payload, context = {}) {
             }
 
             if (product.stock_quantity < item.qty) {
-                throw new Error(`Estoque insuficiente para ${product.name} no modo offline.`)
+                throw new Error(`Nao tem quantidade suficiente em estoque para ${product.name} no modo offline.`)
             }
         })
 

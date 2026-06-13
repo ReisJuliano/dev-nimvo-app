@@ -112,10 +112,10 @@ class InventoryOverviewService
             });
 
         return $this->page(
-            'Entrada de estoque',
-            'Itens com necessidade de reposicao.',
+            'Produtos acabando',
+            'Itens que precisam de reposicao.',
             [
-                $this->metric('Itens prioritarios', $products->count()),
+                $this->metric('Produtos acabando', $products->count()),
                 $this->metric('Reposicao sugerida', $products->sum('suggested_inbound'), 'number'),
                 $this->metric('Fornecedores acionados', $products->pluck('supplier_name')->unique()->count()),
                 $this->metric('Itens sem fornecedor', $products->where('supplier_name', 'Sem fornecedor')->count()),
@@ -131,14 +131,14 @@ class InventoryOverviewService
                     ->values()),
             ],
             [
-                $this->table('Reposicao sugerida', [
+                $this->table('Produtos acabando', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'supplier_name', 'label' => 'Fornecedor'],
                     ['key' => 'stock_quantity', 'label' => 'Atual', 'format' => 'number'],
                     ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'number'],
                     ['key' => 'suggested_inbound', 'label' => 'Sugerido', 'format' => 'number'],
-                ], $products, 'Nenhum produto precisa de reposicao agora.'),
+                ], $products, 'Tudo certo por enquanto.'),
             ],
         );
     }
@@ -216,31 +216,31 @@ class InventoryOverviewService
             ]);
 
         return $this->page(
-            'Movimentacao de estoque',
-            'Saidas do periodo e ultimas atualizacoes.',
+            'Historico do estoque',
+            'Entradas, saidas e ajustes do periodo.',
             [
                 $this->metric('Saidas registradas', $movementSummary->sum('outbound_quantity'), 'number'),
                 $this->metric('Entradas registradas', $movementSummary->sum('inbound_quantity'), 'number'),
                 $this->metric('Itens com giro', $movementSummary->count()),
-                $this->metric('Movimentos recentes', $recentMovements->count()),
+                $this->metric('Historico recente', $recentMovements->count()),
             ],
             [],
             [
-                $this->table('Movimentacao por produto', [
+                $this->table('Historico por produto', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'outbound_quantity', 'label' => 'Saidas', 'format' => 'number'],
                     ['key' => 'inbound_quantity', 'label' => 'Entradas', 'format' => 'number'],
                     ['key' => 'balance_delta', 'label' => 'Saldo liquido', 'format' => 'number'],
-                ], $movementSummary, 'Nenhuma movimentacao registrada no periodo.'),
-                $this->table('Ultimos movimentos', [
+                ], $movementSummary, 'Nenhum historico registrado no periodo.'),
+                $this->table('Historico do estoque', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'type', 'label' => 'Tipo'],
                     ['key' => 'quantity_delta', 'label' => 'Delta', 'format' => 'number'],
                     ['key' => 'stock_after', 'label' => 'Saldo final', 'format' => 'number'],
-                    ['key' => 'occurred_at', 'label' => 'Movimentado em', 'format' => 'datetime'],
-                ], $recentMovements, 'Nenhum movimento encontrado.'),
+                    ['key' => 'occurred_at', 'label' => 'Data', 'format' => 'datetime'],
+                ], $recentMovements, 'Nenhum historico encontrado.'),
             ],
             $from,
             $to,
@@ -266,17 +266,17 @@ class InventoryOverviewService
             ]);
 
         return $this->page(
-            'Faltas e giro',
+            'Produtos acabando',
             'Itens em falta ou abaixo do estoque minimo.',
             [
                 $this->metric('Itens em falta', $products->where('stock_quantity', '<=', 0)->count()),
-                $this->metric('Baixo estoque', $products->count()),
+                $this->metric('Produtos acabando', $products->count()),
                 $this->metric('Reposicao minima', $products->sum('missing'), 'number'),
                 $this->metric('Sem fornecedor', $products->where('supplier_name', 'Sem fornecedor')->count()),
             ],
             [],
             [
-                $this->table('Itens criticos', [
+                $this->table('Produtos acabando', [
                     ['key' => 'code', 'label' => 'Codigo'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'category_name', 'label' => 'Categoria'],
@@ -284,7 +284,7 @@ class InventoryOverviewService
                     ['key' => 'stock_quantity', 'label' => 'Atual', 'format' => 'number'],
                     ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'number'],
                     ['key' => 'missing', 'label' => 'Falta', 'format' => 'number'],
-                ], $products, 'Nenhum item com falta ou baixo estoque.'),
+                ], $products, 'Tudo certo por enquanto.'),
             ],
         );
     }

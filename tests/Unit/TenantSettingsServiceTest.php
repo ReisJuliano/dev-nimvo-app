@@ -13,6 +13,7 @@ class TenantSettingsServiceTest extends TestCase
         $preset = collect($service->businessPresets())->firstWhere('key', TenantSettingsService::SERVICE_PRESET);
 
         $this->assertNotNull($preset);
+        $this->assertSame('Mesas e comandas', $preset['label']);
         $this->assertTrue($preset['modules']['comandas']);
         $this->assertTrue($preset['modules']['pdv_avancado']);
         $this->assertTrue($preset['modules']['mesas']);
@@ -33,11 +34,15 @@ class TenantSettingsServiceTest extends TestCase
         $preset = collect($service->businessPresets())->firstWhere('key', TenantSettingsService::DIRECT_SALES_PRESET);
 
         $this->assertNotNull($preset);
+        $this->assertSame('Balcao simples', $preset['label']);
         $this->assertTrue($preset['modules']['pdv_simples']);
         $this->assertFalse($preset['modules']['pdv_avancado']);
         $this->assertTrue($preset['modules']['estoque']);
         $this->assertTrue($preset['modules']['prazo']);
         $this->assertTrue($preset['modules']['controle_validade']);
+        $this->assertTrue($preset['modules']['relatorios_basicos']);
+        $this->assertFalse($preset['modules']['relatorios_avancados']);
+        $this->assertFalse($preset['modules']['fiscal_avancado']);
         $this->assertFalse($preset['modules']['comandas']);
     }
 

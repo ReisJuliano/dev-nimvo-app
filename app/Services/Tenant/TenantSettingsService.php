@@ -22,10 +22,10 @@ class TenantSettingsService
     {
         return [
             'business' => [
-                'preset' => self::CUSTOM_PRESET,
+                'preset' => self::DIRECT_SALES_PRESET,
             ],
             'cash_closing' => [
-                'require_conference' => true,
+                'require_conference' => false,
             ],
             'modules' => $this->defaultModules(),
         ];
@@ -34,19 +34,22 @@ class TenantSettingsService
     public function defaultModules(): array
     {
         return [
-            'comandas' => true,
+            'comandas' => false,
             'pdv_simples' => true,
             'pdv_avancado' => false,
             'estoque' => true,
             'prazo' => true,
             'delivery' => false,
             'caixa' => true,
-            'relatorios_avancados' => true,
+            'fiscal_basico' => false,
+            'fiscal_avancado' => false,
+            'relatorios_basicos' => true,
+            'relatorios_avancados' => false,
             'clientes' => true,
             'fornecedores' => true,
             'compras' => false,
             'controle_lotes' => false,
-            'controle_validade' => false,
+            'controle_validade' => true,
             'mesas' => false,
             'impressao_automatica' => false,
             'catalogo_online' => false,
@@ -65,21 +68,21 @@ class TenantSettingsService
     {
         return [
             [
-                'key' => self::SERVICE_PRESET,
-                'label' => 'Atendimento',
-                'description' => 'Fluxo integrado com pedidos, preparo e acompanhamento.',
-                'modules' => $this->presetModules(self::SERVICE_PRESET),
-            ],
-            [
                 'key' => self::DIRECT_SALES_PRESET,
-                'label' => 'Venda direta',
-                'description' => 'Checkout simples com estoque, clientes e rotinas essenciais.',
+                'label' => 'Balcao simples',
+                'description' => 'Para loja que vende no balcao, controla caixa, estoque e fiado sem complicacao.',
                 'modules' => $this->presetModules(self::DIRECT_SALES_PRESET),
             ],
             [
+                'key' => self::SERVICE_PRESET,
+                'label' => 'Mesas e comandas',
+                'description' => 'Para restaurante ou lanchonete com operacao por mesa ou comanda.',
+                'modules' => $this->presetModules(self::SERVICE_PRESET),
+            ],
+            [
                 'key' => self::CUSTOM_PRESET,
-                'label' => 'Personalizado',
-                'description' => 'Ligacao manual de modulos.',
+                'label' => 'Avancado',
+                'description' => 'Use apenas se souber configurar recursos manualmente.',
                 'modules' => $this->defaultModules(),
             ],
         ];
@@ -98,47 +101,35 @@ class TenantSettingsService
     {
         return [
             [
-                'section' => 'Atendimento',
+                'section' => 'Recursos da loja',
                 'items' => [
-                    ['key' => 'comandas', 'label' => 'Pedidos', 'description' => 'Organiza atendimentos antes da cobranca.'],
-                    ['key' => 'pdv_simples', 'label' => 'Checkout', 'description' => 'Fluxo direto para vendas rapidas.'],
-                    ['key' => 'pdv_avancado', 'label' => 'Checkout integrado', 'description' => 'Integra checkout, pedidos e cobranca.'],
-                    ['key' => 'mesas', 'label' => 'Referencias', 'description' => 'Agrupa atendimentos por contexto ou origem.'],
-                    ['key' => 'delivery', 'label' => 'Entregas', 'description' => 'Acompanha pedidos externos.'],
-                    ['key' => 'prazo', 'label' => 'A Prazo', 'description' => 'Permite registrar saldo pendente por cliente.'],
-                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Controla abertura, conferencia e fechamento.'],
-                    ['key' => 'impressao_automatica', 'label' => 'Impressao automatica', 'description' => 'Automatiza impressoes operacionais.'],
+                    ['key' => 'pdv_simples', 'label' => 'Vender', 'description' => 'Venda rapida no balcao.'],
+                    ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Acompanha dinheiro, Pix e cartoes do dia.'],
+                    ['key' => 'estoque', 'label' => 'Estoque', 'description' => 'Controla o que entrou, saiu e esta acabando.'],
+                    ['key' => 'prazo', 'label' => 'Fiado', 'description' => 'Permite vender para receber depois.'],
+                    ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Cadastro de quem compra na loja.'],
+                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'De quem voce compra.'],
+                    ['key' => 'controle_validade', 'label' => 'Validade', 'description' => 'Avisa produtos perto de vencer.'],
+                    ['key' => 'relatorios_basicos', 'label' => 'Resumo', 'description' => 'Mostra como a loja esta hoje.'],
                 ],
             ],
             [
-                'section' => 'Operacao',
+                'section' => 'Mostrar recursos avancados',
                 'items' => [
-                    ['key' => 'compras', 'label' => 'Compras', 'description' => 'Organiza reposicao e entrada planejada.'],
-                ],
-            ],
-            [
-                'section' => 'Catalogo',
-                'items' => [
-                    ['key' => 'estoque', 'label' => 'Estoque', 'description' => 'Controla saldo e movimentacoes.'],
+                    ['key' => 'comandas', 'label' => 'Mesas e comandas', 'description' => 'Atendimento por mesa ou comanda.'],
+                    ['key' => 'pdv_avancado', 'label' => 'PDV avancado', 'description' => 'Integra pedidos, comandas e cobranca.'],
+                    ['key' => 'mesas', 'label' => 'Mesas', 'description' => 'Agrupa atendimentos por mesa.'],
+                    ['key' => 'delivery', 'label' => 'Delivery', 'description' => 'Acompanha pedidos externos.'],
+                    ['key' => 'compras', 'label' => 'Compras com nota fiscal', 'description' => 'Entrada por XML/NF-e e contas de compra.'],
                     ['key' => 'controle_lotes', 'label' => 'Lotes', 'description' => 'Rastreia itens por lote.'],
-                    ['key' => 'controle_validade', 'label' => 'Validade', 'description' => 'Monitora datas e vencimentos.'],
-                    ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Mantem cadastros ativos.'],
-                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'Mantem origem de compra e contato.'],
-                ],
-            ],
-            [
-                'section' => 'Gestao',
-                'items' => [
-                    ['key' => 'relatorios_avancados', 'label' => 'Relatorios', 'description' => 'Libera visoes consolidadas.'],
-                ],
-            ],
-            [
-                'section' => 'Digital',
-                'items' => [
-                    ['key' => 'catalogo_online', 'label' => 'Shop online', 'description' => 'Exibe vitrine publica para o cliente final.'],
-                    ['key' => 'pedidos_online', 'label' => 'Pedidos pelo site', 'description' => 'Permite checkout pelo shop integrado aos pedidos.'],
-                    ['key' => 'whatsapp_pedidos', 'label' => 'WhatsApp pedidos', 'description' => 'Monta fluxo de pedido via WhatsApp a partir do shop.'],
-                    ['key' => 'moda', 'label' => 'Moda', 'description' => 'Promocoes, catalogo digital e pedidos online no painel.'],
+                    ['key' => 'fiscal_basico', 'label' => 'Fiscal basico', 'description' => 'Configura NFC-e com apoio do contador.'],
+                    ['key' => 'fiscal_avancado', 'label' => 'Suporte fiscal', 'description' => 'XML, cancelamento, contingencia e inutilizacao.'],
+                    ['key' => 'relatorios_avancados', 'label' => 'Relatorios avancados', 'description' => 'Vendas por periodo, demanda, CMV e analises detalhadas.'],
+                    ['key' => 'catalogo_online', 'label' => 'Vendas online', 'description' => 'Catalogo, pedidos pelo site e canais digitais.'],
+                    ['key' => 'pedidos_online', 'label' => 'Pedidos online', 'description' => 'Checkout do catalogo online.'],
+                    ['key' => 'whatsapp_pedidos', 'label' => 'WhatsApp pedidos', 'description' => 'Pedido via WhatsApp a partir do catalogo.'],
+                    ['key' => 'moda', 'label' => 'Moda', 'description' => 'Grade, catalogo de moda e vendas condicionais.'],
+                    ['key' => 'impressao_automatica', 'label' => 'Impressao automatica', 'description' => 'Automatiza impressoes operacionais.'],
                 ],
             ],
         ];
@@ -150,7 +141,7 @@ class TenantSettingsService
             [
                 'key' => 'cash_closing.require_conference',
                 'label' => 'Conferencia no fechamento',
-                'description' => 'Revisa os totais antes de concluir o caixa.',
+                'description' => 'Confira se os valores batem com o que entrou hoje.',
             ],
         ];
     }
@@ -217,6 +208,7 @@ class TenantSettingsService
             'pedidos' => $modules['comandas'],
             'prazo' => $modules['prazo'],
             'crediario' => $modules['prazo'],
+            'fiado' => $modules['prazo'],
             'produtos' => $modules['estoque'] || $modules['controle_lotes'] || $modules['controle_validade'],
             'categorias' => $modules['estoque'],
             'clientes' => $modules['clientes'],
@@ -224,11 +216,15 @@ class TenantSettingsService
             'entrada_estoque' => $modules['estoque'],
             'ajuste_estoque' => $modules['estoque'],
             'movimentacao_estoque' => $modules['estoque'],
-            'relatorios' => $modules['relatorios_avancados'],
+            'resumo' => $modules['relatorios_basicos'],
+            'relatorios' => $modules['relatorios_basicos'],
             'vendas' => $modules['relatorios_avancados'],
             'demanda' => $modules['relatorios_avancados'],
             'faltas' => $modules['relatorios_avancados'] && $modules['estoque'],
             'usuarios' => true,
+            'fiscal_basico' => $modules['fiscal_basico'],
+            'fiscal_avancado' => $modules['fiscal_avancado'],
+            'consultas_fiscais' => $modules['fiscal_avancado'],
             'delivery' => $modules['delivery'],
             'compras' => $modules['compras'],
             'catalogo_online' => $modules['catalogo_online'],
@@ -361,6 +357,7 @@ class TenantSettingsService
             'estoque' => $inventoryEnabled,
             'prazo' => (bool) data_get($legacyModules, 'crediario', true),
             'caixa' => (bool) data_get($legacyModules, 'caixa', true),
+            'relatorios_basicos' => true,
             'relatorios_avancados' => $reportsEnabled,
             'clientes' => (bool) data_get($legacyModules, 'clientes', true),
             'fornecedores' => (bool) data_get($legacyModules, 'fornecedores', true),
@@ -408,7 +405,10 @@ class TenantSettingsService
             'prazo' => false,
             'delivery' => false,
             'caixa' => true,
-            'relatorios_avancados' => true,
+            'fiscal_basico' => false,
+            'fiscal_avancado' => false,
+            'relatorios_basicos' => true,
+            'relatorios_avancados' => false,
             'clientes' => false,
             'fornecedores' => false,
             'compras' => false,
@@ -439,6 +439,7 @@ class TenantSettingsService
                 'clientes' => true,
                 'fornecedores' => true,
                 'controle_validade' => true,
+                'relatorios_basicos' => true,
             ]),
             default => $this->defaultModules(),
         };

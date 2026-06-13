@@ -67,6 +67,12 @@ export default function AppSidebar({
             .slice(0, 2)
             .toUpperCase() || 'U'
     const isCompact = collapsed
+    const roleLabels = {
+        admin: 'Dono',
+        manager: 'Gerente avancado',
+        operator: 'Operador',
+    }
+    const userRole = roleLabels[auth?.user?.role] || auth?.user?.role || 'Operador'
 
     return (
         <CompactSidebar
@@ -107,7 +113,7 @@ export default function AppSidebar({
                 <div className="app-user-avatar">{userInitials}</div>
                 <div className="app-user-info">
                     <span className="app-user-name">{auth?.user?.name || 'Usuario'}</span>
-                    <span className="app-user-role">{auth?.user?.role || 'operador'}</span>
+                    <span className="app-user-role">{userRole}</span>
                 </div>
             </div>
 

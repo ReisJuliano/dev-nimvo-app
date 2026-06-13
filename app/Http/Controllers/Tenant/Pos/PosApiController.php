@@ -17,6 +17,7 @@ use App\Services\Tenant\LocalAgentPrintQueueService;
 use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
+use App\Services\Tenant\ProductService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
@@ -76,6 +77,42 @@ class PosApiController extends Controller
             ]);
 
         return response()->json(['products' => $products]);
+    }
+
+    public function quickProduct(Request $request, ProductService $productService): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sale_price' => ['required', 'numeric', 'min:0'],
+            'barcode' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $product = $productService->save(new Product(), [
+            'name' => trim((string) $validated['name']),
+            'sale_price' => round((float) $validated['sale_price'], 2),
+            'barcode' => filled($validated['barcode'] ?? null) ? trim((string) $validated['barcode']) : null,
+            'unit' => 'UN',
+            'cost_price' => 0,
+            'stock_quantity' => 0,
+            'min_stock' => 0,
+            'active' => true,
+            'fiscal_enabled' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Produto cadastrado e adicionado a venda.',
+            'product' => [
+                'id' => $product->id,
+                'code' => $product->code,
+                'barcode' => $product->barcode,
+                'name' => $product->name,
+                'description' => $product->description,
+                'unit' => $product->unit,
+                'cost_price' => (float) $product->cost_price,
+                'sale_price' => (float) $product->sale_price,
+                'stock_quantity' => (float) $product->stock_quantity,
+            ],
+        ], 201);
     }
 
     public function recommendations(
@@ -369,7 +406,7 @@ class PosApiController extends Controller
         );
 
         return response()->json([
-            'message' => 'Documento fiscal enfileirado com sucesso.',
+            'message' => 'Cupom fiscal enviado para emissao.',
             'document' => $this->serializeFiscalDocument($document),
         ]);
     }

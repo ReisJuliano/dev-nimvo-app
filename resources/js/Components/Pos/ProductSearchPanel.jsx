@@ -19,6 +19,7 @@ export default function ProductSearchPanel({
     searchPlaceholder = 'Busque por nome, código, EAN ou descrição',
     emptyMessage = 'Digite algo para buscar produtos',
     noResultsMessage = 'Nenhum produto encontrado para essa pesquisa.',
+    onCreateAndSell = null,
 }) {
     const normalizedSearchTerm =
         searchTerm == null || String(searchTerm).toLowerCase() === 'null'
@@ -103,7 +104,15 @@ export default function ProductSearchPanel({
                             </button>
                         ))
                         : (
-                            <div className="pos-search-empty">{noResultsMessage}</div>
+                            <div className="pos-search-empty">
+                                <p>{noResultsMessage}</p>
+                                {onCreateAndSell ? (
+                                    <button type="button" className="ui-button" onClick={onCreateAndSell}>
+                                        <i className="fa-solid fa-plus" />
+                                        Cadastrar e vender
+                                    </button>
+                                ) : null}
+                            </div>
                         )}
             </div>
         </section>

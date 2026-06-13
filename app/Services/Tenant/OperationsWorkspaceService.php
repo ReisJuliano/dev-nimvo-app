@@ -562,8 +562,8 @@ class OperationsWorkspaceService
         return [
             'records' => $includeRecords ? $this->userRecords(['applied' => true]) : [],
             'roles' => [
-                ['value' => 'admin', 'label' => 'Administrador'],
-                ['value' => 'manager', 'label' => 'Gerente'],
+                ['value' => 'admin', 'label' => 'Dono'],
+                ['value' => 'manager', 'label' => 'Gerente avancado'],
                 ['value' => 'operator', 'label' => 'Operador'],
             ],
         ];

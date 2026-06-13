@@ -4,6 +4,7 @@ namespace App\Services\Tenant;
 
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Models\Tenant\CashRegister;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -172,6 +173,17 @@ class DashboardService
             ->whereColumn('stock_quantity', '<=', 'min_stock')
             ->count();
 
+        $openCreditTotal = DB::table('sale_payments')
+            ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
+            ->where('sales.status', 'finalized')
+            ->where('sale_payments.payment_method', 'credit')
+            ->sum('sale_payments.amount');
+
+        $openCashRegister = CashRegister::query()
+            ->where('status', 'open')
+            ->latest('opened_at')
+            ->first();
+
         $averageTicket = (int) ($monthSales->qty ?? 0) > 0
             ? (float) $monthSales->total / (int) $monthSales->qty
             : 0;
@@ -185,6 +197,10 @@ class DashboardService
                 'today_sales_total' => (float) ($todaySales->total ?? 0),
                 'today_sales_qty' => (int) ($todaySales->qty ?? 0),
                 'today_profit' => (float) ($todaySales->profit ?? 0),
+                'open_credit_total' => (float) $openCreditTotal,
+                'open_cash_register_id' => $openCashRegister?->id,
+                'open_cash_register_amount' => (float) ($openCashRegister?->opening_amount ?? 0),
+                'open_cash_register_opened_at' => $openCashRegister?->opened_at?->toIso8601String(),
                 'month_sales_total' => (float) ($monthSales->total ?? 0),
                 'month_sales_qty' => (int) ($monthSales->qty ?? 0),
                 'month_profit' => (float) ($monthSales->profit ?? 0),
@@ -229,7 +245,7 @@ class DashboardService
             'pix' => 'Pix',
             'debit_card' => 'Debito',
             'credit_card' => 'Credito',
-            'credit' => 'A prazo',
+            'credit' => 'Fiado',
             'mixed' => 'Misto',
             default => ucfirst(str_replace('_', ' ', $paymentMethod)),
         };

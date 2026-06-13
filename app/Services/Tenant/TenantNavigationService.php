@@ -10,26 +10,69 @@ class TenantNavigationService
     {
         return [
             [
-                'section' => 'Gerencial',
+                'section' => 'Loja',
                 'items' => [
                     [
                         'href' => '/dashboard',
-                        'label' => 'Inicio',
+                        'label' => 'Resumo',
                         'icon' => 'fa-chart-pie',
+                        'access_key' => 'resumo',
                         'request_patterns' => ['dashboard'],
+                    ],
+                    [
+                        'href' => '/pdv',
+                        'label' => 'Vender',
+                        'icon' => 'fa-cash-register',
+                        'access_key' => 'pdv',
+                        'request_patterns' => ['pdv', 'api/pdv*'],
+                    ],
+                    [
+                        'href' => '/caixa',
+                        'label' => 'Caixa',
+                        'icon' => 'fa-vault',
+                        'access_key' => 'caixa',
+                        'request_patterns' => ['caixa', 'api/cash-registers*'],
+                    ],
+                    [
+                        'href' => '/produtos',
+                        'label_type' => 'products',
+                        'icon' => 'fa-boxes-stacked',
+                        'access_key' => 'produtos',
+                        'request_patterns' => ['produtos', 'api/products*'],
+                    ],
+                    [
+                        'href' => '/entrada-estoque',
+                        'label' => 'Estoque',
+                        'icon' => 'fa-box-open',
+                        'access_key' => 'entrada_estoque',
+                        'request_patterns' => ['entrada-estoque'],
+                    ],
+                    [
+                        'href' => '/fiado',
+                        'label' => 'Fiado',
+                        'icon' => 'fa-handshake',
+                        'access_key' => 'prazo',
+                        'request_patterns' => ['a-prazo', 'fiado'],
+                    ],
+                    [
+                        'href' => '/clientes',
+                        'label' => 'Clientes',
+                        'icon' => 'fa-users',
+                        'access_key' => 'clientes',
+                        'request_patterns' => ['clientes'],
+                    ],
+                    [
+                        'href' => '/configuracoes',
+                        'label' => 'Configuracoes',
+                        'icon' => 'fa-gear',
+                        'required_role' => 'admin',
+                        'request_patterns' => ['configuracoes', 'api/settings'],
                     ],
                 ],
             ],
             [
-                'section' => 'Vendas',
+                'section' => 'Avancado',
                 'items' => [
-                    [
-                        'href' => '/pdv',
-                        'label' => 'Checkout integrado',
-                        'icon' => 'fa-cash-register',
-                        'access_key' => 'pdv',
-                        'request_patterns' => ['pdv', 'caixa', 'api/pdv*'],
-                    ],
                     [
                         'href' => '/pedidos',
                         'label_type' => 'orders',
@@ -38,30 +81,20 @@ class TenantNavigationService
                         'request_patterns' => ['pedidos', 'api/orders*'],
                     ],
                     [
-                        'href' => '/a-prazo',
-                        'label' => 'A Prazo',
-                        'icon' => 'fa-handshake',
-                        'access_key' => 'prazo',
-                        'request_patterns' => ['a-prazo', 'fiado'],
-                    ],
-                    [
                         'href' => '/venda-condicional',
                         'label' => 'Condicional',
                         'icon' => 'fa-shirt',
-                        'access_key' => 'prazo',
+                        'access_key' => 'moda',
                         'request_patterns' => ['venda-condicional*'],
                     ],
                     [
                         'href' => '/consultas-cancelamentos',
-                        'label' => 'Consultas',
+                        'label' => 'Suporte fiscal',
                         'icon' => 'fa-magnifying-glass-dollar',
+                        'access_key' => 'fiscal_avancado',
+                        'required_role' => 'admin',
                         'request_patterns' => ['consultas-cancelamentos*'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Operacao',
-                'items' => [
                     [
                         'href' => '/delivery',
                         'label' => 'Entregas',
@@ -83,18 +116,6 @@ class TenantNavigationService
                         'access_key' => 'compras',
                         'request_patterns' => ['contas-a-pagar', 'api/operations/contas-a-pagar*'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Cadastros',
-                'items' => [
-                    [
-                        'href' => '/produtos',
-                        'label_type' => 'products',
-                        'icon' => 'fa-boxes-stacked',
-                        'access_key' => 'produtos',
-                        'request_patterns' => ['produtos', 'api/products*'],
-                    ],
                     [
                         'href' => '/categorias',
                         'label' => 'Categorias',
@@ -103,65 +124,36 @@ class TenantNavigationService
                         'request_patterns' => ['categorias'],
                     ],
                     [
-                        'href' => '/clientes',
-                        'label' => 'Clientes',
-                        'icon' => 'fa-users',
-                        'access_key' => 'clientes',
-                        'request_patterns' => ['clientes'],
-                    ],
-                    [
                         'href' => '/fornecedores',
                         'label' => 'Fornecedores',
                         'icon' => 'fa-building',
                         'access_key' => 'fornecedores',
                         'request_patterns' => ['fornecedores'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Estoque',
-                'items' => [
-                    [
-                        'href' => '/entrada-estoque',
-                        'label' => 'Entrada',
-                        'icon' => 'fa-file-invoice',
-                        'access_key' => 'entrada_estoque',
-                        'request_patterns' => ['entrada-estoque'],
-                    ],
                     [
                         'href' => '/entrada-estoque/manutencao',
-                        'label' => 'Manutencao NF',
+                        'label' => 'Compras com nota',
                         'icon' => 'fa-clipboard-check',
-                        'access_key' => 'entrada_estoque',
+                        'access_key' => 'compras',
                         'request_patterns' => ['entrada-estoque/manutencao*'],
                     ],
                     [
                         'href' => '/movimentacao-estoque',
-                        'label' => 'Ajuste estoque',
+                        'label' => 'Historico do estoque',
                         'icon' => 'fa-arrows-rotate',
                         'access_key' => 'movimentacao_estoque',
                         'request_patterns' => ['movimentacao-estoque', 'ajuste-estoque'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Relatorios',
-                'items' => [
                     [
                         'href' => '/relatorios',
-                        'label' => 'Relatorios',
+                        'label' => 'Relatorios avancados',
                         'icon' => 'fa-chart-bar',
-                        'access_key' => 'relatorios',
+                        'access_key' => 'relatorios_avancados',
                         'request_patterns' => ['relatorios*', 'vendas', 'demanda', 'faltas'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Digital',
-                'items' => [
                     [
                         'href' => '/shop',
-                        'label' => 'Shop online',
+                        'label' => 'Vendas online',
                         'icon' => 'fa-store',
                         'access_key' => 'catalogo_online',
                         'request_patterns' => ['shop', 'shop/*'],
@@ -173,11 +165,6 @@ class TenantNavigationService
                         'access_key' => 'moda',
                         'request_patterns' => ['moda*', 'api/fashion*'],
                     ],
-                ],
-            ],
-            [
-                'section' => 'Admin',
-                'items' => [
                     [
                         'href' => '/usuarios',
                         'label' => 'Usuarios',
@@ -185,13 +172,6 @@ class TenantNavigationService
                         'access_key' => 'usuarios',
                         'required_role' => 'admin',
                         'request_patterns' => ['usuarios'],
-                    ],
-                    [
-                        'href' => '/configuracoes',
-                        'label' => 'Configuracoes',
-                        'icon' => 'fa-gear',
-                        'required_role' => 'admin',
-                        'request_patterns' => ['configuracoes', 'api/settings'],
                     ],
                 ],
             ],
@@ -238,6 +218,10 @@ class TenantNavigationService
             'api/cash-registers*' => 'caixa',
             'api/delivery*' => 'delivery',
             'api/fashion*' => 'moda',
+            'api/fiado*' => 'prazo',
+            'api/fiscal*' => 'fiscal_avancado',
+            'api/purchases*' => 'compras',
+            'api/stock*' => 'entrada_estoque',
         ];
     }
 

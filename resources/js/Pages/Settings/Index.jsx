@@ -112,11 +112,11 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                 <RightSidebarSection title="Contexto" subtitle="Estado atual">
                                     <div className="right-sidebar-meta">
                                         <div className="right-sidebar-meta-item">
-                                            <span>Preset</span>
+                                            <span>Tipo de operacao</span>
                                             <strong>{moduleState.presetLabel}</strong>
                                         </div>
                                         <div className="right-sidebar-meta-item">
-                                            <span>Modulos ativos</span>
+                                            <span>Recursos ativos</span>
                                             <strong>{enabledModulesCount}</strong>
                                         </div>
                                         <div className="right-sidebar-meta-item">
@@ -146,7 +146,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                         </div>
                                     ) : (
                                         <div className="settings-feedback neutral">
-                                            <strong>O menu lateral ja acompanha os modulos do formulario atual.</strong>
+                                            <strong>O menu lateral acompanha os recursos ligados aqui.</strong>
                                         </div>
                                     )}
 
@@ -160,7 +160,8 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         <section className="settings-section">
                             <div className="settings-section-header">
                                 <div>
-                                    <h2>Presets</h2>
+                                    <h2>Tipo de operacao</h2>
+                                    <p>Escolha como a loja trabalha no dia a dia.</p>
                                 </div>
                             </div>
 
@@ -178,8 +179,9 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                         >
                                             <div className="settings-preset-top">
                                                 <span>{preset.label}</span>
-                                                <strong>{activeCount} modulos</strong>
+                                                <strong>{activeCount} recursos</strong>
                                             </div>
+                                            <p>{preset.description}</p>
                                             <small>{isActive ? 'Ativo' : 'Aplicar'}</small>
                                         </button>
                                     )
@@ -210,7 +212,51 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         <section className="settings-section">
                             <div className="settings-section-header">
                                 <div>
-                                    <h2>Modulos por area</h2>
+                                    <h2>Fiscal</h2>
+                                    <p>A configuracao fiscal deve ser validada com o contador do cliente.</p>
+                                </div>
+                            </div>
+                            <div className="settings-card-grid">
+                                <article className={`settings-toggle-card ${!moduleState.modules?.fiscal_basico && !moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
+                                    <div>
+                                        <strong>Fiscal desligado</strong>
+                                        <p>O sistema registra vendas e estoque, mas nao emite documento fiscal automaticamente.</p>
+                                    </div>
+                                </article>
+                                <article className={`settings-toggle-card ${moduleState.modules?.fiscal_basico && !moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
+                                    <div>
+                                        <strong>Fiscal em configuracao</strong>
+                                        <p>Checklist: certificado, CSC, serie/numero, ambiente, agente local e teste de emissao.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={`settings-toggle-button ${moduleState.modules?.fiscal_basico ? 'active' : ''}`}
+                                        onClick={() => handleToggle('modules.fiscal_basico')}
+                                    >
+                                        <span>{moduleState.modules?.fiscal_basico ? 'Ligado' : 'Ligar'}</span>
+                                    </button>
+                                </article>
+                                <article className={`settings-toggle-card ${moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
+                                    <div>
+                                        <strong>NFC-e ativa</strong>
+                                        <p>Libera emissao no PDV. XML, cancelamento e contingencia ficam em suporte fiscal.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={`settings-toggle-button ${moduleState.modules?.fiscal_avancado ? 'active' : ''}`}
+                                        onClick={() => handleToggle('modules.fiscal_avancado')}
+                                    >
+                                        <span>{moduleState.modules?.fiscal_avancado ? 'Ligado' : 'Ligar'}</span>
+                                    </button>
+                                </article>
+                            </div>
+                        </section>
+
+                        <section className="settings-section">
+                            <div className="settings-section-header">
+                                <div>
+                                    <h2>Recursos da loja</h2>
+                                    <p>O Nimvo Balcao mostra o simples primeiro. Ligue avancados apenas quando precisar.</p>
                                 </div>
                             </div>
 
@@ -234,6 +280,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                                     <article key={item.key} className={`settings-toggle-card ${active ? 'active' : ''}`}>
                                                         <div>
                                                             <strong>{item.label}</strong>
+                                                            <p>{item.description}</p>
                                                         </div>
                                                         <button
                                                             type="button"

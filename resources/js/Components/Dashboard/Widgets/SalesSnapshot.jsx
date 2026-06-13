@@ -5,7 +5,7 @@ const paymentLabels = {
     pix: 'Pix',
     debit_card: 'Debito',
     credit_card: 'Credito',
-    credit: 'A prazo',
+    credit: 'Fiado',
     mixed: 'Misto',
 }
 

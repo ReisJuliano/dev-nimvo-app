@@ -37,7 +37,6 @@ export function buildNavigationGroups({ authRole, modules, capabilities, catalog
         .map((group) => ({
             ...group,
             items: (group.items ?? [])
-                .filter((item) => item.href !== '/configuracoes')
                 .filter((item) => isNavigationItemEnabled(item, authRole, modules, capabilities))
                 .map((item) => ({
                     ...item,

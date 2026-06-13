@@ -38,6 +38,12 @@ O ambiente local usa `TENANT_DEV_SINGLE_DATABASE=true` por padrao no
 simplifica desenvolvimento. Para producao ou testes de isolamento real, use
 `TENANT_DEV_SINGLE_DATABASE=false` e rode tambem `php artisan tenants:migrate`.
 
+Tenant novo nasce no preset interno `venda_direta`, exibido na UI como
+`Balcao simples`/Nimvo Balcao. Esse preset deixa visiveis PDV simples, caixa,
+produtos, estoque simples, fiado, clientes, fornecedores, validade e resumo;
+comandas, delivery, compras com NF-e, fiscal avancado, relatorios avancados,
+vendas online e moda ficam desligados por padrao.
+
 ## Credenciais padrao
 
 O `.env.example` contem credenciais de desenvolvimento para facilitar setup

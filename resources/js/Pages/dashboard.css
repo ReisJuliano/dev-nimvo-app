@@ -522,3 +522,145 @@
         height: 280px;
     }
 }
+.store-summary-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.store-summary-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.store-summary-hero h1 {
+    margin: 0;
+    font-size: 2rem;
+    line-height: 1.1;
+}
+
+.store-summary-hero p {
+    margin: 8px 0 0;
+    color: var(--text-muted, #64748b);
+}
+
+.store-summary-detail-link,
+.store-summary-panel header a {
+    color: var(--primary, #2563eb);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.store-summary-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.store-summary-shortcut {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 8px;
+    color: #0f172a;
+    display: flex;
+    gap: 12px;
+    min-height: 76px;
+    padding: 16px;
+    text-decoration: none;
+}
+
+.store-summary-shortcut i {
+    color: #2563eb;
+    font-size: 1.2rem;
+}
+
+.store-summary-shortcut span {
+    font-weight: 800;
+}
+
+.store-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.store-summary-card,
+.store-summary-panel {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+.store-summary-card {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+}
+
+.store-summary-card i {
+    color: #0f766e;
+}
+
+.store-summary-card span,
+.store-summary-card small,
+.store-summary-list-row span,
+.store-summary-empty {
+    color: #64748b;
+}
+
+.store-summary-card strong {
+    color: #0f172a;
+    font-size: 1.45rem;
+}
+
+.store-summary-bottom {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.store-summary-panel {
+    padding: 18px;
+}
+
+.store-summary-panel header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.store-summary-panel h2 {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.store-summary-list {
+    display: grid;
+    gap: 10px;
+}
+
+.store-summary-list-row {
+    align-items: center;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding-top: 10px;
+}
+
+.store-summary-empty {
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .store-summary-hero {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

@@ -70,7 +70,8 @@ class LocalAgentReceiptPrinter
             $printer->setEmphasis(true);
             $printer->text($this->headline($storeName)."\n");
             $printer->setEmphasis(false);
-            $printer->text("COMPROVANTE DE PAGAMENTO\n");
+            $printer->text("RECIBO INTERNO\n");
+            $printer->text("SEM VALOR FISCAL\n");
             $printer->text(str_repeat('=', 48)."\n");
 
             $printer->setJustification(Printer::JUSTIFY_LEFT);
@@ -117,6 +118,9 @@ class LocalAgentReceiptPrinter
                 $printer->text(str_repeat('-', 48)."\n");
                 $printer->text($notes."\n");
             }
+
+            $printer->text(str_repeat('-', 48)."\n");
+            $printer->text("Recibo interno sem valor fiscal.\n");
 
             $printer->feed(2);
             $printer->cut();

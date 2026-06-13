@@ -132,7 +132,7 @@ export default function OrderCheckoutModal({
                             <div className="orders-inline-empty wide">
                                 <i className="fa-solid fa-user-tag" />
                                 <div>
-                                    <strong>Cliente obrigatório para A Prazo</strong>
+                                    <strong>Escolha quem vai ficar devendo</strong>
                                     <p>Vincule um cliente antes de concluir com esta forma de pagamento.</p>
                                 </div>
                             </div>

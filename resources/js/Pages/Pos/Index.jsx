@@ -76,6 +76,7 @@ const shortcutActionByCode = {
 
 const emptyDiscountAuthorizer = null
 const initialAuthorizationForm = { authorizer_user_id: '', authorizer_password: '' }
+const initialQuickProductForm = { name: '', sale_price: '', barcode: '' }
 const initialQuickCustomerForm = { name: '', phone: '', document: '', email: '' }
 const initialQuickCompanyForm = {
     name: '',
@@ -411,6 +412,8 @@ export default function PosIndex({
     const moduleState = useModules()
     const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
+    const supportsConditionalSale = moduleState.isModuleEnabled('moda')
+    const supportsFiscalIssue = moduleState.isCapabilityEnabled('fiscal_basico') || moduleState.isCapabilityEnabled('fiscal_avancado')
     const supportsPendingSales = posCapabilities.pending_sales !== false
     const supportsCompanies = posCapabilities.companies !== false
     const allowOversell = Boolean(
@@ -442,6 +445,9 @@ export default function PosIndex({
     const productSearchControl = useConfirmedSearch('')
     const [products, setProducts] = useState([])
     const [loadingProducts, setLoadingProducts] = useState(false)
+    const [quickProductOpen, setQuickProductOpen] = useState(false)
+    const [quickProductForm, setQuickProductForm] = useState(initialQuickProductForm)
+    const [creatingQuickProduct, setCreatingQuickProduct] = useState(false)
     const [recommendations, setRecommendations] = useState(normalizeRecommendations(initialRecommendations))
     const [loadingRecommendations, setLoadingRecommendations] = useState(false)
     const [cart, setCart] = useState([])
@@ -547,12 +553,12 @@ export default function PosIndex({
                 { value: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave' },
                 { value: 'pix', label: 'Pix', icon: 'fa-qrcode' },
                 { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card' },
-                { value: 'credit_card', label: 'Credito', icon: 'fa-credit-card' },
-                { value: 'credit', label: 'A Prazo', icon: 'fa-handshake' },
-                { value: conditionalPaymentMethod, label: 'Condicional', icon: 'fa-tags' },
+                { value: 'credit_card', label: 'Cartao', icon: 'fa-credit-card' },
+                { value: 'credit', label: 'Fiado', icon: 'fa-handshake' },
+                supportsConditionalSale ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'fa-tags' } : null,
                 { value: 'mixed', label: 'Misto', icon: 'fa-layer-group' },
-            ].filter((option) => supportsDeferredPayment || !['credit', conditionalPaymentMethod].includes(option.value)),
-        [supportsDeferredPayment],
+            ].filter(Boolean).filter((option) => supportsDeferredPayment || !['credit', conditionalPaymentMethod].includes(option.value)),
+        [supportsConditionalSale, supportsDeferredPayment],
     )
     const currentUserCanAuthorizeDiscountOffline = ['admin', 'manager'].includes(auth?.user?.role || '')
     const currentUserCanAuthorizeCloseCashOffline = supervisors.some((supervisor) => String(supervisor.id) === String(auth?.user?.id))
@@ -955,7 +961,7 @@ export default function PosIndex({
     }, [supportsOrders])
 
     useEffect(() => {
-        if (supportsDeferredPayment) return
+        if (supportsDeferredPayment && (supportsConditionalSale || paymentMethod !== conditionalPaymentMethod)) return
 
         if (paymentMethod === 'credit' || paymentMethod === conditionalPaymentMethod) {
             setPaymentMethod('cash')
@@ -967,7 +973,7 @@ export default function PosIndex({
             method: ['credit', conditionalPaymentMethod].includes(current.method) ? 'cash' : current.method,
         }))
         setCreditStatus(null)
-    }, [paymentMethod, supportsDeferredPayment])
+    }, [paymentMethod, supportsConditionalSale, supportsDeferredPayment])
 
     useEffect(() => {
         if (supportsOrders) return
@@ -1193,14 +1199,14 @@ export default function PosIndex({
     const paymentGridOptions = useMemo(
         () => [
             { value: 'debit_card', label: 'Cartao Debito', icon: 'card' },
-            { value: 'credit_card', label: 'Cartao Credito', icon: 'card' },
+            { value: 'credit_card', label: 'Cartao', icon: 'card' },
             { value: 'cash', label: 'Dinheiro', icon: 'cash' },
             { value: 'pix', label: 'Pix', icon: 'pix' },
-            supportsDeferredPayment ? { value: 'credit', label: 'A Prazo', icon: 'wallet' } : null,
-            supportsDeferredPayment ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'wallet' } : null,
+            supportsDeferredPayment ? { value: 'credit', label: 'Fiado', icon: 'wallet' } : null,
+            supportsDeferredPayment && supportsConditionalSale ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'wallet' } : null,
             { value: 'mixed', label: 'Dividir', icon: 'split' },
         ].filter(Boolean),
-        [supportsDeferredPayment],
+        [supportsConditionalSale, supportsDeferredPayment],
     )
 
     const invoiceGridOptions = useMemo(
@@ -1228,8 +1234,8 @@ export default function PosIndex({
             { key: 'payment', label: 'Pagamento', done: paymentReady, active: paymentModalOpen },
             { key: 'fiscal', label: 'Decisão fiscal', done: false, active: fiscalDecisionOpen },
             { key: 'issue', label: recipientDocumentModel === '55' ? 'NF-e / DANFE' : 'Emissao', done: false, active: recipientModalOpen },
-        ],
-        [cart.length, paymentReady, paymentModalOpen, fiscalDecisionOpen, recipientModalOpen, recipientDocumentModel],
+        ].filter((step) => supportsFiscalIssue || !['fiscal', 'issue'].includes(step.key)),
+        [cart.length, paymentReady, paymentModalOpen, fiscalDecisionOpen, recipientModalOpen, recipientDocumentModel, supportsFiscalIssue],
     )
 
     function showFeedback(type, text) {
@@ -1552,7 +1558,7 @@ export default function PosIndex({
                     const stockLimit = Number(item.stock_quantity ?? 0)
 
                     if (!allowOversell && stockLimit > 0 && nextQty > stockLimit) {
-                        showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+                        showFeedback('warning', `Nao tem quantidade suficiente em estoque para este produto. Disponivel: ${formatNumber(stockLimit)} unidade(s).`)
                         return item
                     }
 
@@ -1562,6 +1568,55 @@ export default function PosIndex({
 
             return [...current, normalizeCartItem({ ...product, qty: 1 })]
         })
+    }
+
+    function openQuickProductModal() {
+        setQuickProductForm((current) => ({
+            ...initialQuickProductForm,
+            name: current.name || appliedSearchTerm.trim() || searchTerm.trim(),
+            barcode: /^\d{6,}$/.test(appliedSearchTerm.trim()) ? appliedSearchTerm.trim() : '',
+        }))
+        setQuickProductOpen(true)
+    }
+
+    async function handleQuickProductSubmit(event) {
+        event.preventDefault()
+
+        const name = quickProductForm.name.trim()
+        const salePrice = Number(quickProductForm.sale_price || 0)
+
+        if (!name) {
+            showFeedback('warning', 'Informe o nome do produto.')
+            return
+        }
+
+        if (salePrice < 0 || quickProductForm.sale_price === '') {
+            showFeedback('warning', 'Informe o preco de venda.')
+            return
+        }
+
+        setCreatingQuickProduct(true)
+        try {
+            const response = await apiRequest('/api/pdv/products/quick', {
+                method: 'post',
+                data: {
+                    name,
+                    sale_price: salePrice,
+                    barcode: quickProductForm.barcode.trim() || null,
+                },
+            })
+
+            const product = response.product
+            handleAddProduct(product)
+            setProducts((current) => [product, ...current.filter((item) => item.id !== product.id)])
+            setQuickProductOpen(false)
+            setQuickProductForm(initialQuickProductForm)
+            showFeedback('success', response.message || 'Produto cadastrado e adicionado a venda.')
+        } catch (error) {
+            showFeedback('error', error.message || 'Nao foi possivel cadastrar o produto.')
+        } finally {
+            setCreatingQuickProduct(false)
+        }
     }
 
     function handleQuantityChange(productId, value) {
@@ -1577,7 +1632,7 @@ export default function PosIndex({
                 : Math.max(0.001, Math.min(typedQty, stockLimit > 0 ? stockLimit : Infinity))
 
             if (!allowOversell && stockLimit > 0 && typedQty > stockLimit) {
-                showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+                showFeedback('warning', `Nao tem quantidade suficiente em estoque para este produto. Disponivel: ${formatNumber(stockLimit)} unidade(s).`)
             }
 
             return { ...item, qty }
@@ -1600,7 +1655,7 @@ export default function PosIndex({
             const stockLimit = Number(item.stock_quantity ?? 0)
 
             if (!allowOversell && stockLimit > 0 && nextQty > stockLimit) {
-                showFeedback('warning', `Estoque insuficiente. Disponível: ${formatNumber(stockLimit)} unidade(s).`)
+                showFeedback('warning', `Nao tem quantidade suficiente em estoque para este produto. Disponivel: ${formatNumber(stockLimit)} unidade(s).`)
                 return [item]
             }
 
@@ -1616,8 +1671,13 @@ export default function PosIndex({
     }
 
     function handlePaymentMethodChange(value) {
+        if (value === conditionalPaymentMethod && !supportsConditionalSale) {
+            showFeedback('warning', 'Venda condicional e um recurso avancado e nao esta ativada nesta loja.')
+            return
+        }
+
         if (!supportsDeferredPayment && (value === 'credit' || value === conditionalPaymentMethod)) {
-            showFeedback('warning', 'O modulo de prazo/condicional esta desativado nesta conta.')
+            showFeedback('warning', 'O fiado nao esta ativado nesta loja.')
             return
         }
 
@@ -2625,7 +2685,7 @@ export default function PosIndex({
             }
 
             if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
-                throw new Error('Selecione um cliente para usar A Prazo no pagamento misto.')
+                throw new Error('Escolha quem vai ficar devendo para usar fiado no pagamento misto.')
             }
 
             if (Math.abs(mixedTotal - totals.total) > 0.009) {
@@ -2639,7 +2699,7 @@ export default function PosIndex({
         }
 
         if (paymentMethod === 'credit' && !selectedCustomer) {
-            throw new Error('Selecione um cliente para registrar a venda a prazo.')
+            throw new Error('Escolha quem vai ficar devendo.')
         }
 
         if (paymentMethod === conditionalPaymentMethod) {
@@ -2735,7 +2795,12 @@ export default function PosIndex({
             return
         }
 
-        openInvoiceStep()
+        if (supportsFiscalIssue) {
+            openInvoiceStep()
+            return
+        }
+
+        void handleCloseSaleWithoutFiscal()
     }
 
     async function handleRetryPendingNfce(document) {
@@ -2848,7 +2913,7 @@ export default function PosIndex({
         }
 
         if (!name || !document) {
-            throw new Error('Identifique o consumidor com nome e CPF/CNPJ antes de emitir o documento fiscal.')
+            throw new Error('Identifique o consumidor com nome e CPF/CNPJ antes de emitir o cupom fiscal / NFC-e.')
         }
 
         if (documentModel === '55') {
@@ -3149,7 +3214,7 @@ export default function PosIndex({
 
         if (recipientSelectionMode === 'customer') {
             const customer = customers.find((entry) => String(entry.id) === String(selectedCustomer))
-            if (!customer) throw new Error('Selecione um cliente válido para emitir o documento fiscal.')
+            if (!customer) throw new Error('Selecione um cliente valido para emitir o cupom fiscal / NFC-e.')
             return {
                 type: 'customer',
                 customer_id: customer.id,
@@ -3163,7 +3228,7 @@ export default function PosIndex({
             }
 
             const company = companies.find((entry) => String(entry.id) === String(selectedCompany))
-            if (!company) throw new Error('Selecione uma empresa valida para emitir o documento fiscal.')
+            if (!company) throw new Error('Selecione uma empresa valida para emitir o cupom fiscal / NFC-e.')
             return {
                 type: 'company',
                 company_id: company.id,
@@ -3827,6 +3892,15 @@ export default function PosIndex({
                     </form>
                 </div>
             ) : null}
+
+            <QuickProductModal
+                open={quickProductOpen}
+                form={quickProductForm}
+                saving={creatingQuickProduct}
+                onChange={setQuickProductForm}
+                onSubmit={handleQuickProductSubmit}
+                onClose={() => setQuickProductOpen(false)}
+            />
         </AppLayout>
     )
 
@@ -3841,8 +3915,8 @@ export default function PosIndex({
                                     <span className={`ui-badge ${cashRegisterState ? 'success' : 'danger'}`}>
                                         {cashRegisterState ? 'Caixa ativo' : 'Caixa fechado'}
                                     </span>
-                                    <h1>Caixa modular</h1>
-                                    <p>Produtos, revisão, pagamento e fiscal organizados por etapa para reduzir ruido operacional.</p>
+                                    <h1>Vender</h1>
+                                    <p>Busque o produto, escolha o pagamento e finalize a venda.</p>
                                     <div className="pos-hero-shortcuts">
                                         <span className="pos-hero-shortcuts-title">Atalhos</span>
                                         <div className="pos-shortcut-list">
@@ -3869,8 +3943,8 @@ export default function PosIndex({
                     <section className="pos-card pos-stage-board">
                         <div className="pos-card-header">
                             <div>
-                                <h2>Etapas do caixa</h2>
-                                <p>O fluxo agora avanca por revisão, pagamento e decisao fiscal em modais separados.</p>
+                                <h2>Etapas da venda</h2>
+                                <p>Produtos, pagamento e finalizacao organizados para vender rapido.</p>
                             </div>
                         </div>
                         <div className="pos-stage-list">
@@ -3895,6 +3969,7 @@ export default function PosIndex({
                         products={products}
                         loading={loadingProducts}
                         onAddProduct={handleAddProduct}
+                        onCreateAndSell={openQuickProductModal}
                         title="Selecao de produtos"
                         subtitle="Busque por nome, código ou EAN e adicione direto na venda."
                         actions={
@@ -3917,7 +3992,7 @@ export default function PosIndex({
                             <article className="pos-review-highlight">
                                 <span>Cliente da venda</span>
                                 <strong>{selectedCustomerData?.name || 'Não identificado'}</strong>
-                                <small>{selectedCustomerData?.document || selectedCustomerData?.phone || 'Selecione um cliente quando precisar de credito ou identificação.'}</small>
+                                <small>{selectedCustomerData?.document || selectedCustomerData?.phone || 'Escolha um cliente quando for vender fiado ou identificar a venda.'}</small>
                                 <div className="pos-review-actions">
                                     <button type="button" className="pos-inline-button" onClick={openCustomerPicker}>
                                         <i className="fa-solid fa-user-magnifying-glass" />
@@ -4282,7 +4357,49 @@ export default function PosIndex({
                     </form>
                 </div>
             ) : null}
+
+            <QuickProductModal
+                open={quickProductOpen}
+                form={quickProductForm}
+                saving={creatingQuickProduct}
+                onChange={setQuickProductForm}
+                onSubmit={handleQuickProductSubmit}
+                onClose={() => setQuickProductOpen(false)}
+            />
         </AppLayout>
+    )
+}
+
+function QuickProductModal({ open, form, saving, onChange, onSubmit, onClose }) {
+    if (!open) return null
+
+    function update(field, value) {
+        onChange((current) => ({ ...current, [field]: value }))
+    }
+
+    return (
+        <div className="pos-quick-customer" onClick={onClose}>
+            <form className="pos-quick-customer-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
+                <div className="pos-quick-customer-header">
+                    <div>
+                        <h2>Cadastrar e vender</h2>
+                        <p>Informe apenas o essencial. Depois voce pode completar o cadastro em Produtos.</p>
+                    </div>
+                    <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={onClose}>
+                        <i className="fa-solid fa-xmark" />
+                    </button>
+                </div>
+                <input className="ui-input" placeholder="Nome do produto" value={form.name} onChange={(event) => update('name', event.target.value)} autoFocus />
+                <input className="ui-input" placeholder="Preco de venda" type="number" min="0" step="0.01" value={form.sale_price} onChange={(event) => update('sale_price', event.target.value)} />
+                <input className="ui-input" placeholder="Codigo de barras opcional" value={form.barcode} onChange={(event) => update('barcode', event.target.value)} />
+                <div className="pos-quick-customer-actions">
+                    <button className="pos-button ghost" type="button" onClick={onClose}>Cancelar</button>
+                    <button className="pos-button info" type="submit" disabled={saving}>
+                        {saving ? 'Salvando...' : 'Salvar e adicionar'}
+                    </button>
+                </div>
+            </form>
+        </div>
     )
 }
 
@@ -5201,7 +5318,7 @@ function PosCashTurnPanel({
                 disabled: loadingClosePreview || closingCashRegister,
                 onClick: onOpenCloseCashRegister,
             },
-        ]
+        ].filter((action) => action.key !== 'pending-nfce' || pendingNfceCount > 0)
         : [
             {
                 key: 'open',
@@ -5224,7 +5341,7 @@ function PosCashTurnPanel({
                 tone: 'info',
                 onClick: onOpenPendingNfces,
             },
-        ]
+        ].filter((action) => action.key !== 'pending-nfce' || pendingNfceCount > 0)
     const handleCashOptionClick = (action) => {
         action.onClick?.()
         setCashOptionsOpen(false)
