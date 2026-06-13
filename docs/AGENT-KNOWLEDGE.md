@@ -25,6 +25,8 @@ relatorios, modulos operacionais e fiscal.
   inutilizacao, consulta e armazenamento fiscal.
 - `resources/js/Pages`: paginas Inertia/React.
 - `resources/js/Components`: componentes compartilhados de UI e dominio.
+- `nimvo_app/`: scaffold Flutter do app mobile gerencial para proprietarios e
+  gerentes, consumindo `mobile-api/v1` no contexto tenant.
 - `local-agent/go-agent`: agente local em Go.
 - `local-agent/php-bridge`: bridge PHP usada pelo agente local.
 - `scripts/post-pull-deploy.sh`: rotina de deploy no VPS.
@@ -81,6 +83,21 @@ MariaDB local nao esta ativo em `127.0.0.1:3306` para o banco `nimvo_central`.
 
 `go test ./...` nao foi executado nesta maquina porque `go.exe` nao foi
 encontrado no PATH nem nos locais inspecionados.
+
+2026-06-13:
+
+```bash
+php artisan route:list --name=mobile
+php artisan test --filter=MobileApiConfigurationTest
+php artisan test --filter=TenantRoutesMiddlewareTest
+php artisan test --filter=TenantUserAuthenticationTest
+```
+
+Resultado: rotas mobile registradas e testes focados passaram. O Flutter SDK
+nao esta instalado nesta maquina (`flutter` nao encontrado no PATH), entao o
+app em `nimvo_app/` foi criado como scaffold de codigo; em uma maquina com SDK,
+rodar `flutter create . --org br.com.nimvo --platforms android,ios` dentro de
+`nimvo_app` antes de `flutter pub get`.
 
 ## Historico de contexto
 

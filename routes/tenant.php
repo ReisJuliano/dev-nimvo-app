@@ -17,6 +17,12 @@ use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalNumberInutilizationController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleContingencyController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
+use App\Http\Controllers\Tenant\Mobile\MobileAuthController;
+use App\Http\Controllers\Tenant\Mobile\MobileCashRegisterController;
+use App\Http\Controllers\Tenant\Mobile\MobileDashboardController;
+use App\Http\Controllers\Tenant\Mobile\MobileReportsController;
+use App\Http\Controllers\Tenant\Mobile\MobileSalesController;
+use App\Http\Controllers\Tenant\Mobile\MobileStockController;
 use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
@@ -53,6 +59,27 @@ Route::middleware('guest')->group(function () {
 
 Route::get('/shop', ShopPageController::class)->name('shop.index');
 Route::post('/shop/api/checkout', [ShopApiController::class, 'checkout'])->name('shop.checkout');
+
+Route::prefix('mobile-api/v1')->group(function () {
+    Route::post('/auth/login', [MobileAuthController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('mobile.auth.login');
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/auth/logout', [MobileAuthController::class, 'logout'])->name('mobile.auth.logout');
+        Route::get('/auth/me', [MobileAuthController::class, 'me'])->name('mobile.auth.me');
+
+        Route::get('/dashboard', [MobileDashboardController::class, 'index'])->name('mobile.dashboard');
+        Route::get('/sales', [MobileSalesController::class, 'index'])->name('mobile.sales.index');
+        Route::get('/sales/by-seller', [MobileSalesController::class, 'bySeller'])->name('mobile.sales.by-seller');
+        Route::get('/reports/cmv', [MobileReportsController::class, 'cmv'])->name('mobile.reports.cmv');
+        Route::get('/reports/period', [MobileReportsController::class, 'period'])->name('mobile.reports.period');
+        Route::get('/reports/top-products', [MobileReportsController::class, 'topProducts'])->name('mobile.reports.top-products');
+        Route::get('/reports/payment-methods', [MobileReportsController::class, 'paymentMethods'])->name('mobile.reports.payment-methods');
+        Route::get('/stock/alerts', [MobileStockController::class, 'alerts'])->name('mobile.stock.alerts');
+        Route::get('/cash-register/status', [MobileCashRegisterController::class, 'status'])->name('mobile.cash-register.status');
+    });
+});
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');

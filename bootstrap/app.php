@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->preventRequestForgery([
             'api/local-agents/*',
+            'mobile-api/*',
         ]);
 
         $middleware->alias([

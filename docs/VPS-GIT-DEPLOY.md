@@ -31,6 +31,8 @@ O hook `post-merge` do VPS executa automaticamente:
 - `npm ci` quando necessario
 - `npm run build` quando necessario
 - `php artisan migrate --force`
+- `php artisan tenants:migrate --force` quando o ambiente estiver em tenancy
+  multi-database
 - `php artisan config:cache`
 - `php artisan queue:restart`
 
