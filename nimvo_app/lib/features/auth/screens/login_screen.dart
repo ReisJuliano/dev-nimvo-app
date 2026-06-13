@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/nimvo_brand.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -56,80 +57,102 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 42),
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(18),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF152235),
+              AppColors.background,
+              AppColors.background,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 42),
+                  const Center(
+                    child: NimvoLogo(size: 96, showShadow: true),
                   ),
-                  child: const Icon(Icons.insights, color: Colors.white, size: 30),
-                ),
-                const SizedBox(height: 26),
-                Text('Nimvo Mobile', style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                const Text(
-                  'Painel gerencial para acompanhar sua loja em tempo real.',
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.4),
-                ),
-                const SizedBox(height: 34),
-                TextFormField(
-                  controller: _storeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Loja ou URL',
-                    prefixIcon: Icon(Icons.storefront_outlined),
+                  const SizedBox(height: 28),
+                  Center(
+                    child: Text('Nimvo Mobile',
+                        style: Theme.of(context).textTheme.headlineSmall),
                   ),
-                  validator: (value) => value == null || value.trim().isEmpty ? 'Informe a loja' : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Usuario',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                  validator: (value) => value == null || value.trim().isEmpty ? 'Informe o usuario' : null,
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  const SizedBox(height: 8),
+                  const Center(
+                    child: Text(
+                      'Painel gerencial para acompanhar sua loja em tempo real.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: AppColors.textSecondary, height: 1.4),
                     ),
                   ),
-                  validator: (value) => value == null || value.isEmpty ? 'Informe a senha' : null,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton.icon(
-                    onPressed: loading ? null : _submit,
-                    icon: loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.login),
-                    label: Text(loading ? 'Entrando...' : 'Entrar'),
+                  const SizedBox(height: 34),
+                  TextFormField(
+                    controller: _storeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Loja ou URL',
+                      prefixIcon: Icon(Icons.storefront_outlined),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Informe a loja'
+                        : null,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Usuario',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Informe o usuario'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscure,
+                    decoration: InputDecoration(
+                      labelText: 'Senha',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                        icon: Icon(_obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                      ),
+                    ),
+                    validator: (value) => value == null || value.isEmpty
+                        ? 'Informe a senha'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: FilledButton.icon(
+                      onPressed: loading ? null : _submit,
+                      icon: loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.login),
+                      label: Text(loading ? 'Entrando...' : 'Entrar'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

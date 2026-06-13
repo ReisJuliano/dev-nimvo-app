@@ -22,30 +22,33 @@ class KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = (growth ?? 0) >= 0;
+    final featured = growth != null;
+    final mutedText = featured
+        ? Colors.white.withValues(alpha: 0.78)
+        : AppColors.textSecondary;
 
     return Container(
       width: 184,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.card, AppColors.surface],
-        ),
+        gradient: growth != null ? AppGradients.brand : AppGradients.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: AppColors.primary, size: 20),
+              Icon(icon,
+                  color: featured ? Colors.white : AppColors.primary, size: 20),
               const Spacer(),
               if (growth != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (positive ? AppColors.success : AppColors.danger).withValues(alpha: 0.14),
+                    color: (positive ? AppColors.success : AppColors.danger)
+                        .withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -60,13 +63,16 @@ class KpiCard extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(title, style: TextStyle(color: mutedText, fontSize: 12)),
           const SizedBox(height: 8),
           Text(
             isMoney ? formatCurrency(value) : value.toStringAsFixed(1),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: Colors.white),
           ),
         ],
       ),

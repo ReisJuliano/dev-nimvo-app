@@ -1,7 +1,8 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
-  SecureStorage([FlutterSecureStorage? storage]) : _storage = storage ?? const FlutterSecureStorage();
+  SecureStorage([FlutterSecureStorage? storage])
+      : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -10,11 +11,13 @@ class SecureStorage {
 
   Future<String?> readToken() => _storage.read(key: tokenKey);
 
-  Future<void> saveToken(String token) => _storage.write(key: tokenKey, value: token);
+  Future<void> saveToken(String token) =>
+      _storage.write(key: tokenKey, value: token);
 
   Future<String?> readStore() => _storage.read(key: storeKey);
 
-  Future<void> saveStore(String store) => _storage.write(key: storeKey, value: store);
+  Future<void> saveStore(String store) =>
+      _storage.write(key: storeKey, value: store);
 
   Future<void> clearSession() => _storage.delete(key: tokenKey);
 

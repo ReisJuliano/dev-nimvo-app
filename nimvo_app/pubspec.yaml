@@ -26,3 +26,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/nimvo-logo.png
+    - assets/branding/nimvo-logo-512.png

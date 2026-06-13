@@ -13,7 +13,8 @@ class SalesLineChart extends StatelessWidget {
     final spots = <FlSpot>[];
     for (var i = 0; i < items.length; i++) {
       final item = items[i] as Map<String, dynamic>;
-      spots.add(FlSpot(i.toDouble(), ((item['total'] as num?) ?? 0).toDouble()));
+      spots
+          .add(FlSpot(i.toDouble(), ((item['total'] as num?) ?? 0).toDouble()));
     }
 
     return SizedBox(

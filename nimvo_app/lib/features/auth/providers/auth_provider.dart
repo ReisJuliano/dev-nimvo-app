@@ -36,10 +36,12 @@ class AuthState {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(dioClientProvider), ref.watch(secureStorageProvider));
+  return AuthRepository(
+      ref.watch(dioClientProvider), ref.watch(secureStorageProvider));
 });
 
-final authControllerProvider = AsyncNotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider =
+    AsyncNotifierProvider<AuthController, AuthState>(AuthController.new);
 
 class AuthController extends AsyncNotifier<AuthState> {
   late final AuthRepository _repository;
@@ -59,7 +61,8 @@ class AuthController extends AsyncNotifier<AuthState> {
 
     try {
       final session = await _repository.me();
-      return AuthState(user: session.user, tenant: session.tenant, store: store);
+      return AuthState(
+          user: session.user, tenant: session.tenant, store: store);
     } catch (_) {
       await _storage.clearSession();
       return AuthState(store: store);
@@ -71,7 +74,8 @@ class AuthController extends AsyncNotifier<AuthState> {
     required String username,
     required String password,
   }) async {
-    state = AsyncData((state.valueOrNull ?? const AuthState()).copyWith(isLoading: true, store: store));
+    state = AsyncData((state.valueOrNull ?? const AuthState())
+        .copyWith(isLoading: true, store: store));
 
     state = await AsyncValue.guard(() async {
       final user = await _repository.login(

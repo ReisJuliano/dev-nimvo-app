@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/nimvo_brand.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
@@ -40,15 +41,38 @@ class DashboardScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_greeting(auth?.user?.name), style: Theme.of(context).textTheme.headlineSmall),
+                              Row(
+                                children: [
+                                  const NimvoLogo(size: 34),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _greeting(auth?.user?.name),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 4),
-                              Text(auth?.tenant?.name ?? 'Nimvo', style: const TextStyle(color: AppColors.textSecondary)),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 44),
+                                child: Text(auth?.tenant?.name ?? 'Nimvo',
+                                    style: const TextStyle(
+                                        color: AppColors.textSecondary)),
+                              ),
                             ],
                           ),
                         ),
                         CircleAvatar(
-                          backgroundColor: AppColors.primary,
-                          child: Text((auth?.user?.name ?? 'N').characters.first.toUpperCase()),
+                          backgroundColor: AppColors.rose,
+                          child: Text((auth?.user?.name ?? 'N')
+                              .characters
+                              .first
+                              .toUpperCase()),
                         ),
                       ],
                     ),
@@ -61,15 +85,33 @@ class DashboardScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       scrollDirection: Axis.horizontal,
                       children: [
-                        KpiCard(title: 'Venda hoje', value: _num(summary['today_sales_total']), growth: _num(summary['today_growth']), icon: Icons.today),
+                        KpiCard(
+                            title: 'Venda hoje',
+                            value: _num(summary['today_sales_total']),
+                            growth: _num(summary['today_growth']),
+                            icon: Icons.today),
                         const SizedBox(width: 12),
-                        KpiCard(title: 'Lucro hoje', value: _num(summary['today_profit']), icon: Icons.savings_outlined),
+                        KpiCard(
+                            title: 'Lucro hoje',
+                            value: _num(summary['today_profit']),
+                            icon: Icons.savings_outlined),
                         const SizedBox(width: 12),
-                        KpiCard(title: 'Venda mes', value: _num(summary['month_sales_total']), growth: _num(summary['month_growth']), icon: Icons.calendar_month),
+                        KpiCard(
+                            title: 'Venda mes',
+                            value: _num(summary['month_sales_total']),
+                            growth: _num(summary['month_growth']),
+                            icon: Icons.calendar_month),
                         const SizedBox(width: 12),
-                        KpiCard(title: 'Ticket medio', value: _num(summary['average_ticket']), icon: Icons.receipt_long),
+                        KpiCard(
+                            title: 'Ticket medio',
+                            value: _num(summary['average_ticket']),
+                            icon: Icons.receipt_long),
                         const SizedBox(width: 12),
-                        KpiCard(title: 'Margem %', value: _num(summary['profit_margin']), icon: Icons.percent, isMoney: false),
+                        KpiCard(
+                            title: 'Margem %',
+                            value: _num(summary['profit_margin']),
+                            icon: Icons.percent,
+                            isMoney: false),
                       ],
                     ),
                   ),
@@ -88,8 +130,10 @@ class DashboardScreen extends ConsumerWidget {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(product['name'] as String? ?? ''),
-                        subtitle: Text('${_num(product['qty_sold']).toStringAsFixed(0)} un.'),
-                        trailing: Text(formatCurrency(_num(product['total_sold']))),
+                        subtitle: Text(
+                            '${_num(product['qty_sold']).toStringAsFixed(0)} un.'),
+                        trailing:
+                            Text(formatCurrency(_num(product['total_sold']))),
                       );
                     }).toList(),
                   ),
@@ -103,7 +147,8 @@ class DashboardScreen extends ConsumerWidget {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('#${sale['sale_number'] ?? sale['id']}'),
-                        subtitle: Text('${sale['customer_name'] ?? 'Cliente'} - ${sale['user_name'] ?? 'Vendedor'}'),
+                        subtitle: Text(
+                            '${sale['customer_name'] ?? 'Cliente'} - ${sale['user_name'] ?? 'Vendedor'}'),
                         trailing: Text(formatCurrency(_num(sale['total']))),
                       );
                     }).toList(),
@@ -113,15 +158,18 @@ class DashboardScreen extends ConsumerWidget {
                   context,
                   title: 'Alertas de estoque',
                   child: stock.isEmpty
-                      ? const Text('Nenhum alerta no momento.', style: TextStyle(color: AppColors.textSecondary))
+                      ? const Text('Nenhum alerta no momento.',
+                          style: TextStyle(color: AppColors.textSecondary))
                       : Column(
                           children: stock.map((item) {
                             final product = item as Map<String, dynamic>;
                             return ListTile(
                               contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.warning_amber, color: AppColors.warning),
+                              leading: const Icon(Icons.warning_amber,
+                                  color: AppColors.warning),
                               title: Text(product['name'] as String? ?? ''),
-                              subtitle: Text('Atual ${_num(product['stock_quantity'])} / min ${_num(product['min_stock'])}'),
+                              subtitle: Text(
+                                  'Atual ${_num(product['stock_quantity'])} / min ${_num(product['min_stock'])}'),
                             );
                           }).toList(),
                         ),
@@ -135,7 +183,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  SliverToBoxAdapter _section(BuildContext context, {required String title, required Widget child}) {
+  SliverToBoxAdapter _section(BuildContext context,
+      {required String title, required Widget child}) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
@@ -158,7 +207,8 @@ class DashboardScreen extends ConsumerWidget {
 
   String _greeting(String? name) {
     final hour = DateTime.now().hour;
-    final prefix = hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite');
+    final prefix =
+        hour < 12 ? 'Bom dia' : (hour < 18 ? 'Boa tarde' : 'Boa noite');
     final firstName = (name ?? '').trim().split(' ').first;
     return firstName.isEmpty ? prefix : '$prefix, $firstName';
   }

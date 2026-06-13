@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/nimvo_brand.dart';
 import '../../../shared/widgets/state_views.dart';
 import '../data/stock_provider.dart';
 
@@ -13,7 +14,7 @@ class StockScreen extends ConsumerWidget {
     final alerts = ref.watch(stockAlertsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Estoque')),
+      appBar: AppBar(title: const NimvoTitle(label: 'Estoque')),
       body: asyncScaffold(
         value: alerts,
         onRefresh: () => ref.refresh(stockAlertsProvider.future),
@@ -23,7 +24,8 @@ class StockScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(24),
               children: const [
                 SizedBox(height: 120),
-                Icon(Icons.check_circle_outline, color: AppColors.success, size: 48),
+                Icon(Icons.check_circle_outline,
+                    color: AppColors.success, size: 48),
                 SizedBox(height: 16),
                 Center(child: Text('Nenhum alerta de estoque')),
               ],
@@ -41,14 +43,19 @@ class StockScreen extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: Icon(
-                    critical ? Icons.error_outline : Icons.warning_amber_outlined,
+                    critical
+                        ? Icons.error_outline
+                        : Icons.warning_amber_outlined,
                     color: critical ? AppColors.danger : AppColors.warning,
                   ),
                   title: Text(item['name'] as String? ?? ''),
-                  subtitle: Text('Atual ${item['stock_quantity']} / minimo ${item['min_stock']} ${item['unit'] ?? ''}'),
+                  subtitle: Text(
+                      'Atual ${item['stock_quantity']} / minimo ${item['min_stock']} ${item['unit'] ?? ''}'),
                   trailing: Chip(
                     label: Text(critical ? 'CRITICO' : 'ATENCAO'),
-                    backgroundColor: (critical ? AppColors.danger : AppColors.warning).withValues(alpha: 0.16),
+                    backgroundColor:
+                        (critical ? AppColors.danger : AppColors.warning)
+                            .withValues(alpha: 0.16),
                   ),
                 ),
               );

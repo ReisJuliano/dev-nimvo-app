@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/nimvo_brand.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -14,18 +15,16 @@ class SettingsScreen extends ConsumerWidget {
     final user = auth?.user;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuracoes')),
+      appBar: AppBar(title: const NimvoTitle(label: 'Configuracoes')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Card(
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Text((user?.name ?? 'N').characters.first.toUpperCase()),
-              ),
+              leading: const NimvoLogo(size: 44),
               title: Text(user?.name ?? 'Usuario'),
-              subtitle: Text('${user?.role ?? ''} - ${auth?.tenant?.name ?? 'Nimvo'}'),
+              subtitle: Text(
+                  '${user?.role ?? ''} - ${auth?.tenant?.name ?? 'Nimvo'}'),
             ),
           ),
           const SizedBox(height: 12),
@@ -36,7 +35,9 @@ class SettingsScreen extends ConsumerWidget {
                   leading: const Icon(Icons.storefront_outlined),
                   title: const Text('Trocar de loja'),
                   onTap: () async {
-                    await ref.read(authControllerProvider.notifier).logout(clearStore: true);
+                    await ref
+                        .read(authControllerProvider.notifier)
+                        .logout(clearStore: true);
                     if (context.mounted) {
                       context.go('/login');
                     }
@@ -58,7 +59,8 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           const Center(
-            child: Text('Nimvo Mobile 0.1.0', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Nimvo Mobile 0.1.0',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
         ],
       ),

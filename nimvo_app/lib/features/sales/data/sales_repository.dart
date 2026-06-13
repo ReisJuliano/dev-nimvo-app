@@ -19,7 +19,8 @@ class SalesRepository {
   }
 
   Future<Map<String, dynamic>> bySeller() async {
-    final response = await _client.dio.get<Map<String, dynamic>>('/sales/by-seller');
+    final response =
+        await _client.dio.get<Map<String, dynamic>>('/sales/by-seller');
     return response.data?['data'] as Map<String, dynamic>;
   }
 }
