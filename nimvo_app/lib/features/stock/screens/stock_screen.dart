@@ -19,9 +19,9 @@ class StockScreen extends ConsumerWidget {
         onRefresh: () => ref.refresh(stockAlertsProvider.future),
         builder: (items) {
           if (items.isEmpty) {
-            return const ListView(
-              padding: EdgeInsets.all(24),
-              children: [
+            return ListView(
+              padding: const EdgeInsets.all(24),
+              children: const [
                 SizedBox(height: 120),
                 Icon(Icons.check_circle_outline, color: AppColors.success, size: 48),
                 SizedBox(height: 16),
@@ -48,7 +48,7 @@ class StockScreen extends ConsumerWidget {
                   subtitle: Text('Atual ${item['stock_quantity']} / minimo ${item['min_stock']} ${item['unit'] ?? ''}'),
                   trailing: Chip(
                     label: Text(critical ? 'CRITICO' : 'ATENCAO'),
-                    backgroundColor: (critical ? AppColors.danger : AppColors.warning).withOpacity(0.16),
+                    backgroundColor: (critical ? AppColors.danger : AppColors.warning).withValues(alpha: 0.16),
                   ),
                 ),
               );

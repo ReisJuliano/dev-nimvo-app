@@ -93,11 +93,24 @@ php artisan test --filter=TenantRoutesMiddlewareTest
 php artisan test --filter=TenantUserAuthenticationTest
 ```
 
-Resultado: rotas mobile registradas e testes focados passaram. O Flutter SDK
-nao esta instalado nesta maquina (`flutter` nao encontrado no PATH), entao o
-app em `nimvo_app/` foi criado como scaffold de codigo; em uma maquina com SDK,
-rodar `flutter create . --org br.com.nimvo --platforms android,ios` dentro de
-`nimvo_app` antes de `flutter pub get`.
+Resultado: rotas mobile registradas e testes focados passaram.
+
+Ainda em 2026-06-13, o Flutter SDK foi instalado em
+`B:\Tools\Flutter\flutter`, o Android SDK em `B:\Tools\Android\sdk` e o JDK 17
+via Microsoft OpenJDK. O projeto `nimvo_app/` foi materializado com
+`flutter create . --org br.com.nimvo --platforms android,ios`. Validacoes
+executadas:
+
+```bash
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+Resultado: analyze e teste passam, e o APK debug e gerado em
+`nimvo_app/build/app/outputs/flutter-apk/app-debug.apk`. `flutter doctor`
+passa para Flutter e Android toolchain; segue apontando ausencia de Chrome e
+Visual Studio, que so afetam builds Web/Windows desktop.
 
 ## Historico de contexto
 

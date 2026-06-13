@@ -20,17 +20,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final auth = authState.valueOrNull;
+      final isAuthenticated = auth?.isAuthenticated ?? false;
       final loggingIn = state.matchedLocation == '/login';
 
       if (authState.isLoading || auth?.isLoading == true) {
         return null;
       }
 
-      if (!auth.isAuthenticated && !loggingIn) {
+      if (!isAuthenticated && !loggingIn) {
         return '/login';
       }
 
-      if (auth.isAuthenticated && loggingIn) {
+      if (isAuthenticated && loggingIn) {
         return '/dashboard';
       }
 
