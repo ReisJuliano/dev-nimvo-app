@@ -69,7 +69,7 @@ export default function AppSidebar({
     const isCompact = collapsed
     const roleLabels = {
         admin: 'Dono',
-        manager: 'Gerente avancado',
+        manager: 'Gerente',
         operator: 'Operador',
     }
     const userRole = roleLabels[auth?.user?.role] || auth?.user?.role || 'Operador'

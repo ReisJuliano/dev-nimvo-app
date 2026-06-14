@@ -34,9 +34,11 @@ function isNavigationItemEnabled(item, authRole, modules, capabilities) {
 
 export function buildNavigationGroups({ authRole, modules, capabilities, catalog }) {
     return (catalog ?? [])
+        .filter((group) => !group.hidden)
         .map((group) => ({
             ...group,
             items: (group.items ?? [])
+                .filter((item) => !item.hidden)
                 .filter((item) => isNavigationItemEnabled(item, authRole, modules, capabilities))
                 .map((item) => ({
                     ...item,

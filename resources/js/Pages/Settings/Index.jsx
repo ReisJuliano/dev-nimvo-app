@@ -6,9 +6,20 @@ import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSid
 import AppLayout from '@/Layouts/AppLayout'
 import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
-import { CUSTOM_PRESET } from '@/lib/modules'
+import { DIRECT_SALES_PRESET } from '@/lib/modules'
 import { apiRequest } from '@/lib/http'
 import './settings.css'
+
+const SIMPLE_MODULE_KEYS = new Set([
+    'pdv_simples',
+    'caixa',
+    'estoque',
+    'prazo',
+    'clientes',
+    'fornecedores',
+    'controle_validade',
+    'relatorios_basicos',
+])
 
 function getValueByPath(object, path) {
     return path.split('.').reduce((current, segment) => current?.[segment], object)
@@ -38,16 +49,36 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     const [feedback, setFeedback] = useState(null)
     const moduleState = useModules(form)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
-    const enabledModulesCount = Object.values(moduleState.modules || {}).filter(Boolean).length
-    const enabledCapabilitiesCount = Object.values(moduleState.capabilities || {}).filter(Boolean).length
-    const activePreset = form.business?.preset || CUSTOM_PRESET
-    const activeLabels = useMemo(
+    const visibleBusinessPresets = useMemo(
+        () => businessPresets.filter((preset) => preset.key === DIRECT_SALES_PRESET),
+        [businessPresets],
+    )
+    const visibleModuleSections = useMemo(
         () =>
             moduleSections
+                .map((section) => ({
+                    ...section,
+                    items: section.items.filter((item) => SIMPLE_MODULE_KEYS.has(item.key)),
+                }))
+                .filter((section) => section.items.length > 0),
+        [moduleSections],
+    )
+    const visibleModuleKeys = useMemo(
+        () => visibleModuleSections.flatMap((section) => section.items.map((item) => item.key)),
+        [visibleModuleSections],
+    )
+    const enabledModulesCount = visibleModuleKeys.filter((key) => moduleState.modules?.[key]).length
+    const enabledCapabilitiesCount = ['pdv', 'caixa', 'produtos', 'entrada_estoque', 'prazo', 'clientes', 'fornecedores', 'resumo']
+        .filter((key) => moduleState.capabilities?.[key])
+        .length
+    const activePreset = form.business?.preset || DIRECT_SALES_PRESET
+    const activeLabels = useMemo(
+        () =>
+            visibleModuleSections
                 .flatMap((section) => section.items)
                 .filter((item) => moduleState.modules?.[item.key])
                 .map((item) => item.label),
-        [moduleSections, moduleState.modules],
+        [visibleModuleSections, moduleState.modules],
     )
 
     function handleToggle(path) {
@@ -57,7 +88,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
             if (path.startsWith('modules.')) {
                 next.business = {
                     ...next.business,
-                    preset: CUSTOM_PRESET,
+                    preset: DIRECT_SALES_PRESET,
                 }
             }
 
@@ -166,7 +197,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                             </div>
 
                             <div className="settings-preset-grid">
-                                {businessPresets.map((preset) => {
+                                {visibleBusinessPresets.map((preset) => {
                                     const isActive = preset.key === activePreset
                                     const activeCount = Object.values(preset.modules || {}).filter(Boolean).length
 
@@ -212,56 +243,13 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         <section className="settings-section">
                             <div className="settings-section-header">
                                 <div>
-                                    <h2>Fiscal</h2>
-                                    <p>A configuracao fiscal deve ser validada com o contador do cliente.</p>
-                                </div>
-                            </div>
-                            <div className="settings-card-grid">
-                                <article className={`settings-toggle-card ${!moduleState.modules?.fiscal_basico && !moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
-                                    <div>
-                                        <strong>Fiscal desligado</strong>
-                                        <p>O sistema registra vendas e estoque, mas nao emite documento fiscal automaticamente.</p>
-                                    </div>
-                                </article>
-                                <article className={`settings-toggle-card ${moduleState.modules?.fiscal_basico && !moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
-                                    <div>
-                                        <strong>Fiscal em configuracao</strong>
-                                        <p>Checklist: certificado, CSC, serie/numero, ambiente, agente local e teste de emissao.</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className={`settings-toggle-button ${moduleState.modules?.fiscal_basico ? 'active' : ''}`}
-                                        onClick={() => handleToggle('modules.fiscal_basico')}
-                                    >
-                                        <span>{moduleState.modules?.fiscal_basico ? 'Ligado' : 'Ligar'}</span>
-                                    </button>
-                                </article>
-                                <article className={`settings-toggle-card ${moduleState.modules?.fiscal_avancado ? 'active' : ''}`}>
-                                    <div>
-                                        <strong>NFC-e ativa</strong>
-                                        <p>Libera emissao no PDV. XML, cancelamento e contingencia ficam em suporte fiscal.</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className={`settings-toggle-button ${moduleState.modules?.fiscal_avancado ? 'active' : ''}`}
-                                        onClick={() => handleToggle('modules.fiscal_avancado')}
-                                    >
-                                        <span>{moduleState.modules?.fiscal_avancado ? 'Ligado' : 'Ligar'}</span>
-                                    </button>
-                                </article>
-                            </div>
-                        </section>
-
-                        <section className="settings-section">
-                            <div className="settings-section-header">
-                                <div>
                                     <h2>Recursos da loja</h2>
-                                    <p>O Nimvo Balcao mostra o simples primeiro. Ligue avancados apenas quando precisar.</p>
+                                    <p>Deixe ligado apenas o que a loja usa no dia a dia.</p>
                                 </div>
                             </div>
 
                             <div className="settings-modules-stack">
-                                {moduleSections.map((section) => (
+                                {visibleModuleSections.map((section) => (
                                     <section key={section.section} className="settings-module-section">
                                         <header>
                                             <div>

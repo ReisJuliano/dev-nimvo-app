@@ -30,7 +30,7 @@ export const MODULE_DEFAULTS = {
 export const PRESET_LABELS = {
     [DIRECT_SALES_PRESET]: 'Balcao simples',
     [SERVICE_PRESET]: 'Mesas e comandas',
-    [CUSTOM_PRESET]: 'Avancado',
+    [CUSTOM_PRESET]: 'Configuracao da loja',
 }
 
 function normalizePresetAlias(preset) {

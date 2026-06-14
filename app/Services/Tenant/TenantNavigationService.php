@@ -72,6 +72,7 @@ class TenantNavigationService
             ],
             [
                 'section' => 'Avancado',
+                'hidden' => true,
                 'items' => [
                     [
                         'href' => '/pedidos',

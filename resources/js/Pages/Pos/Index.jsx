@@ -410,10 +410,10 @@ export default function PosIndex({
     const { tenant, auth, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const moduleState = useModules()
-    const supportsOrders = moduleState.isCapabilityEnabled('pedidos')
+    const supportsOrders = false
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
-    const supportsConditionalSale = moduleState.isModuleEnabled('moda')
-    const supportsFiscalIssue = moduleState.isCapabilityEnabled('fiscal_basico') || moduleState.isCapabilityEnabled('fiscal_avancado')
+    const supportsConditionalSale = false
+    const supportsFiscalIssue = false
     const supportsPendingSales = posCapabilities.pending_sales !== false
     const supportsCompanies = posCapabilities.companies !== false
     const allowOversell = Boolean(
@@ -3609,7 +3609,7 @@ export default function PosIndex({
         onOpenCashHistory: openCashHistoryDrawer,
         onOpenCloseCashRegister: handleOpenCashWorkflow,
         onOpenPendingNfces: () => setPendingNfcesModalOpen(true),
-        pendingNfceCount: pendingNfces.length,
+        pendingNfceCount: supportsFiscalIssue ? pendingNfces.length : 0,
         loadingClosePreview,
         openingCashRegister,
         closingCashRegister,
@@ -4540,8 +4540,8 @@ function PosWorkspace({
         { key: 'discount', label: 'Desconto', icon: 'discount', onClick: () => openDiscountModal(), disabled: !cartLength || submitting },
         { key: 'customer', label: 'Cliente', icon: 'user', onClick: openCustomerPicker, disabled: submitting },
         ...(supportsOrders ? [{ key: 'drafts', label: 'Comandas', icon: 'cart', onClick: openCashierDraftsModal, disabled: submitting }] : []),
-        { key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting },
-        { key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting || paymentMethod === conditionalPaymentMethod },
+        ...(supportsFiscalIssue ? [{ key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting }] : []),
+        ...(supportsFiscalIssue ? [{ key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting || paymentMethod === conditionalPaymentMethod }] : []),
         { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
         { key: 'finalize', label: submitting ? 'Finalizando...' : paymentMethod === conditionalPaymentMethod ? 'Registrar Condicional' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
     ]

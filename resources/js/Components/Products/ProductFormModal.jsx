@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup, showErrorPopup } from '@/lib/errorPopup'
 
 const ADD_NEW_OPTION = '__add_new__'
+const SHOW_PRODUCT_ADVANCED_FIELDS = false
+const SHOW_PRODUCT_FISCAL_FIELDS = false
 
 const emptyForm = {
     id: null,
@@ -172,8 +174,8 @@ export default function ProductFormModal({
         setInitialForm(nextForm)
         setErrors({})
         setSubmitError('')
-        setShowAdvanced(Boolean(product))
-        setShowFiscal(Boolean(product?.fiscal_enabled))
+        setShowAdvanced(SHOW_PRODUCT_ADVANCED_FIELDS && Boolean(product))
+        setShowFiscal(SHOW_PRODUCT_FISCAL_FIELDS && Boolean(product?.fiscal_enabled))
         setShowQuickCategory(false)
         setShowQuickSupplier(false)
         setQuickCategory({ name: '', description: '' })
@@ -456,12 +458,14 @@ export default function ProductFormModal({
                                 </div>
                             </label>
 
-                            <button type="button" className="ui-button-ghost span-2" onClick={() => setShowAdvanced((current) => !current)}>
-                                <i className={`fa-solid ${showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                <span>{showAdvanced ? 'Ocultar dados avancados' : 'Dados avancados'}</span>
-                            </button>
+                            {SHOW_PRODUCT_ADVANCED_FIELDS ? (
+                                <button type="button" className="ui-button-ghost span-2" onClick={() => setShowAdvanced((current) => !current)}>
+                                    <i className={`fa-solid ${showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                                    <span>{showAdvanced ? 'Ocultar dados extras' : 'Dados extras'}</span>
+                                </button>
+                            ) : null}
 
-                            {showAdvanced ? (
+                            {SHOW_PRODUCT_ADVANCED_FIELDS && showAdvanced ? (
                                 <>
                                     <label className="products-editor-field">
                                         <span>Codigo interno</span>
@@ -522,12 +526,14 @@ export default function ProductFormModal({
                                 </>
                             ) : null}
 
-                            <button type="button" className="ui-button-ghost span-2" onClick={() => setShowFiscal((current) => !current)}>
-                                <i className={`fa-solid ${showFiscal ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                <span>Configurar dados fiscais</span>
-                            </button>
+                            {SHOW_PRODUCT_FISCAL_FIELDS ? (
+                                <button type="button" className="ui-button-ghost span-2" onClick={() => setShowFiscal((current) => !current)}>
+                                    <i className={`fa-solid ${showFiscal ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                                    <span>Configurar dados fiscais</span>
+                                </button>
+                            ) : null}
 
-                            {showFiscal ? (
+                            {SHOW_PRODUCT_FISCAL_FIELDS && showFiscal ? (
                                 <section className="products-editor-grid span-2">
                                     <article className="products-editor-card span-2">
                                         <h3>Dados fiscais e avancados</h3>

@@ -81,8 +81,8 @@ class TenantSettingsService
             ],
             [
                 'key' => self::CUSTOM_PRESET,
-                'label' => 'Avancado',
-                'description' => 'Use apenas se souber configurar recursos manualmente.',
+                'label' => 'Configuracao da loja',
+                'description' => 'Ajustes guardados para esta loja.',
                 'modules' => $this->defaultModules(),
             ],
         ];
