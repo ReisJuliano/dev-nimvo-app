@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'nimvo-offline-v3'
+const CACHE_VERSION = 'nimvo-offline-v4'
 const APP_CACHE = `${CACHE_VERSION}:app`
 const PAGE_CACHE = `${CACHE_VERSION}:pages`
 
@@ -134,6 +134,28 @@ async function staleWhileRevalidate(request) {
     throw new Error('Network unavailable and resource not cached.')
 }
 
+async function networkFirstStatic(request) {
+    const cache = await caches.open(APP_CACHE)
+
+    try {
+        const response = await fetch(request, { cache: 'no-store' })
+
+        if (response.ok) {
+            await cache.put(request, response.clone())
+        }
+
+        return response
+    } catch {
+        const cached = await cache.match(request)
+
+        if (cached) {
+            return cached
+        }
+
+        throw new Error('Static resource unavailable and not cached.')
+    }
+}
+
 self.addEventListener('fetch', (event) => {
     const { request } = event
 
@@ -151,14 +173,18 @@ self.addEventListener('fetch', (event) => {
         return
     }
 
+    if (url.pathname.startsWith('/build/')) {
+        event.respondWith(networkFirstStatic(request))
+        return
+    }
+
     if (
         request.destination === 'style'
         || request.destination === 'script'
         || request.destination === 'font'
         || request.destination === 'image'
-        || url.pathname.startsWith('/build/')
     ) {
-        event.respondWith(cacheFirst(request))
+        event.respondWith(staleWhileRevalidate(request))
         return
     }
 
