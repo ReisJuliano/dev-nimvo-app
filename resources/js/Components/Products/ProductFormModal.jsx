@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup, showErrorPopup } from '@/lib/errorPopup'
+import useModules from '@/hooks/useModules'
 
 const ADD_NEW_OPTION = '__add_new__'
-const SHOW_PRODUCT_ADVANCED_FIELDS = false
-const SHOW_PRODUCT_FISCAL_FIELDS = false
 
 const emptyForm = {
     id: null,
@@ -46,18 +45,6 @@ const numericFieldLabels = {
     cofins_rate: 'Aliquota de COFINS',
     ipi_rate: 'Aliquota de IPI',
 }
-
-const originOptions = [
-    { value: '0', label: '0 - Nacional' },
-    { value: '1', label: '1 - Estrangeira direta' },
-    { value: '2', label: '2 - Estrangeira adquirida no mercado interno' },
-    { value: '3', label: '3 - Nacional com importacao acima de 40%' },
-    { value: '4', label: '4 - Nacional com processo produtivo basico' },
-    { value: '5', label: '5 - Nacional com importacao ate 40%' },
-    { value: '6', label: '6 - Estrangeira direta sem similar nacional' },
-    { value: '7', label: '7 - Estrangeira adquirida sem similar nacional' },
-    { value: '8', label: '8 - Nacional com importacao acima de 70%' },
-]
 
 const icmsOptions = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900']
 const pisOptions = ['01', '02', '04', '05', '06', '07', '08', '09', '49', '99']
@@ -152,6 +139,7 @@ export default function ProductFormModal({
     onQuickCreateCategory,
     onQuickCreateSupplier,
 }) {
+    const moduleState = useModules()
     const [form, setForm] = useState(emptyForm)
     const [initialForm, setInitialForm] = useState(emptyForm)
     const [errors, setErrors] = useState({})
@@ -164,6 +152,7 @@ export default function ProductFormModal({
     const [quickSupplier, setQuickSupplier] = useState({ name: '', phone: '', email: '' })
     const [creatingCategory, setCreatingCategory] = useState(false)
     const [creatingSupplier, setCreatingSupplier] = useState(false)
+    const fiscalFieldsEnabled = Boolean(moduleState.modules?.fiscal_basico || moduleState.modules?.fiscal_avancado)
 
     useEffect(() => {
         if (!open) return
@@ -174,13 +163,13 @@ export default function ProductFormModal({
         setInitialForm(nextForm)
         setErrors({})
         setSubmitError('')
-        setShowAdvanced(SHOW_PRODUCT_ADVANCED_FIELDS && Boolean(product))
-        setShowFiscal(SHOW_PRODUCT_FISCAL_FIELDS && Boolean(product?.fiscal_enabled))
+        setShowAdvanced(false)
+        setShowFiscal(fiscalFieldsEnabled && Boolean(product?.fiscal_enabled))
         setShowQuickCategory(false)
         setShowQuickSupplier(false)
         setQuickCategory({ name: '', description: '' })
         setQuickSupplier({ name: '', phone: '', email: '' })
-    }, [open, product])
+    }, [fiscalFieldsEnabled, open, product])
 
     const hasUnsavedChanges = useMemo(() => {
         if (!open) return false
@@ -244,7 +233,7 @@ export default function ProductFormModal({
         try {
             await onSubmit({
                 ...form,
-                fiscal_enabled: Boolean(form.fiscal_enabled),
+                fiscal_enabled: fiscalFieldsEnabled ? Boolean(form.fiscal_enabled) : false,
                 unit: form.unit || 'UN',
                 commercial_unit: form.commercial_unit || form.unit || 'UN',
                 taxable_unit: form.taxable_unit || form.commercial_unit || form.unit || 'UN',
@@ -355,14 +344,14 @@ export default function ProductFormModal({
                     <div className="products-editor-body">
                         <section className="products-editor-grid products-editor-tab-content">
                             <div className="products-editor-section-title span-2">
-                                <h3>Informacoes do produto</h3>
+                                <h3>O produto</h3>
                             </div>
 
                             <label className={`products-editor-field span-2 ${errors.name ? 'has-error' : ''}`}>
                                 <span>Nome do produto *</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-box" />
-                                    <input autoFocus value={form.name ?? ''} onChange={(event) => updateField('name', event.target.value)} required />
+                                    <input autoFocus value={form.name ?? ''} onChange={(event) => updateField('name', event.target.value)} placeholder="Ex: Coca-Cola 2L" required />
                                 </div>
                                 {renderFieldError('name')}
                             </label>
@@ -370,7 +359,7 @@ export default function ProductFormModal({
                             <label className="products-editor-field">
                                 <span>Codigo de barras</span>
                                 <div className="products-editor-input-wrap">
-                                    <i className="fa-solid fa-barcode" />
+                                    <i className="fa-solid fa-camera" />
                                     <input value={form.barcode ?? ''} onChange={(event) => updateField('barcode', event.target.value)} placeholder="Opcional" />
                                 </div>
                             </label>
@@ -380,7 +369,7 @@ export default function ProductFormModal({
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-layer-group" />
                                     <select value={form.category_id ?? ''} onChange={(event) => handleCategorySelect(event.target.value)}>
-                                        <option value="">Opcional</option>
+                                        <option value="">Sem categoria</option>
                                         {categories.map((category) => (
                                             <option key={category.id} value={category.id}>
                                                 {category.name}
@@ -424,6 +413,7 @@ export default function ProductFormModal({
                                     <i className="fa-solid fa-coins" />
                                     <input type="number" step="0.01" min="0" value={form.cost_price ?? ''} onChange={(event) => updateField('cost_price', event.target.value)} placeholder="Opcional" />
                                 </div>
+                                <small className="products-field-help">Usado para calcular seu lucro.</small>
                                 {renderFieldError('cost_price')}
                             </label>
 
@@ -442,45 +432,23 @@ export default function ProductFormModal({
                                     <i className="fa-solid fa-triangle-exclamation" />
                                     <input type="number" step="0.001" min="0" value={form.min_stock ?? ''} onChange={(event) => updateField('min_stock', event.target.value)} placeholder="Opcional" />
                                 </div>
+                                <small className="products-field-help">Avisa quando estiver acabando.</small>
                                 {renderFieldError('min_stock')}
                             </label>
 
-                            <label className="products-editor-field">
-                                <span>Unidade</span>
-                                <div className="products-editor-input-wrap">
-                                    <i className="fa-solid fa-ruler-combined" />
-                                    <select value={form.unit ?? 'UN'} onChange={(event) => updateField('unit', event.target.value)}>
-                                        <option value="UN">UN</option>
-                                        <option value="CX">CX</option>
-                                        <option value="KG">KG</option>
-                                        <option value="L">L</option>
-                                    </select>
-                                </div>
-                            </label>
+                            <button type="button" className="products-advanced-link span-2" onClick={() => setShowAdvanced((current) => !current)}>
+                                <i className={`fa-solid ${showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                                <span>{showAdvanced ? 'Ocultar dados avancados' : 'Ver dados avancados'}</span>
+                            </button>
 
-                            {SHOW_PRODUCT_ADVANCED_FIELDS ? (
-                                <button type="button" className="ui-button-ghost span-2" onClick={() => setShowAdvanced((current) => !current)}>
-                                    <i className={`fa-solid ${showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                    <span>{showAdvanced ? 'Ocultar dados extras' : 'Dados extras'}</span>
-                                </button>
-                            ) : null}
-
-                            {SHOW_PRODUCT_ADVANCED_FIELDS && showAdvanced ? (
+                            {showAdvanced ? (
                                 <>
                                     <label className="products-editor-field">
-                                        <span>Codigo interno</span>
-                                        <div className="products-editor-input-wrap">
-                                            <i className="fa-solid fa-hashtag" />
-                                            <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} />
-                                        </div>
-                                    </label>
-
-                                    <label className="products-editor-field">
-                                        <span>Fornecedor</span>
+                                        <span>Fornecedor - de quem voce compra</span>
                                         <div className="products-editor-input-wrap">
                                             <i className="fa-solid fa-building" />
                                             <select value={form.supplier_id ?? ''} onChange={(event) => handleSupplierSelect(event.target.value)}>
-                                                <option value="">Opcional - de quem voce compra</option>
+                                                <option value="">Opcional</option>
                                                 {suppliers.map((supplier) => (
                                                     <option key={supplier.id} value={supplier.id}>
                                                         {supplier.name}
@@ -488,6 +456,27 @@ export default function ProductFormModal({
                                                 ))}
                                                 {onQuickCreateSupplier ? <option value={ADD_NEW_OPTION}>+ Criar fornecedor</option> : null}
                                             </select>
+                                        </div>
+                                    </label>
+
+                                    <label className="products-editor-field">
+                                        <span>Unidade</span>
+                                        <div className="products-editor-input-wrap">
+                                            <i className="fa-solid fa-ruler-combined" />
+                                            <select value={form.unit ?? 'UN'} onChange={(event) => updateField('unit', event.target.value)}>
+                                                <option value="UN">UN</option>
+                                                <option value="CX">CX</option>
+                                                <option value="KG">KG</option>
+                                                <option value="L">L</option>
+                                            </select>
+                                        </div>
+                                    </label>
+
+                                    <label className="products-editor-field">
+                                        <span>Codigo interno</span>
+                                        <div className="products-editor-input-wrap">
+                                            <i className="fa-solid fa-hashtag" />
+                                            <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} placeholder="Opcional" />
                                         </div>
                                     </label>
 
@@ -526,18 +515,18 @@ export default function ProductFormModal({
                                 </>
                             ) : null}
 
-                            {SHOW_PRODUCT_FISCAL_FIELDS ? (
-                                <button type="button" className="ui-button-ghost span-2" onClick={() => setShowFiscal((current) => !current)}>
+                            {showAdvanced && fiscalFieldsEnabled ? (
+                                <button type="button" className="products-advanced-link span-2" onClick={() => setShowFiscal((current) => !current)}>
                                     <i className={`fa-solid ${showFiscal ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                    <span>Configurar dados fiscais</span>
+                                    <span>{showFiscal ? 'Ocultar dados fiscais' : 'Ver dados fiscais'}</span>
                                 </button>
                             ) : null}
 
-                            {SHOW_PRODUCT_FISCAL_FIELDS && showFiscal ? (
+                            {showAdvanced && fiscalFieldsEnabled && showFiscal ? (
                                 <section className="products-editor-grid span-2">
                                     <article className="products-editor-card span-2">
-                                        <h3>Dados fiscais e avancados</h3>
-                                        <small>Use estes campos somente quando a loja for emitir NFC-e com orientacao do contador.</small>
+                                        <h3>Dados fiscais</h3>
+                                        <small>Preencha com o seu contador.</small>
                                         <div className="products-editor-toggle-row">
                                             <button type="button" className={`products-editor-toggle ${form.fiscal_enabled ? 'active' : ''}`} onClick={() => updateField('fiscal_enabled', true)}>Usa fiscal</button>
                                             <button type="button" className={`products-editor-toggle ${!form.fiscal_enabled ? 'active' : ''}`} onClick={() => updateField('fiscal_enabled', false)}>Nao usa fiscal</button>
@@ -572,18 +561,6 @@ export default function ProductFormModal({
                                     </label>
 
                                     <label className="products-editor-field">
-                                        <span>Origem</span>
-                                        <div className="products-editor-input-wrap">
-                                            <i className="fa-solid fa-earth-americas" />
-                                            <select value={form.origin_code ?? '0'} onChange={(event) => updateField('origin_code', event.target.value)}>
-                                                {originOptions.map((option) => (
-                                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </label>
-
-                                    <label className="products-editor-field">
                                         <span>CST / CSOSN ICMS</span>
                                         <div className="products-editor-input-wrap">
                                             <i className="fa-solid fa-shield-halved" />
@@ -610,22 +587,6 @@ export default function ProductFormModal({
                                             <select value={form.cofins_cst ?? '49'} onChange={(event) => updateField('cofins_cst', event.target.value)}>
                                                 {cofinsOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                                             </select>
-                                        </div>
-                                    </label>
-
-                                    <label className="products-editor-field">
-                                        <span>Unidade comercial</span>
-                                        <div className="products-editor-input-wrap">
-                                            <i className="fa-solid fa-scale-balanced" />
-                                            <input maxLength={10} value={form.commercial_unit ?? ''} onChange={(event) => updateField('commercial_unit', event.target.value.toUpperCase())} />
-                                        </div>
-                                    </label>
-
-                                    <label className="products-editor-field">
-                                        <span>Unidade tributavel</span>
-                                        <div className="products-editor-input-wrap">
-                                            <i className="fa-solid fa-scale-balanced" />
-                                            <input maxLength={10} value={form.taxable_unit ?? ''} onChange={(event) => updateField('taxable_unit', event.target.value.toUpperCase())} />
                                         </div>
                                     </label>
                                 </section>

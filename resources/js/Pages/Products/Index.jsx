@@ -86,7 +86,7 @@ function getProductStatusMeta(product) {
     }
 
     if (isLowStock(product)) {
-        return { label: 'Estoque baixo', tone: 'warning' }
+        return { label: 'Produtos acabando', tone: 'warning' }
     }
 
     return { label: 'Ativo', tone: 'active' }
@@ -504,7 +504,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                         filters={[
                             { key: 'all', value: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : undefined },
                             { key: 'active', value: 'active', label: 'Ativos', count: hasAppliedFilters ? filterCounts.active : undefined },
-                            { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
+                            { key: 'low_stock', value: 'low_stock', label: 'Produtos acabando', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
                             { key: 'inactive', value: 'inactive', label: 'Inativos', count: hasAppliedFilters ? filterCounts.inactive : undefined },
                         ]}
                         activeFilter={activeFilter}

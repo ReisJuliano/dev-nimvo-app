@@ -15,7 +15,7 @@ class TenantNavigationService
                     [
                         'href' => '/dashboard',
                         'label' => 'Resumo',
-                        'icon' => 'fa-chart-pie',
+                        'icon' => 'fa-house',
                         'access_key' => 'resumo',
                         'request_patterns' => ['dashboard'],
                     ],
@@ -43,7 +43,7 @@ class TenantNavigationService
                     [
                         'href' => '/entrada-estoque',
                         'label' => 'Estoque',
-                        'icon' => 'fa-box-open',
+                        'icon' => 'fa-arrow-down-to-bracket',
                         'access_key' => 'entrada_estoque',
                         'request_patterns' => ['entrada-estoque'],
                     ],
@@ -61,18 +61,11 @@ class TenantNavigationService
                         'access_key' => 'clientes',
                         'request_patterns' => ['clientes'],
                     ],
-                    [
-                        'href' => '/configuracoes',
-                        'label' => 'Configuracoes',
-                        'icon' => 'fa-gear',
-                        'required_role' => 'admin',
-                        'request_patterns' => ['configuracoes', 'api/settings'],
-                    ],
                 ],
             ],
             [
                 'section' => 'Avancado',
-                'hidden' => true,
+                'hidden_for_presets' => ['venda_direta'],
                 'items' => [
                     [
                         'href' => '/pedidos',

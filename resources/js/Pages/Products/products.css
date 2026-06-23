@@ -1616,6 +1616,42 @@
 }
 
 .products-editor-section-title h3 {
-    font-size: 1rem;
+    color: var(--app-text-muted, #64748b);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
     margin: 0;
+    text-transform: uppercase;
+}
+
+.products-editor-modal {
+    max-height: 85vh;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.products-quick-form .products-editor-body {
+    max-height: calc(85vh - 150px);
+}
+
+.products-field-help {
+    color: var(--app-text-muted, #64748b);
+    font-size: 0.78rem;
+}
+
+.products-advanced-link {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--app-primary, #2563eb);
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 800;
+    gap: 0.45rem;
+    justify-content: flex-start;
+    padding: 0.25rem 0;
+    width: fit-content;
+}
+
+.products-advanced-link:hover {
+    color: #1d4ed8;
 }

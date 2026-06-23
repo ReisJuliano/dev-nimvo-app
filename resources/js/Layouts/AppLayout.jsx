@@ -14,7 +14,7 @@ const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app-sidebar-collapsed'
 
 export default function AppLayout({
     children,
-    title = 'Início',
+    title = 'Resumo',
     settingsOverride = null,
     showTopbar = true,
     contentClassName = '',
@@ -108,8 +108,9 @@ export default function AppLayout({
             modules: moduleState.modules,
             capabilities: moduleState.capabilities,
             catalog: tenantNavigationCatalog,
+            preset: moduleState.preset,
         }),
-        [auth?.user?.role, moduleState.capabilities, moduleState.modules, tenantNavigationCatalog],
+        [auth?.user?.role, moduleState.capabilities, moduleState.modules, moduleState.preset, tenantNavigationCatalog],
     )
     const shouldShowOfflineBanner = Boolean(
         tenant?.id

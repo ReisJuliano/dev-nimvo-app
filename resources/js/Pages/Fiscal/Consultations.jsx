@@ -460,7 +460,7 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                                     ['SEFAZ', fiscalDocument.sefaz_status_code ? `${fiscalDocument.sefaz_status_code} - ${fiscalDocument.sefaz_status_reason || '--'}` : '--', true],
                                     ['Autorizada', formatDateTime(fiscalDocument.authorized_at)],
                                     ['Cancelada', formatDateTime(fiscalDocument.cancelled_at)],
-                                    ['Contingencia', formatDateTime(fiscalDocument.contingency_requested_at)],
+                                    ['Emitir depois', formatDateTime(fiscalDocument.contingency_requested_at)],
                                     ['Tentativas', fiscalDocument.contingency_attempts],
                                     ['Motivo', fiscalDocument.cancellation_reason || '--', true],
                                     ['Motivo conting.', fiscalDocument.contingency_reason || '--', true],

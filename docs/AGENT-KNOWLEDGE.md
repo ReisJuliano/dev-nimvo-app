@@ -126,3 +126,7 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   props recarregadas por Inertia apos alterar fatura. Ao mexer nesse fluxo,
   mantenha o `licenseTenant` sincronizado com `tenants`, como ja ocorre nos
   modais fiscal e de agente local.
+- 2026-06-23: A entrada simples de mercadoria do tenant ja possui endpoint
+  `POST /api/stock/quick-receive`, atendido por
+  `StockEntryPageController::quickReceive`; use esse fluxo para entradas
+  manuais sem NF em vez de criar rota nova.

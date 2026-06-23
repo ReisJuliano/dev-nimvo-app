@@ -1,4 +1,4 @@
-import { getOrdersLabel, getPdvLabel, getProductsLabel } from '@/lib/modules'
+import { DIRECT_SALES_PRESET, getOrdersLabel, getPdvLabel, getProductsLabel } from '@/lib/modules'
 
 const LABEL_RESOLVERS = {
     orders: getOrdersLabel,
@@ -32,9 +32,21 @@ function isNavigationItemEnabled(item, authRole, modules, capabilities) {
     return Boolean(capabilities?.[item.access_key])
 }
 
-export function buildNavigationGroups({ authRole, modules, capabilities, catalog }) {
+function isNavigationGroupEnabled(group, preset) {
+    if (group.hidden) {
+        return false
+    }
+
+    if (Array.isArray(group.hidden_for_presets) && group.hidden_for_presets.includes(preset || DIRECT_SALES_PRESET)) {
+        return false
+    }
+
+    return true
+}
+
+export function buildNavigationGroups({ authRole, modules, capabilities, catalog, preset }) {
     return (catalog ?? [])
-        .filter((group) => !group.hidden)
+        .filter((group) => isNavigationGroupEnabled(group, preset))
         .map((group) => ({
             ...group,
             items: (group.items ?? [])

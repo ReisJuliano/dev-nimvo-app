@@ -159,7 +159,7 @@ export default function OperationsOverview({ module }) {
                                     </div>
                                     {isReportsCatalog ? (
                                         <div className="right-sidebar-meta-item">
-                                            <span>Relatorios</span>
+                                            <span>Resumo</span>
                                             <strong>{module.catalog?.categories?.reduce((total, category) => total + (category.report_count || 0), 0) || 0}</strong>
                                         </div>
                                     ) : null}

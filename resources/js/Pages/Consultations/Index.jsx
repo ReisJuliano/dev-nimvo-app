@@ -59,10 +59,10 @@ function recordPaymentSummary(record) {
 
     return {
         sale: 'Sem pagamento informado',
-        entry: 'Entrada de estoque',
+        entry: 'Recebi mercadoria',
         delivery: 'Delivery',
         credit: 'Fiado',
-        fiscal: 'Documento fiscal',
+        fiscal: 'Cupom fiscal',
     }[record.type] || 'Não informado'
 }
 
@@ -643,7 +643,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
 
                         {selectedRecord.type === 'fiscal' ? (
                             <section className="proc-ui-modal-block">
-                                <h3>Documento fiscal</h3>
+                                <h3>Cupom fiscal</h3>
                                 <div className="proc-ui-summary-grid">
                                     <article className="proc-ui-summary-card"><span>Venda</span><strong>{selectedRecord.details.sale_number || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Status</span><strong>{selectedRecord.details.status || '-'}</strong></article>

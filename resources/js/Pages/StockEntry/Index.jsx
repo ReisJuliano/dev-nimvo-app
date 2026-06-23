@@ -1,38 +1,43 @@
 import { Link } from '@inertiajs/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
-import { apiRequest } from '@/lib/http'
-import { formatMoney, formatNumber } from '@/lib/format'
+import { formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
+import RecebiMercadoriaModal from './RecebiMercadoriaModal'
 import './stock-entry-simple.css'
 
-const emptyReceiveForm = {
-    product_id: '',
-    quantity: '',
-    cost_price: '',
-    notes: '',
+function getStockState(product) {
+    const stock = Number(product.stock_quantity || 0)
+    const minimum = Number(product.min_stock || 0)
+
+    if (stock <= 0) return 'zero'
+    if (stock <= minimum) return 'low'
+
+    return 'ok'
 }
 
 export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
     const [products, setProducts] = useState(Array.isArray(payload?.products) ? payload.products : [])
-    const [form, setForm] = useState(emptyReceiveForm)
     const [query, setQuery] = useState('')
-    const [feedback, setFeedback] = useState(null)
-    const [saving, setSaving] = useState(false)
+    const [receiveModalOpen, setReceiveModalOpen] = useState(false)
+    const [receiveProduct, setReceiveProduct] = useState(null)
+    const [initialProductHandled, setInitialProductHandled] = useState(false)
 
-    const selectedProduct = products.find((product) => String(product.id) === String(form.product_id)) || null
+    useEffect(() => {
+        if (initialProductHandled || typeof window === 'undefined' || !products.length) return
 
-    const productOptions = useMemo(() => {
-        const normalized = normalizeTextSearch(query)
-
-        if (!normalized) {
-            return products.slice(0, 10)
+        const productId = new URLSearchParams(window.location.search).get('product')
+        if (!productId) {
+            setInitialProductHandled(true)
+            return
         }
 
-        return products
-            .filter((product) => matchesTextSearchAny([product.name, product.code, product.barcode], normalized))
-            .slice(0, 10)
-    }, [products, query])
+        const product = products.find((item) => String(item.id) === String(productId))
+        if (product) {
+            openReceiveModal(product)
+        }
+        setInitialProductHandled(true)
+    }, [initialProductHandled, products])
 
     const lowStockProducts = useMemo(() => (
         products
@@ -40,182 +45,150 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
             .sort((left, right) => Number(left.stock_quantity || 0) - Number(right.stock_quantity || 0))
     ), [products])
 
-    function updateForm(field, value) {
-        setForm((current) => ({ ...current, [field]: value }))
-        setFeedback(null)
+    const filteredProducts = useMemo(() => {
+        const normalized = normalizeTextSearch(query)
+
+        if (!normalized) {
+            return products
+        }
+
+        return products.filter((product) => matchesTextSearchAny([product.name, product.code, product.barcode], normalized))
+    }, [products, query])
+
+    function openReceiveModal(product = null) {
+        setReceiveProduct(product)
+        setReceiveModalOpen(true)
     }
 
-    function selectProduct(product) {
-        setForm((current) => ({
-            ...current,
-            product_id: String(product.id),
-            cost_price: product.cost_price ? String(product.cost_price) : current.cost_price,
-        }))
-        setQuery(product.name)
-    }
-
-    async function handleSubmit(event) {
-        event.preventDefault()
-
-        if (!form.product_id) {
-            setFeedback({ type: 'error', text: 'Escolha o produto que chegou.' })
-            return
-        }
-
-        if (Number(form.quantity || 0) <= 0) {
-            setFeedback({ type: 'error', text: 'Informe a quantidade recebida.' })
-            return
-        }
-
-        setSaving(true)
-        setFeedback(null)
-
-        try {
-            const response = await apiRequest('/api/stock/quick-receive', {
-                method: 'post',
-                data: {
-                    product_id: Number(form.product_id),
-                    quantity: Number(form.quantity),
-                    cost_price: form.cost_price === '' ? null : Number(form.cost_price),
-                    notes: form.notes.trim() || null,
-                },
-            })
-
-            setProducts((current) => current.map((product) => (
-                String(product.id) === String(response.product.id) ? { ...product, ...response.product } : product
-            )))
-            setForm(emptyReceiveForm)
-            setQuery('')
-            setFeedback({ type: 'success', text: response.message })
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message || 'Nao foi possivel atualizar o estoque.' })
-        } finally {
-            setSaving(false)
-        }
+    function handleProductSaved(updatedProduct) {
+        setProducts((current) => current.map((product) => (
+            String(product.id) === String(updatedProduct.id) ? { ...product, ...updatedProduct } : product
+        )))
     }
 
     return (
         <AppLayout title={moduleTitle}>
             <div className="stock-simple-page">
                 <section className="stock-simple-hero">
-                    <div>
-                        <h1>Estoque</h1>
-                        <p>Controle o que entrou, saiu e esta acabando.</p>
+                    <div className="stock-simple-hero-copy">
+                        <span className="stock-simple-icon"><i className="fa-solid fa-box-open" /></span>
+                        <div>
+                            <h1>Estoque</h1>
+                            <p>Controle o que entrou, saiu e esta acabando.</p>
+                        </div>
                     </div>
-                </section>
-
-                <section className="stock-action-grid">
-                    <a className="stock-action-card active" href="#recebi-mercadoria">
-                        <i className="fa-solid fa-dolly" />
-                        <span>Recebi mercadoria</span>
-                    </a>
-                    <Link className="stock-action-card" href="/movimentacao-estoque">
-                        <i className="fa-solid fa-sliders" />
-                        <span>Ajustar estoque</span>
-                    </Link>
-                    <a className="stock-action-card" href="#produtos-acabando">
-                        <i className="fa-solid fa-triangle-exclamation" />
-                        <span>Ver produtos acabando</span>
-                    </a>
-                    <Link className="stock-action-card" href="/movimentacao-estoque">
-                        <i className="fa-solid fa-clock-rotate-left" />
-                        <span>Historico do estoque</span>
-                    </Link>
-                </section>
-
-                <section id="recebi-mercadoria" className="stock-simple-panel">
-                    <header>
-                        <div>
-                            <h2>Recebi mercadoria</h2>
-                            <p>Registre o que chegou na loja, sem nota fiscal nesta tela.</p>
-                        </div>
-                    </header>
-
-                    <form className="stock-receive-form" onSubmit={handleSubmit}>
-                        <label>
-                            <span>Produto</span>
-                            <input
-                                className="ui-input"
-                                placeholder="Buscar por nome, codigo ou codigo de barras"
-                                value={query}
-                                onChange={(event) => {
-                                    setQuery(event.target.value)
-                                    updateForm('product_id', '')
-                                }}
-                            />
-                        </label>
-
-                        {query || !selectedProduct ? (
-                            <div className="stock-product-list">
-                                {productOptions.length ? productOptions.map((product) => (
-                                    <button key={product.id} type="button" onClick={() => selectProduct(product)}>
-                                        <strong>{product.name}</strong>
-                                        <span>Estoque {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}</span>
-                                    </button>
-                                )) : <span className="stock-empty-text">Cadastre seu primeiro produto ou venda cadastrando na hora.</span>}
-                            </div>
-                        ) : null}
-
-                        <div className="stock-receive-grid">
-                            <label>
-                                <span>Quantidade recebida</span>
-                                <input className="ui-input" type="number" min="0.001" step="0.001" value={form.quantity} onChange={(event) => updateForm('quantity', event.target.value)} />
-                            </label>
-                            <label>
-                                <span>Custo</span>
-                                <input className="ui-input" type="number" min="0" step="0.01" value={form.cost_price} onChange={(event) => updateForm('cost_price', event.target.value)} placeholder="Opcional" />
-                            </label>
-                            <label>
-                                <span>Observacao</span>
-                                <input className="ui-input" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Opcional" />
-                            </label>
-                        </div>
-
-                        {selectedProduct ? (
-                            <div className="stock-selected-product">
-                                <span>{selectedProduct.name}</span>
-                                <strong>Atual: {formatNumber(selectedProduct.stock_quantity || 0)} {selectedProduct.unit || 'UN'}</strong>
-                                <small>Custo atual {formatMoney(selectedProduct.cost_price || 0)}</small>
-                            </div>
-                        ) : null}
-
-                        {feedback ? <div className={`stock-feedback ${feedback.type}`}>{feedback.text}</div> : null}
-
-                        <div className="stock-form-actions">
-                            <button className="ui-button" type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : 'Salvar'}
-                            </button>
-                        </div>
-                    </form>
-                </section>
-
-                <section id="produtos-acabando" className="stock-simple-panel">
-                    <header>
-                        <div>
-                            <h2>Produtos acabando</h2>
-                            <p>Tudo certo por enquanto se a lista estiver vazia.</p>
-                        </div>
-                    </header>
-
                     {lowStockProducts.length ? (
-                        <div className="stock-low-list">
-                            {lowStockProducts.map((product) => (
-                                <article key={product.id} className="stock-low-item">
-                                    <div>
-                                        <strong>{product.name}</strong>
-                                        <span>Atual {formatNumber(product.stock_quantity || 0)} / minimo {formatNumber(product.min_stock || 0)}</span>
-                                    </div>
-                                    <button type="button" className="ui-button-ghost" onClick={() => selectProduct(product)}>
-                                        Recebi mais
-                                    </button>
-                                </article>
-                            ))}
+                        <span className="stock-alert-badge critical">{formatNumber(lowStockProducts.length)} acabando</span>
+                    ) : null}
+                </section>
+
+                <section className="nimvo-action-grid" aria-label="Acoes de estoque">
+                    <button type="button" className="nimvo-action-card tone-blue" onClick={() => openReceiveModal()}>
+                        <span className="nimvo-action-icon"><i className="fa-solid fa-dolly" /></span>
+                        <span className="nimvo-action-copy">
+                            <strong>Recebi mercadoria</strong>
+                            <small>Registre o que chegou na loja</small>
+                        </span>
+                    </button>
+                    <Link className="nimvo-action-card tone-green" href="/movimentacao-estoque">
+                        <span className="nimvo-action-icon"><i className="fa-solid fa-scale-balanced" /></span>
+                        <span className="nimvo-action-copy">
+                            <strong>Ajustar estoque</strong>
+                            <small>Corrija diferencas no estoque</small>
+                        </span>
+                    </Link>
+                    <a className="nimvo-action-card tone-amber" href="#produtos-em-estoque">
+                        <span className="nimvo-action-icon">
+                            <i className="fa-solid fa-triangle-exclamation" />
+                            {lowStockProducts.length ? <b>{formatNumber(lowStockProducts.length)}</b> : null}
+                        </span>
+                        <span className="nimvo-action-copy">
+                            <strong>Produtos acabando</strong>
+                            <small>{lowStockProducts.length ? `${formatNumber(lowStockProducts.length)} produtos abaixo do minimo` : 'Tudo certo por enquanto'}</small>
+                        </span>
+                    </a>
+                    <Link className="nimvo-action-card tone-slate" href="/movimentacao-estoque">
+                        <span className="nimvo-action-icon"><i className="fa-solid fa-clock-rotate-left" /></span>
+                        <span className="nimvo-action-copy">
+                            <strong>Historico do estoque</strong>
+                            <small>Veja entradas e ajustes anteriores</small>
+                        </span>
+                    </Link>
+                </section>
+
+                <section id="produtos-em-estoque" className="stock-products-section">
+                    <header className="stock-section-header">
+                        <div>
+                            <h2>Produtos em estoque</h2>
+                            <p>Busque um produto e registre entrada quando chegar mais mercadoria.</p>
+                        </div>
+                    </header>
+
+                    <label className="stock-search-field">
+                        <i className="fa-solid fa-magnifying-glass" />
+                        <input
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder="Buscar por nome, codigo ou codigo de barras"
+                        />
+                    </label>
+
+                    {filteredProducts.length ? (
+                        <div className="stock-table-wrap">
+                            <table className="stock-products-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Estoque</th>
+                                        <th>Minimo</th>
+                                        <th>Acao</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredProducts.map((product) => {
+                                        const state = getStockState(product)
+
+                                        return (
+                                            <tr key={product.id} className={`is-${state}`}>
+                                                <td>
+                                                    <strong>{product.name}</strong>
+                                                    {product.code || product.barcode ? <small>{product.code || product.barcode}</small> : null}
+                                                </td>
+                                                <td>
+                                                    <span className={`stock-status-text ${state}`}>
+                                                        {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
+                                                    </span>
+                                                </td>
+                                                <td>{formatNumber(product.min_stock || 0)} {product.unit || 'UN'}</td>
+                                                <td>
+                                                    <button type="button" className="stock-inline-action" onClick={() => openReceiveModal(product)}>
+                                                        Recebi mais
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     ) : (
-                        <p className="stock-empty-text">Tudo certo por enquanto.</p>
+                        <div className="stock-empty-state">
+                            <i className="fa-solid fa-box-open" />
+                            <strong>Nenhum produto cadastrado ainda</strong>
+                            <span>Cadastre seu primeiro produto para comecar a vender.</span>
+                            <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                        </div>
                     )}
                 </section>
             </div>
+
+            <RecebiMercadoriaModal
+                open={receiveModalOpen}
+                products={products}
+                initialProduct={receiveProduct}
+                onClose={() => setReceiveModalOpen(false)}
+                onSaved={handleProductSaved}
+            />
         </AppLayout>
     )
 }
