@@ -122,3 +122,7 @@ Visual Studio, que so afetam builds Web/Windows desktop.
 
 - 2026-06-12: Criado este arquivo para ser a memoria tecnica viva dos agentes.
   Revisao inicial registrada em `docs/SYSTEM-REVIEW.md`.
+- 2026-06-23: No painel central de clientes, o modal de licenca depende das
+  props recarregadas por Inertia apos alterar fatura. Ao mexer nesse fluxo,
+  mantenha o `licenseTenant` sincronizado com `tenants`, como ja ocorre nos
+  modais fiscal e de agente local.

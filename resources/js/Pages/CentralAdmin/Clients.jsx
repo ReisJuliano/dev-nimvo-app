@@ -1239,6 +1239,22 @@ export default function CentralAdminClients({
     }, [safeTenants, fiscalTenant])
 
     useEffect(() => {
+        if (!licenseTenant) {
+            return
+        }
+
+        const updatedTenant = safeTenants.find((tenant) => tenant.id === licenseTenant.id)
+        if (!updatedTenant) {
+            setLicenseTenant(null)
+            setLicenseForm(buildLicenseForm())
+            return
+        }
+
+        setLicenseTenant(updatedTenant)
+        setLicenseForm(buildLicenseForm(updatedTenant))
+    }, [safeTenants, licenseTenant])
+
+    useEffect(() => {
         if (!localAgentTenant) {
             return
         }
