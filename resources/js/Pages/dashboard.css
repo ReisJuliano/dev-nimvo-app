@@ -85,6 +85,17 @@
     color: #2563eb;
 }
 
+.store-summary-shortcut.tone-accent {
+    background: var(--app-primary);
+    border-color: var(--app-primary);
+    color: #ffffff;
+}
+
+.store-summary-shortcut.tone-accent i {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
 .store-summary-shortcut.tone-green {
     background: #f0fdf4;
 }

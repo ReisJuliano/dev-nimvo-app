@@ -130,3 +130,9 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   `POST /api/stock/quick-receive`, atendido por
   `StockEntryPageController::quickReceive`; use esse fluxo para entradas
   manuais sem NF em vez de criar rota nova.
+- 2026-06-23: O menu tenant separa `categorias`, `consultas_fiscais` e
+  `entrada_estoque_avancado` como flags proprias. O preset `venda_direta`
+  mantem as tres desligadas, inclusive ao normalizar configuracoes antigas
+  que ainda nao tenham essas chaves salvas.
+- 2026-06-23: Os utilitarios visuais compartilhados do frontend ficam em
+  `resources/js/styles/nimvo-system.css`, importado por `resources/css/app.css`.

@@ -19,6 +19,11 @@ const emptyForm = {
     name: '',
     description: '',
     internal_notes: '',
+    style_reference: '',
+    color: '',
+    size: '',
+    collection: '',
+    catalog_visible: false,
     active: true,
     category_id: '',
     supplier_id: '',
@@ -153,6 +158,7 @@ export default function ProductFormModal({
     const [creatingCategory, setCreatingCategory] = useState(false)
     const [creatingSupplier, setCreatingSupplier] = useState(false)
     const fiscalFieldsEnabled = Boolean(moduleState.modules?.fiscal_basico || moduleState.modules?.fiscal_avancado)
+    const fashionFieldsEnabled = Boolean(moduleState.modules?.moda)
 
     useEffect(() => {
         if (!open) return
@@ -512,6 +518,63 @@ export default function ProductFormModal({
                                             <button type="button" className={`products-editor-toggle ${!form.active ? 'active' : ''}`} onClick={() => updateField('active', false)}>Inativo</button>
                                         </div>
                                     </article>
+
+                                    {fashionFieldsEnabled ? (
+                                        <>
+                                            <div className="products-editor-section-title span-2">
+                                                <h3>Moda e catalogo</h3>
+                                            </div>
+
+                                            <label className="products-editor-field">
+                                                <span>Cor</span>
+                                                <div className="products-editor-input-wrap">
+                                                    <i className="fa-solid fa-palette" />
+                                                    <input value={form.color ?? ''} onChange={(event) => updateField('color', event.target.value)} placeholder="Opcional" />
+                                                </div>
+                                            </label>
+
+                                            <label className="products-editor-field">
+                                                <span>Tamanho</span>
+                                                <div className="products-editor-input-wrap">
+                                                    <i className="fa-solid fa-ruler" />
+                                                    <input value={form.size ?? ''} onChange={(event) => updateField('size', event.target.value)} placeholder="Opcional" />
+                                                </div>
+                                            </label>
+
+                                            <label className="products-editor-field">
+                                                <span>Colecao</span>
+                                                <div className="products-editor-input-wrap">
+                                                    <i className="fa-solid fa-layer-group" />
+                                                    <input value={form.collection ?? ''} onChange={(event) => updateField('collection', event.target.value)} placeholder="Opcional" />
+                                                </div>
+                                            </label>
+
+                                            <label className="products-editor-field">
+                                                <span>Referencia de estilo</span>
+                                                <div className="products-editor-input-wrap">
+                                                    <i className="fa-solid fa-shirt" />
+                                                    <input value={form.style_reference ?? ''} onChange={(event) => updateField('style_reference', event.target.value)} placeholder="Opcional" />
+                                                </div>
+                                            </label>
+
+                                            <article className="products-editor-card span-2">
+                                                <div className="products-editor-switch-row">
+                                                    <div>
+                                                        <h3>Visivel no catalogo</h3>
+                                                        <small>Mostra este produto nos canais de venda online.</small>
+                                                    </div>
+                                                    <label className="products-editor-switch">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={Boolean(form.catalog_visible)}
+                                                            onChange={(event) => updateField('catalog_visible', event.target.checked)}
+                                                        />
+                                                        <span />
+                                                    </label>
+                                                </div>
+                                            </article>
+                                        </>
+                                    ) : null}
                                 </>
                             ) : null}
 

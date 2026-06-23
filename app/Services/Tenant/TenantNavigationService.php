@@ -85,7 +85,7 @@ class TenantNavigationService
                         'href' => '/consultas-cancelamentos',
                         'label' => 'Suporte fiscal',
                         'icon' => 'fa-magnifying-glass-dollar',
-                        'access_key' => 'fiscal_avancado',
+                        'access_key' => 'consultas_fiscais',
                         'required_role' => 'admin',
                         'request_patterns' => ['consultas-cancelamentos*'],
                     ],
@@ -128,7 +128,7 @@ class TenantNavigationService
                         'href' => '/entrada-estoque/manutencao',
                         'label' => 'Compras com nota',
                         'icon' => 'fa-clipboard-check',
-                        'access_key' => 'compras',
+                        'access_key' => 'entrada_estoque_avancado',
                         'request_patterns' => ['entrada-estoque/manutencao*'],
                     ],
                     [

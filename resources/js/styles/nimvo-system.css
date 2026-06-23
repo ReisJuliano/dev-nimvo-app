@@ -1,0 +1,138 @@
+.nimvo-section-label {
+    color: var(--app-text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+}
+
+.nimvo-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+    padding: 1.25rem 1.5rem;
+}
+
+.nimvo-action-card {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 14px;
+    cursor: pointer;
+    padding: 1.25rem;
+    text-align: left;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+}
+
+.nimvo-action-card:hover {
+    border-color: var(--app-primary);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.nimvo-badge {
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+}
+
+.nimvo-badge.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.nimvo-badge.danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.nimvo-badge.success {
+    background: #d1e7dd;
+    color: #0a3622;
+}
+
+.nimvo-badge.neutral {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.nimvo-empty {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.nimvo-empty i {
+    color: var(--app-text-muted);
+    font-size: 2.5rem;
+}
+
+.nimvo-empty h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.nimvo-empty p {
+    color: var(--app-text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.nimvo-search {
+    align-items: center;
+    background: #fff;
+    border: 1.5px solid #d1d9e0;
+    border-radius: 10px;
+    display: flex;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+}
+
+.nimvo-search:focus-within {
+    border-color: var(--app-primary);
+    box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb, 79, 70, 229), 0.1);
+}
+
+.nimvo-search input {
+    background: transparent;
+    border: 0;
+    flex: 1;
+    font-size: 0.95rem;
+    min-width: 0;
+    outline: 0;
+}
+
+.nimvo-table tr.status-zerado {
+    background: #fff1f1;
+}
+
+.nimvo-table tr.status-zerado td {
+    color: #991b1b;
+}
+
+.nimvo-table tr.status-baixo {
+    background: #fffbeb;
+}
+
+.nimvo-table tr.status-baixo td.col-nome {
+    color: #92400e;
+}
+
+.nimvo-action-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+    .nimvo-action-grid {
+        grid-template-columns: 1fr;
+    }
+}

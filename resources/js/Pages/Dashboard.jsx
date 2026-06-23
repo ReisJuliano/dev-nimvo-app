@@ -50,6 +50,7 @@ function growthBadge(value) {
 
 export default function Dashboard({ summary = {}, lowStockItems = [], recentSales = [] }) {
     const { auth, tenant } = usePage().props
+    const firstName = String(auth?.user?.name || 'loja').trim().split(/\s+/)[0]
     const salesGrowth = growthBadge(summary.today_growth)
     const profitMargin = Number(summary.today_sales_total || 0) > 0
         ? (Number(summary.today_profit || 0) / Number(summary.today_sales_total || 0)) * 100
@@ -57,8 +58,8 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
     const hasOpenCashRegister = Boolean(summary.open_cash_register_id)
 
     const shortcuts = [
-        { href: '/pdv', label: 'Vender agora', icon: 'fa-cash-register', tone: 'blue', visible: true },
-        { href: '/caixa', label: hasOpenCashRegister ? 'Ver caixa' : 'Abrir caixa', icon: 'fa-vault', tone: 'green', visible: true },
+        { href: '/caixa', label: 'Abrir caixa', icon: 'fa-vault', tone: 'green', visible: !hasOpenCashRegister },
+        { href: '/pdv', label: 'Vender agora', icon: 'fa-cash-register', tone: 'accent', visible: hasOpenCashRegister },
         { href: '/produtos', label: 'Cadastrar produto', icon: 'fa-box', tone: 'amber', visible: true },
         { href: '/fiado', label: 'Ver fiados', icon: 'fa-handshake', tone: 'rose', visible: true },
         { href: '/caixa', label: 'Fechar caixa', icon: 'fa-lock', tone: 'slate', visible: hasOpenCashRegister },
@@ -102,7 +103,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             <div className="store-summary-page">
                 <section className="store-summary-hero">
                     <div>
-                        <h1>{getGreeting()}, {auth?.user?.name || 'loja'}</h1>
+                        <h1>{getGreeting()}, {firstName}{' \u{1F44B}'}</h1>
                         <p>Resumo da loja para decidir o proximo passo agora.</p>
                     </div>
                     <strong>{tenant?.name || 'Nimvo'}</strong>

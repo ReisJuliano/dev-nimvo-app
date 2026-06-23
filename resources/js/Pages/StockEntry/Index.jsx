@@ -19,6 +19,8 @@ function getStockState(product) {
 export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
     const [products, setProducts] = useState(Array.isArray(payload?.products) ? payload.products : [])
     const [query, setQuery] = useState('')
+    const [activeFilter, setActiveFilter] = useState(null)
+    const [pageFeedback, setPageFeedback] = useState(null)
     const [receiveModalOpen, setReceiveModalOpen] = useState(false)
     const [receiveProduct, setReceiveProduct] = useState(null)
     const [initialProductHandled, setInitialProductHandled] = useState(false)
@@ -46,24 +48,31 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
     ), [products])
 
     const filteredProducts = useMemo(() => {
+        if (activeFilter === 'low') {
+            return lowStockProducts
+        }
+
         const normalized = normalizeTextSearch(query)
 
         if (!normalized) {
-            return products
+            return []
         }
 
         return products.filter((product) => matchesTextSearchAny([product.name, product.code, product.barcode], normalized))
-    }, [products, query])
+    }, [activeFilter, lowStockProducts, products, query])
+
+    const hasRequestedProducts = query.trim().length > 0 || activeFilter !== null
 
     function openReceiveModal(product = null) {
         setReceiveProduct(product)
         setReceiveModalOpen(true)
     }
 
-    function handleProductSaved(updatedProduct) {
+    function handleProductSaved(updatedProduct, message) {
         setProducts((current) => current.map((product) => (
             String(product.id) === String(updatedProduct.id) ? { ...product, ...updatedProduct } : product
         )))
+        setPageFeedback(message || 'Entrada registrada e estoque atualizado.')
     }
 
     return (
@@ -97,7 +106,15 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                             <small>Corrija diferencas no estoque</small>
                         </span>
                     </Link>
-                    <a className="nimvo-action-card tone-amber" href="#produtos-em-estoque">
+                    <button
+                        type="button"
+                        className="nimvo-action-card tone-amber"
+                        onClick={() => {
+                            setActiveFilter('low')
+                            setQuery('')
+                            document.getElementById('produtos-em-estoque')?.scrollIntoView({ behavior: 'smooth' })
+                        }}
+                    >
                         <span className="nimvo-action-icon">
                             <i className="fa-solid fa-triangle-exclamation" />
                             {lowStockProducts.length ? <b>{formatNumber(lowStockProducts.length)}</b> : null}
@@ -106,7 +123,7 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                             <strong>Produtos acabando</strong>
                             <small>{lowStockProducts.length ? `${formatNumber(lowStockProducts.length)} produtos abaixo do minimo` : 'Tudo certo por enquanto'}</small>
                         </span>
-                    </a>
+                    </button>
                     <Link className="nimvo-action-card tone-slate" href="/movimentacao-estoque">
                         <span className="nimvo-action-icon"><i className="fa-solid fa-clock-rotate-left" /></span>
                         <span className="nimvo-action-copy">
@@ -124,18 +141,51 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                         </div>
                     </header>
 
-                    <label className="stock-search-field">
+                    {pageFeedback ? (
+                        <div className="stock-feedback success" role="status">
+                            {pageFeedback}
+                        </div>
+                    ) : null}
+
+                    <label className="stock-search-field nimvo-search">
                         <i className="fa-solid fa-magnifying-glass" />
                         <input
                             value={query}
-                            onChange={(event) => setQuery(event.target.value)}
+                            onChange={(event) => {
+                                setQuery(event.target.value)
+                                setActiveFilter(null)
+                                setPageFeedback(null)
+                            }}
                             placeholder="Buscar por nome, codigo ou codigo de barras"
                         />
                     </label>
 
-                    {filteredProducts.length ? (
+                    {activeFilter === 'low' ? (
+                        <div className="stock-active-filter">
+                            <span>Mostrando produtos acabando</span>
+                            <button type="button" onClick={() => setActiveFilter(null)}>
+                                <i className="fa-solid fa-xmark" />
+                                Limpar filtro
+                            </button>
+                        </div>
+                    ) : null}
+
+                    {!products.length ? (
+                        <div className="stock-empty-state nimvo-empty">
+                            <i className="fa-solid fa-box-open" />
+                            <strong>Nenhum produto cadastrado ainda</strong>
+                            <span>Cadastre seu primeiro produto para comecar a vender.</span>
+                            <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                        </div>
+                    ) : !hasRequestedProducts ? (
+                        <div className="stock-list-prompt nimvo-empty">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <strong>Digite para buscar um produto</strong>
+                            <span>Ou use o atalho Produtos acabando acima.</span>
+                        </div>
+                    ) : filteredProducts.length ? (
                         <div className="stock-table-wrap">
-                            <table className="stock-products-table">
+                            <table className="stock-products-table nimvo-table">
                                 <thead>
                                     <tr>
                                         <th>Nome</th>
@@ -149,8 +199,8 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                                         const state = getStockState(product)
 
                                         return (
-                                            <tr key={product.id} className={`is-${state}`}>
-                                                <td>
+                                            <tr key={product.id} className={`is-${state} ${state === 'zero' ? 'status-zerado' : state === 'low' ? 'status-baixo' : ''}`}>
+                                                <td className="col-nome">
                                                     <strong>{product.name}</strong>
                                                     {product.code || product.barcode ? <small>{product.code || product.barcode}</small> : null}
                                                 </td>
@@ -172,11 +222,10 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                             </table>
                         </div>
                     ) : (
-                        <div className="stock-empty-state">
-                            <i className="fa-solid fa-box-open" />
-                            <strong>Nenhum produto cadastrado ainda</strong>
-                            <span>Cadastre seu primeiro produto para comecar a vender.</span>
-                            <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                        <div className="stock-list-prompt nimvo-empty">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <strong>Nenhum produto encontrado</strong>
+                            <span>Tente outro nome, codigo ou codigo de barras.</span>
                         </div>
                     )}
                 </section>

@@ -93,7 +93,7 @@ export default function RecebiMercadoriaModal({
                 },
             })
 
-            onSaved?.(response.product)
+            onSaved?.(response.product, response.message)
             setFeedback({ type: 'success', text: response.message || 'Entrada registrada.' })
             setTimeout(() => onClose?.(), 450)
         } catch (error) {
@@ -135,7 +135,7 @@ export default function RecebiMercadoriaModal({
                         />
                     </label>
 
-                    {query || !selectedProduct ? (
+                    {!selectedProduct ? (
                         <div className="stock-product-picker span-2">
                             {productOptions.length ? productOptions.map((product) => (
                                 <button key={product.id} type="button" onClick={() => selectProduct(product)}>
@@ -153,9 +153,23 @@ export default function RecebiMercadoriaModal({
 
                     {selectedProduct ? (
                         <div className="stock-selected-product span-2">
-                            <span>{selectedProduct.name}</span>
-                            <strong>Atual: {formatNumber(selectedProduct.stock_quantity || 0)} {selectedProduct.unit || 'UN'}</strong>
-                            <small>Custo atual {formatMoney(selectedProduct.cost_price || 0)}</small>
+                            <div>
+                                <span>{selectedProduct.name}</span>
+                                <strong>Atual: {formatNumber(selectedProduct.stock_quantity || 0)} {selectedProduct.unit || 'UN'}</strong>
+                                <small>Custo atual {formatMoney(selectedProduct.cost_price || 0)}</small>
+                            </div>
+                            <button
+                                type="button"
+                                className="stock-selected-remove ui-tooltip"
+                                data-tooltip="Trocar produto"
+                                aria-label="Trocar produto"
+                                onClick={() => {
+                                    updateForm('product_id', '')
+                                    setQuery('')
+                                }}
+                            >
+                                <i className="fa-solid fa-xmark" />
+                            </button>
                         </div>
                     ) : null}
 

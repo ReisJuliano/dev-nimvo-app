@@ -38,7 +38,7 @@ class TenantNavigationServiceTest extends TestCase
     public function test_it_checks_required_roles_from_the_navigation_catalog(): void
     {
         $service = new TenantNavigationService();
-        $request = Request::create('/configuracoes', 'GET');
+        $request = Request::create('/consultas-cancelamentos', 'GET');
 
         $request->setUserResolver(fn () => (object) ['role' => 'operador']);
         $this->assertFalse($service->userHasRequiredRole($request));
@@ -53,5 +53,24 @@ class TenantNavigationServiceTest extends TestCase
         $items = collect($service->catalog())->flatMap(fn (array $group) => $group['items'] ?? []);
 
         $this->assertTrue($items->contains(fn (array $item) => ($item['href'] ?? null) === '/caixa'));
+    }
+
+    public function test_advanced_navigation_uses_specific_module_flags(): void
+    {
+        $service = new TenantNavigationService();
+        $items = collect($service->catalog())->flatMap(fn (array $group) => $group['items'] ?? []);
+
+        $this->assertSame(
+            'consultas_fiscais',
+            $items->firstWhere('href', '/consultas-cancelamentos')['access_key'],
+        );
+        $this->assertSame(
+            'categorias',
+            $items->firstWhere('href', '/categorias')['access_key'],
+        );
+        $this->assertSame(
+            'entrada_estoque_avancado',
+            $items->firstWhere('href', '/entrada-estoque/manutencao')['access_key'],
+        );
     }
 }

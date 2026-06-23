@@ -43,6 +43,9 @@ class TenantSettingsService
             'caixa' => true,
             'fiscal_basico' => false,
             'fiscal_avancado' => false,
+            'consultas_fiscais' => false,
+            'categorias' => true,
+            'entrada_estoque_avancado' => false,
             'relatorios_basicos' => true,
             'relatorios_avancados' => false,
             'clientes' => true,
@@ -121,6 +124,8 @@ class TenantSettingsService
                     ['key' => 'mesas', 'label' => 'Mesas', 'description' => 'Agrupa atendimentos por mesa.'],
                     ['key' => 'delivery', 'label' => 'Delivery', 'description' => 'Acompanha pedidos externos.'],
                     ['key' => 'compras', 'label' => 'Compras com nota fiscal', 'description' => 'Entrada por XML/NF-e e contas de compra.'],
+                    ['key' => 'entrada_estoque_avancado', 'label' => 'Compras com nota', 'description' => 'Acessa o fluxo completo de entrada por NF-e.'],
+                    ['key' => 'consultas_fiscais', 'label' => 'Consultas fiscais', 'description' => 'Consulta, cancela e acompanha cupons fiscais.'],
                     ['key' => 'controle_lotes', 'label' => 'Lotes', 'description' => 'Rastreia itens por lote.'],
                     ['key' => 'fiscal_basico', 'label' => 'Fiscal basico', 'description' => 'Configura NFC-e com apoio do contador.'],
                     ['key' => 'fiscal_avancado', 'label' => 'Suporte fiscal', 'description' => 'XML, cancelamento, contingencia e inutilizacao.'],
@@ -210,7 +215,7 @@ class TenantSettingsService
             'crediario' => $modules['prazo'],
             'fiado' => $modules['prazo'],
             'produtos' => $modules['estoque'] || $modules['controle_lotes'] || $modules['controle_validade'],
-            'categorias' => $modules['estoque'],
+            'categorias' => $modules['categorias'],
             'clientes' => $modules['clientes'],
             'fornecedores' => $modules['fornecedores'],
             'entrada_estoque' => $modules['estoque'],
@@ -224,7 +229,8 @@ class TenantSettingsService
             'usuarios' => true,
             'fiscal_basico' => $modules['fiscal_basico'],
             'fiscal_avancado' => $modules['fiscal_avancado'],
-            'consultas_fiscais' => $modules['fiscal_avancado'],
+            'consultas_fiscais' => $modules['consultas_fiscais'],
+            'entrada_estoque_avancado' => $modules['entrada_estoque_avancado'],
             'delivery' => $modules['delivery'],
             'compras' => $modules['compras'],
             'catalogo_online' => $modules['catalogo_online'],
@@ -302,6 +308,13 @@ class TenantSettingsService
         }
 
         if (isset($settings['modules'])) {
+            if (
+                $this->normalizePreset(data_get($settings, 'business.preset')) === self::DIRECT_SALES_PRESET
+                && ! array_key_exists('categorias', (array) $settings['modules'])
+            ) {
+                $settings['modules']['categorias'] = false;
+            }
+
             $settings['modules'] = $this->normalizeModules((array) $settings['modules']);
         }
 
@@ -407,6 +420,9 @@ class TenantSettingsService
             'caixa' => true,
             'fiscal_basico' => false,
             'fiscal_avancado' => false,
+            'consultas_fiscais' => false,
+            'categorias' => false,
+            'entrada_estoque_avancado' => false,
             'relatorios_basicos' => true,
             'relatorios_avancados' => false,
             'clientes' => false,
@@ -431,6 +447,7 @@ class TenantSettingsService
                 'mesas' => true,
                 'clientes' => true,
                 'fornecedores' => true,
+                'categorias' => true,
             ]),
             self::DIRECT_SALES_PRESET => array_replace($base, [
                 'pdv_simples' => true,
@@ -440,6 +457,9 @@ class TenantSettingsService
                 'fornecedores' => true,
                 'controle_validade' => true,
                 'relatorios_basicos' => true,
+                'categorias' => false,
+                'consultas_fiscais' => false,
+                'entrada_estoque_avancado' => false,
             ]),
             default => $this->defaultModules(),
         };

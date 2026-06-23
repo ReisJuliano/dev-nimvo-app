@@ -44,6 +44,15 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertFalse($preset['modules']['relatorios_avancados']);
         $this->assertFalse($preset['modules']['fiscal_avancado']);
         $this->assertFalse($preset['modules']['comandas']);
+        $this->assertFalse($preset['modules']['categorias']);
+        $this->assertFalse($preset['modules']['consultas_fiscais']);
+        $this->assertFalse($preset['modules']['entrada_estoque_avancado']);
+
+        $capabilities = $service->moduleCapabilities($preset['modules']);
+
+        $this->assertFalse($capabilities['categorias']);
+        $this->assertFalse($capabilities['consultas_fiscais']);
+        $this->assertFalse($capabilities['entrada_estoque_avancado']);
     }
 
     public function test_merge_with_defaults_converts_legacy_settings_into_modular_flags(): void
@@ -99,6 +108,28 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertFalse($normalized['prazo']);
         $this->assertFalse($normalized['comandas']);
         $this->assertFalse($normalized['mesas']);
+    }
+
+    public function test_old_direct_sales_settings_keep_new_advanced_flags_disabled(): void
+    {
+        $service = new TenantSettingsService();
+        $mergeWithDefaults = \Closure::bind(
+            fn (array $settings) => $this->mergeWithDefaults($settings),
+            $service,
+            TenantSettingsService::class,
+        );
+
+        $merged = $mergeWithDefaults([
+            'business' => ['preset' => TenantSettingsService::DIRECT_SALES_PRESET],
+            'modules' => [
+                'pdv_simples' => true,
+                'estoque' => true,
+            ],
+        ]);
+
+        $this->assertFalse($merged['modules']['categorias']);
+        $this->assertFalse($merged['modules']['consultas_fiscais']);
+        $this->assertFalse($merged['modules']['entrada_estoque_avancado']);
     }
 
     public function test_normalize_preset_maps_legacy_keys(): void
