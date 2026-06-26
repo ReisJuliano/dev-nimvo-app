@@ -4540,8 +4540,6 @@ function PosWorkspace({
         { key: 'discount', label: 'Desconto', icon: 'discount', onClick: () => openDiscountModal(), disabled: !cartLength || submitting },
         { key: 'customer', label: 'Cliente', icon: 'user', onClick: openCustomerPicker, disabled: submitting },
         ...(supportsOrders ? [{ key: 'drafts', label: 'Comandas', icon: 'cart', onClick: openCashierDraftsModal, disabled: submitting }] : []),
-        ...(supportsFiscalIssue ? [{ key: 'consumer', label: 'Consumidor', icon: 'receipt', onClick: openConsumerModal, disabled: submitting }] : []),
-        ...(supportsFiscalIssue ? [{ key: 'invoice', label: 'NF-e', icon: 'document', onClick: openInvoiceStep, disabled: !cartLength || submitting || paymentMethod === conditionalPaymentMethod }] : []),
         { key: 'cancel', label: 'Cancelar', icon: 'cancel', onClick: onOpenCancel, disabled: !cartLength || submitting, tone: 'danger' },
         { key: 'finalize', label: submitting ? 'Finalizando...' : paymentMethod === conditionalPaymentMethod ? 'Registrar Condicional' : 'Finalizar Venda', icon: 'check', onClick: openFinalizeStep, disabled: !cartLength || submitting, tone: 'success' },
     ]
