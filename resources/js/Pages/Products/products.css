@@ -1655,3 +1655,206 @@
 .products-advanced-link:hover {
     color: #1d4ed8;
 }
+
+/* ─── New products page layout ──────────────────────────── */
+
+.prd-page {
+    display: grid;
+    gap: 0.875rem;
+    padding-top: 0.875rem;
+    min-height: calc(100dvh - var(--app-topbar-height) - 2rem);
+    align-content: start;
+}
+
+/* Banner */
+.prd-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%);
+    color: white;
+    flex-wrap: wrap;
+}
+
+.prd-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.prd-banner-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.prd-banner-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #fff;
+}
+
+.prd-banner-sub {
+    margin: 0.2rem 0 0;
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+/* Metrics inside banner */
+.prd-banner-stats {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.prd-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 1rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    min-width: 120px;
+}
+
+.prd-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.prd-stat-icon--blue   { background: rgba(255,255,255,0.18); color: #fff; }
+.prd-stat-icon--amber  { background: rgba(251,191,36,0.22); color: #fef3c7; }
+.prd-stat-icon--green  { background: rgba(74,222,128,0.2); color: #bbf7d0; }
+
+.prd-stat-body {
+    display: grid;
+    gap: 0.06rem;
+}
+
+.prd-stat-body strong {
+    display: block;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.prd-stat-body span {
+    display: block;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* CTA button inside banner */
+.prd-banner-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.2rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.prd-banner-cta:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Table card */
+.prd-table-card {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+}
+
+/* Cell helpers */
+.prd-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.58rem;
+    border-radius: 999px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    color: var(--app-text-secondary);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.prd-muted {
+    color: var(--app-text-muted);
+}
+
+.prd-stock-cell {
+    display: grid;
+    gap: 0.2rem;
+    text-align: right;
+}
+
+.prd-stock-cell strong {
+    font-size: 0.9rem;
+    color: var(--app-text-primary);
+}
+
+.prd-stock-cell small {
+    font-size: 0.74rem;
+    color: var(--app-text-muted);
+}
+
+.prd-stock-cell--low strong {
+    color: #b45309;
+}
+
+@media (max-width: 860px) {
+    .prd-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .prd-banner-stats { width: 100%; }
+    .prd-stat { flex: 1 1 100px; min-width: 0; }
+    .prd-banner-cta { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 540px) {
+    .prd-banner-stats { flex-direction: column; }
+    .prd-stat { width: 100%; }
+}

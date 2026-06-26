@@ -1,6 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
@@ -490,135 +489,162 @@ export default function ProductsIndex({ products, categories, suppliers, filters
         return record
     }
 
+    const totalCatalogValue = useMemo(
+        () => visibleCollectionItems.reduce((sum, p) => sum + Number(p.sale_price || 0), 0),
+        [visibleCollectionItems],
+    )
+
     return (
         <AppLayout title="Produtos">
-            <div className="ui-list-page-shell">
-                <div className="ui-list-page-main">
-                    <PageHeader
-                        title="Produtos"
-                        search={{
-                            placeholder: 'Buscar por nome, código ou EAN',
-                            value: searchControl.draftValue,
-                            onChange: searchControl.setDraftValue,
-                        }}
-                        filters={[
-                            { key: 'all', value: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : undefined },
-                            { key: 'active', value: 'active', label: 'Ativos', count: hasAppliedFilters ? filterCounts.active : undefined },
-                            { key: 'low_stock', value: 'low_stock', label: 'Produtos acabando', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
-                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: hasAppliedFilters ? filterCounts.inactive : undefined },
-                        ]}
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                        onApply={handleApplyFilters}
-                        onReset={handleResetFilters}
-                    />
+            <div className="prd-page">
 
-                    <section className="ui-list-page-table-card">
-                        <DataTable
-                            columns={[
-                                {
-                                    key: 'product',
-                                    label: 'Produto',
-                                    render: (product) => (
-                                        <div className="products-product-cell">
-                                            <strong>{product.name}</strong>
-                                            <div className="products-row-meta">
-                                                {product.code ? <span>#{product.code}</span> : null}
-                                                {product.barcode ? <span>{product.barcode}</span> : null}
-                                            </div>
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    key: 'category',
-                                    label: 'Categoria',
-                                    render: (product) => product.category_name || 'Sem categoria',
-                                },
-                                {
-                                    key: 'supplier',
-                                    label: 'Fornecedor',
-                                    render: (product) => product.supplier_name || 'Sem fornecedor',
-                                },
-                                {
-                                    key: 'sale_price',
-                                    label: 'Venda',
-                                    align: 'right',
-                                    render: (product) => (
-                                        <div className="products-price-cell">
-                                            <strong>{formatMoney(product.sale_price || 0)}</strong>
-                                            <small>Custo {formatMoney(product.cost_price || 0)}</small>
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    key: 'stock',
-                                    label: 'Estoque',
-                                    align: 'right',
-                                    render: (product) => (
-                                        <div className="products-stock-cell">
-                                            <strong>{formatNumber(product.stock_quantity || 0)}</strong>
-                                            <small>Min {formatNumber(product.min_stock || 0)}</small>
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    key: 'status',
-                                    label: 'Status',
-                                    render: (product) => {
-                                        const statusMeta = getProductStatusMeta(product)
+                {/* Banner */}
+                <div className="prd-banner">
+                    <div className="prd-banner-left">
+                        <div className="prd-banner-icon">
+                            <i className="fa-solid fa-boxes-stacked" />
+                        </div>
+                        <div>
+                            <h1 className="prd-banner-title">Produtos</h1>
+                            <p className="prd-banner-sub">Catálogo de produtos da loja</p>
+                        </div>
+                    </div>
 
-                                        return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
-                                    },
-                                },
-                            ]}
-                            rows={filteredProducts}
-                            rowKey="id"
-                            selectedRowKey={selectedProductId}
-                            onRowClick={(product) => setSelectedProductId(product.id)}
-                            onRowDoubleClick={(product) => handleEdit(product)}
-                            emptyMessage={hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
-                            emptyIcon="fa-box-open"
-                            actions={(product) => [
-                                {
-                                    key: 'view',
-                                    icon: 'fa-eye',
-                                    label: 'Ver detalhes',
-                                    tone: 'primary',
-                                    onClick: () => handleEdit(product),
-                                },
-                            ]}
-                        />
-                    </section>
+                    <div className="prd-banner-stats">
+                        <div className="prd-stat">
+                            <div className="prd-stat-icon prd-stat-icon--blue">
+                                <i className="fa-solid fa-box" />
+                            </div>
+                            <div className="prd-stat-body">
+                                <strong>{hasAppliedFilters ? filterCounts.all : visibleCollectionItems.length}</strong>
+                                <span>Cadastrados</span>
+                            </div>
+                        </div>
+                        <div className="prd-stat">
+                            <div className="prd-stat-icon prd-stat-icon--amber">
+                                <i className="fa-solid fa-triangle-exclamation" />
+                            </div>
+                            <div className="prd-stat-body">
+                                <strong>{hasAppliedFilters ? filterCounts.low_stock : visibleCollectionItems.filter(isLowStock).length}</strong>
+                                <span>Estoque baixo</span>
+                            </div>
+                        </div>
+                        <div className="prd-stat">
+                            <div className="prd-stat-icon prd-stat-icon--green">
+                                <i className="fa-solid fa-tag" />
+                            </div>
+                            <div className="prd-stat-body">
+                                <strong>{formatMoney(totalCatalogValue)}</strong>
+                                <span>Valor do catálogo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button className="prd-banner-cta" onClick={handleCreate} type="button">
+                        <i className="fa-solid fa-plus" />
+                        Novo produto
+                    </button>
                 </div>
 
-                <ActionSidebar
-                    storageKey="products-index"
-                    actions={[
-                        {
-                            key: 'create',
-                            icon: 'fa-plus',
-                            label: 'Novo produto',
-                            tone: 'primary',
-                            onClick: handleCreate,
-                        },
-                        {
-                            key: 'edit',
-                            icon: 'fa-pen',
-                            label: 'Editar',
-                            disabled: !selectedRow,
-                            onClick: () => selectedRow && handleEdit(selectedRow),
-                        },
-                        {
-                            key: 'delete',
-                            icon: 'fa-trash-can',
-                            label: 'Excluir',
-                            tone: 'danger',
-                            dividerBefore: true,
-                            disabled: !selectedRow,
-                            onClick: () => selectedRow && handleDelete(selectedRow),
-                        },
+                {/* Search + filters */}
+                <PageHeader
+                    search={{
+                        placeholder: 'Buscar por nome, código ou EAN',
+                        value: searchControl.draftValue,
+                        onChange: searchControl.setDraftValue,
+                    }}
+                    filters={[
+                        { key: 'all', value: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : undefined },
+                        { key: 'active', value: 'active', label: 'Ativos', count: hasAppliedFilters ? filterCounts.active : undefined },
+                        { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
+                        { key: 'inactive', value: 'inactive', label: 'Inativos', count: hasAppliedFilters ? filterCounts.inactive : undefined },
                     ]}
+                    activeFilter={activeFilter}
+                    onFilterChange={setActiveFilter}
+                    onApply={handleApplyFilters}
+                    onReset={handleResetFilters}
                 />
+
+                {/* Table */}
+                <div className="prd-table-card">
+                    <DataTable
+                        columns={[
+                            {
+                                key: 'product',
+                                label: 'Produto',
+                                render: (product) => (
+                                    <div className="products-product-cell">
+                                        <strong>{product.name}</strong>
+                                        <div className="products-row-meta">
+                                            {product.code ? <span>#{product.code}</span> : null}
+                                            {product.barcode ? <span>{product.barcode}</span> : null}
+                                        </div>
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'category',
+                                label: 'Categoria',
+                                render: (product) => product.category_name
+                                    ? <span className="prd-pill">{product.category_name}</span>
+                                    : <span className="prd-muted">—</span>,
+                            },
+                            {
+                                key: 'sale_price',
+                                label: 'Preço de venda',
+                                align: 'right',
+                                render: (product) => (
+                                    <div className="products-price-cell">
+                                        <strong>{formatMoney(product.sale_price || 0)}</strong>
+                                        <small>Custo {formatMoney(product.cost_price || 0)}</small>
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'stock',
+                                label: 'Estoque',
+                                align: 'right',
+                                render: (product) => (
+                                    <div className={`prd-stock-cell ${isLowStock(product) ? 'prd-stock-cell--low' : ''}`}>
+                                        <strong>{formatNumber(product.stock_quantity || 0)}</strong>
+                                        <small>mín {formatNumber(product.min_stock || 0)}</small>
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'status',
+                                label: 'Status',
+                                render: (product) => {
+                                    const statusMeta = getProductStatusMeta(product)
+                                    return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                },
+                            },
+                        ]}
+                        rows={filteredProducts}
+                        rowKey="id"
+                        selectedRowKey={selectedProductId}
+                        onRowClick={(product) => setSelectedProductId(product.id)}
+                        onRowDoubleClick={(product) => handleEdit(product)}
+                        emptyMessage={hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
+                        emptyIcon="fa-box-open"
+                        actions={(product) => [
+                            {
+                                key: 'edit',
+                                icon: 'fa-pen',
+                                label: 'Editar',
+                                tone: 'primary',
+                                onClick: () => handleEdit(product),
+                            },
+                            {
+                                key: 'delete',
+                                icon: 'fa-trash-can',
+                                label: 'Excluir',
+                                tone: 'danger',
+                                onClick: () => handleDelete(product),
+                            },
+                        ]}
+                    />
+                </div>
             </div>
 
             <ProductFormModal
