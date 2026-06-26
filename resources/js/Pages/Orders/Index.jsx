@@ -1729,6 +1729,28 @@ export default function OrdersIndex({
     return (
         <AppLayout title="Pedidos">
             <div className="orders-screen">
+                <div className="page-hero page-hero--violet">
+                    <div className="page-hero-left">
+                        <div className="page-hero-icon">
+                            <i className="fa-solid fa-clipboard-list" />
+                        </div>
+                        <div>
+                            <h1 className="page-hero-title">Pedidos</h1>
+                            <p className="page-hero-sub">Gerencie e acompanhe todos os pedidos</p>
+                        </div>
+                    </div>
+                    <div className="page-hero-stats">
+                        <div className="page-hero-stat page-hero-stat--accent">
+                            <strong>{filterCounts.open ?? 0}</strong>
+                            <span>Em aberto</span>
+                        </div>
+                        <div className="page-hero-stat">
+                            <strong>{formatMoney(filteredDraftsValue)}</strong>
+                            <span>Total filtrado</span>
+                        </div>
+                    </div>
+                </div>
+
                 {feedback ? (
                     <div className={`ui-alert ${feedback.type}`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />

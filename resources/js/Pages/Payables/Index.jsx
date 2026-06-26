@@ -368,6 +368,36 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
 
     return (
         <AppLayout title={moduleTitle}>
+            <div className="page-hero page-hero--amber">
+                <div className="page-hero-left">
+                    <div className="page-hero-icon">
+                        <i className="fa-solid fa-file-invoice-dollar" />
+                    </div>
+                    <div>
+                        <h1 className="page-hero-title">{moduleTitle}</h1>
+                        <p className="page-hero-sub">Controle de pagamentos e vencimentos</p>
+                    </div>
+                </div>
+                <div className="page-hero-stats">
+                    <div className="page-hero-stat">
+                        <strong>{formatMoney(totals.open)}</strong>
+                        <span>Em aberto</span>
+                    </div>
+                    <div className="page-hero-stat page-hero-stat--danger">
+                        <strong>{formatMoney(totals.overdue)}</strong>
+                        <span>Vencidas</span>
+                    </div>
+                    <div className="page-hero-stat">
+                        <strong>{statusCounts.open ?? 0}</strong>
+                        <span>Contas</span>
+                    </div>
+                </div>
+                <button className="page-hero-cta" onClick={openCreateModal} type="button">
+                    <i className="fa-solid fa-plus" />
+                    Novo lançamento
+                </button>
+            </div>
+
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
                     <PageHeader

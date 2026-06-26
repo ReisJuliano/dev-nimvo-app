@@ -452,8 +452,40 @@ export default function ConditionalSalesPage({
         setOpenedRecordId(selectedRow.id)
     }
 
+    const totalOutstanding = useMemo(
+        () => visibleConditionals.reduce((sum, c) => sum + Number(c.outstanding_total || 0), 0),
+        [visibleConditionals],
+    )
+    const owingCount = visibleConditionals.filter((c) => Number(c.outstanding_total || 0) > 0).length
+
     return (
         <AppLayout title="Venda Condicional">
+            <div className="page-hero page-hero--rose">
+                <div className="page-hero-left">
+                    <div className="page-hero-icon">
+                        <i className="fa-solid fa-handshake" />
+                    </div>
+                    <div>
+                        <h1 className="page-hero-title">Venda Condicional</h1>
+                        <p className="page-hero-sub">Clientes com valores pendentes a receber</p>
+                    </div>
+                </div>
+                <div className="page-hero-stats">
+                    <div className="page-hero-stat page-hero-stat--danger">
+                        <strong>{formatMoney(totalOutstanding)}</strong>
+                        <span>A receber</span>
+                    </div>
+                    <div className="page-hero-stat page-hero-stat--accent">
+                        <strong>{owingCount}</strong>
+                        <span>Clientes devendo</span>
+                    </div>
+                </div>
+                <button className="page-hero-cta" onClick={() => setCreateOpen(true)} type="button">
+                    <i className="fa-solid fa-plus" />
+                    Nova venda condicional
+                </button>
+            </div>
+
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
                     <PageHeader

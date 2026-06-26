@@ -1420,6 +1420,32 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
 
     return (
         <AppLayout title={moduleTitle}>
+            <div className="page-hero page-hero--green">
+                <div className="page-hero-left">
+                    <div className="page-hero-icon">
+                        <i className="fa-solid fa-cart-shopping" />
+                    </div>
+                    <div>
+                        <h1 className="page-hero-title">{moduleTitle}</h1>
+                        <p className="page-hero-sub">Entradas de mercadoria e NF-e de fornecedores</p>
+                    </div>
+                </div>
+                <div className="page-hero-stats">
+                    <div className="page-hero-stat page-hero-stat--accent">
+                        <strong>{statusCounts.open ?? 0}</strong>
+                        <span>Em andamento</span>
+                    </div>
+                    <div className="page-hero-stat">
+                        <strong>{statusCounts.all ?? 0}</strong>
+                        <span>Total</span>
+                    </div>
+                </div>
+                <button className="page-hero-cta" onClick={openCreateModal} type="button">
+                    <i className="fa-solid fa-plus" />
+                    Nova compra
+                </button>
+            </div>
+
             <div className="proc-ui-page purchases-page">
                 <section className="proc-ui-section-card purchases-list-card">
                     <div className="ui-list-page-shell" style={{ padding: 0 }}>

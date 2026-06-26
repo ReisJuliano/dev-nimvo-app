@@ -72,29 +72,37 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             note: `${formatNumber(summary.today_sales_qty || 0)} venda(s)`,
             badge: salesGrowth.label,
             badgeTone: salesGrowth.tone,
+            icon: 'fa-arrow-trend-up',
+            color: 'blue',
         },
         {
-            title: 'Lucro estimado hoje',
+            title: 'Lucro estimado',
             value: formatMoney(summary.today_profit || 0),
             note: `${formatNumber(profitMargin)}% de margem`,
             badge: 'Estimado',
             badgeTone: 'neutral',
+            icon: 'fa-chart-pie',
+            color: 'green',
         },
         {
             title: 'Fiado em aberto',
             value: formatMoney(summary.open_credit_total || 0),
-            note: 'Valores para receber depois',
+            note: 'A receber de clientes',
             badge: 'Fiado',
             badgeTone: 'warning',
+            icon: 'fa-handshake',
+            color: 'amber',
         },
         {
-            title: 'Caixa atual',
+            title: 'Saldo do caixa',
             value: hasOpenCashRegister ? formatMoney(summary.open_cash_register_amount || 0) : 'Fechado',
             note: hasOpenCashRegister
                 ? `Aberto em ${formatDateTime(summary.open_cash_register_opened_at)}`
                 : 'Abra o caixa para comecar a vender.',
             badge: hasOpenCashRegister ? 'Aberto' : 'Fechado',
             badgeTone: hasOpenCashRegister ? 'positive' : 'neutral',
+            icon: 'fa-vault',
+            color: hasOpenCashRegister ? 'teal' : 'gray',
         },
     ]
 
@@ -102,11 +110,24 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
         <AppLayout title="Resumo da loja">
             <div className="store-summary-page">
                 <section className="store-summary-hero">
-                    <div>
-                        <h1>{getGreeting()}, {firstName}{' \u{1F44B}'}</h1>
-                        <p>Resumo da loja para decidir o proximo passo agora.</p>
+                    <div className="store-summary-hero-copy">
+                        <div className="store-summary-hero-greeting">
+                            <div className="store-summary-hero-wave">
+                                <i className="fa-solid fa-store" />
+                            </div>
+                            <div>
+                                <h1>{getGreeting()}, {firstName}!</h1>
+                                <p>Veja como está indo a loja hoje.</p>
+                            </div>
+                        </div>
                     </div>
-                    <strong>{tenant?.name || 'Nimvo'}</strong>
+                    <div className="store-summary-hero-right">
+                        <strong className="store-summary-hero-store">{tenant?.name || 'Nimvo'}</strong>
+                        <span className={`store-summary-hero-status ${hasOpenCashRegister ? 'open' : 'closed'}`}>
+                            <i className={`fa-solid ${hasOpenCashRegister ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
+                            Caixa {hasOpenCashRegister ? 'aberto' : 'fechado'}
+                        </span>
+                    </div>
                 </section>
 
                 <section className="store-summary-shortcuts" aria-label="Atalhos rapidos">
@@ -120,11 +141,14 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
 
                 <section className="store-summary-cards" aria-label="Resumo de hoje">
                     {cards.map((card) => (
-                        <article key={card.title} className="store-summary-card">
-                            <div>
-                                <span>{card.title}</span>
+                        <article key={card.title} className={`store-summary-card store-summary-card--${card.color}`}>
+                            <div className="store-summary-card-top">
+                                <div className={`store-summary-card-icon store-summary-card-icon--${card.color}`}>
+                                    <i className={`fa-solid ${card.icon}`} />
+                                </div>
                                 <b className={`store-summary-badge ${card.badgeTone}`}>{card.badge}</b>
                             </div>
+                            <span>{card.title}</span>
                             <strong>{card.value}</strong>
                             <small>{card.note}</small>
                         </article>

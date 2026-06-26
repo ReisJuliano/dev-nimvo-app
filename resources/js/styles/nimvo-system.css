@@ -1,3 +1,135 @@
+/* ─── Page hero banner (shared across pages) ─────────────── */
+
+.page-hero {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.125rem 1.375rem;
+    border-radius: 14px;
+    border: 1px solid var(--app-border);
+    border-left: 4px solid var(--page-hero-color, var(--app-primary));
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+    flex-wrap: wrap;
+    margin-top: 0.875rem;
+}
+
+.page-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.page-hero-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    background: color-mix(in srgb, var(--page-hero-color, var(--app-primary)) 12%, transparent);
+    color: var(--page-hero-color, var(--app-primary));
+    border: 1px solid color-mix(in srgb, var(--page-hero-color, var(--app-primary)) 20%, transparent);
+}
+
+.page-hero-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--app-text-primary);
+    line-height: 1.15;
+}
+
+.page-hero-sub {
+    margin: 0.18rem 0 0;
+    font-size: 0.82rem;
+    color: var(--app-text-muted);
+}
+
+.page-hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.page-hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 9px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    min-width: 90px;
+}
+
+.page-hero-stat strong {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--app-text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.page-hero-stat span {
+    font-size: 0.7rem;
+    color: var(--app-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.page-hero-stat--accent strong { color: var(--page-hero-color, var(--app-primary)); }
+.page-hero-stat--danger strong { color: var(--app-danger); }
+.page-hero-stat--success strong { color: var(--app-success); }
+.page-hero-stat--warning strong { color: var(--app-warning); }
+
+.page-hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 9px;
+    border: none;
+    background: var(--page-hero-color, var(--app-primary));
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.page-hero-cta:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+}
+
+/* Accent color presets */
+.page-hero--blue   { --page-hero-color: #2563eb; }
+.page-hero--amber  { --page-hero-color: #d97706; }
+.page-hero--violet { --page-hero-color: #7c3aed; }
+.page-hero--rose   { --page-hero-color: #e11d48; }
+.page-hero--green  { --page-hero-color: #16a34a; }
+.page-hero--teal   { --page-hero-color: #0891b2; }
+
+@media (max-width: 760px) {
+    .page-hero { flex-direction: column; align-items: flex-start; gap: 0.875rem; }
+    .page-hero-stats { width: 100%; }
+    .page-hero-cta { width: 100%; justify-content: center; }
+}
+
+/* ─── Nimvo system classes ───────────────────────────────── */
+
 .nimvo-section-label {
     color: var(--app-text-muted);
     font-size: 0.68rem;
