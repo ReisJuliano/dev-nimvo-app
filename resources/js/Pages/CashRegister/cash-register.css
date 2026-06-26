@@ -115,10 +115,10 @@
 
 .cash-register-section-kicker,
 .cash-register-count-chip {
-    padding: 0.38rem 0.8rem;
-    background: rgba(47, 124, 246, 0.12);
-    color: var(--app-primary-dark);
-    border: 1px solid rgba(47, 124, 246, 0.12);
+    padding: 0.32rem 0.72rem;
+    background: var(--app-primary-soft);
+    color: var(--app-primary-light);
+    border: 1px solid var(--app-border-accent);
 }
 
 .cash-register-status-hero {
@@ -187,12 +187,10 @@
 .cash-register-actions-grid form {
     display: grid;
     gap: 0.75rem;
-    padding: 1.1rem;
+    padding: 1rem;
     border: 1px solid var(--app-border);
-    border-radius: 22px;
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.08), transparent 30%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 247, 252, 0.92));
+    border-radius: 10px;
+    background: var(--app-surface-2);
 }
 
 .cash-register-action-form strong {
@@ -201,13 +199,15 @@
 }
 
 .cash-register-action-form.tone-danger .cash-register-form-chip {
-    background: rgba(216, 78, 97, 0.12);
-    color: #bc314c;
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
 .cash-register-action-form.tone-success .cash-register-form-chip {
-    background: rgba(26, 168, 111, 0.14);
-    color: #0f7f52;
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.2);
 }
 
 .cash-register-form label,
@@ -223,28 +223,30 @@
 .cash-register-actions-grid input {
     width: 100%;
     border: 1px solid var(--app-border-strong);
-    border-radius: 16px;
-    padding: 0.85rem 1rem;
-    background: rgba(255, 255, 255, 0.96);
+    border-radius: 8px;
+    padding: 0.65rem 0.875rem;
+    background: var(--app-surface-muted);
     color: var(--app-text-primary);
     outline: none;
+    font: inherit;
+    font-size: 0.875rem;
     transition: var(--app-transition);
 }
 
 .cash-register-form input:focus,
 .cash-register-form textarea:focus,
 .cash-register-actions-grid input:focus {
-    border-color: rgba(47, 124, 246, 0.44);
-    box-shadow: 0 0 0 0.22rem rgba(47, 124, 246, 0.12);
+    border-color: var(--app-primary);
+    box-shadow: 0 0 0 3px var(--app-primary-soft);
 }
 
 .cash-register-inline-alert {
     display: grid;
     gap: 0.3rem;
-    padding: 1rem 1.05rem;
-    border-radius: 20px;
-    border: 1px solid rgba(47, 124, 246, 0.14);
-    background: linear-gradient(135deg, rgba(47, 124, 246, 0.08), rgba(255, 255, 255, 0.96));
+    padding: 0.875rem 1rem;
+    border-radius: 9px;
+    border: 1px solid var(--app-border-accent);
+    background: var(--app-primary-soft);
 }
 
 .cash-register-inline-alert strong {
@@ -277,27 +279,29 @@
 .cash-register-primary-button,
 .cash-register-actions-grid button,
 .cash-register-history-table button {
-    background: linear-gradient(135deg, var(--app-primary), #57a1ff);
+    background: var(--app-primary);
     color: #fff;
-    box-shadow: 0 18px 30px rgba(47, 124, 246, 0.2);
+    border-color: var(--app-primary-dark);
+    box-shadow: 0 4px 18px rgba(59, 130, 246, 0.3);
 }
 
 .cash-register-primary-button:hover,
 .cash-register-actions-grid button:hover,
 .cash-register-history-table button:hover {
+    background: var(--app-primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 22px 34px rgba(47, 124, 246, 0.24);
 }
 
 .cash-register-danger-button {
-    background: linear-gradient(135deg, #d84e61, #c83c4f);
+    background: var(--app-danger);
     color: white;
-    box-shadow: 0 18px 30px rgba(216, 78, 97, 0.18);
+    border-color: #dc2626;
+    box-shadow: 0 4px 18px rgba(239, 68, 68, 0.3);
 }
 
 .cash-register-danger-button:hover {
+    background: #dc2626;
     transform: translateY(-1px);
-    box-shadow: 0 22px 34px rgba(216, 78, 97, 0.22);
 }
 
 .cash-register-summary-grid,
@@ -313,11 +317,9 @@
 .cash-register-movement-row,
 .cash-register-report-box {
     border: 1px solid var(--app-border);
-    border-radius: 20px;
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.08), transparent 30%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
-    padding: 1rem 1.05rem;
+    border-radius: 10px;
+    background: var(--app-surface-2);
+    padding: 0.875rem 1rem;
 }
 
 .cash-register-summary-grid article {
@@ -325,29 +327,10 @@
     gap: 0.35rem;
 }
 
-.cash-register-summary-grid article.tone-primary {
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.14), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.94));
-}
-
-.cash-register-summary-grid article.tone-info {
-    background:
-        radial-gradient(circle at top right, rgba(7, 165, 201, 0.14), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 252, 255, 0.94));
-}
-
-.cash-register-summary-grid article.tone-success {
-    background:
-        radial-gradient(circle at top right, rgba(26, 168, 111, 0.14), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 253, 246, 0.94));
-}
-
-.cash-register-summary-grid article.tone-danger {
-    background:
-        radial-gradient(circle at top right, rgba(216, 78, 97, 0.14), transparent 32%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 244, 246, 0.94));
-}
+.cash-register-summary-grid article.tone-primary { border-color: var(--app-border-accent); background: var(--app-primary-soft); }
+.cash-register-summary-grid article.tone-info    { border-color: rgba(6, 182, 212, 0.2); background: rgba(6, 182, 212, 0.06); }
+.cash-register-summary-grid article.tone-success { border-color: rgba(34, 197, 94, 0.2); background: rgba(34, 197, 94, 0.06); }
+.cash-register-summary-grid article.tone-danger  { border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.06); }
 
 .cash-register-summary-grid span,
 .cash-register-payments span,
@@ -398,13 +381,13 @@
 .cash-register-history-table thead th {
     position: sticky;
     top: 0;
-    background: rgba(246, 248, 252, 0.96);
+    background: var(--app-surface-muted);
 }
 
 .cash-register-history-table th,
 .cash-register-history-table td {
-    padding: 0.95rem 0.8rem;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 0.75rem 0.8rem;
+    border-bottom: 1px solid var(--app-border);
     text-align: left;
     color: var(--app-text-primary);
 }
@@ -422,7 +405,7 @@
 }
 
 .cash-register-history-table tbody tr:hover {
-    background: rgba(47, 124, 246, 0.04);
+    background: rgba(59, 130, 246, 0.06);
 }
 
 .cash-register-empty {
@@ -432,15 +415,15 @@
 .cash-register-empty,
 .cash-register-report-box {
     border: 1px solid var(--app-border);
-    border-radius: 20px;
+    border-radius: 10px;
     color: var(--app-text-muted);
 }
 
 .cash-register-report-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(10, 18, 31, 0.52);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
     display: grid;
     place-items: center;
     padding: 1rem;
@@ -451,12 +434,11 @@
 .cash-register-report-card {
     width: min(820px, 100%);
     max-height: calc(100dvh - 2rem);
-    border-radius: 28px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(18px);
+    border-radius: 14px;
+    background: var(--app-surface);
     display: grid;
     gap: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--app-border-strong);
     box-shadow: var(--app-shadow-lg);
     overflow: auto;
     overscroll-behavior: contain;
@@ -467,11 +449,9 @@
     justify-content: space-between;
     gap: 1rem;
     align-items: flex-start;
-    padding: 1.2rem;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.1), transparent 30%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 255, 0.92));
+    padding: 1.125rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
 }
 
 .cash-register-report-header p {
@@ -493,13 +473,11 @@
 
 .cash-register-breakdown-card {
     display: grid;
-    gap: 0.9rem;
-    padding: 1rem 1.05rem;
-    border-radius: 20px;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
     border: 1px solid var(--app-border);
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.08), transparent 30%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 252, 0.92));
+    background: var(--app-surface-2);
 }
 
 .cash-register-breakdown-card label {
@@ -513,11 +491,14 @@
 .cash-register-report-section textarea {
     width: 100%;
     border: 1px solid var(--app-border-strong);
-    border-radius: 16px;
-    padding: 0.85rem 1rem;
-    background: rgba(255, 255, 255, 0.96);
+    border-radius: 8px;
+    padding: 0.65rem 0.875rem;
+    background: var(--app-surface-muted);
     color: var(--app-text-primary);
     outline: none;
+    font: inherit;
+    font-size: 0.875rem;
+    transition: var(--app-transition);
 }
 
 .cash-register-breakdown-top,
@@ -538,15 +519,15 @@
 }
 
 .cash-register-difference-pill {
-    padding: 0.75rem 0.85rem;
-    border-radius: 16px;
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
     border: 1px solid var(--app-border);
-    background: rgba(255, 255, 255, 0.88);
+    background: var(--app-surface-2);
 }
 
 .cash-register-difference-pill.alert,
 .cash-register-breakdown-values .alert {
-    color: #b53c51;
+    color: #fca5a5;
 }
 
 .cash-register-modal-actions {
@@ -622,10 +603,10 @@
 .cash-compact-hero,
 .cash-compact-panel,
 .cash-compact-closed-state {
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
 }
 
 .cash-compact-hero {
@@ -691,10 +672,10 @@
 .cash-compact-metrics article {
     display: grid;
     gap: 0.22rem;
-    padding: 0.8rem 0.85rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.94);
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-surface-2);
 }
 
 .cash-compact-metrics span,
@@ -764,12 +745,13 @@
 .cash-compact-empty-icon {
     width: 3rem;
     height: 3rem;
-    border-radius: 14px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(47, 124, 246, 0.08);
-    color: var(--app-primary-dark);
+    background: var(--app-primary-soft);
+    border: 1px solid var(--app-border-accent);
+    color: var(--app-primary-light);
     font-size: 1.1rem;
 }
 
@@ -819,9 +801,9 @@
     display: grid;
     gap: 0.75rem;
     padding: 0.8rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 14px;
-    background: rgba(247, 250, 252, 0.92);
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-surface-2);
 }
 
 .cash-close-card-top {
@@ -844,10 +826,10 @@
 .cash-close-difference {
     display: grid;
     gap: 0.18rem;
-    padding: 0.65rem 0.72rem;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.94);
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-surface-muted);
 }
 
 .cash-close-difference.alert strong {
