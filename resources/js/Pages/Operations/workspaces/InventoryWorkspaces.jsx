@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
+import './inventory-workspaces.css'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
@@ -10,67 +11,35 @@ import {
     buildRecordsUrl,
     EmptyState,
     Feedback,
-    FeedbackHeader,
     getProductOptionLabel,
     ListCard,
     parseNumber,
     upsertRecord,
 } from './shared'
 
-function FieldLabel({ icon, text }) {
-    return (
-        <span className="ops-workspace-label-with-icon">
-            <i className={`fa-solid ${icon}`} />
-            {text}
-        </span>
-    )
-}
-
-function formatProductScanCode(product) {
-    return product?.barcode || product?.code || '-'
-}
-
-function updateStockInProducts(products, productId, stockAfter) {
-    if (!productId || stockAfter == null) {
-        return products
-    }
-
-    return products.map((product) =>
-        String(product.id) === String(productId)
-            ? { ...product, stock_quantity: Number(stockAfter) }
-            : product,
-    )
-}
+/* ─── helpers ─── */
 
 function findProductByScan(products, value) {
-    const normalizedValue = String(value || '').trim()
-
-    if (!normalizedValue) {
-        return null
-    }
-
-    return products.find((product) => (
-        String(product.barcode || '').trim() === normalizedValue
-        || String(product.code || '').trim() === normalizedValue
-    )) || null
+    const v = String(value || '').trim()
+    if (!v) return null
+    return products.find((p) =>
+        String(p.barcode || '').trim() === v || String(p.code || '').trim() === v,
+    ) || null
 }
 
 function filterProductsByQuery(products, value, limit = 8) {
-    const normalizedValue = normalizeTextSearch(value)
-
-    if (!normalizedValue) {
-        return []
-    }
-
+    const q = normalizeTextSearch(value)
+    if (!q) return []
     return products
-        .filter((product) => (
-            matchesTextSearchAny([product.name, product.code, product.barcode], normalizedValue)
-        ))
+        .filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q))
         .slice(0, limit)
 }
 
 function sumItems(items) {
-    return items.reduce((total, item) => total + (parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0)), 0)
+    return items.reduce(
+        (total, item) => total + parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0),
+        0,
+    )
 }
 
 function buildInboundItem(product) {
@@ -85,83 +54,106 @@ function buildInboundItem(product) {
 }
 
 function upsertInboundItem(items, product) {
-    const existingIndex = items.findIndex((item) => String(item.product_id) === String(product.id))
-
-    if (existingIndex === -1) {
-        return [...items, buildInboundItem(product)]
-    }
-
-    return items.map((item, index) => (
-        index === existingIndex
-            ? { ...item, quantity: String(parseNumber(item.quantity, 0) + 1) }
-            : item
-    ))
+    const idx = items.findIndex((item) => String(item.product_id) === String(product.id))
+    if (idx === -1) return [...items, buildInboundItem(product)]
+    return items.map((item, i) =>
+        i === idx ? { ...item, quantity: String(parseNumber(item.quantity, 0) + 1) } : item,
+    )
 }
 
-function StepPill({ icon, index, label, active, done, onClick }) {
+function updateStockInProducts(products, productId, stockAfter) {
+    if (!productId || stockAfter == null) return products
+    return products.map((p) =>
+        String(p.id) === String(productId) ? { ...p, stock_quantity: Number(stockAfter) } : p,
+    )
+}
+
+function formatProductScanCode(product) {
+    return product?.barcode || product?.code || '-'
+}
+
+/* ─── Subcomponentes ─── */
+
+function SectionCard({ title, subtitle, icon, children, className = '' }) {
     return (
-        <button
-            type="button"
-            className={`ops-step-pill ${active ? 'active' : ''} ${done ? 'done' : ''}`}
-            onClick={onClick}
-        >
-            <span className="ops-step-pill-index">{done ? <i className="fa-solid fa-check" /> : index + 1}</span>
-            <span className="ops-step-pill-copy">
-                <i className={`fa-solid ${icon}`} />
-                <strong>{label}</strong>
-            </span>
-        </button>
+        <div className={`inv-section-card ${className}`}>
+            <div className="inv-section-header">
+                <div className="inv-section-icon">
+                    <i className={`fa-solid ${icon}`} />
+                </div>
+                <div>
+                    <h3 className="inv-section-title">{title}</h3>
+                    {subtitle ? <p className="inv-section-sub">{subtitle}</p> : null}
+                </div>
+            </div>
+            {children}
+        </div>
     )
 }
 
 function InboundItemsTable({ items, onChange, onRemove }) {
     if (!items.length) {
-        return <EmptyState title="Sem itens" text="Bipe ou selecione os produtos." />
+        return (
+            <div className="inv-empty-items">
+                <i className="fa-solid fa-barcode" />
+                <strong>Nenhum item adicionado</strong>
+                <span>Bipe ou selecione os produtos acima.</span>
+            </div>
+        )
     }
 
     return (
-        <div className="ops-workspace-table-wrap">
+        <div className="inv-items-table-wrap">
             <table className="ui-table">
                 <thead>
                     <tr>
                         <th>Produto</th>
-                        <th>Qtd</th>
-                        <th>Custo</th>
-                        <th>Total</th>
-                        <th />
+                        <th style={{ width: 90 }}>Qtd.</th>
+                        <th style={{ width: 110 }}>Custo unit.</th>
+                        <th style={{ width: 100 }}>Total</th>
+                        <th style={{ width: 40 }} />
                     </tr>
                 </thead>
                 <tbody>
                     {items.map((item, index) => (
                         <tr key={`${item.product_id}-${index}`}>
                             <td>
-                                <div className="ops-inline-product-meta">
+                                <div className="inv-product-meta">
                                     <strong>{item.product_name}</strong>
                                     <small>{item.barcode || item.code || '-'}</small>
                                 </div>
                             </td>
                             <td>
                                 <input
+                                    className="inv-number-input"
                                     type="number"
                                     min="0.001"
                                     step="0.001"
                                     value={item.quantity}
-                                    onChange={(event) => onChange(index, 'quantity', event.target.value)}
+                                    onChange={(e) => onChange(index, 'quantity', e.target.value)}
                                 />
                             </td>
                             <td>
                                 <input
+                                    className="inv-number-input"
                                     type="number"
                                     min="0"
                                     step="0.01"
                                     value={item.unit_cost}
-                                    onChange={(event) => onChange(index, 'unit_cost', event.target.value)}
+                                    onChange={(e) => onChange(index, 'unit_cost', e.target.value)}
                                 />
                             </td>
-                            <td>{formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}</td>
+                            <td className="inv-cell-mono">
+                                {formatMoney(parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0))}
+                            </td>
                             <td>
-                                <button type="button" className="ui-button-ghost danger icon-only" onClick={() => onRemove(index)}>
-                                    <i className="fa-solid fa-trash" />
+                                <button
+                                    type="button"
+                                    className="inv-remove-btn"
+                                    onClick={() => onRemove(index)}
+                                    title="Remover item"
+                                >
+                                    <i className="fa-solid fa-xmark" />
                                 </button>
                             </td>
                         </tr>
@@ -172,24 +164,17 @@ function InboundItemsTable({ items, onChange, onRemove }) {
     )
 }
 
+/* ══════════════════════════════════════════════════════════
+   ENTRADA DE ESTOQUE
+═══════════════════════════════════════════════════════════ */
+
 export function StockInboundWorkspace({ moduleKey, payload }) {
     const suppliers = payload.suppliers || []
     const emptyForm = {
-        supplier_id: '',
-        invoice_number: '',
-        billing_barcode: '',
-        billing_amount: '',
-        billing_due_date: '',
-        notes: '',
+        supplier_id: '', invoice_number: '',
+        billing_barcode: '', billing_amount: '', billing_due_date: '', notes: '',
         items: [],
     }
-
-    const steps = [
-        { key: 'supplier', label: 'Fornecedor', icon: 'fa-building' },
-        { key: 'invoice', label: 'Nota', icon: 'fa-file-invoice' },
-        { key: 'items', label: 'Itens', icon: 'fa-barcode' },
-        { key: 'billing', label: 'Boleto', icon: 'fa-receipt' },
-    ]
 
     const [records, setRecords] = useState(payload.records || [])
     const [products] = useState(payload.products || [])
@@ -198,49 +183,40 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     const [historyRange, setHistoryRange] = useState({ from: '', to: '' })
     const [historyLoading, setHistoryLoading] = useState(false)
     const [hasLoadedHistory, setHasLoadedHistory] = useState((payload.records || []).length > 0)
-    const [step, setStep] = useState(0)
     const [scanCode, setScanCode] = useState('')
     const [manualProductId, setManualProductId] = useState('')
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [showBilling, setShowBilling] = useState(false)
     const scanInputRef = useRef(null)
 
     const filteredProducts = useMemo(() => (
         form.supplier_id
-            ? products.filter((product) => String(product.supplier_id || '') === String(form.supplier_id))
+            ? products.filter((p) => String(p.supplier_id || '') === String(form.supplier_id))
             : products
     ), [products, form.supplier_id])
 
     const subtotalPreview = useMemo(() => sumItems(form.items), [form.items])
     const billingPreview = parseNumber(form.billing_amount, 0)
-    const supplierName = suppliers.find((supplier) => String(supplier.id) === String(form.supplier_id))?.name || '-'
+    const supplierName = suppliers.find((s) => String(s.id) === String(form.supplier_id))?.name || null
 
-    function resetForm() {
-        setForm(emptyForm)
-        setStep(0)
-        setScanCode('')
-        setManualProductId('')
+    function set(field, value) {
+        setForm((cur) => ({ ...cur, [field]: value }))
     }
 
     function handleItemChange(index, field, value) {
-        setForm((current) => ({
-            ...current,
-            items: current.items.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)),
+        setForm((cur) => ({
+            ...cur,
+            items: cur.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
         }))
     }
 
     function handleItemRemove(index) {
-        setForm((current) => ({
-            ...current,
-            items: current.items.filter((_, itemIndex) => itemIndex !== index),
-        }))
+        setForm((cur) => ({ ...cur, items: cur.items.filter((_, i) => i !== index) }))
     }
 
     function pushProduct(product) {
-        setForm((current) => ({
-            ...current,
-            items: upsertInboundItem(current.items, product),
-        }))
+        setForm((cur) => ({ ...cur, items: upsertInboundItem(cur.items, product) }))
         setScanCode('')
         setManualProductId('')
         scanInputRef.current?.focus()
@@ -248,52 +224,46 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
 
     function handleScanSubmit(event) {
         event.preventDefault()
-
         const product = findProductByScan(filteredProducts, scanCode)
-
         if (!product) {
             setFeedback({ type: 'error', text: 'Produto não encontrado para o código informado.' })
             return
         }
-
         pushProduct(product)
     }
 
     function handleManualAdd() {
-        const product = filteredProducts.find((entry) => String(entry.id) === String(manualProductId))
-
+        const product = filteredProducts.find((p) => String(p.id) === String(manualProductId))
         if (!product) {
             setFeedback({ type: 'error', text: 'Selecione um produto para adicionar.' })
             return
         }
-
         pushProduct(product)
     }
 
-    function handleNextStep() {
-        if (step === 0 && !form.supplier_id) {
-            setFeedback({ type: 'error', text: 'Selecione o fornecedor para continuar.' })
-            return
-        }
-
-        if (step === 1 && !String(form.invoice_number || '').trim()) {
-            setFeedback({ type: 'error', text: 'Informe o numero da nota.' })
-            return
-        }
-
-        if (step === 2 && !form.items.length) {
-            setFeedback({ type: 'error', text: 'Adicione ao menos um item na entrada.' })
-            return
-        }
-
-        setStep((current) => Math.min(current + 1, steps.length - 1))
+    function handleReset() {
+        setForm(emptyForm)
+        setScanCode('')
+        setManualProductId('')
+        setFeedback(null)
+        setShowBilling(false)
     }
 
     async function handleSubmit(event) {
         event.preventDefault()
 
+        if (!form.supplier_id) {
+            setFeedback({ type: 'error', text: 'Selecione o fornecedor.' })
+            return
+        }
+
+        if (!String(form.invoice_number || '').trim()) {
+            setFeedback({ type: 'error', text: 'Informe o número da nota fiscal.' })
+            return
+        }
+
         if (!form.items.length) {
-            setFeedback({ type: 'error', text: 'Adicione itens antes de finalizar a entrada.' })
+            setFeedback({ type: 'error', text: 'Adicione ao menos um item na entrada.' })
             return
         }
 
@@ -301,7 +271,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
         setFeedback(null)
 
         try {
-            const payloadData = {
+            const data = {
                 supplier_id: Number(form.supplier_id),
                 invoice_number: form.invoice_number.trim(),
                 billing_barcode: form.billing_barcode.trim() || null,
@@ -315,10 +285,10 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                 })),
             }
 
-            const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
+            const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data })
+            setRecords((cur) => upsertRecord(cur, response.record))
             setHasLoadedHistory(true)
-            resetForm()
+            handleReset()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -330,7 +300,6 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     async function handleLoadHistory() {
         setHistoryLoading(true)
         setFeedback(null)
-
         try {
             const nextSearch = historySearchControl.apply()
             const response = await apiRequest(buildRecordsUrl(moduleKey), {
@@ -341,7 +310,6 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                     to: historyRange.to || undefined,
                 },
             })
-
             setRecords(Array.isArray(response?.records) ? response.records : [])
             setHasLoadedHistory(true)
         } catch (error) {
@@ -360,192 +328,251 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack ops-inbound-workspace">
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel ops-compact-panel">
-                    <div className="ops-stepper-row">
-                        {steps.map((entry, index) => (
-                            <StepPill
-                                key={entry.key}
-                                icon={entry.icon}
-                                index={index}
-                                label={entry.label}
-                                active={step === index}
-                                done={index < step || (index === 0 && !!form.supplier_id) || (index === 1 && !!form.invoice_number) || (index === 2 && form.items.length > 0)}
-                                onClick={() => {
-                                    if (index <= step) {
-                                        setStep(index)
-                                        return
-                                    }
+        <div className="inv-page">
 
-                                    handleNextStep()
-                                }}
+            {/* Cabeçalho da página */}
+            <div className="inv-page-hero">
+                <div className="inv-page-hero-icon">
+                    <i className="fa-solid fa-truck-ramp-box" />
+                </div>
+                <div>
+                    <h2 className="inv-page-hero-title">Entrada de mercadoria</h2>
+                    <p className="inv-page-hero-sub">Registre o recebimento de produtos com nota fiscal.</p>
+                </div>
+            </div>
+
+            <Feedback feedback={feedback} />
+
+            <form className="inv-form-grid" onSubmit={handleSubmit}>
+
+                {/* Seção 1 — Fornecedor + NF */}
+                <SectionCard title="Fornecedor e nota" icon="fa-building" subtitle="Identifique o recebimento.">
+                    <div className="inv-form-row">
+                        <label className="inv-label">
+                            <span>Fornecedor</span>
+                            <select
+                                className="ui-select"
+                                value={form.supplier_id}
+                                onChange={(e) => set('supplier_id', e.target.value)}
+                            >
+                                <option value="">Selecione o fornecedor</option>
+                                {suppliers.map((s) => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <label className="inv-label">
+                            <span>Número da nota fiscal</span>
+                            <input
+                                className="ui-input"
+                                value={form.invoice_number}
+                                onChange={(e) => set('invoice_number', e.target.value)}
+                                placeholder="Ex: NF 000123"
                             />
-                        ))}
+                        </label>
                     </div>
+                </SectionCard>
 
-                    <Feedback feedback={feedback} />
-
-                    {step === 0 ? (
-                        <div className="ops-step-card">
-                            <FeedbackHeader title="Fornecedor" subtitle={supplierName === '-' ? 'Selecao' : supplierName} />
-                            <div className="ops-workspace-form-grid one-column">
-                                <label>
-                                    <FieldLabel icon="fa-building" text="Fornecedor" />
-                                    <select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}>
-                                        <option value="">Selecione</option>
-                                        {suppliers.map((supplier) => (
-                                            <option key={supplier.id} value={supplier.id}>
-                                                {supplier.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {step === 1 ? (
-                        <div className="ops-step-card">
-                            <FeedbackHeader title="Nota" subtitle={form.invoice_number || 'Numero'} />
-                            <div className="ops-workspace-form-grid one-column">
-                                <label>
-                                    <FieldLabel icon="fa-file-invoice" text="Numero da nota" />
-                                    <input value={form.invoice_number} onChange={(event) => setForm((current) => ({ ...current, invoice_number: event.target.value }))} placeholder="NF 000123" />
-                                </label>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {step === 2 ? (
-                        <div className="ops-step-card">
-                            <FeedbackHeader title="Itens" subtitle={`${form.items.length} item(ns)`} />
-                            <div className="ops-scan-shell">
-                                <form className="ops-scan-form" onSubmit={handleScanSubmit}>
-                                    <label>
-                                        <FieldLabel icon="fa-barcode" text="Bipar produto" />
-                                        <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou código" autoComplete="off" />
-                                    </label>
-                                    <button type="submit" className="ui-button">
-                                        <i className="fa-solid fa-plus" />
-                                    </button>
-                                </form>
-
-                                <div className="ops-workspace-inline-adder compact">
-                                    <select value={manualProductId} onChange={(event) => setManualProductId(event.target.value)}>
-                                        <option value="">Selecionar produto</option>
-                                        {filteredProducts.map((product) => (
-                                            <option key={product.id} value={product.id}>
-                                                {getProductOptionLabel(product)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <button type="button" className="ui-button-ghost" onClick={handleManualAdd}>
-                                        <i className="fa-solid fa-plus" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <InboundItemsTable items={form.items} onChange={handleItemChange} onRemove={handleItemRemove} />
-
-                            <div className="ops-workspace-total-bar">
-                                <span>Subtotal</span>
-                                <strong>{formatMoney(subtotalPreview)}</strong>
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {step === 3 ? (
-                        <form className="ops-step-card" onSubmit={handleSubmit}>
-                            <FeedbackHeader title="Boleto" subtitle={formatMoney(billingPreview || subtotalPreview)} />
-                            <div className="ops-workspace-form-grid">
-                                <label className="span-2">
-                                    <FieldLabel icon="fa-barcode" text="Código" />
-                                    <input value={form.billing_barcode} onChange={(event) => setForm((current) => ({ ...current, billing_barcode: event.target.value }))} placeholder="Linha digitavel" />
-                                </label>
-                                <label>
-                                    <FieldLabel icon="fa-money-bill-wave" text="Valor" />
-                                    <input type="number" min="0" step="0.01" value={form.billing_amount} onChange={(event) => setForm((current) => ({ ...current, billing_amount: event.target.value }))} />
-                                </label>
-                                <label>
-                                    <FieldLabel icon="fa-calendar-day" text="Vencimento" />
-                                    <input type="date" value={form.billing_due_date} onChange={(event) => setForm((current) => ({ ...current, billing_due_date: event.target.value }))} />
-                                </label>
-                                <label className="span-2">
-                                    <FieldLabel icon="fa-note-sticky" text="Observação" />
-                                    <textarea rows="3" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
-                                </label>
-                            </div>
-
-                            <div className="ops-review-grid">
-                                <article><small>Fornecedor</small><strong>{supplierName}</strong></article>
-                                <article><small>Nota</small><strong>{form.invoice_number || '-'}</strong></article>
-                                <article><small>Itens</small><strong>{form.items.length}</strong></article>
-                                <article><small>Total</small><strong>{formatMoney(subtotalPreview)}</strong></article>
-                            </div>
-
-                            <div className="ops-workspace-actions">
-                                <button type="button" className="ui-button-ghost" onClick={resetForm}>
-                                    <i className="fa-solid fa-rotate-left" />
-                                </button>
-                                <button type="submit" className="ui-button" disabled={saving}>
-                                    <i className="fa-solid fa-check" />
-                                    <span>{saving ? 'Salvando...' : 'Finalizar'}</span>
-                                </button>
-                            </div>
+                {/* Seção 2 — Itens */}
+                <SectionCard
+                    title="Itens da entrada"
+                    icon="fa-barcode"
+                    subtitle={form.items.length ? `${form.items.length} produto(s) · Subtotal: ${formatMoney(subtotalPreview)}` : 'Adicione os produtos recebidos.'}
+                >
+                    {/* Scan + seleção manual */}
+                    <div className="inv-adder-row">
+                        <form className="inv-scan-group" onSubmit={handleScanSubmit}>
+                            <input
+                                ref={scanInputRef}
+                                className="ui-input"
+                                value={scanCode}
+                                onChange={(e) => setScanCode(e.target.value)}
+                                placeholder="Bipe EAN / código..."
+                                autoComplete="off"
+                            />
+                            <button type="submit" className="ui-button">
+                                <i className="fa-solid fa-barcode" />
+                                Bipar
+                            </button>
                         </form>
-                    ) : null}
 
-                    {step < steps.length - 1 ? (
-                        <div className="ops-workspace-actions">
-                            {step > 0 ? (
-                                <button type="button" className="ui-button-ghost" onClick={() => setStep((current) => Math.max(current - 1, 0))}>
-                                    <i className="fa-solid fa-arrow-left" />
-                                </button>
-                            ) : null}
-                            <button type="button" className="ui-button" onClick={handleNextStep}>
-                                <i className="fa-solid fa-arrow-right" />
+                        <div className="inv-scan-group">
+                            <select
+                                className="ui-select"
+                                value={manualProductId}
+                                onChange={(e) => setManualProductId(e.target.value)}
+                            >
+                                <option value="">Selecionar produto manualmente</option>
+                                {filteredProducts.map((p) => (
+                                    <option key={p.id} value={p.id}>{getProductOptionLabel(p)}</option>
+                                ))}
+                            </select>
+                            <button type="button" className="ui-button-ghost" onClick={handleManualAdd}>
+                                <i className="fa-solid fa-plus" />
+                                Adicionar
                             </button>
                         </div>
-                    ) : null}
-                </section>
-
-                <section className="ops-workspace-panel ops-compact-panel">
-                    <PageHeader
-                        title={`Entradas (${records.length})`}
-                        search={{
-                            placeholder: 'Buscar NF, fornecedor ou produto',
-                            value: historySearchControl.draftValue,
-                            onChange: historySearchControl.setDraftValue,
-                        }}
-                        dateRange={{
-                            from: historyRange.from,
-                            to: historyRange.to,
-                            onChange: setHistoryRange,
-                        }}
-                        quickDates
-                        applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
-                        onApply={() => void handleLoadHistory()}
-                        onReset={handleResetHistory}
-                    />
-                    <div className="ops-workspace-list-stack">
-                        {records.length ? records.map((record) => (
-                            <ListCard
-                                key={record.id}
-                                active={false}
-                                onClick={() => null}
-                                title={record.invoice_number || record.code}
-                                badge={<Badge tone="success">{record.supplier_name || 'Sem fornecedor'}</Badge>}
-                                description={formatMoney(record.total || 0)}
-                                meta={[`${formatNumber(record.quantity_total || 0)} un`, record.billing_due_date || 'Sem vencimento']}
-                            />
-                        )) : <EmptyState title={historyLoading ? 'Buscando entradas' : hasLoadedHistory ? 'Sem entradas' : 'Clique em Filtrar para buscar'} text={hasLoadedHistory ? 'Nenhum recebimento encontrado nesse recorte.' : 'Use a busca e o periodo acima.'} />}
                     </div>
-                </section>
+
+                    {/* Tabela de itens */}
+                    <InboundItemsTable
+                        items={form.items}
+                        onChange={handleItemChange}
+                        onRemove={handleItemRemove}
+                    />
+
+                    {form.items.length > 0 ? (
+                        <div className="inv-subtotal-bar">
+                            <span>{form.items.length} produto(s)</span>
+                            <strong>Subtotal: {formatMoney(subtotalPreview)}</strong>
+                        </div>
+                    ) : null}
+                </SectionCard>
+
+                {/* Seção 3 — Boleto (colapsável) */}
+                <SectionCard
+                    title="Boleto / Pagamento"
+                    icon="fa-receipt"
+                    subtitle="Opcional — registre o boleto desta nota."
+                >
+                    <button
+                        type="button"
+                        className="inv-toggle-billing"
+                        onClick={() => setShowBilling((v) => !v)}
+                    >
+                        <i className={`fa-solid ${showBilling ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
+                        {showBilling ? 'Ocultar dados do boleto' : 'Informar dados do boleto'}
+                    </button>
+
+                    {showBilling ? (
+                        <div className="inv-billing-fields">
+                            <label className="inv-label inv-label--span2">
+                                <span>Código de barras do boleto</span>
+                                <input
+                                    className="ui-input"
+                                    value={form.billing_barcode}
+                                    onChange={(e) => set('billing_barcode', e.target.value)}
+                                    placeholder="Linha digitável"
+                                />
+                            </label>
+                            <label className="inv-label">
+                                <span>Valor do boleto</span>
+                                <input
+                                    className="ui-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={form.billing_amount}
+                                    onChange={(e) => set('billing_amount', e.target.value)}
+                                    placeholder="R$ 0,00"
+                                />
+                            </label>
+                            <label className="inv-label">
+                                <span>Vencimento</span>
+                                <input
+                                    className="ui-input"
+                                    type="date"
+                                    value={form.billing_due_date}
+                                    onChange={(e) => set('billing_due_date', e.target.value)}
+                                />
+                            </label>
+                            <label className="inv-label inv-label--span2">
+                                <span>Observação</span>
+                                <textarea
+                                    className="ui-textarea"
+                                    rows="2"
+                                    value={form.notes}
+                                    onChange={(e) => set('notes', e.target.value)}
+                                />
+                            </label>
+                        </div>
+                    ) : null}
+                </SectionCard>
+
+                {/* Resumo + ações */}
+                {form.items.length > 0 ? (
+                    <div className="inv-review-bar">
+                        <div className="inv-review-chips">
+                            {supplierName ? (
+                                <span className="inv-chip">
+                                    <i className="fa-solid fa-building" />
+                                    {supplierName}
+                                </span>
+                            ) : null}
+                            {form.invoice_number ? (
+                                <span className="inv-chip">
+                                    <i className="fa-solid fa-file-invoice" />
+                                    {form.invoice_number}
+                                </span>
+                            ) : null}
+                            <span className="inv-chip">
+                                <i className="fa-solid fa-boxes-stacked" />
+                                {form.items.length} item(ns)
+                            </span>
+                            <span className="inv-chip inv-chip--accent">
+                                {formatMoney(billingPreview || subtotalPreview)}
+                            </span>
+                        </div>
+                        <div className="inv-form-actions">
+                            <button type="button" className="ui-button-ghost" onClick={handleReset}>
+                                <i className="fa-solid fa-rotate-left" />
+                                Limpar
+                            </button>
+                            <button type="submit" className="ui-button" disabled={saving}>
+                                <i className="fa-solid fa-check" />
+                                {saving ? 'Salvando...' : 'Finalizar entrada'}
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+            </form>
+
+            {/* ─── Histórico ─── */}
+            <div className="inv-history-section">
+                <PageHeader
+                    title={`Histórico de entradas (${records.length})`}
+                    search={{
+                        placeholder: 'Buscar NF, fornecedor ou produto',
+                        value: historySearchControl.draftValue,
+                        onChange: historySearchControl.setDraftValue,
+                    }}
+                    dateRange={{
+                        from: historyRange.from,
+                        to: historyRange.to,
+                        onChange: setHistoryRange,
+                    }}
+                    quickDates
+                    applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
+                    onApply={() => void handleLoadHistory()}
+                    onReset={handleResetHistory}
+                />
+                <div className="inv-history-list">
+                    {records.length ? records.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={false}
+                            onClick={() => null}
+                            title={record.invoice_number || record.code}
+                            badge={<Badge tone="success">{record.supplier_name || 'Sem fornecedor'}</Badge>}
+                            description={formatMoney(record.total || 0)}
+                            meta={[`${formatNumber(record.quantity_total || 0)} un`, record.billing_due_date || 'Sem vencimento']}
+                        />
+                    )) : (
+                        <EmptyState
+                            title={historyLoading ? 'Buscando entradas' : hasLoadedHistory ? 'Sem entradas' : 'Clique em Filtrar para buscar'}
+                            text={hasLoadedHistory ? 'Nenhum recebimento encontrado nesse recorte.' : 'Use a busca e o período acima.'}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     )
 }
+
+/* ══════════════════════════════════════════════════════════
+   AJUSTE DE ESTOQUE
+═══════════════════════════════════════════════════════════ */
 
 export function StockMovementsWorkspace({ moduleKey, payload }) {
     const emptyForm = {
@@ -569,17 +596,22 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     const scanInputRef = useRef(null)
 
     const selectedProduct = useMemo(
-        () => products.find((product) => String(product.id) === String(form.product_id)) || null,
+        () => products.find((p) => String(p.id) === String(form.product_id)) || null,
         [products, form.product_id],
     )
+
     const visibleProducts = useMemo(
         () => filterProductsByQuery(products, productSearch),
         [products, productSearch],
     )
 
+    function set(field, value) {
+        setForm((cur) => ({ ...cur, [field]: value }))
+    }
+
     function selectProduct(product) {
-        setForm((current) => ({
-            ...current,
+        setForm((cur) => ({
+            ...cur,
             product_id: String(product.id),
             counted_quantity: String(product.stock_quantity || 0),
         }))
@@ -589,30 +621,30 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
 
     function handleScanSubmit(event) {
         event.preventDefault()
-
         const product = findProductByScan(products, scanCode)
-
         if (!product) {
             setFeedback({ type: 'error', text: 'Produto não encontrado para o código informado.' })
             return
         }
-
         selectProduct(product)
     }
 
     function handleProductSearchKeyDown(event) {
-        if (event.key !== 'Enter') {
-            return
-        }
-
+        if (event.key !== 'Enter') return
         event.preventDefault()
-
         if (!visibleProducts.length) {
-            setFeedback({ type: 'error', text: 'Nenhum produto encontrado para a busca informada.' })
+            setFeedback({ type: 'error', text: 'Nenhum produto encontrado.' })
             return
         }
-
         selectProduct(visibleProducts[0])
+    }
+
+    function handleClear() {
+        setForm(emptyForm)
+        setProductSearch('')
+        setScanCode('')
+        setFeedback(null)
+        scanInputRef.current?.focus()
     }
 
     async function handleSubmit(event) {
@@ -626,34 +658,29 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Confirmar ajuste',
-            message: `Atualizar ${selectedProduct.name} de ${formatNumber(selectedProduct.stock_quantity || 0)} para ${formatNumber(parseNumber(form.counted_quantity, 0))}?`,
+            message: `Atualizar "${selectedProduct.name}" de ${formatNumber(selectedProduct.stock_quantity || 0)} para ${formatNumber(parseNumber(form.counted_quantity, 0))}?`,
             confirmLabel: 'Confirmar',
             cancelLabel: 'Cancelar',
         })
 
-        if (!confirmed) {
-            return
-        }
+        if (!confirmed) return
 
         setSaving(true)
         setFeedback(null)
 
         try {
-            const payloadData = {
+            const data = {
                 product_id: Number(form.product_id),
                 counted_quantity: parseNumber(form.counted_quantity, 0),
                 reason: form.reason.trim() || null,
                 notes: form.notes.trim() || null,
             }
 
-            const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data: payloadData })
-            setRecords((current) => upsertRecord(current, response.record))
+            const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data })
+            setRecords((cur) => upsertRecord(cur, response.record))
             setHasLoadedHistory(true)
-            setProducts((current) => updateStockInProducts(current, response.record.product_id, response.record.stock_after))
-            setForm(emptyForm)
-            setScanCode('')
-            setProductSearch('')
-            scanInputRef.current?.focus()
+            setProducts((cur) => updateStockInProducts(cur, response.record.product_id, response.record.stock_after))
+            handleClear()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -665,7 +692,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     async function handleLoadHistory() {
         setHistoryLoading(true)
         setFeedback(null)
-
         try {
             const nextSearch = historySearchControl.apply()
             const response = await apiRequest(buildRecordsUrl(moduleKey), {
@@ -676,7 +702,6 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
                     to: historyRange.to || undefined,
                 },
             })
-
             setRecords(Array.isArray(response?.records) ? response.records : [])
             setHasLoadedHistory(true)
         } catch (error) {
@@ -695,125 +720,211 @@ export function StockMovementsWorkspace({ moduleKey, payload }) {
     }
 
     return (
-        <div className="ops-workspace-stack ops-stock-movement-workspace">
-            <div className="ops-workspace-grid two-columns">
-                <section className="ops-workspace-panel ops-compact-panel">
-                    <FeedbackHeader title="Movimentação" subtitle={selectedProduct ? selectedProduct.name : 'Bipagem'} />
-                    <Feedback feedback={feedback} />
+        <div className="inv-page">
 
-                    <div className="ops-scan-shell">
-                        <form className="ops-scan-form" onSubmit={handleScanSubmit}>
-                            <label>
-                                <FieldLabel icon="fa-barcode" text="Bipar produto" />
-                                <input ref={scanInputRef} value={scanCode} onChange={(event) => setScanCode(event.target.value)} placeholder="EAN ou código" autoComplete="off" />
-                            </label>
-                        </form>
+            {/* Cabeçalho da página */}
+            <div className="inv-page-hero inv-page-hero--teal">
+                <div className="inv-page-hero-icon">
+                    <i className="fa-solid fa-scale-balanced" />
+                </div>
+                <div>
+                    <h2 className="inv-page-hero-title">Ajuste de estoque</h2>
+                    <p className="inv-page-hero-sub">Corrija ou atualize a quantidade de um produto em estoque.</p>
+                </div>
+            </div>
 
-                        <div className="ops-workspace-inline-adder compact ops-product-search">
-                            <label>
-                                <FieldLabel icon="fa-magnifying-glass" text="Buscar produto" />
+            <Feedback feedback={feedback} />
+
+            {/* Busca do produto */}
+            <SectionCard title="Encontrar produto" icon="fa-magnifying-glass" subtitle="Bipe o código de barras ou pesquise pelo nome.">
+                <div className="inv-adder-row">
+                    <form className="inv-scan-group" onSubmit={handleScanSubmit}>
+                        <input
+                            ref={scanInputRef}
+                            className="ui-input"
+                            value={scanCode}
+                            onChange={(e) => setScanCode(e.target.value)}
+                            placeholder="Bipe EAN / código..."
+                            autoComplete="off"
+                        />
+                        <button type="submit" className="ui-button">
+                            <i className="fa-solid fa-barcode" />
+                            Bipar
+                        </button>
+                    </form>
+
+                    <div className="inv-scan-group">
+                        <input
+                            className="ui-input"
+                            type="search"
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            onKeyDown={handleProductSearchKeyDown}
+                            placeholder="Nome, código ou EAN..."
+                            autoComplete="off"
+                        />
+                    </div>
+                </div>
+
+                {/* Resultados da busca */}
+                {productSearch.trim() && !selectedProduct ? (
+                    <div className="inv-search-results">
+                        {visibleProducts.length ? visibleProducts.map((product) => (
+                            <button
+                                key={product.id}
+                                type="button"
+                                className="inv-search-result"
+                                onClick={() => selectProduct(product)}
+                            >
+                                <div className="inv-product-meta">
+                                    <strong>{product.name}</strong>
+                                    <small>{getProductOptionLabel(product)}</small>
+                                </div>
+                                <span className="inv-stock-chip">
+                                    {formatNumber(product.stock_quantity || 0)} em estoque
+                                </span>
+                            </button>
+                        )) : (
+                            <div className="inv-search-empty">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                Nenhum produto encontrado para &ldquo;{productSearch}&rdquo;
+                            </div>
+                        )}
+                    </div>
+                ) : null}
+            </SectionCard>
+
+            {/* Formulário de ajuste (só aparece quando produto selecionado) */}
+            {selectedProduct ? (
+                <form onSubmit={handleSubmit}>
+                    <SectionCard
+                        title="Ajustar estoque"
+                        icon="fa-pen-to-square"
+                        subtitle={`Produto selecionado: ${selectedProduct.name}`}
+                    >
+                        {/* Card do produto */}
+                        <div className="inv-product-focus">
+                            <div className="inv-product-focus-item">
+                                <small>Produto</small>
+                                <strong>{selectedProduct.name}</strong>
+                            </div>
+                            <div className="inv-product-focus-item">
+                                <small>Código</small>
+                                <strong>{formatProductScanCode(selectedProduct)}</strong>
+                            </div>
+                            <div className="inv-product-focus-item">
+                                <small>Estoque atual</small>
+                                <strong className="inv-stock-highlight">
+                                    {formatNumber(selectedProduct.stock_quantity || 0)}
+                                </strong>
+                            </div>
+                            <button type="button" className="inv-change-product" onClick={handleClear}>
+                                <i className="fa-solid fa-arrow-left" />
+                                Trocar produto
+                            </button>
+                        </div>
+
+                        {/* Campos do ajuste */}
+                        <div className="inv-form-row">
+                            <label className="inv-label">
+                                <span>Novo estoque</span>
                                 <input
-                                    type="search"
-                                    value={productSearch}
-                                    onChange={(event) => setProductSearch(event.target.value)}
-                                    onKeyDown={handleProductSearchKeyDown}
-                                    placeholder="Digite nome, código ou EAN"
-                                    autoComplete="off"
+                                    className="ui-input"
+                                    type="number"
+                                    min="0"
+                                    step="0.001"
+                                    value={form.counted_quantity}
+                                    onChange={(e) => set('counted_quantity', e.target.value)}
+                                    placeholder="Quantidade total em estoque"
+                                    autoFocus
+                                />
+                            </label>
+                            <label className="inv-label">
+                                <span>Motivo do ajuste</span>
+                                <input
+                                    className="ui-input"
+                                    value={form.reason}
+                                    onChange={(e) => set('reason', e.target.value)}
+                                    placeholder="Ex: Inventário, quebra, furto..."
                                 />
                             </label>
                         </div>
-                    </div>
 
-                    {selectedProduct ? (
-                        <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
-                            <div className="ops-stock-focus-card span-2">
-                                <div><small>Produto</small><strong>{selectedProduct.name}</strong></div>
-                                <div><small>Código</small><strong>{formatProductScanCode(selectedProduct)}</strong></div>
-                                <div><small>Estoque atual</small><strong>{formatNumber(selectedProduct.stock_quantity || 0)}</strong></div>
-                            </div>
-
-                            <label>
-                                <FieldLabel icon="fa-scale-balanced" text="Novo estoque" />
-                                <input type="number" min="0" step="0.001" value={form.counted_quantity} onChange={(event) => setForm((current) => ({ ...current, counted_quantity: event.target.value }))} />
-                            </label>
-                            <label>
-                                <FieldLabel icon="fa-pen" text="Motivo" />
-                                <input value={form.reason} onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} />
-                            </label>
-
-                            <label className="span-2">
-                                <FieldLabel icon="fa-note-sticky" text="Observação" />
-                                <textarea rows="3" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
-                            </label>
-
-                            <div className="ops-workspace-actions span-2">
-                                <button type="button" className="ui-button-ghost" onClick={() => {
-                                    setForm(emptyForm)
-                                    setProductSearch('')
-                                    setScanCode('')
-                                }}>
-                                    <i className="fa-solid fa-rotate-left" />
-                                </button>
-                                <button type="submit" className="ui-button" disabled={saving}>
-                                    <i className="fa-solid fa-check" />
-                                    <span>{saving ? 'Salvando...' : 'Confirmar'}</span>
-                                </button>
-                            </div>
-                        </form>
-                    ) : productSearch.trim() ? (
-                        <div className="ops-inline-search-results">
-                            {visibleProducts.length ? visibleProducts.map((product) => (
-                                <button
-                                    key={product.id}
-                                    type="button"
-                                    className={`ops-inline-search-result ${String(selectedProduct?.id || '') === String(product.id) ? 'active' : ''}`}
-                                    onClick={() => selectProduct(product)}
-                                >
-                                    <div className="ops-inline-product-meta">
-                                        <strong>{product.name}</strong>
-                                        <small>{getProductOptionLabel(product)}</small>
-                                    </div>
-                                    <span>{product.barcode || product.code || '-'}</span>
-                                </button>
-                            )) : <div className="ops-inline-search-empty">Nenhum produto encontrado.</div>}
-                        </div>
-                    ) : (
-                        <EmptyState title="Nenhum produto" text="Busque um item para ajustar." />
-                    )}
-                </section>
-
-                <section className="ops-workspace-panel ops-compact-panel">
-                    <PageHeader
-                        title={`Histórico (${records.length})`}
-                        search={{
-                            placeholder: 'Buscar produto, motivo ou usuario',
-                            value: historySearchControl.draftValue,
-                            onChange: historySearchControl.setDraftValue,
-                        }}
-                        dateRange={{
-                            from: historyRange.from,
-                            to: historyRange.to,
-                            onChange: setHistoryRange,
-                        }}
-                        quickDates
-                        applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
-                        onApply={() => void handleLoadHistory()}
-                        onReset={handleResetHistory}
-                    />
-                    <div className="ops-workspace-list-stack">
-                        {records.length ? records.map((record) => (
-                            <ListCard
-                                key={record.id}
-                                active={false}
-                                onClick={() => null}
-                                title={record.product_name || 'Produto'}
-                                badge={<Badge tone={Number(record.quantity_delta || 0) >= 0 ? 'success' : 'warning'}>{formatNumber(record.quantity_delta || 0)}</Badge>}
-                                description={record.reason || 'Ajuste manual'}
-                                meta={[`${formatNumber(record.stock_before || 0)} -> ${formatNumber(record.stock_after || 0)}`, record.product_code || '-']}
+                        <label className="inv-label">
+                            <span>Observação (opcional)</span>
+                            <textarea
+                                className="ui-textarea"
+                                rows="2"
+                                value={form.notes}
+                                onChange={(e) => set('notes', e.target.value)}
                             />
-                        )) : <EmptyState title={historyLoading ? 'Buscando ajustes' : hasLoadedHistory ? 'Sem ajustes' : 'Clique em Filtrar para buscar'} text={hasLoadedHistory ? 'Nenhum movimento encontrado nesse recorte.' : 'Use a busca e o periodo acima.'} />}
-                    </div>
-                </section>
+                        </label>
+
+                        <div className="inv-form-actions">
+                            <button type="button" className="ui-button-ghost" onClick={handleClear}>
+                                <i className="fa-solid fa-rotate-left" />
+                                Cancelar
+                            </button>
+                            <button type="submit" className="ui-button" disabled={saving}>
+                                <i className="fa-solid fa-check" />
+                                {saving ? 'Salvando...' : 'Confirmar ajuste'}
+                            </button>
+                        </div>
+                    </SectionCard>
+                </form>
+            ) : !productSearch.trim() ? (
+                <div className="inv-empty-prompt">
+                    <i className="fa-solid fa-magnifying-glass" />
+                    <strong>Selecione um produto</strong>
+                    <span>Use a busca acima para encontrar o produto que deseja ajustar.</span>
+                </div>
+            ) : null}
+
+            {/* ─── Histórico ─── */}
+            <div className="inv-history-section">
+                <PageHeader
+                    title={`Histórico de ajustes (${records.length})`}
+                    search={{
+                        placeholder: 'Buscar produto, motivo ou usuário',
+                        value: historySearchControl.draftValue,
+                        onChange: historySearchControl.setDraftValue,
+                    }}
+                    dateRange={{
+                        from: historyRange.from,
+                        to: historyRange.to,
+                        onChange: setHistoryRange,
+                    }}
+                    quickDates
+                    applyLabel={historyLoading ? 'Buscando...' : 'Filtrar'}
+                    onApply={() => void handleLoadHistory()}
+                    onReset={handleResetHistory}
+                />
+                <div className="inv-history-list">
+                    {records.length ? records.map((record) => (
+                        <ListCard
+                            key={record.id}
+                            active={false}
+                            onClick={() => null}
+                            title={record.product_name || 'Produto'}
+                            badge={
+                                <Badge tone={Number(record.quantity_delta || 0) >= 0 ? 'success' : 'warning'}>
+                                    {Number(record.quantity_delta || 0) >= 0 ? '+' : ''}
+                                    {formatNumber(record.quantity_delta || 0)}
+                                </Badge>
+                            }
+                            description={record.reason || 'Ajuste manual'}
+                            meta={[
+                                `${formatNumber(record.stock_before || 0)} → ${formatNumber(record.stock_after || 0)}`,
+                                record.product_code || '-',
+                            ]}
+                        />
+                    )) : (
+                        <EmptyState
+                            title={historyLoading ? 'Buscando ajustes' : hasLoadedHistory ? 'Sem ajustes' : 'Clique em Filtrar para buscar'}
+                            text={hasLoadedHistory ? 'Nenhum movimento encontrado nesse recorte.' : 'Use a busca e o período acima.'}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     )

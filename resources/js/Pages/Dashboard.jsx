@@ -5,21 +5,19 @@ import './dashboard.css'
 
 function getGreeting() {
     const hour = new Date().getHours()
-
     if (hour < 12) return 'Bom dia'
     if (hour < 18) return 'Boa tarde'
-
     return 'Boa noite'
+}
+
+function getShortDate() {
+    return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
 }
 
 function formatSaleTime(value) {
     if (!value) return '--:--'
-
     try {
-        return new Intl.DateTimeFormat('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date(value))
+        return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
     } catch {
         return formatDateTime(value)
     }
@@ -27,23 +25,26 @@ function formatSaleTime(value) {
 
 function paymentLabel(method) {
     const labels = {
-        cash: 'Dinheiro',
-        pix: 'Pix',
-        debit_card: 'Debito',
-        credit_card: 'Credito',
-        credit: 'Fiado',
-        mixed: 'Misto',
+        cash: 'Dinheiro', pix: 'Pix', debit_card: 'Débito',
+        credit_card: 'Crédito', credit: 'Fiado', mixed: 'Misto',
     }
+    return labels[method] || method || 'Não informado'
+}
 
-    return labels[method] || method || 'Nao informado'
+function paymentIcon(method) {
+    const icons = {
+        cash: 'fa-money-bill-wave', pix: 'fa-qrcode',
+        debit_card: 'fa-credit-card', credit_card: 'fa-credit-card',
+        credit: 'fa-handshake', mixed: 'fa-shuffle',
+    }
+    return icons[method] || 'fa-circle-dollar-to-slot'
 }
 
 function growthBadge(value) {
     const numeric = Number(value || 0)
     const isPositive = numeric >= 0
-
     return {
-        label: `${isPositive ? '+' : ''}${formatNumber(numeric)}% vs ontem`,
+        label: `${isPositive ? '+' : ''}${formatNumber(numeric)}%`,
         tone: isPositive ? 'positive' : 'negative',
     }
 }
@@ -58,14 +59,15 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
     const hasOpenCashRegister = Boolean(summary.open_cash_register_id)
 
     const shortcuts = [
-        { href: '/caixa', label: 'Abrir caixa', icon: 'fa-vault', tone: 'green', visible: !hasOpenCashRegister },
+        { href: '/caixa', label: 'Abrir caixa', icon: 'fa-lock-open', tone: 'green', visible: !hasOpenCashRegister },
         { href: '/pdv', label: 'Vender agora', icon: 'fa-cash-register', tone: 'accent', visible: hasOpenCashRegister },
-        { href: '/produtos', label: 'Cadastrar produto', icon: 'fa-box', tone: 'amber', visible: true },
-        { href: '/fiado', label: 'Ver fiados', icon: 'fa-handshake', tone: 'rose', visible: true },
+        { href: '/produtos', label: 'Novo produto', icon: 'fa-plus', tone: 'indigo', visible: true },
+        { href: '/fiado', label: 'Ver fiados', icon: 'fa-handshake', tone: 'amber', visible: true },
+        { href: '/contas-a-pagar', label: 'Contas', icon: 'fa-file-invoice-dollar', tone: 'rose', visible: true },
         { href: '/caixa', label: 'Fechar caixa', icon: 'fa-lock', tone: 'slate', visible: hasOpenCashRegister },
-    ]
+    ].filter((s) => s.visible)
 
-    const cards = [
+    const kpis = [
         {
             title: 'Vendido hoje',
             value: formatMoney(summary.today_sales_total || 0),
@@ -73,7 +75,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             badge: salesGrowth.label,
             badgeTone: salesGrowth.tone,
             icon: 'fa-arrow-trend-up',
-            color: 'blue',
+            color: 'indigo',
         },
         {
             title: 'Lucro estimado',
@@ -88,7 +90,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             title: 'Fiado em aberto',
             value: formatMoney(summary.open_credit_total || 0),
             note: 'A receber de clientes',
-            badge: 'Fiado',
+            badge: 'Pendente',
             badgeTone: 'warning',
             icon: 'fa-handshake',
             color: 'amber',
@@ -97,8 +99,8 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             title: 'Saldo do caixa',
             value: hasOpenCashRegister ? formatMoney(summary.open_cash_register_amount || 0) : 'Fechado',
             note: hasOpenCashRegister
-                ? `Aberto em ${formatDateTime(summary.open_cash_register_opened_at)}`
-                : 'Abra o caixa para comecar a vender.',
+                ? `Aberto ${formatDateTime(summary.open_cash_register_opened_at)}`
+                : 'Abra o caixa para vender.',
             badge: hasOpenCashRegister ? 'Aberto' : 'Fechado',
             badgeTone: hasOpenCashRegister ? 'positive' : 'neutral',
             icon: 'fa-vault',
@@ -106,137 +108,167 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
         },
     ]
 
+    const quickAccess = [
+        { href: '/produtos', label: 'Produtos', icon: 'fa-boxes-stacked', color: 'indigo' },
+        { href: '/clientes', label: 'Clientes', icon: 'fa-users', color: 'blue' },
+        { href: '/relatorios', label: 'Relatórios', icon: 'fa-chart-bar', color: 'violet' },
+        { href: '/contas-a-pagar', label: 'Contas', icon: 'fa-file-invoice-dollar', color: 'rose' },
+        { href: '/entrada-estoque', label: 'Entrada', icon: 'fa-truck-ramp-box', color: 'green' },
+        { href: '/configuracoes', label: 'Config.', icon: 'fa-gear', color: 'gray' },
+    ]
+
     return (
         <AppLayout title="Resumo da loja">
-            <div className="store-summary-page">
+            <div className="ds-page">
 
-                {/* Hero */}
-                <section className="store-summary-hero">
-                    <div className="store-summary-hero-copy">
-                        <div className="store-summary-hero-greeting">
-                            <div className="store-summary-hero-wave">
+                {/* ─── HERO ─── */}
+                <section className="ds-hero">
+                    <div className="ds-hero-top">
+                        <div className="ds-hero-identity">
+                            <div className="ds-hero-icon">
                                 <i className="fa-solid fa-store" />
                             </div>
                             <div>
-                                <h1>{getGreeting()}, {firstName}!</h1>
-                                <p>Aqui está o resumo de hoje da loja.</p>
+                                <h1 className="ds-hero-greeting">{getGreeting()}, {firstName}!</h1>
+                                <p className="ds-hero-sub">{tenant?.name || 'Nimvo'} · {getShortDate()}</p>
                             </div>
                         </div>
+                        <div className="ds-hero-status-row">
+                            <span className={`ds-cash-badge ${hasOpenCashRegister ? 'open' : 'closed'}`}>
+                                <i className={`fa-solid ${hasOpenCashRegister ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
+                                Caixa {hasOpenCashRegister ? 'aberto' : 'fechado'}
+                            </span>
+                            {hasOpenCashRegister ? (
+                                <span className="ds-sales-chip">
+                                    <i className="fa-solid fa-receipt" />
+                                    {formatNumber(summary.today_sales_qty || 0)} venda(s) hoje
+                                </span>
+                            ) : null}
+                        </div>
                     </div>
-                    <div className="store-summary-hero-right">
-                        <strong className="store-summary-hero-store">{tenant?.name || 'Nimvo'}</strong>
-                        <span className={`store-summary-hero-status ${hasOpenCashRegister ? 'open' : 'closed'}`}>
-                            <i className={`fa-solid ${hasOpenCashRegister ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
-                            Caixa {hasOpenCashRegister ? 'aberto' : 'fechado'}
-                        </span>
+
+                    <div className="ds-hero-actions">
+                        {shortcuts.map((shortcut) => (
+                            <Link key={shortcut.label} className={`ds-action tone-${shortcut.tone}`} href={shortcut.href}>
+                                <i className={`fa-solid ${shortcut.icon}`} />
+                                <span>{shortcut.label}</span>
+                            </Link>
+                        ))}
                     </div>
                 </section>
 
-                {/* KPI cards */}
-                <section className="store-summary-cards" aria-label="Resumo de hoje">
-                    {cards.map((card) => (
-                        <article key={card.title} className={`store-summary-card store-summary-card--${card.color}`}>
-                            <div className="store-summary-card-top">
-                                <div className={`store-summary-card-icon store-summary-card-icon--${card.color}`}>
-                                    <i className={`fa-solid ${card.icon}`} />
+                {/* ─── KPI CARDS ─── */}
+                <section className="ds-kpis">
+                    {kpis.map((kpi) => (
+                        <article key={kpi.title} className={`ds-kpi ds-kpi--${kpi.color}`}>
+                            <div className="ds-kpi-top">
+                                <div className={`ds-kpi-icon ds-kpi-icon--${kpi.color}`}>
+                                    <i className={`fa-solid ${kpi.icon}`} />
                                 </div>
-                                <b className={`store-summary-badge ${card.badgeTone}`}>{card.badge}</b>
+                                <span className={`ds-kpi-badge ${kpi.badgeTone}`}>{kpi.badge}</span>
                             </div>
-                            <span>{card.title}</span>
-                            <strong>{card.value}</strong>
-                            <small>{card.note}</small>
+                            <p className="ds-kpi-label">{kpi.title}</p>
+                            <strong className="ds-kpi-value">{kpi.value}</strong>
+                            <small className="ds-kpi-note">{kpi.note}</small>
                         </article>
                     ))}
                 </section>
 
-                {/* Atalhos rápidos */}
-                <section className="store-summary-shortcuts" aria-label="Atalhos rapidos">
-                    {shortcuts.filter((shortcut) => shortcut.visible).map((shortcut) => (
-                        <Link key={shortcut.label} className={`store-summary-shortcut tone-${shortcut.tone}`} href={shortcut.href}>
-                            <i className={`fa-solid ${shortcut.icon}`} />
-                            <span>{shortcut.label}</span>
-                        </Link>
-                    ))}
-                </section>
+                {/* ─── BOTTOM ─── */}
+                <div className="ds-bottom">
 
-                {/* Bottom: 2 colunas */}
-                <div className="store-summary-bottom">
-                    {/* Coluna esquerda: últimas vendas */}
-                    <section className="store-summary-panel">
-                        <header>
+                    {/* Últimas vendas */}
+                    <section className="ds-panel ds-panel--sales">
+                        <div className="ds-panel-header">
                             <div>
                                 <h2>Últimas vendas</h2>
-                                <p>As 5 vendas mais recentes.</p>
+                                <p>Movimentações mais recentes do dia.</p>
                             </div>
-                            <Link href="/relatorios">Ver todas</Link>
-                        </header>
-                    {recentSales?.length ? (
-                        <div className="store-summary-sales-list">
-                            {recentSales.slice(0, 5).map((sale) => (
-                                <div key={sale.id} className="store-summary-sale-row">
-                                    <span>{formatSaleTime(sale.created_at)}</span>
-                                    <strong>{sale.customer_name || 'Sem cliente'}</strong>
-                                    <small>{paymentLabel(sale.payment_method)}</small>
-                                    <b>{formatMoney(sale.total || 0)}</b>
-                                </div>
-                            ))}
+                            <Link href="/relatorios" className="ds-panel-link">
+                                <i className="fa-solid fa-arrow-right" />
+                                Ver relatório
+                            </Link>
                         </div>
-                    ) : (
-                        <div className="store-summary-empty">
-                            <i className="fa-solid fa-receipt" />
-                            <strong>Nenhuma venda hoje ainda</strong>
-                            <span>Quando a primeira venda sair, ela aparece aqui.</span>
-                        </div>
-                    )}
+
+                        {recentSales?.length ? (
+                            <div className="ds-sales-list">
+                                {recentSales.slice(0, 8).map((sale) => (
+                                    <div key={sale.id} className="ds-sale-row">
+                                        <div className="ds-sale-method-icon">
+                                            <i className={`fa-solid ${paymentIcon(sale.payment_method)}`} />
+                                        </div>
+                                        <div className="ds-sale-info">
+                                            <strong>{sale.customer_name || 'Sem cliente'}</strong>
+                                            <small>{paymentLabel(sale.payment_method)}</small>
+                                        </div>
+                                        <span className="ds-sale-time">{formatSaleTime(sale.created_at)}</span>
+                                        <b className="ds-sale-amount">{formatMoney(sale.total || 0)}</b>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="ds-empty">
+                                <i className="fa-solid fa-receipt" />
+                                <strong>Nenhuma venda hoje ainda</strong>
+                                <span>As vendas aparecerão aqui conforme forem registradas.</span>
+                            </div>
+                        )}
                     </section>
 
-                    {/* Coluna direita: estoque baixo + ações rápidas */}
-                    <div className="store-summary-right-col">
+                    {/* Coluna direita */}
+                    <div className="ds-right-col">
+
+                        {/* Alerta de estoque baixo */}
                         {lowStockItems?.length ? (
-                            <section className="store-summary-panel">
-                                <header>
+                            <section className="ds-panel ds-panel--alert">
+                                <div className="ds-panel-header">
                                     <div>
-                                        <h2>Acabando no estoque</h2>
+                                        <h2>
+                                            <i className="fa-solid fa-triangle-exclamation" />
+                                            Estoque baixo
+                                        </h2>
                                         <p>{formatNumber(lowStockItems.length)} produto(s) abaixo do mínimo.</p>
                                     </div>
-                                    {Number(summary.low_stock_count || 0) > 5 ? <Link href="/entrada-estoque">Ver todos</Link> : null}
-                                </header>
-                                <div className="store-summary-list">
-                                    {lowStockItems.slice(0, 5).map((product) => (
-                                        <div key={product.id} className="store-summary-list-row">
-                                            <span>{product.name}</span>
-                                            <strong>{formatNumber(product.stock_quantity)} {product.unit || 'UN'}</strong>
-                                            <Link href={`/entrada-estoque?product=${product.id}`}>Repor</Link>
+                                    {Number(summary.low_stock_count || 0) > 5 ? (
+                                        <Link href="/entrada-estoque" className="ds-panel-link">Ver todos</Link>
+                                    ) : null}
+                                </div>
+                                <div className="ds-stock-list">
+                                    {lowStockItems.slice(0, 6).map((product) => (
+                                        <div key={product.id} className="ds-stock-row">
+                                            <div className="ds-stock-icon">
+                                                <i className="fa-solid fa-box" />
+                                            </div>
+                                            <div className="ds-stock-info">
+                                                <strong>{product.name}</strong>
+                                                <small>{formatNumber(product.stock_quantity)} {product.unit || 'UN'} em estoque</small>
+                                            </div>
+                                            <Link href={`/entrada-estoque?product=${product.id}`} className="ds-repor-btn">
+                                                Repor
+                                            </Link>
                                         </div>
                                     ))}
                                 </div>
                             </section>
                         ) : null}
 
-                        <section className="store-summary-panel store-summary-panel--actions">
-                            <header>
+                        {/* Acesso rápido */}
+                        <section className="ds-panel ds-panel--quick">
+                            <div className="ds-panel-header">
                                 <div>
                                     <h2>Acesso rápido</h2>
                                     <p>Atalhos para as áreas mais usadas.</p>
                                 </div>
-                            </header>
-                            <div className="store-summary-quick-links">
-                                <Link href="/produtos" className="store-summary-quick-link">
-                                    <i className="fa-solid fa-boxes-stacked" />
-                                    <span>Produtos</span>
-                                </Link>
-                                <Link href="/clientes" className="store-summary-quick-link">
-                                    <i className="fa-solid fa-users" />
-                                    <span>Clientes</span>
-                                </Link>
-                                <Link href="/relatorios" className="store-summary-quick-link">
-                                    <i className="fa-solid fa-chart-bar" />
-                                    <span>Relatórios</span>
-                                </Link>
-                                <Link href="/contas-a-pagar" className="store-summary-quick-link">
-                                    <i className="fa-solid fa-file-invoice-dollar" />
-                                    <span>Contas</span>
-                                </Link>
+                            </div>
+                            <div className="ds-quick-grid">
+                                {quickAccess.map((item) => (
+                                    <Link key={item.href} href={item.href} className={`ds-quick-item ds-quick-item--${item.color}`}>
+                                        <div className="ds-quick-icon">
+                                            <i className={`fa-solid ${item.icon}`} />
+                                        </div>
+                                        <span>{item.label}</span>
+                                    </Link>
+                                ))}
                             </div>
                         </section>
                     </div>
