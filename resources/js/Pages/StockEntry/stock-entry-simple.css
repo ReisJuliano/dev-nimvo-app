@@ -729,6 +729,19 @@
 .se-empty-state strong { font-size: 0.95rem; color: var(--app-text-secondary); font-weight: 700; }
 .se-empty-state p      { font-size: 0.84rem; color: var(--app-text-muted); margin: 0; max-width: 30ch; line-height: 1.5; }
 
+/* ─── Entry/Adjust layout ─── */
+
+.se-entry-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .se-entry-layout { grid-template-columns: 1fr; }
+}
+
 /* ─── Filter chips (estoque view) ─── */
 
 .se-filter-chips {

@@ -113,8 +113,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/categorias', OperationsPageController::class)->defaults('module', 'categorias')->name('categories.index');
         Route::get('/estoque', StockEntryPageController::class)->name('stock.view');
         Route::get('/entrada-estoque/manutencao', StockEntryMaintenancePageController::class)->name('stock.inbound.maintenance');
-        Route::get('/entrada-estoque', OperationsPageController::class)->defaults('module', 'entrada-estoque')->name('stock.inbound');
-        Route::get('/ajuste-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.adjustments');
+        Route::get('/entrada-estoque', [StockEntryPageController::class, 'entrada'])->name('stock.entry');
+        Route::get('/ajuste-estoque', [StockEntryPageController::class, 'ajuste'])->name('stock.adjustment');
         Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.movement');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
@@ -203,6 +203,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/cash-registers/{cashRegister}/close', [CashRegisterApiController::class, 'close'])->name('api.cash-registers.close');
             Route::get('/cash-registers/{cashRegister}/report', [CashRegisterApiController::class, 'report'])->name('api.cash-registers.report');
             Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
+            Route::post('/stock/quick-adjust', [StockEntryPageController::class, 'quickAdjust'])->name('api.stock.quick-adjust');
 
             Route::post('/products', [ProductsApiController::class, 'store'])->name('api.products.store');
             Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');

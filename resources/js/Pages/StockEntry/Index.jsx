@@ -27,7 +27,7 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
         if (activeFilter === 'low') return lowStockProducts
         if (activeFilter === 'zero') return products.filter((p) => Number(p.stock_quantity || 0) <= 0)
         const q = normalizeTextSearch(query)
-        if (!q) return products
+        if (!q) return []           // sem busca → sem dados (só filtro de status acima)
         return products.filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q))
     }, [activeFilter, lowStockProducts, products, query])
 
@@ -139,6 +139,12 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                         <strong>Nenhum produto cadastrado</strong>
                         <p>Cadastre produtos primeiro para controlar o estoque.</p>
                         <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                    </div>
+                ) : !activeFilter && !query ? (
+                    <div className="se-empty-state se-empty-state--prompt">
+                        <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
+                        <strong>Use a busca ou um filtro acima</strong>
+                        <p>Pesquise por nome ou clique em "Estoque baixo" / "Sem estoque" para ver os produtos.</p>
                     </div>
                 ) : filteredProducts.length ? (
                     <div className="se-table-card">

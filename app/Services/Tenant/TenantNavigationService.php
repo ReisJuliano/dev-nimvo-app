@@ -50,7 +50,7 @@ class TenantNavigationService
                     [
                         'href' => '/entrada-estoque',
                         'label' => 'Entrada de mercadoria',
-                        'icon' => 'fa-arrow-down-to-bracket',
+                        'icon' => 'fa-dolly',
                         'access_key' => 'entrada_estoque',
                         'request_patterns' => ['entrada-estoque'],
                     ],
@@ -59,7 +59,7 @@ class TenantNavigationService
                         'label' => 'Ajuste de estoque',
                         'icon' => 'fa-scale-balanced',
                         'access_key' => 'entrada_estoque',
-                        'request_patterns' => ['ajuste-estoque', 'movimentacao-estoque'],
+                        'request_patterns' => ['ajuste-estoque'],
                     ],
                     [
                         'href' => '/fiado',
