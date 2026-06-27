@@ -34,7 +34,7 @@ export default function StockEntryIndex({ payload }) {
                         </div>
                         <div>
                             <h1 className="se-header-title">Estoque de produtos</h1>
-                            <p className="se-header-sub">{formatNumber(products.length)} produto(s) cadastrado(s)</p>
+                            <p className="se-header-sub">Pesquise um produto pelo nome, código ou EAN.</p>
                         </div>
                     </div>
                 </div>
