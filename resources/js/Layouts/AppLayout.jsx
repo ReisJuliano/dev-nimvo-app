@@ -1,8 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
-import AppNavbar from '@/Components/Layout/AppNavbar'
+import AppSidebar from '@/Components/Layout/AppSidebar'
+import AppTopbar from '@/Components/Layout/AppTopbar'
 import { buildNavigationGroups } from '@/Components/Layout/navigation'
 import useModules from '@/hooks/useModules'
+import { formatDateTime } from '@/lib/format'
 import { useFlashPopup } from '@/lib/errorPopup'
 import useOfflineStatus from '@/lib/offline/useOfflineStatus'
 import { configureOfflineWorkspaceBridge, hydrateOfflineWorkspace } from '@/lib/offline/workspace'
@@ -21,10 +23,46 @@ export default function AppLayout({
 }) {
     const { auth, flash, tenant, tenantNavigationCatalog, license, localAgentBridge } = usePage().props
     const currentUrl = usePage().url
+    const isOverlayNavigation = navigationMode === 'overlay'
     const isHiddenNavigation = navigationMode === 'hidden'
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [collapsed, setCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return Boolean(defaultCollapsed)
+        }
+
+        const storedValue = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
+
+        if (storedValue !== null) {
+            return storedValue === 'true'
+        }
+
+        return Boolean(defaultCollapsed)
+    })
     const moduleState = useModules(settingsOverride)
     const offlineStatus = useOfflineStatus(tenant?.id)
     useFlashPopup(flash)
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || isOverlayNavigation || isHiddenNavigation) {
+            return
+        }
+
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
+    }, [collapsed, isHiddenNavigation, isOverlayNavigation])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const root = document.documentElement
+        root.classList.toggle('app-sidebar-is-collapsed', collapsed)
+
+        return () => {
+            root.classList.remove('app-sidebar-is-collapsed')
+        }
+    }, [collapsed])
 
     useEffect(() => {
         if (!tenant?.id) {
@@ -44,6 +82,26 @@ export default function AppLayout({
         router.post('/logout')
     }
 
+    function toggleCollapsed() {
+        if (isHiddenNavigation) {
+            return
+        }
+
+        setCollapsed((current) => !current)
+    }
+
+    function toggleMobileSidebar() {
+        if (isHiddenNavigation) {
+            return
+        }
+
+        setSidebarOpen((current) => !current)
+    }
+
+    function closeMobileSidebar() {
+        setSidebarOpen(false)
+    }
+
     const navigationGroups = useMemo(
         () => buildNavigationGroups({
             authRole: auth?.user?.role,
@@ -54,20 +112,29 @@ export default function AppLayout({
         }),
         [auth?.user?.role, moduleState.capabilities, moduleState.modules, moduleState.preset, tenantNavigationCatalog],
     )
-
     const shouldShowOfflineBanner = Boolean(
         tenant?.id
         && (offlineStatus.isOffline || offlineStatus.pendingCount > 0 || offlineStatus.lastSyncError),
     )
-    const offlineBannerTone = offlineStatus.isOffline ? 'offline' : offlineStatus.lastSyncError ? 'warning' : 'syncing'
+    const offlineBannerTone = offlineStatus.isOffline
+        ? 'offline'
+        : offlineStatus.lastSyncError
+            ? 'warning'
+            : 'syncing'
     const offlineBannerTitle = offlineStatus.isOffline
         ? 'Modo offline ativo'
-        : offlineStatus.pendingCount > 0 ? 'Reconectado com fila pendente' : 'Sincronização requer revisão'
-    const offlineBannerText = offlineStatus.isOffline
-        ? `Alterações salvas nesta máquina. ${offlineStatus.pendingCount} pendencia(s).`
         : offlineStatus.pendingCount > 0
-            ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronização.`
-            : offlineStatus.lastSyncError || 'Sincronização requer atenção.'
+            ? 'Reconectado com fila pendente'
+            : 'Sincronização requer revisão'
+    const offlineBannerText = offlineStatus.isOffline
+        ? `As alterações ficam salvas nesta máquina e seráo sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
+        : offlineStatus.pendingCount > 0
+            ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronização com o servidor.`
+            : offlineStatus.lastSyncError || 'Existe uma sincronização que precisa de atenção.'
+    const offlineBannerMeta = offlineStatus.lastSyncAt
+        ? `Última sincronização concluída em ${formatDateTime(offlineStatus.lastSyncAt)}.`
+        : 'Ainda não houve uma sincronização concluída nesta máquina.'
+    const isSidebarCollapsed = collapsed
 
     return (
         <>
@@ -77,34 +144,73 @@ export default function AppLayout({
                 rel="stylesheet"
             />
 
-            <div className="app-layout-root">
-                {!isHiddenNavigation && showTopbar && (
-                    <AppNavbar
-                        auth={auth}
-                        navigationGroups={navigationGroups}
-                        currentUrl={currentUrl}
-                        onLogout={handleLogout}
-                    />
-                )}
+            <div
+                className={`app-layout-root ${isOverlayNavigation ? 'overlay-nav' : ''} ${isHiddenNavigation ? 'no-sidebar' : ''}`.trim()}
+            >
+                <div className="app-layout-backdrop app-layout-backdrop-two" />
+                <div className="app-layout-shell">
+                    {isHiddenNavigation ? null : (
+                        <div
+                            className={`app-sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+                            onClick={closeMobileSidebar}
+                        />
+                    )}
 
-                <div className="app-layout-body">
-                    {license && license.status !== 'active' ? (
-                        <div className={`app-notice app-notice--${license.status === 'blocked' ? 'danger' : 'warning'}`}>
-                            <i className={`fa-solid ${license.status === 'blocked' ? 'fa-lock' : 'fa-triangle-exclamation'}`} />
-                            <span><strong>{license.status === 'blocked' ? 'Licença bloqueada.' : 'Licença requer atenção.'}</strong> {license.message}</span>
-                        </div>
-                    ) : null}
+                    {isHiddenNavigation ? null : (
+                        <AppSidebar
+                            auth={auth}
+                            navigationGroups={navigationGroups}
+                            currentUrl={currentUrl}
+                            collapsed={isSidebarCollapsed}
+                            sidebarOpen={sidebarOpen}
+                            allowCollapse={!isOverlayNavigation}
+                            onToggleCollapsed={toggleCollapsed}
+                            onCloseMobile={closeMobileSidebar}
+                            onLogout={handleLogout}
+                        />
+                    )}
 
-                    {shouldShowOfflineBanner ? (
-                        <div className={`app-notice app-notice--${offlineBannerTone === 'offline' ? 'warning' : 'info'}`}>
-                            <i className={`fa-solid ${offlineStatus.isOffline ? 'fa-wifi-slash' : 'fa-rotate'}`} />
-                            <span><strong>{offlineBannerTitle}.</strong> {offlineBannerText}</span>
-                        </div>
-                    ) : null}
+                    <div className={`app-main ${isSidebarCollapsed ? 'collapsed' : ''} ${showTopbar ? '' : 'no-topbar'}`}>
+                        {showTopbar ? (
+                            <AppTopbar
+                                title={title}
+                                collapsed={isSidebarCollapsed}
+                                onToggleSidebar={toggleCollapsed}
+                                onToggleMobileSidebar={toggleMobileSidebar}
+                            />
+                        ) : !isHiddenNavigation ? (
+                            <button className="app-mobile-toggle app-mobile-toggle-floating" onClick={toggleMobileSidebar} type="button">
+                                <i className="fas fa-bars" />
+                            </button>
+                        ) : null}
 
-                    <main className={`app-page-content ${contentClassName}`.trim()}>
-                        {children}
-                    </main>
+                        {license && license.status !== 'active' ? (
+                            <section className={`app-license-banner ${license.status}`}>
+                                <div className="app-license-banner-icon">
+                                    <i className={`fa-solid ${license.status === 'blocked' ? 'fa-lock' : 'fa-triangle-exclamation'}`} />
+                                </div>
+                                <div className="app-license-banner-copy">
+                                    <strong>{license.status === 'blocked' ? 'Licença bloqueada' : 'Licença requer atenção'}</strong>
+                                    <span>{license.message}</span>
+                                </div>
+                            </section>
+                        ) : null}
+
+                        {shouldShowOfflineBanner ? (
+                            <section className={`app-offline-banner ${offlineBannerTone}`}>
+                                <div className="app-offline-banner-icon">
+                                    <i className={`fa-solid ${offlineStatus.isOffline ? 'fa-wifi-slash' : offlineStatus.lastSyncError ? 'fa-triangle-exclamation' : 'fa-rotate'}`} />
+                                </div>
+                                <div className="app-offline-banner-copy">
+                                    <strong>{offlineBannerTitle}</strong>
+                                    <span>{offlineBannerText}</span>
+                                    <small>{offlineBannerMeta}</small>
+                                </div>
+                            </section>
+                        ) : null}
+
+                        <main className={`app-page-content ${contentClassName}`.trim()}>{children}</main>
+                    </div>
                 </div>
             </div>
         </>

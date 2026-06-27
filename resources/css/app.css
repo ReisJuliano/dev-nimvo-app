@@ -22,13 +22,13 @@ body,
 }
 
 html {
-    background: #f5f4ff;
+    background: #f1f5f9;
 }
 
 body {
     margin: 0;
-    background: #f5f4ff;
-    color: #1e1b4b;
+    background: #f1f5f9;
+    color: #0f172a;
     font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
 

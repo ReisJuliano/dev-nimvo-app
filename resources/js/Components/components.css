@@ -1,45 +1,32 @@
 :root {
-    /* Brand — indigo palette, mais colorido e acolhedor */
-    --app-primary: #6366f1;
-    --app-primary-dark: #4f46e5;
-    --app-primary-light: #818cf8;
-    --app-primary-soft: rgba(99, 102, 241, 0.1);
-
-    /* Semantic */
-    --app-success: #10b981;
-    --app-warning: #f59e0b;
-    --app-danger: #ef4444;
-    --app-info: #06b6d4;
-    --app-violet: #8b5cf6;
-
-    /* Background — levemente tintado de índigo */
-    --app-bg: #f5f4ff;
+    --app-primary: #2563eb;
+    --app-primary-dark: #1d4ed8;
+    --app-primary-soft: rgba(37, 99, 235, 0.1);
+    --app-success: #16a34a;
+    --app-warning: #d97706;
+    --app-danger: #dc2626;
+    --app-info: #0891b2;
+    --app-violet: #7c3aed;
+    --app-bg: #f1f5f9;
     --app-surface: #ffffff;
     --app-surface-strong: #ffffff;
-    --app-surface-muted: #f8f7ff;
-
-    /* Borders */
-    --app-border: rgba(99, 102, 241, 0.1);
-    --app-border-strong: rgba(99, 102, 241, 0.18);
-
-    /* Text */
-    --app-text-primary: #1e1b4b;
-    --app-text-secondary: #6b7280;
-    --app-text-muted: #9ca3af;
-
-    /* Topbar */
-    --app-topbar-height: 62px;
-
-    /* Radius — mais redondo = mais amigável */
-    --app-radius-sm: 10px;
-    --app-radius: 16px;
-    --app-radius-lg: 20px;
-
-    /* Shadows */
-    --app-shadow-sm: 0 1px 3px rgba(99, 102, 241, 0.06), 0 4px 10px rgba(0, 0, 0, 0.04);
-    --app-shadow: 0 4px 20px rgba(99, 102, 241, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
-    --app-shadow-lg: 0 12px 40px rgba(99, 102, 241, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
-
+    --app-surface-muted: #f8fafc;
+    --app-border: rgba(15, 23, 42, 0.08);
+    --app-border-strong: rgba(15, 23, 42, 0.13);
+    --app-text-primary: #0f172a;
+    --app-text-secondary: #475569;
+    --app-text-muted: #94a3b8;
+    --app-sidebar-bg: #0f172a;
+    --app-sidebar-bg-soft: #1e293b;
+    --app-sidebar-width: 240px;
+    --app-sidebar-width-collapsed: 68px;
+    --app-topbar-height: 60px;
+    --app-radius-sm: 8px;
+    --app-radius: 12px;
+    --app-radius-lg: 16px;
+    --app-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 8px rgba(15, 23, 42, 0.04);
+    --app-shadow: 0 4px 16px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.06);
+    --app-shadow-lg: 0 8px 32px rgba(15, 23, 42, 0.14), 0 2px 8px rgba(15, 23, 42, 0.08);
     --app-transition: all 0.15s ease;
 }
 
