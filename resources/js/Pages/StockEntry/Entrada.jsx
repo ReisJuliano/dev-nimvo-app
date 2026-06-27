@@ -171,6 +171,7 @@ export default function StockEntradaPage({ payload }) {
         ].filter(Boolean).join(' | ') || null
 
         // 1. Registrar estoque de cada produto
+        let lastError = null
         for (let i = 0; i < items.length; i++) {
             const { product, quantity, cost } = items[i]
             try {
@@ -179,11 +180,14 @@ export default function StockEntradaPage({ payload }) {
                     data: {
                         product_id: product.id,
                         quantity: Number(quantity),
-                        cost_price: cost ? Number(cost) : null,
+                        cost_price: Number(cost) > 0 ? Number(cost) : null,
                         notes: entryNotes,
                     },
                 })
-            } catch { errors++ }
+            } catch (err) {
+                errors++
+                lastError = err?.message || 'Erro ao salvar produto'
+            }
             setProgress({ done: i + 1, total: totalSteps })
         }
 
@@ -212,8 +216,11 @@ export default function StockEntradaPage({ payload }) {
 
         setSaving(false)
         setProgress(null)
-        if (errors === 0) setDone(true)
-        else showFlash('err', `${errors} item(ns) com erro. Verifique e tente novamente.`)
+        if (errors === 0) {
+            setDone(true)
+        } else {
+            showFlash('err', lastError || `${errors} item(ns) com erro ao salvar.`)
+        }
     }
 
     function startNew() {

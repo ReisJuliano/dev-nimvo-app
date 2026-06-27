@@ -116,7 +116,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
         { href: '/relatorios', label: 'Relatórios', icon: 'fa-chart-bar', color: 'violet' },
         { href: '/contas-a-pagar', label: 'Contas', icon: 'fa-file-invoice-dollar', color: 'rose' },
         { href: '/entrada-estoque', label: 'Entrada', icon: 'fa-truck-ramp-box', color: 'green' },
-        { href: '/configuracoes', label: 'Config.', icon: 'fa-gear', color: 'gray' },
+        { href: '/estoque', label: 'Estoque', icon: 'fa-warehouse', color: 'teal' },
     ]
 
     return (
