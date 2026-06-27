@@ -7,37 +7,26 @@ import './stock-entry-simple.css'
 
 function getStockState(product) {
     const stock = Number(product.stock_quantity || 0)
-    const minimum = Number(product.min_stock || 0)
+    const min   = Number(product.min_stock || 0)
     if (stock <= 0) return 'zero'
-    if (stock <= minimum) return 'low'
+    if (stock <= min) return 'low'
     return 'ok'
 }
 
-export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
+export default function StockEntryIndex({ payload }) {
     const [products] = useState(Array.isArray(payload?.products) ? payload.products : [])
     const [query, setQuery] = useState('')
-    const [activeFilter, setActiveFilter] = useState(null)
-
-    const lowStockProducts = useMemo(() =>
-        products.filter((p) => Number(p.stock_quantity || 0) <= Number(p.min_stock || 0)),
-        [products],
-    )
 
     const filteredProducts = useMemo(() => {
-        if (activeFilter === 'low') return lowStockProducts
-        if (activeFilter === 'zero') return products.filter((p) => Number(p.stock_quantity || 0) <= 0)
         const q = normalizeTextSearch(query)
-        if (!q) return []           // sem busca → sem dados (só filtro de status acima)
+        if (!q) return []
         return products.filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q))
-    }, [activeFilter, lowStockProducts, products, query])
-
-    const zeroCount = useMemo(() => products.filter((p) => Number(p.stock_quantity || 0) <= 0).length, [products])
+    }, [products, query])
 
     return (
         <AppLayout title="Estoque">
             <div className="se-page">
 
-                {/* ─── Header ─── */}
                 <div className="se-header">
                     <div className="se-header-left">
                         <div className="se-header-icon">
@@ -45,51 +34,19 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                         </div>
                         <div>
                             <h1 className="se-header-title">Estoque de produtos</h1>
-                            <p className="se-header-sub">
-                                {formatNumber(products.length)} produto(s)
-                                {lowStockProducts.length > 0 ? ` · ${formatNumber(lowStockProducts.length)} abaixo do mínimo` : ''}
-                                {zeroCount > 0 ? ` · ${formatNumber(zeroCount)} zerado(s)` : ''}
-                            </p>
+                            <p className="se-header-sub">{formatNumber(products.length)} produto(s) cadastrado(s)</p>
                         </div>
-                    </div>
-                    <div className="se-header-kpis">
-                        <div className="se-kpi">
-                            <strong>{formatNumber(products.length)}</strong>
-                            <span>Total</span>
-                        </div>
-                        {lowStockProducts.length > 0 ? (
-                            <div className="se-kpi se-kpi--warn">
-                                <strong>{formatNumber(lowStockProducts.length)}</strong>
-                                <span>Baixo</span>
-                            </div>
-                        ) : null}
-                        {zeroCount > 0 ? (
-                            <div className="se-kpi se-kpi--zero">
-                                <strong>{formatNumber(zeroCount)}</strong>
-                                <span>Zerado</span>
-                            </div>
-                        ) : null}
-                    </div>
-                    <div className="se-header-actions">
-                        <Link href="/entrada-estoque" className="se-action-btn se-action-btn--primary">
-                            <i className="fa-solid fa-arrow-down-to-bracket" />
-                            Entrada
-                        </Link>
-                        <Link href="/ajuste-estoque" className="se-action-btn se-action-btn--ghost">
-                            <i className="fa-solid fa-scale-balanced" />
-                            Ajuste
-                        </Link>
                     </div>
                 </div>
 
-                {/* ─── Busca + filtros ─── */}
                 <div className="se-search-bar">
-                    <label className="se-search-wrap">
+                    <label className="se-search-wrap" style={{ flex: 1 }}>
                         <i className="fa-solid fa-magnifying-glass" />
                         <input
                             value={query}
-                            onChange={(e) => { setQuery(e.target.value); setActiveFilter(null) }}
-                            placeholder="Nome, código ou código de barras..."
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Buscar por nome, código ou código de barras..."
+                            autoFocus
                         />
                         {query ? (
                             <button type="button" className="se-clear-search" onClick={() => setQuery('')}>
@@ -97,42 +54,8 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                             </button>
                         ) : null}
                     </label>
-
-                    <div className="se-filter-chips">
-                        <button
-                            type="button"
-                            className={`se-chip ${!activeFilter && !query ? 'active' : ''}`}
-                            onClick={() => { setActiveFilter(null); setQuery('') }}
-                        >
-                            Todos
-                            <span className="se-chip-count">{formatNumber(products.length)}</span>
-                        </button>
-                        {lowStockProducts.length > 0 ? (
-                            <button
-                                type="button"
-                                className={`se-chip ${activeFilter === 'low' ? 'active active-warn' : ''}`}
-                                onClick={() => { setActiveFilter('low'); setQuery('') }}
-                            >
-                                <i className="fa-solid fa-triangle-exclamation" />
-                                Estoque baixo
-                                <span>{formatNumber(lowStockProducts.length)}</span>
-                            </button>
-                        ) : null}
-                        {zeroCount > 0 ? (
-                            <button
-                                type="button"
-                                className={`se-chip ${activeFilter === 'zero' ? 'active active-danger' : ''}`}
-                                onClick={() => { setActiveFilter('zero'); setQuery('') }}
-                            >
-                                <i className="fa-solid fa-circle-exclamation" />
-                                Sem estoque
-                                <span>{formatNumber(zeroCount)}</span>
-                            </button>
-                        ) : null}
-                    </div>
                 </div>
 
-                {/* ─── Tabela ─── */}
                 {!products.length ? (
                     <div className="se-empty-state">
                         <div className="se-empty-icon"><i className="fa-solid fa-box-open" /></div>
@@ -140,11 +63,11 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                         <p>Cadastre produtos primeiro para controlar o estoque.</p>
                         <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
                     </div>
-                ) : !activeFilter && !query ? (
+                ) : !query ? (
                     <div className="se-empty-state se-empty-state--prompt">
                         <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
-                        <strong>Use a busca ou um filtro acima</strong>
-                        <p>Pesquise por nome ou clique em "Estoque baixo" / "Sem estoque" para ver os produtos.</p>
+                        <strong>Pesquise um produto acima</strong>
+                        <p>Digite o nome, código ou código de barras para ver o estoque.</p>
                     </div>
                 ) : filteredProducts.length ? (
                     <div className="se-table-card">
@@ -157,7 +80,6 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                                     <th>Em estoque</th>
                                     <th>Mínimo</th>
                                     <th>Status</th>
-                                    <th style={{ width: 110 }}>Ação rápida</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -188,15 +110,6 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
                                                         ? <span className="se-status se-status--low">Estoque baixo</span>
                                                         : <span className="se-status se-status--ok">Normal</span>
                                                 }
-                                            </td>
-                                            <td>
-                                                <Link
-                                                    href={`/entrada-estoque?product=${product.id}`}
-                                                    className="se-receive-btn"
-                                                >
-                                                    <i className="fa-solid fa-plus" />
-                                                    Entrada
-                                                </Link>
                                             </td>
                                         </tr>
                                     )
