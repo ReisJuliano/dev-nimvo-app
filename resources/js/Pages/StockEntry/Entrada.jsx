@@ -28,19 +28,26 @@ function upsertItem(items, product) {
 
 /* ─── Componente ─── */
 
+function todayValue() {
+    return new Date().toISOString().slice(0, 10)
+}
+
 export default function StockEntradaPage({ payload }) {
-    const products = useMemo(
-        () => (Array.isArray(payload?.products) ? payload.products : []),
-        [payload],
-    )
+    const products  = useMemo(() => Array.isArray(payload?.products)  ? payload.products  : [], [payload])
+    const suppliers = useMemo(() => Array.isArray(payload?.suppliers) ? payload.suppliers : [], [payload])
+
+    // Header da entrada
+    const [entryDate, setEntryDate]         = useState(todayValue)
+    const [entrySupplier, setEntrySupplier] = useState('')
+    const [entryName, setEntryName]         = useState('')
 
     const [items, setItems] = useState([])
     const [scanValue, setScanValue] = useState('')
     const [textSearch, setTextSearch] = useState('')
     const [searchResults, setSearchResults] = useState([])
-    const [flash, setFlash] = useState(null)   // {type:'ok'|'err', text}
+    const [flash, setFlash] = useState(null)
     const [saving, setSaving] = useState(false)
-    const [progress, setProgress] = useState(null) // {done, total}
+    const [progress, setProgress] = useState(null)
 
     const scanRef = useRef(null)
     const flashTimer = useRef(null)
@@ -178,6 +185,41 @@ export default function StockEntradaPage({ payload }) {
                     <Link href="/estoque" className="se-action-btn se-action-btn--ghost">
                         <i className="fa-solid fa-arrow-left" /> Voltar
                     </Link>
+                </div>
+
+                {/* Mini-form: cabeçalho da entrada */}
+                <div className="ent-meta-card">
+                    <div className="ent-meta-field">
+                        <label className="ent-meta-label">Data da entrada</label>
+                        <input
+                            type="date"
+                            className="ent-meta-input"
+                            value={entryDate}
+                            onChange={(e) => setEntryDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="ent-meta-field">
+                        <label className="ent-meta-label">Fornecedor <span>(opcional)</span></label>
+                        <select
+                            className="ent-meta-input"
+                            value={entrySupplier}
+                            onChange={(e) => setEntrySupplier(e.target.value)}
+                        >
+                            <option value="">Sem fornecedor</option>
+                            {suppliers.map((s) => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="ent-meta-field ent-meta-field--wide">
+                        <label className="ent-meta-label">Identificação <span>(opcional)</span></label>
+                        <input
+                            className="ent-meta-input"
+                            value={entryName}
+                            onChange={(e) => setEntryName(e.target.value)}
+                            placeholder="Ex: NF 1234, Entrega da manhã..."
+                        />
+                    </div>
                 </div>
 
                 {/* Flash feedback */}

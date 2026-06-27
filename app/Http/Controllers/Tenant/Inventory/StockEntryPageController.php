@@ -27,9 +27,15 @@ class StockEntryPageController extends Controller
     public function entrada(): Response
     {
         $products = $this->buildProductPayload();
+        $suppliers = Supplier::query()
+            ->where('active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])
+            ->all();
 
         return Inertia::render('StockEntry/Entrada', [
-            'payload' => ['products' => $products],
+            'payload' => ['products' => $products, 'suppliers' => $suppliers],
         ]);
     }
 
