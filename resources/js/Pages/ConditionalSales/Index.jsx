@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import CreateConditionalSaleCard from '@/Components/ConditionalSales/CreateConditionalSaleCard'
 import ConditionalSaleDetailCard from '@/Components/ConditionalSales/ConditionalSaleDetailCard'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -486,154 +485,90 @@ export default function ConditionalSalesPage({
                 </button>
             </div>
 
-            <div className="ui-list-page-shell">
-                <div className="ui-list-page-main">
-                    <PageHeader
-                        title="Venda Condicional"
-                        subtitle="Gestão de vendas condicionais"
-                        search={{
-                            placeholder: 'Buscar cliente por nome',
-                            value: search,
-                            onChange: setSearch,
-                        }}
-                        filters={[
-                            { key: 'all', value: 'all', label: 'Todos', count: visibleConditionals.length },
-                            { key: 'owing', value: 'owing', label: 'Devendo', count: visibleConditionals.filter((entry) => Number(entry.outstanding_total || 0) > 0).length },
-                            { key: 'alert', value: 'alert', label: 'Em alerta', count: visibleConditionals.filter((entry) => Number(entry.days_overdue || 0) > 0).length },
-                            {
-                                key: 'over_limit',
-                                value: 'over_limit',
-                                label: 'Acima do limite',
-                                count: visibleConditionals.filter((entry) => {
-                                    const customerMeta = customerMetaById.get(String(entry.customer?.id || '')) || {}
-                                    return Number(customerMeta.credit_limit || 0) > 0 && Number(entry.outstanding_total || 0) > Number(customerMeta.credit_limit || 0)
-                                }).length,
-                            },
-                        ]}
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                        dateRange={{
-                            from: range.from,
-                            to: range.to,
-                            onChange: setRange,
-                        }}
-                        quickDates
-                        onApply={applyFilters}
-                        onReset={() => {
-                            setSearch('')
-                            setRange(defaultRange)
-                            setActiveFilter('all')
-                            setAppliedSearch('')
-                            setAppliedFilter('all')
-                            setAppliedRange(defaultRange)
-                            setHasAppliedFilters(false)
-                            setSelectedRecordId(null)
-                            setOpenedRecordId(null)
-                            router.get('/venda-condicional', {}, {
-                                preserveScroll: true,
-                                preserveState: true,
-                                replace: true,
-                            })
-                        }}
-                    />
+            {/* Barra de busca + filtros */}
+            <PageHeader
+                search={{
+                    placeholder: 'Buscar cliente por nome',
+                    value: search,
+                    onChange: setSearch,
+                }}
+                filters={[
+                    { key: 'all', value: 'all', label: 'Todos', count: visibleConditionals.length },
+                    { key: 'owing', value: 'owing', label: 'Devendo', count: visibleConditionals.filter((e) => Number(e.outstanding_total || 0) > 0).length },
+                    { key: 'alert', value: 'alert', label: 'Em alerta', count: visibleConditionals.filter((e) => Number(e.days_overdue || 0) > 0).length },
+                ]}
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+                onApply={applyFilters}
+                onReset={() => {
+                    setSearch(''); setActiveFilter('all'); setAppliedSearch(''); setAppliedFilter('all')
+                    setHasAppliedFilters(false); setSelectedRecordId(null); setOpenedRecordId(null)
+                    router.get('/venda-condicional', {}, { preserveScroll: true, preserveState: true, replace: true })
+                }}
+            />
 
-                    <section className="ui-list-page-table-card">
-                        <DataTable
-                            columns={[
-                                {
-                                    key: 'customer',
-                                    label: 'Cliente',
-                                    render: (conditionalSale) => conditionalSale.customer?.name || 'Cliente não informado',
-                                },
-                                {
-                                    key: 'purchase',
-                                    label: 'Compras',
-                                    render: (conditionalSale) => conditionalSale.sale?.sale_number ? `Venda ${conditionalSale.sale.sale_number}` : conditionalSale.code,
-                                },
-                                {
-                                    key: 'open',
-                                    label: 'Total em aberto',
-                                    align: 'right',
-                                    render: (conditionalSale) => <strong>{formatMoney(conditionalSale.outstanding_total || 0)}</strong>,
-                                },
-                                {
-                                    key: 'last_payment',
-                                    label: 'Ultimo pagamento',
-                                    render: (conditionalSale) => conditionalSale.resolved_at
-                                        ? formatDateTime(conditionalSale.resolved_at)
-                                        : '--',
-                                },
-                                {
-                                    key: 'limit',
-                                    label: 'Limite',
-                                    align: 'right',
-                                    render: (conditionalSale) => {
-                                        const customerMeta = customerMetaById.get(String(conditionalSale.customer?.id || '')) || {}
-                                        return formatMoney(customerMeta.credit_limit || 0)
-                                    },
-                                },
-                                {
-                                    key: 'status',
-                                    label: 'Status',
-                                    render: (conditionalSale) => (
-                                        <StatusBadge compact label={conditionalSale.status_label} tone={conditionalSale.status_tone} />
-                                    ),
-                                },
-                            ]}
-                            rows={filteredRows}
-                            rowKey="id"
-                            selectedRowKey={selectedRecordId}
-                            onRowClick={(conditionalSale) => setSelectedRecordId(conditionalSale.id)}
-                            onRowDoubleClick={(conditionalSale) => {
-                                setSelectedRecordId(conditionalSale.id)
-                                setDetailPanel('overview')
-                                setOpenedRecordId(conditionalSale.id)
-                            }}
-                            emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
-                            actions={(conditionalSale) => [
-                                {
-                                    key: 'view',
-                                    icon: 'fa-eye',
-                                    label: 'Ver cliente',
-                                    tone: 'primary',
-                                    onClick: () => {
-                                        setSelectedRecordId(conditionalSale.id)
-                                        setDetailPanel('overview')
-                                        setOpenedRecordId(conditionalSale.id)
-                                    },
-                                },
-                            ]}
-                        />
-                    </section>
+            {/* Cards de cliente */}
+            {filteredRows.length > 0 ? (
+                <div className="cs-grid">
+                    {filteredRows.map((sale) => {
+                        const customerMeta = customerMetaById.get(String(sale.customer?.id || '')) || {}
+                        const outstanding = Number(sale.outstanding_total || 0)
+                        const overdue = Number(sale.days_overdue || 0)
+                        const initials = (sale.customer?.name || '?').slice(0, 2).toUpperCase()
+                        const isSelected = selectedRecordId === sale.id
+
+                        return (
+                            <div
+                                key={sale.id}
+                                className={`cs-card ${isSelected ? 'cs-card--selected' : ''} ${overdue > 0 ? 'cs-card--alert' : ''}`}
+                                onClick={() => setSelectedRecordId(sale.id)}
+                                onDoubleClick={() => { setSelectedRecordId(sale.id); setDetailPanel('overview'); setOpenedRecordId(sale.id) }}
+                                role="button"
+                                tabIndex={0}
+                            >
+                                <div className="cs-card-head">
+                                    <div className={`cs-avatar ${overdue > 0 ? 'cs-avatar--danger' : outstanding > 0 ? 'cs-avatar--warning' : 'cs-avatar--ok'}`}>
+                                        {initials}
+                                    </div>
+                                    <div className="cs-card-info">
+                                        <strong>{sale.customer?.name || 'Cliente não informado'}</strong>
+                                        {overdue > 0 && <span className="cs-overdue">{overdue} dia(s) em atraso</span>}
+                                    </div>
+                                    <StatusBadge compact label={sale.status_label} tone={sale.status_tone} />
+                                </div>
+
+                                <div className="cs-card-amounts">
+                                    <div className="cs-amount cs-amount--main">
+                                        <span>Deve</span>
+                                        <strong>{formatMoney(outstanding)}</strong>
+                                    </div>
+                                    {Number(customerMeta.credit_limit || 0) > 0 && (
+                                        <div className="cs-amount">
+                                            <span>Limite</span>
+                                            <strong>{formatMoney(customerMeta.credit_limit)}</strong>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="cs-card-actions">
+                                    <button type="button" className="cs-btn" onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('overview'); setOpenedRecordId(sale.id) }}>
+                                        <i className="fa-solid fa-eye" /> Ver
+                                    </button>
+                                    <button type="button" className="cs-btn cs-btn--pay" onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('finalize'); setOpenedRecordId(sale.id) }}>
+                                        <i className="fa-solid fa-money-bill-wave" /> Receber
+                                    </button>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
-
-                <ActionSidebar
-                    storageKey="conditional-sales-index"
-                    actions={[
-                        {
-                            key: 'view',
-                            icon: 'fa-eye',
-                            label: 'Ver cliente',
-                            disabled: !selectedRow,
-                            onClick: () => openSelected('overview'),
-                        },
-                        {
-                            key: 'payment',
-                            icon: 'fa-money-bill-wave',
-                            label: 'Registrar pagamento',
-                            disabled: !selectedRow || selectedRow.status === 'closed',
-                            onClick: () => openSelected('finalize'),
-                        },
-                        {
-                            key: 'entries',
-                            icon: 'fa-clipboard-list',
-                            label: 'Ver lancamentos',
-                            disabled: !selectedRow,
-                            onClick: () => openSelected('return'),
-                        },
-                    ]}
-                />
-            </div>
+            ) : (
+                <div className="cs-empty">
+                    <i className="fa-solid fa-handshake" />
+                    <strong>Nenhum resultado encontrado</strong>
+                    <p>Ajuste os filtros ou crie uma nova venda condicional.</p>
+                </div>
+            )}
 
             <ModalForm
                 description="Preencha cliente, datas e itens. O estoque será reservado na abertura."

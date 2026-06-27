@@ -78,18 +78,34 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
     return (
         <AppLayout title={moduleTitle}>
             <div className="stock-simple-page">
-                <section className="stock-simple-hero">
-                    <div className="stock-simple-hero-copy">
-                        <span className="stock-simple-icon"><i className="fa-solid fa-box-open" /></span>
+                {/* Banner */}
+                <div className="page-hero page-hero--teal">
+                    <div className="page-hero-left">
+                        <div className="page-hero-icon">
+                            <i className="fa-solid fa-box-open" />
+                        </div>
                         <div>
-                            <h1>Estoque</h1>
-                            <p>Controle o que entrou, saiu e esta acabando.</p>
+                            <h1 className="page-hero-title">Estoque</h1>
+                            <p className="page-hero-sub">Entradas, saídas e produtos que estão acabando</p>
                         </div>
                     </div>
-                    {lowStockProducts.length ? (
-                        <span className="stock-alert-badge critical">{formatNumber(lowStockProducts.length)} acabando</span>
-                    ) : null}
-                </section>
+                    <div className="page-hero-stats">
+                        <div className="page-hero-stat">
+                            <strong>{formatNumber(products.length)}</strong>
+                            <span>Produtos</span>
+                        </div>
+                        {lowStockProducts.length > 0 && (
+                            <div className="page-hero-stat page-hero-stat--danger">
+                                <strong>{formatNumber(lowStockProducts.length)}</strong>
+                                <span>Acabando</span>
+                            </div>
+                        )}
+                    </div>
+                    <button type="button" className="page-hero-cta" onClick={() => openReceiveModal()}>
+                        <i className="fa-solid fa-dolly" />
+                        Recebi mercadoria
+                    </button>
+                </div>
 
                 <section className="nimvo-action-grid" aria-label="Acoes de estoque">
                     <button type="button" className="nimvo-action-card tone-blue" onClick={() => openReceiveModal()}>

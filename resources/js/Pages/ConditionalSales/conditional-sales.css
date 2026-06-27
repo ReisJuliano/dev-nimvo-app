@@ -1,3 +1,160 @@
+/* ─── Customer cards (novo layout) ──────────────────────── */
+
+.cs-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    padding-top: 0.25rem;
+}
+
+.cs-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 1.125rem;
+    border-radius: 14px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.cs-card:hover { box-shadow: var(--app-shadow); transform: translateY(-2px); }
+
+.cs-card--selected {
+    border-color: rgba(37, 99, 235, 0.3);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08), var(--app-shadow);
+}
+
+.cs-card--alert { border-left: 3px solid var(--app-danger); }
+
+.cs-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cs-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+}
+
+.cs-avatar--ok      { background: rgba(22,163,74,0.1);   color: #16a34a; border-color: rgba(22,163,74,0.2); }
+.cs-avatar--warning { background: rgba(217,119,6,0.1);   color: #d97706; border-color: rgba(217,119,6,0.2); }
+.cs-avatar--danger  { background: rgba(220,38,38,0.1);   color: #dc2626; border-color: rgba(220,38,38,0.2); }
+
+.cs-card-info {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 0.15rem;
+}
+
+.cs-card-info strong {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--app-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cs-overdue {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--app-danger);
+}
+
+.cs-card-amounts {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: var(--app-surface-muted);
+    border: 1px solid var(--app-border);
+}
+
+.cs-amount { display: grid; gap: 0.1rem; }
+
+.cs-amount span {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--app-text-muted);
+}
+
+.cs-amount strong {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--app-text-primary);
+}
+
+.cs-amount--main strong { color: var(--app-danger); }
+
+.cs-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.cs-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    color: var(--app-text-secondary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--app-transition);
+    font-family: inherit;
+}
+
+.cs-btn:hover { background: var(--app-border); color: var(--app-text-primary); }
+
+.cs-btn--pay {
+    background: rgba(22,163,74,0.1);
+    border-color: rgba(22,163,74,0.2);
+    color: #16a34a;
+}
+.cs-btn--pay:hover { background: rgba(22,163,74,0.18); }
+
+.cs-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 300px;
+    text-align: center;
+    border-radius: 14px;
+    border: 1px dashed var(--app-border-strong);
+    background: var(--app-surface);
+    padding: 2rem;
+    color: var(--app-text-muted);
+}
+
+.cs-empty i { font-size: 2rem; opacity: 0.4; }
+.cs-empty strong { color: var(--app-text-secondary); }
+.cs-empty p { font-size: 0.875rem; margin: 0; }
+
+/* ─── Legacy ─────────────────────────────────────────────── */
+
 /* Layout especifico da venda condicional (alinha ao shell de Produtos / tokens globais) */
 .conditional-workspace {
     display: grid;

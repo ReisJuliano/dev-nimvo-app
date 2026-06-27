@@ -565,86 +565,78 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                     onReset={handleResetFilters}
                 />
 
-                {/* Table */}
-                <div className="prd-table-card">
-                    <DataTable
-                        columns={[
-                            {
-                                key: 'product',
-                                label: 'Produto',
-                                render: (product) => (
-                                    <div className="products-product-cell">
-                                        <strong>{product.name}</strong>
-                                        <div className="products-row-meta">
-                                            {product.code ? <span>#{product.code}</span> : null}
-                                            {product.barcode ? <span>{product.barcode}</span> : null}
+                {/* Grid de cards */}
+                {filteredProducts.length > 0 ? (
+                    <div className="prd-grid">
+                        {filteredProducts.map((product) => {
+                            const statusMeta = getProductStatusMeta(product)
+                            const low = isLowStock(product)
+                            const initial = (product.name || '?').slice(0, 2).toUpperCase()
+
+                            return (
+                                <div
+                                    key={product.id}
+                                    className={`prd-card ${selectedProductId === product.id ? 'prd-card--selected' : ''} ${!product.active ? 'prd-card--inactive' : ''}`}
+                                    onClick={() => setSelectedProductId(product.id)}
+                                    onDoubleClick={() => handleEdit(product)}
+                                    role="button"
+                                    tabIndex={0}
+                                >
+                                    <div className="prd-card-top">
+                                        <div className={`prd-card-avatar ${low ? 'prd-card-avatar--warn' : ''}`}>
+                                            {initial}
+                                        </div>
+                                        <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
+                                    </div>
+
+                                    <div className="prd-card-body">
+                                        <strong className="prd-card-name">{product.name}</strong>
+                                        {product.category_name
+                                            ? <span className="prd-card-category">{product.category_name}</span>
+                                            : null}
+                                    </div>
+
+                                    <div className="prd-card-footer">
+                                        <div className="prd-card-price">
+                                            <strong>{formatMoney(product.sale_price || 0)}</strong>
+                                            <small>custo {formatMoney(product.cost_price || 0)}</small>
+                                        </div>
+                                        <div className={`prd-card-stock ${low ? 'prd-card-stock--low' : ''}`}>
+                                            <i className={`fa-solid ${low ? 'fa-triangle-exclamation' : 'fa-box'}`} />
+                                            <span>{formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}</span>
                                         </div>
                                     </div>
-                                ),
-                            },
-                            {
-                                key: 'category',
-                                label: 'Categoria',
-                                render: (product) => product.category_name
-                                    ? <span className="prd-pill">{product.category_name}</span>
-                                    : <span className="prd-muted">—</span>,
-                            },
-                            {
-                                key: 'sale_price',
-                                label: 'Preço de venda',
-                                align: 'right',
-                                render: (product) => (
-                                    <div className="products-price-cell">
-                                        <strong>{formatMoney(product.sale_price || 0)}</strong>
-                                        <small>Custo {formatMoney(product.cost_price || 0)}</small>
+
+                                    <div className="prd-card-actions">
+                                        <button
+                                            type="button"
+                                            className="prd-card-btn"
+                                            onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
+                                            title="Editar"
+                                        >
+                                            <i className="fa-solid fa-pen" />
+                                            Editar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="prd-card-btn prd-card-btn--danger"
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
+                                            title="Excluir"
+                                        >
+                                            <i className="fa-solid fa-trash-can" />
+                                        </button>
                                     </div>
-                                ),
-                            },
-                            {
-                                key: 'stock',
-                                label: 'Estoque',
-                                align: 'right',
-                                render: (product) => (
-                                    <div className={`prd-stock-cell ${isLowStock(product) ? 'prd-stock-cell--low' : ''}`}>
-                                        <strong>{formatNumber(product.stock_quantity || 0)}</strong>
-                                        <small>mín {formatNumber(product.min_stock || 0)}</small>
-                                    </div>
-                                ),
-                            },
-                            {
-                                key: 'status',
-                                label: 'Status',
-                                render: (product) => {
-                                    const statusMeta = getProductStatusMeta(product)
-                                    return <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
-                                },
-                            },
-                        ]}
-                        rows={filteredProducts}
-                        rowKey="id"
-                        selectedRowKey={selectedProductId}
-                        onRowClick={(product) => setSelectedProductId(product.id)}
-                        onRowDoubleClick={(product) => handleEdit(product)}
-                        emptyMessage={hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}
-                        emptyIcon="fa-box-open"
-                        actions={(product) => [
-                            {
-                                key: 'edit',
-                                icon: 'fa-pen',
-                                label: 'Editar',
-                                tone: 'primary',
-                                onClick: () => handleEdit(product),
-                            },
-                            {
-                                key: 'delete',
-                                icon: 'fa-trash-can',
-                                label: 'Excluir',
-                                tone: 'danger',
-                                onClick: () => handleDelete(product),
-                            },
-                        ]}
-                    />
-                </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                ) : (
+                    <div className="prd-empty">
+                        <i className="fa-solid fa-box-open" />
+                        <strong>{hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}</strong>
+                        {!hasAppliedFilters && <p>Use a busca acima para encontrar seus produtos.</p>}
+                    </div>
+                )}
             </div>
 
             <ProductFormModal

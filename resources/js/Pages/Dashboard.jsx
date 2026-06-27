@@ -109,6 +109,8 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
     return (
         <AppLayout title="Resumo da loja">
             <div className="store-summary-page">
+
+                {/* Hero */}
                 <section className="store-summary-hero">
                     <div className="store-summary-hero-copy">
                         <div className="store-summary-hero-greeting">
@@ -117,7 +119,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                             </div>
                             <div>
                                 <h1>{getGreeting()}, {firstName}!</h1>
-                                <p>Veja como está indo a loja hoje.</p>
+                                <p>Aqui está o resumo de hoje da loja.</p>
                             </div>
                         </div>
                     </div>
@@ -130,15 +132,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                     </div>
                 </section>
 
-                <section className="store-summary-shortcuts" aria-label="Atalhos rapidos">
-                    {shortcuts.filter((shortcut) => shortcut.visible).map((shortcut) => (
-                        <Link key={shortcut.label} className={`store-summary-shortcut tone-${shortcut.tone}`} href={shortcut.href}>
-                            <i className={`fa-solid ${shortcut.icon}`} />
-                            <span>{shortcut.label}</span>
-                        </Link>
-                    ))}
-                </section>
-
+                {/* KPI cards */}
                 <section className="store-summary-cards" aria-label="Resumo de hoje">
                     {cards.map((card) => (
                         <article key={card.title} className={`store-summary-card store-summary-card--${card.color}`}>
@@ -155,35 +149,27 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                     ))}
                 </section>
 
-                {lowStockItems?.length ? (
+                {/* Atalhos rápidos */}
+                <section className="store-summary-shortcuts" aria-label="Atalhos rapidos">
+                    {shortcuts.filter((shortcut) => shortcut.visible).map((shortcut) => (
+                        <Link key={shortcut.label} className={`store-summary-shortcut tone-${shortcut.tone}`} href={shortcut.href}>
+                            <i className={`fa-solid ${shortcut.icon}`} />
+                            <span>{shortcut.label}</span>
+                        </Link>
+                    ))}
+                </section>
+
+                {/* Bottom: 2 colunas */}
+                <div className="store-summary-bottom">
+                    {/* Coluna esquerda: últimas vendas */}
                     <section className="store-summary-panel">
                         <header>
                             <div>
-                                <h2>Esta acabando</h2>
-                                <p>{formatNumber(lowStockItems.length)} produto(s) precisam de reposicao.</p>
+                                <h2>Últimas vendas</h2>
+                                <p>As 5 vendas mais recentes.</p>
                             </div>
-                            {Number(summary.low_stock_count || 0) > 5 ? <Link href="/entrada-estoque">Ver todos</Link> : null}
+                            <Link href="/relatorios">Ver todas</Link>
                         </header>
-                        <div className="store-summary-list">
-                            {lowStockItems.slice(0, 5).map((product) => (
-                                <div key={product.id} className="store-summary-list-row">
-                                    <span>{product.name}</span>
-                                    <strong>{formatNumber(product.stock_quantity)} {product.unit || 'UN'}</strong>
-                                    <Link href={`/entrada-estoque?product=${product.id}`}>Recebi mais</Link>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                ) : null}
-
-                <section className="store-summary-panel">
-                    <header>
-                        <div>
-                            <h2>Ultimas vendas</h2>
-                            <p>As 5 vendas mais recentes da loja.</p>
-                        </div>
-                        <Link href="/relatorios">Ver todas as vendas</Link>
-                    </header>
                     {recentSales?.length ? (
                         <div className="store-summary-sales-list">
                             {recentSales.slice(0, 5).map((sale) => (
@@ -202,7 +188,59 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                             <span>Quando a primeira venda sair, ela aparece aqui.</span>
                         </div>
                     )}
-                </section>
+                    </section>
+
+                    {/* Coluna direita: estoque baixo + ações rápidas */}
+                    <div className="store-summary-right-col">
+                        {lowStockItems?.length ? (
+                            <section className="store-summary-panel">
+                                <header>
+                                    <div>
+                                        <h2>Acabando no estoque</h2>
+                                        <p>{formatNumber(lowStockItems.length)} produto(s) abaixo do mínimo.</p>
+                                    </div>
+                                    {Number(summary.low_stock_count || 0) > 5 ? <Link href="/entrada-estoque">Ver todos</Link> : null}
+                                </header>
+                                <div className="store-summary-list">
+                                    {lowStockItems.slice(0, 5).map((product) => (
+                                        <div key={product.id} className="store-summary-list-row">
+                                            <span>{product.name}</span>
+                                            <strong>{formatNumber(product.stock_quantity)} {product.unit || 'UN'}</strong>
+                                            <Link href={`/entrada-estoque?product=${product.id}`}>Repor</Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        ) : null}
+
+                        <section className="store-summary-panel store-summary-panel--actions">
+                            <header>
+                                <div>
+                                    <h2>Acesso rápido</h2>
+                                    <p>Atalhos para as áreas mais usadas.</p>
+                                </div>
+                            </header>
+                            <div className="store-summary-quick-links">
+                                <Link href="/produtos" className="store-summary-quick-link">
+                                    <i className="fa-solid fa-boxes-stacked" />
+                                    <span>Produtos</span>
+                                </Link>
+                                <Link href="/clientes" className="store-summary-quick-link">
+                                    <i className="fa-solid fa-users" />
+                                    <span>Clientes</span>
+                                </Link>
+                                <Link href="/relatorios" className="store-summary-quick-link">
+                                    <i className="fa-solid fa-chart-bar" />
+                                    <span>Relatórios</span>
+                                </Link>
+                                <Link href="/contas-a-pagar" className="store-summary-quick-link">
+                                    <i className="fa-solid fa-file-invoice-dollar" />
+                                    <span>Contas</span>
+                                </Link>
+                            </div>
+                        </section>
+                    </div>
+                </div>
             </div>
         </AppLayout>
     )

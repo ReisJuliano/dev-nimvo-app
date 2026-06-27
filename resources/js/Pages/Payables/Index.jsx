@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
 import CompactModal from '@/Components/UI/CompactModal'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -398,105 +397,70 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                 </button>
             </div>
 
-            <div className="ui-list-page-shell">
-                <div className="ui-list-page-main">
-                    <PageHeader
-                        title={moduleTitle}
-                        search={{
-                            placeholder: 'Buscar por fornecedor ou descrição',
-                            value: searchControl.draftValue,
-                            onChange: searchControl.setDraftValue,
-                        }}
-                        filters={STATUS_FILTERS.map((filter) => ({
-                            ...filter,
-                            count: statusCounts[filter.key],
-                        }))}
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                        dateRange={{
-                            from: range.from,
-                            to: range.to,
-                            onChange: setRange,
-                        }}
-                        quickDates
-                        onApply={handleApplyFilters}
-                        onReset={handleResetFilters}
-                    />
+            <PageHeader
+                search={{
+                    placeholder: 'Buscar por fornecedor ou descrição',
+                    value: searchControl.draftValue,
+                    onChange: searchControl.setDraftValue,
+                }}
+                filters={STATUS_FILTERS.map((filter) => ({
+                    ...filter,
+                    count: statusCounts[filter.key],
+                }))}
+                activeFilter={activeFilter}
+                onFilterChange={setActiveFilter}
+                dateRange={{ from: range.from, to: range.to, onChange: setRange }}
+                quickDates
+                onApply={handleApplyFilters}
+                onReset={handleResetFilters}
+            />
 
-                    {feedback ? (
-                        <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                            <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                            <span>{feedback.text}</span>
-                        </div>
-                    ) : null}
-
-                    <section className="ui-list-page-table-card">
-                        <DataTable
-                            columns={tableColumns}
-                            rows={filteredRecords}
-                            selectedRowKey={selectedId}
-                            onRowClick={(record) => setSelectedId(record.id)}
-                            onRowDoubleClick={(record) => {
-                                setSelectedId(record.id)
-                                setDetailModalOpen(true)
-                            }}
-                            emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
-                            actions={(record) => [
-                                {
-                                    key: 'view',
-                                    icon: 'fa-eye',
-                                    label: 'Ver detalhes',
-                                    tone: 'primary',
-                                    onClick: () => {
-                                        setSelectedId(record.id)
-                                        setDetailModalOpen(true)
-                                    },
-                                },
-                            ]}
-                        />
-                    </section>
-
-                    <div className="proc-ui-footer-totals">
-                        <span>Total em aberto: <strong>{formatMoney(totals.open)}</strong></span>
-                        <span>Vencidos: <strong>{formatMoney(totals.overdue)}</strong></span>
-                    </div>
+            {feedback ? (
+                <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
+                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                    <span>{feedback.text}</span>
                 </div>
+            ) : null}
 
-                <ActionSidebar
-                    storageKey="payables-index"
-                    actions={[
+            <section className="ui-list-page-table-card">
+                <DataTable
+                    columns={tableColumns}
+                    rows={filteredRecords}
+                    selectedRowKey={selectedId}
+                    onRowClick={(record) => setSelectedId(record.id)}
+                    onRowDoubleClick={(record) => { setSelectedId(record.id); setDetailModalOpen(true) }}
+                    emptyMessage="Nenhum resultado. Ajuste os filtros e clique em Filtrar."
+                    actions={(record) => [
                         {
-                            key: 'create',
-                            icon: 'fa-plus',
-                            label: 'Novo lancamento',
+                            key: 'view',
+                            icon: 'fa-eye',
                             tone: 'primary',
-                            onClick: openCreateModal,
+                            onClick: () => { setSelectedId(record.id); setDetailModalOpen(true) },
                         },
                         {
                             key: 'payment',
                             icon: 'fa-money-bill-wave',
-                            label: 'Registrar pagamento',
-                            disabled: !selectedRecord || selectedRecord.status === 'paid',
-                            onClick: () => selectedRecord && setPaymentModal(buildPaymentDraft(selectedRecord)),
+                            tone: 'primary',
+                            onClick: () => setPaymentModal(buildPaymentDraft(record)),
                         },
                         {
                             key: 'edit',
                             icon: 'fa-pen',
-                            label: 'Editar',
-                            disabled: !selectedRecord,
-                            onClick: () => selectedRecord && openEditModal(selectedRecord),
+                            onClick: () => openEditModal(record),
                         },
                         {
                             key: 'delete',
                             icon: 'fa-trash',
-                            label: 'Excluir',
                             tone: 'danger',
-                            dividerBefore: true,
-                            disabled: !selectedRecord,
-                            onClick: () => selectedRecord && handleDelete(selectedRecord),
+                            onClick: () => handleDelete(record),
                         },
                     ]}
                 />
+            </section>
+
+            <div className="proc-ui-footer-totals">
+                <span>Total em aberto: <strong>{formatMoney(totals.open)}</strong></span>
+                <span>Vencidos: <strong>{formatMoney(totals.overdue)}</strong></span>
             </div>
 
             <CompactModal

@@ -2,7 +2,6 @@ import { startTransition, useCallback, useEffect, useMemo, useRef, useState } fr
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import StatusBadge from '@/Components/UI/StatusBadge'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
@@ -1830,68 +1829,35 @@ export default function OrdersIndex({
                                 rowKey="id"
                                 selectedRowKey={selectedListDraftId}
                                 onRowClick={(draft) => setSelectedListDraftId(draft.id)}
-                                onRowDoubleClick={(draft) => {
-                                    setSelectedListDraftId(draft.id)
-                                    openDraft(draft.id)
+                                onRowDoubleClick={(draft) => { setSelectedListDraftId(draft.id); openDraft(draft.id) }}
+                                emptyMessage="Nenhum resultado. Ajuste os filtros e clique em Filtrar."
+                                actions={(draft) => {
+                                    const statusMeta = getOrderStatusMeta(draft.status)
+                                    const canAdvance = Boolean(statusMeta?.can_advance)
+                                    const canCancel = Boolean(statusMeta?.can_cancel)
+
+                                    return [
+                                        { key: 'view', icon: 'fa-eye', tone: 'primary', onClick: () => openDraft(draft.id) },
+                                        canAdvance ? { key: 'advance', icon: 'fa-play', tone: 'primary', onClick: () => void handleAdvanceListDraft(draft) } : null,
+                                        canCancel ? { key: 'cancel', icon: 'fa-xmark', tone: 'danger', onClick: () => void handleCancelListDraft(draft) } : null,
+                                    ].filter(Boolean)
                                 }}
-                                emptyMessage="Nenhum resultado encontrado. Ajuste os filtros e clique em Filtrar."
-                                actions={(draft) => [
-                                    {
-                                        key: 'view',
-                                        icon: 'fa-eye',
-                                        label: 'Ver detalhes',
-                                        tone: 'primary',
-                                        onClick: () => openDraft(draft.id),
-                                    },
-                                ]}
                             />
                         </section>
 
                         <footer className="purchases-table-footer">
-                            <span>{filteredDrafts.length} pedido(s)</span>
-                            <span>{filteredDraftsItems} item(ns)</span>
-                            <span>Total: <strong>{formatMoney(filteredDraftsValue)}</strong></span>
+                            <span>{filteredDrafts.length} pedido(s) · {filteredDraftsItems} item(ns)</span>
+                            <span>Total filtrado: <strong>{formatMoney(filteredDraftsValue)}</strong></span>
+                            <button
+                                type="button"
+                                className="action-button tone-primary"
+                                onClick={() => { setNewDraftForm(getInitialNewDraftForm()); setNewDraftModalOpen(true) }}
+                            >
+                                <i className="fa-solid fa-plus" />
+                                Novo pedido
+                            </button>
                         </footer>
                     </div>
-
-                    <ActionSidebar
-                        storageKey="orders-index"
-                        actions={[
-                            {
-                                key: 'create',
-                                icon: 'fa-plus',
-                                label: 'Novo pedido',
-                                tone: 'primary',
-                                onClick: () => {
-                                    setNewDraftForm(getInitialNewDraftForm())
-                                    setNewDraftModalOpen(true)
-                                },
-                            },
-                            {
-                                key: 'view',
-                                icon: 'fa-eye',
-                                label: 'Ver detalhes',
-                                disabled: !selectedListDraft,
-                                onClick: () => selectedListDraft && openDraft(selectedListDraft.id),
-                            },
-                            {
-                                key: 'advance',
-                                icon: 'fa-play',
-                                label: 'Avancar status',
-                                disabled: !canAdvanceSelectedListDraft || sendingDraft,
-                                onClick: () => selectedListDraft && void handleAdvanceListDraft(selectedListDraft),
-                            },
-                            {
-                                key: 'cancel',
-                                icon: 'fa-xmark',
-                                label: 'Cancelar',
-                                tone: 'danger',
-                                dividerBefore: true,
-                                disabled: !canCancelSelectedListDraft || deletingDraft,
-                                onClick: () => selectedListDraft && void handleCancelListDraft(selectedListDraft),
-                            },
-                        ]}
-                    />
                 </div>
 
                 {draftModalOpen ? (
