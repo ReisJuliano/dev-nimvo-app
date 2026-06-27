@@ -77,174 +77,189 @@ export default function StockEntryIndex({ moduleTitle = 'Estoque', payload }) {
 
     return (
         <AppLayout title={moduleTitle}>
-            <div className="stock-simple-page">
-                {/* Banner */}
-                <div className="page-hero page-hero--teal">
-                    <div className="page-hero-left">
-                        <div className="page-hero-icon">
+            <div className="se-page">
+
+                {/* ─── Header ─── */}
+                <div className="se-header">
+                    <div className="se-header-left">
+                        <div className="se-header-icon">
                             <i className="fa-solid fa-box-open" />
                         </div>
                         <div>
-                            <h1 className="page-hero-title">Estoque</h1>
-                            <p className="page-hero-sub">Entradas, saídas e produtos que estão acabando</p>
+                            <h1 className="se-header-title">Estoque</h1>
+                            <p className="se-header-sub">
+                                {formatNumber(products.length)} produto(s) cadastrado(s)
+                                {lowStockProducts.length > 0 ? ` · ${formatNumber(lowStockProducts.length)} acabando` : ''}
+                            </p>
                         </div>
                     </div>
-                    <div className="page-hero-stats">
-                        <div className="page-hero-stat">
-                            <strong>{formatNumber(products.length)}</strong>
-                            <span>Produtos</span>
-                        </div>
-                        {lowStockProducts.length > 0 && (
-                            <div className="page-hero-stat page-hero-stat--danger">
-                                <strong>{formatNumber(lowStockProducts.length)}</strong>
-                                <span>Acabando</span>
-                            </div>
-                        )}
+
+                    <div className="se-header-actions">
+                        <button type="button" className="se-action-btn se-action-btn--primary" onClick={() => openReceiveModal()}>
+                            <i className="fa-solid fa-dolly" />
+                            Recebi mercadoria
+                        </button>
+                        <Link className="se-action-btn se-action-btn--ghost" href="/movimentacao-estoque">
+                            <i className="fa-solid fa-scale-balanced" />
+                            Ajustar estoque
+                        </Link>
+                        <Link className="se-action-btn se-action-btn--ghost" href="/entrada-estoque">
+                            <i className="fa-solid fa-clock-rotate-left" />
+                            Histórico
+                        </Link>
                     </div>
-                    <button type="button" className="page-hero-cta" onClick={() => openReceiveModal()}>
-                        <i className="fa-solid fa-dolly" />
-                        Recebi mercadoria
-                    </button>
                 </div>
 
-                <section className="nimvo-action-grid" aria-label="Acoes de estoque">
-                    <button type="button" className="nimvo-action-card tone-blue" onClick={() => openReceiveModal()}>
-                        <span className="nimvo-action-icon"><i className="fa-solid fa-dolly" /></span>
-                        <span className="nimvo-action-copy">
-                            <strong>Recebi mercadoria</strong>
-                            <small>Registre o que chegou na loja</small>
-                        </span>
-                    </button>
-                    <Link className="nimvo-action-card tone-green" href="/movimentacao-estoque">
-                        <span className="nimvo-action-icon"><i className="fa-solid fa-scale-balanced" /></span>
-                        <span className="nimvo-action-copy">
-                            <strong>Ajustar estoque</strong>
-                            <small>Corrija diferencas no estoque</small>
-                        </span>
-                    </Link>
-                    <button
-                        type="button"
-                        className="nimvo-action-card tone-amber"
-                        onClick={() => {
-                            setActiveFilter('low')
-                            setQuery('')
-                            document.getElementById('produtos-em-estoque')?.scrollIntoView({ behavior: 'smooth' })
-                        }}
-                    >
-                        <span className="nimvo-action-icon">
-                            <i className="fa-solid fa-triangle-exclamation" />
-                            {lowStockProducts.length ? <b>{formatNumber(lowStockProducts.length)}</b> : null}
-                        </span>
-                        <span className="nimvo-action-copy">
-                            <strong>Produtos acabando</strong>
-                            <small>{lowStockProducts.length ? `${formatNumber(lowStockProducts.length)} produtos abaixo do minimo` : 'Tudo certo por enquanto'}</small>
-                        </span>
-                    </button>
-                    <Link className="nimvo-action-card tone-slate" href="/movimentacao-estoque">
-                        <span className="nimvo-action-icon"><i className="fa-solid fa-clock-rotate-left" /></span>
-                        <span className="nimvo-action-copy">
-                            <strong>Historico do estoque</strong>
-                            <small>Veja entradas e ajustes anteriores</small>
-                        </span>
-                    </Link>
-                </section>
-
-                <section id="produtos-em-estoque" className="stock-products-section">
-                    <header className="stock-section-header">
-                        <div>
-                            <h2>Produtos em estoque</h2>
-                            <p>Busque um produto e registre entrada quando chegar mais mercadoria.</p>
+                {/* ─── Alerta estoque baixo ─── */}
+                {lowStockProducts.length > 0 ? (
+                    <div className="se-alert">
+                        <div className="se-alert-left">
+                            <div className="se-alert-icon">
+                                <i className="fa-solid fa-triangle-exclamation" />
+                            </div>
+                            <div>
+                                <strong>{formatNumber(lowStockProducts.length)} produto(s) abaixo do estoque mínimo</strong>
+                                <span>Reponha o estoque para não perder vendas.</span>
+                            </div>
                         </div>
-                    </header>
+                        <button
+                            type="button"
+                            className="se-alert-btn"
+                            onClick={() => { setActiveFilter('low'); setQuery('') }}
+                        >
+                            Ver produtos acabando
+                        </button>
+                    </div>
+                ) : null}
 
-                    {pageFeedback ? (
-                        <div className="stock-feedback success" role="status">
-                            {pageFeedback}
-                        </div>
-                    ) : null}
+                {/* ─── Feedback ─── */}
+                {pageFeedback ? (
+                    <div className="se-feedback">
+                        <i className="fa-solid fa-circle-check" />
+                        {pageFeedback}
+                    </div>
+                ) : null}
 
-                    <label className="stock-search-field nimvo-search">
+                {/* ─── Busca + filtros ─── */}
+                <div className="se-search-bar">
+                    <label className="se-search-wrap">
                         <i className="fa-solid fa-magnifying-glass" />
                         <input
                             value={query}
-                            onChange={(event) => {
-                                setQuery(event.target.value)
-                                setActiveFilter(null)
-                                setPageFeedback(null)
-                            }}
-                            placeholder="Buscar por nome, codigo ou codigo de barras"
+                            onChange={(e) => { setQuery(e.target.value); setActiveFilter(null); setPageFeedback(null) }}
+                            placeholder="Nome, código ou código de barras..."
                         />
+                        {query ? (
+                            <button type="button" className="se-clear-search" onClick={() => { setQuery(''); setPageFeedback(null) }}>
+                                <i className="fa-solid fa-xmark" />
+                            </button>
+                        ) : null}
                     </label>
 
-                    {activeFilter === 'low' ? (
-                        <div className="stock-active-filter">
-                            <span>Mostrando produtos acabando</span>
-                            <button type="button" onClick={() => setActiveFilter(null)}>
-                                <i className="fa-solid fa-xmark" />
-                                Limpar filtro
-                            </button>
-                        </div>
-                    ) : null}
+                    <div className="se-filter-chips">
+                        <button
+                            type="button"
+                            className={`se-chip ${activeFilter === null && !query ? 'active' : ''}`}
+                            onClick={() => { setActiveFilter(null); setQuery('') }}
+                        >
+                            <i className="fa-solid fa-list" />
+                            Buscar
+                        </button>
+                        <button
+                            type="button"
+                            className={`se-chip ${activeFilter === 'low' ? 'active active-warn' : ''}`}
+                            onClick={() => { setActiveFilter('low'); setQuery('') }}
+                        >
+                            <i className="fa-solid fa-triangle-exclamation" />
+                            Acabando
+                            {lowStockProducts.length > 0 ? <span>{formatNumber(lowStockProducts.length)}</span> : null}
+                        </button>
+                    </div>
+                </div>
 
-                    {!products.length ? (
-                        <div className="stock-empty-state nimvo-empty">
-                            <i className="fa-solid fa-box-open" />
-                            <strong>Nenhum produto cadastrado ainda</strong>
-                            <span>Cadastre seu primeiro produto para comecar a vender.</span>
-                            <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
-                        </div>
-                    ) : !hasRequestedProducts ? (
-                        <div className="stock-list-prompt nimvo-empty">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <strong>Digite para buscar um produto</strong>
-                            <span>Ou use o atalho Produtos acabando acima.</span>
-                        </div>
-                    ) : filteredProducts.length ? (
-                        <div className="stock-table-wrap">
-                            <table className="stock-products-table nimvo-table">
-                                <thead>
-                                    <tr>
-                                        <th>Nome</th>
-                                        <th>Estoque</th>
-                                        <th>Minimo</th>
-                                        <th>Acao</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredProducts.map((product) => {
-                                        const state = getStockState(product)
+                {/* ─── Tabela ─── */}
+                {!products.length ? (
+                    <div className="se-empty-state">
+                        <div className="se-empty-icon"><i className="fa-solid fa-box-open" /></div>
+                        <strong>Nenhum produto cadastrado</strong>
+                        <p>Cadastre produtos primeiro para controlar o estoque.</p>
+                        <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                    </div>
+                ) : !hasRequestedProducts ? (
+                    <div className="se-empty-state se-empty-state--prompt">
+                        <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
+                        <strong>Digite um nome ou clique em "Acabando"</strong>
+                        <p>Para ver todos os produtos, use o filtro acima.</p>
+                    </div>
+                ) : filteredProducts.length ? (
+                    <div className="se-table-card">
+                        <table className="se-table">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Em estoque</th>
+                                    <th>Estoque mínimo</th>
+                                    <th>Status</th>
+                                    <th style={{ width: 110 }}>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredProducts.map((product) => {
+                                    const state = getStockState(product)
 
-                                        return (
-                                            <tr key={product.id} className={`is-${state} ${state === 'zero' ? 'status-zerado' : state === 'low' ? 'status-baixo' : ''}`}>
-                                                <td className="col-nome">
-                                                    <strong>{product.name}</strong>
-                                                    {product.code || product.barcode ? <small>{product.code || product.barcode}</small> : null}
-                                                </td>
-                                                <td>
-                                                    <span className={`stock-status-text ${state}`}>
-                                                        {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
-                                                    </span>
-                                                </td>
-                                                <td>{formatNumber(product.min_stock || 0)} {product.unit || 'UN'}</td>
-                                                <td>
-                                                    <button type="button" className="stock-inline-action" onClick={() => openReceiveModal(product)}>
-                                                        Recebi mais
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : (
-                        <div className="stock-list-prompt nimvo-empty">
-                            <i className="fa-solid fa-magnifying-glass" />
-                            <strong>Nenhum produto encontrado</strong>
-                            <span>Tente outro nome, codigo ou codigo de barras.</span>
-                        </div>
-                    )}
-                </section>
+                                    return (
+                                        <tr key={product.id} className={`se-row se-row--${state}`}>
+                                            <td>
+                                                <div className="se-product-cell">
+                                                    <div className={`se-product-dot se-product-dot--${state}`} />
+                                                    <div>
+                                                        <strong>{product.name}</strong>
+                                                        {product.code || product.barcode ? (
+                                                            <small>{product.code || product.barcode}</small>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`se-stock-badge se-stock-badge--${state}`}>
+                                                    {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
+                                                </span>
+                                            </td>
+                                            <td className="se-min-col">
+                                                {formatNumber(product.min_stock || 0)} {product.unit || 'UN'}
+                                            </td>
+                                            <td>
+                                                {state === 'zero' ? (
+                                                    <span className="se-status se-status--zero">Sem estoque</span>
+                                                ) : state === 'low' ? (
+                                                    <span className="se-status se-status--low">Estoque baixo</span>
+                                                ) : (
+                                                    <span className="se-status se-status--ok">Normal</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="se-receive-btn"
+                                                    onClick={() => openReceiveModal(product)}
+                                                >
+                                                    <i className="fa-solid fa-plus" />
+                                                    Recebi mais
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="se-empty-state">
+                        <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
+                        <strong>Nenhum produto encontrado</strong>
+                        <p>Tente outro nome, código ou código de barras.</p>
+                    </div>
+                )}
             </div>
 
             <RecebiMercadoriaModal

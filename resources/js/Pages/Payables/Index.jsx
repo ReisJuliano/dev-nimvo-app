@@ -8,6 +8,7 @@ import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatMoney } from '@/lib/format'
+import './payables.css'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import { buildRecordsUrl, upsertRecord } from '@/Pages/Operations/workspaces/shared'
 import '../Operations/backoffice-workspace.css'
@@ -367,100 +368,244 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
 
     return (
         <AppLayout title={moduleTitle}>
-            <div className="page-hero page-hero--amber">
-                <div className="page-hero-left">
-                    <div className="page-hero-icon">
-                        <i className="fa-solid fa-file-invoice-dollar" />
+            <div className="pay-page">
+
+                {/* ─── Header ─── */}
+                <div className="pay-header">
+                    <div className="pay-header-left">
+                        <div className="pay-header-icon">
+                            <i className="fa-solid fa-file-invoice-dollar" />
+                        </div>
+                        <div>
+                            <h1 className="pay-header-title">{moduleTitle}</h1>
+                            <p className="pay-header-sub">Controle de pagamentos e vencimentos</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="page-hero-title">{moduleTitle}</h1>
-                        <p className="page-hero-sub">Controle de pagamentos e vencimentos</p>
+                    <button className="pay-new-btn" onClick={openCreateModal} type="button">
+                        <i className="fa-solid fa-plus" />
+                        Novo lançamento
+                    </button>
+                </div>
+
+                {/* ─── KPI cards ─── */}
+                <div className="pay-kpis">
+                    <div className="pay-kpi pay-kpi--amber">
+                        <div className="pay-kpi-icon">
+                            <i className="fa-solid fa-circle-dot" />
+                        </div>
+                        <div className="pay-kpi-body">
+                            <span>Em aberto</span>
+                            <strong>{formatMoney(totals.open)}</strong>
+                            <small>{statusCounts.open ?? 0} conta(s)</small>
+                        </div>
+                    </div>
+                    <div className="pay-kpi pay-kpi--danger">
+                        <div className="pay-kpi-icon">
+                            <i className="fa-solid fa-triangle-exclamation" />
+                        </div>
+                        <div className="pay-kpi-body">
+                            <span>Vencidas</span>
+                            <strong>{formatMoney(totals.overdue)}</strong>
+                            <small>{statusCounts.overdue ?? 0} conta(s)</small>
+                        </div>
+                    </div>
+                    <div className="pay-kpi pay-kpi--green">
+                        <div className="pay-kpi-icon">
+                            <i className="fa-solid fa-circle-check" />
+                        </div>
+                        <div className="pay-kpi-body">
+                            <span>Pagas</span>
+                            <strong>{statusCounts.paid ?? 0}</strong>
+                            <small>neste período</small>
+                        </div>
+                    </div>
+                    <div className="pay-kpi pay-kpi--default">
+                        <div className="pay-kpi-icon">
+                            <i className="fa-solid fa-list-check" />
+                        </div>
+                        <div className="pay-kpi-body">
+                            <span>Total carregado</span>
+                            <strong>{statusCounts.all ?? 0}</strong>
+                            <small>lançamentos</small>
+                        </div>
                     </div>
                 </div>
-                <div className="page-hero-stats">
-                    <div className="page-hero-stat">
-                        <strong>{formatMoney(totals.open)}</strong>
-                        <span>Em aberto</span>
+
+                {/* ─── Filtros + busca ─── */}
+                <div className="pay-toolbar">
+                    <div className="pay-filter-tabs">
+                        {STATUS_FILTERS.map((filter) => (
+                            <button
+                                key={filter.key}
+                                type="button"
+                                className={`pay-filter-tab ${activeFilter === filter.key ? 'active' : ''}`}
+                                onClick={() => setActiveFilter(filter.key)}
+                            >
+                                {filter.label}
+                                {statusCounts[filter.key] != null ? (
+                                    <span>{statusCounts[filter.key]}</span>
+                                ) : null}
+                            </button>
+                        ))}
                     </div>
-                    <div className="page-hero-stat page-hero-stat--danger">
-                        <strong>{formatMoney(totals.overdue)}</strong>
-                        <span>Vencidas</span>
-                    </div>
-                    <div className="page-hero-stat">
-                        <strong>{statusCounts.open ?? 0}</strong>
-                        <span>Contas</span>
+
+                    <div className="pay-toolbar-right">
+                        <label className="pay-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                placeholder="Buscar por descrição ou fornecedor..."
+                                value={searchControl.draftValue}
+                                onChange={(e) => searchControl.setDraftValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+                            />
+                        </label>
+
+                        <div className="pay-date-row">
+                            <input
+                                type="date"
+                                className="pay-date-input"
+                                value={range.from}
+                                onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+                            />
+                            <span>até</span>
+                            <input
+                                type="date"
+                                className="pay-date-input"
+                                value={range.to}
+                                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+                            />
+                        </div>
+
+                        <button type="button" className="pay-apply-btn" onClick={handleApplyFilters} disabled={busy}>
+                            {busy ? <i className="fa-solid fa-spinner fa-spin" /> : <i className="fa-solid fa-magnifying-glass" />}
+                            Filtrar
+                        </button>
+                        <button type="button" className="pay-reset-btn" onClick={handleResetFilters}>
+                            <i className="fa-solid fa-xmark" />
+                        </button>
                     </div>
                 </div>
-                <button className="page-hero-cta" onClick={openCreateModal} type="button">
-                    <i className="fa-solid fa-plus" />
-                    Novo lançamento
-                </button>
-            </div>
 
-            <PageHeader
-                search={{
-                    placeholder: 'Buscar por fornecedor ou descrição',
-                    value: searchControl.draftValue,
-                    onChange: searchControl.setDraftValue,
-                }}
-                filters={STATUS_FILTERS.map((filter) => ({
-                    ...filter,
-                    count: statusCounts[filter.key],
-                }))}
-                activeFilter={activeFilter}
-                onFilterChange={setActiveFilter}
-                dateRange={{ from: range.from, to: range.to, onChange: setRange }}
-                quickDates
-                onApply={handleApplyFilters}
-                onReset={handleResetFilters}
-            />
+                {/* ─── Feedback ─── */}
+                {feedback ? (
+                    <div className={`pay-feedback ${feedback.type}`}>
+                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                        <span>{feedback.text}</span>
+                    </div>
+                ) : null}
 
-            {feedback ? (
-                <div className={`proc-ui-flash ${feedback.type === 'success' ? 'success' : 'error'}`}>
-                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                    <span>{feedback.text}</span>
+                {/* ─── Tabela ─── */}
+                <div className="pay-table-card">
+                    {filteredRecords.length > 0 ? (
+                        <table className="pay-table">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Fornecedor / Credor</th>
+                                    <th style={{ textAlign: 'right' }}>Valor</th>
+                                    <th style={{ textAlign: 'right' }}>Restante</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th style={{ width: 120 }}>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredRecords.map((record) => {
+                                    const isOverdue = record.status === 'overdue'
+                                    const isPaid = record.status === 'paid'
+                                    const isSelected = record.id === selectedId
+
+                                    return (
+                                        <tr
+                                            key={record.id}
+                                            className={`pay-row ${isSelected ? 'selected' : ''} ${isOverdue ? 'overdue' : ''} ${isPaid ? 'paid' : ''}`}
+                                            onClick={() => setSelectedId(record.id)}
+                                        >
+                                            <td>
+                                                <div className="pay-row-desc">
+                                                    <strong>{record.description}</strong>
+                                                    <small>{record.purchase_code || record.code || 'Sem referência'}</small>
+                                                </div>
+                                            </td>
+                                            <td className="pay-row-supplier">
+                                                {record.supplier_name || 'Credor avulso'}
+                                            </td>
+                                            <td className="pay-row-money">
+                                                {formatMoney(record.amount)}
+                                            </td>
+                                            <td className={`pay-row-money ${isOverdue ? 'text-danger' : ''}`}>
+                                                <strong>{formatMoney(record.remaining_amount)}</strong>
+                                            </td>
+                                            <td className={`pay-row-date ${isOverdue ? 'text-danger' : ''}`}>
+                                                {isOverdue ? <i className="fa-solid fa-triangle-exclamation" /> : null}
+                                                {record.due_date ? formatDate(record.due_date) : '—'}
+                                            </td>
+                                            <td>
+                                                <StatusBadge compact label={record.status_label} tone={record.status_tone} />
+                                            </td>
+                                            <td>
+                                                <div className="pay-row-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="pay-row-btn"
+                                                        title="Ver detalhes"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedId(record.id); setDetailModalOpen(true) }}
+                                                    >
+                                                        <i className="fa-solid fa-eye" />
+                                                    </button>
+                                                    {!isPaid ? (
+                                                        <button
+                                                            type="button"
+                                                            className="pay-row-btn pay-row-btn--pay"
+                                                            title="Registrar pagamento"
+                                                            onClick={(e) => { e.stopPropagation(); setPaymentModal(buildPaymentDraft(record)) }}
+                                                        >
+                                                            <i className="fa-solid fa-money-bill-wave" />
+                                                        </button>
+                                                    ) : null}
+                                                    <button
+                                                        type="button"
+                                                        className="pay-row-btn"
+                                                        title="Editar"
+                                                        onClick={(e) => { e.stopPropagation(); openEditModal(record) }}
+                                                    >
+                                                        <i className="fa-solid fa-pen" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="pay-row-btn pay-row-btn--danger"
+                                                        title="Excluir"
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(record) }}
+                                                    >
+                                                        <i className="fa-solid fa-trash" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="pay-empty">
+                            <i className="fa-solid fa-file-invoice-dollar" />
+                            <strong>{hasLoadedRecords ? 'Nenhum lançamento encontrado' : 'Filtre para carregar os lançamentos'}</strong>
+                            <small>{hasLoadedRecords ? 'Ajuste os filtros acima.' : 'Use os filtros e clique em Filtrar.'}</small>
+                        </div>
+                    )}
+
+                    {filteredRecords.length > 0 ? (
+                        <div className="pay-footer">
+                            <span>
+                                <strong>{filteredRecords.length}</strong> lançamento(s) · Em aberto:&nbsp;
+                                <strong>{formatMoney(totals.open)}</strong>
+                                {totals.overdue > 0 ? (
+                                    <>&nbsp;·&nbsp;<span className="text-danger">Vencido: <strong>{formatMoney(totals.overdue)}</strong></span></>
+                                ) : null}
+                            </span>
+                        </div>
+                    ) : null}
                 </div>
-            ) : null}
-
-            <section className="ui-list-page-table-card">
-                <DataTable
-                    columns={tableColumns}
-                    rows={filteredRecords}
-                    selectedRowKey={selectedId}
-                    onRowClick={(record) => setSelectedId(record.id)}
-                    onRowDoubleClick={(record) => { setSelectedId(record.id); setDetailModalOpen(true) }}
-                    emptyMessage="Nenhum resultado. Ajuste os filtros e clique em Filtrar."
-                    actions={(record) => [
-                        {
-                            key: 'view',
-                            icon: 'fa-eye',
-                            tone: 'primary',
-                            onClick: () => { setSelectedId(record.id); setDetailModalOpen(true) },
-                        },
-                        {
-                            key: 'payment',
-                            icon: 'fa-money-bill-wave',
-                            tone: 'primary',
-                            onClick: () => setPaymentModal(buildPaymentDraft(record)),
-                        },
-                        {
-                            key: 'edit',
-                            icon: 'fa-pen',
-                            onClick: () => openEditModal(record),
-                        },
-                        {
-                            key: 'delete',
-                            icon: 'fa-trash',
-                            tone: 'danger',
-                            onClick: () => handleDelete(record),
-                        },
-                    ]}
-                />
-            </section>
-
-            <div className="proc-ui-footer-totals">
-                <span>Total em aberto: <strong>{formatMoney(totals.open)}</strong></span>
-                <span>Vencidos: <strong>{formatMoney(totals.overdue)}</strong></span>
             </div>
 
             <CompactModal

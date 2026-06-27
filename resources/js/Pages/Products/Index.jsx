@@ -494,149 +494,264 @@ export default function ProductsIndex({ products, categories, suppliers, filters
         [visibleCollectionItems],
     )
 
+    const detailProduct = selectedRow
+    const detailInitial = detailProduct ? (detailProduct.name || '?').slice(0, 2).toUpperCase() : ''
+    const detailStatus = detailProduct ? getProductStatusMeta(detailProduct) : null
+    const detailLow = detailProduct ? isLowStock(detailProduct) : false
+    const detailMargin = detailProduct && Number(detailProduct.sale_price || 0) > 0
+        ? ((Number(detailProduct.sale_price || 0) - Number(detailProduct.cost_price || 0)) / Number(detailProduct.sale_price)) * 100
+        : 0
+
+    const filtersList = [
+        { key: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : visibleCollectionItems.length },
+        { key: 'active', label: 'Ativos', count: filterCounts.active },
+        { key: 'low_stock', label: 'Estoque baixo', count: filterCounts.low_stock },
+        { key: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+    ]
+
     return (
         <AppLayout title="Produtos">
             <div className="prd-page">
 
-                {/* Banner */}
-                <div className="prd-banner">
-                    <div className="prd-banner-left">
-                        <div className="prd-banner-icon">
+                {/* Topbar */}
+                <div className="prd-topbar">
+                    <div className="prd-topbar-left">
+                        <div className="prd-topbar-icon">
                             <i className="fa-solid fa-boxes-stacked" />
                         </div>
                         <div>
-                            <h1 className="prd-banner-title">Produtos</h1>
-                            <p className="prd-banner-sub">Catálogo de produtos da loja</p>
+                            <h1 className="prd-topbar-title">Produtos</h1>
+                            <p className="prd-topbar-sub">Catálogo da loja</p>
                         </div>
                     </div>
 
-                    <div className="prd-banner-stats">
-                        <div className="prd-stat">
-                            <div className="prd-stat-icon prd-stat-icon--blue">
-                                <i className="fa-solid fa-box" />
-                            </div>
-                            <div className="prd-stat-body">
-                                <strong>{hasAppliedFilters ? filterCounts.all : visibleCollectionItems.length}</strong>
-                                <span>Cadastrados</span>
-                            </div>
+                    <div className="prd-topbar-stats">
+                        <div className="prd-stat-pill">
+                            <strong>{visibleCollectionItems.length}</strong>
+                            <span>Total</span>
                         </div>
-                        <div className="prd-stat">
-                            <div className="prd-stat-icon prd-stat-icon--amber">
+                        {filterCounts.low_stock > 0 ? (
+                            <div className="prd-stat-pill prd-stat-pill--warn">
                                 <i className="fa-solid fa-triangle-exclamation" />
-                            </div>
-                            <div className="prd-stat-body">
-                                <strong>{hasAppliedFilters ? filterCounts.low_stock : visibleCollectionItems.filter(isLowStock).length}</strong>
+                                <strong>{filterCounts.low_stock}</strong>
                                 <span>Estoque baixo</span>
                             </div>
-                        </div>
-                        <div className="prd-stat">
-                            <div className="prd-stat-icon prd-stat-icon--green">
-                                <i className="fa-solid fa-tag" />
-                            </div>
-                            <div className="prd-stat-body">
-                                <strong>{formatMoney(totalCatalogValue)}</strong>
-                                <span>Valor do catálogo</span>
-                            </div>
+                        ) : null}
+                        <div className="prd-stat-pill prd-stat-pill--value">
+                            <strong>{formatMoney(totalCatalogValue)}</strong>
+                            <span>Valor em catálogo</span>
                         </div>
                     </div>
 
-                    <button className="prd-banner-cta" onClick={handleCreate} type="button">
+                    <button className="prd-topbar-cta" onClick={handleCreate} type="button">
                         <i className="fa-solid fa-plus" />
                         Novo produto
                     </button>
                 </div>
 
-                {/* Search + filters */}
-                <PageHeader
-                    search={{
-                        placeholder: 'Buscar por nome, código ou EAN',
-                        value: searchControl.draftValue,
-                        onChange: searchControl.setDraftValue,
-                    }}
-                    filters={[
-                        { key: 'all', value: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : undefined },
-                        { key: 'active', value: 'active', label: 'Ativos', count: hasAppliedFilters ? filterCounts.active : undefined },
-                        { key: 'low_stock', value: 'low_stock', label: 'Estoque baixo', count: hasAppliedFilters ? filterCounts.low_stock : undefined },
-                        { key: 'inactive', value: 'inactive', label: 'Inativos', count: hasAppliedFilters ? filterCounts.inactive : undefined },
-                    ]}
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                    onApply={handleApplyFilters}
-                    onReset={handleResetFilters}
-                />
+                {/* Split layout */}
+                <div className="prd-split">
 
-                {/* Grid de cards */}
-                {filteredProducts.length > 0 ? (
-                    <div className="prd-grid">
-                        {filteredProducts.map((product) => {
-                            const statusMeta = getProductStatusMeta(product)
-                            const low = isLowStock(product)
-                            const initial = (product.name || '?').slice(0, 2).toUpperCase()
+                    {/* Painel esquerdo — lista */}
+                    <div className="prd-list-panel">
 
-                            return (
-                                <div
-                                    key={product.id}
-                                    className={`prd-card ${selectedProductId === product.id ? 'prd-card--selected' : ''} ${!product.active ? 'prd-card--inactive' : ''}`}
-                                    onClick={() => setSelectedProductId(product.id)}
-                                    onDoubleClick={() => handleEdit(product)}
-                                    role="button"
-                                    tabIndex={0}
+                        {/* Busca */}
+                        <div className="prd-search-row">
+                            <label className="prd-search-wrap">
+                                <i className="fa-solid fa-magnifying-glass" />
+                                <input
+                                    className="prd-search-input"
+                                    placeholder="Nome, código ou EAN..."
+                                    value={searchControl.draftValue}
+                                    onChange={(e) => searchControl.setDraftValue(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+                                />
+                            </label>
+                            <button type="button" className="prd-filter-btn" onClick={handleApplyFilters}>Filtrar</button>
+                            <button type="button" className="prd-reset-btn" onClick={handleResetFilters}>
+                                <i className="fa-solid fa-xmark" />
+                            </button>
+                        </div>
+
+                        {/* Tabs de status */}
+                        <div className="prd-filter-tabs">
+                            {filtersList.map((f) => (
+                                <button
+                                    key={f.key}
+                                    type="button"
+                                    className={`prd-filter-tab ${activeFilter === f.key ? 'active' : ''}`}
+                                    onClick={() => setActiveFilter(f.key)}
                                 >
-                                    <div className="prd-card-top">
-                                        <div className={`prd-card-avatar ${low ? 'prd-card-avatar--warn' : ''}`}>
-                                            {initial}
-                                        </div>
-                                        <StatusBadge compact label={statusMeta.label} tone={statusMeta.tone} />
-                                    </div>
+                                    {f.label}
+                                    {f.count != null ? <span>{f.count}</span> : null}
+                                </button>
+                            ))}
+                        </div>
 
-                                    <div className="prd-card-body">
-                                        <strong className="prd-card-name">{product.name}</strong>
-                                        {product.category_name
-                                            ? <span className="prd-card-category">{product.category_name}</span>
-                                            : null}
-                                    </div>
+                        {/* Lista de produtos */}
+                        {filteredProducts.length > 0 ? (
+                            <div className="prd-list">
+                                {filteredProducts.map((product) => {
+                                    const low = isLowStock(product)
+                                    const initial = (product.name || '?').slice(0, 2).toUpperCase()
+                                    const isActive = String(selectedProductId) === String(product.id)
 
-                                    <div className="prd-card-footer">
-                                        <div className="prd-card-price">
-                                            <strong>{formatMoney(product.sale_price || 0)}</strong>
-                                            <small>custo {formatMoney(product.cost_price || 0)}</small>
-                                        </div>
-                                        <div className={`prd-card-stock ${low ? 'prd-card-stock--low' : ''}`}>
-                                            <i className={`fa-solid ${low ? 'fa-triangle-exclamation' : 'fa-box'}`} />
-                                            <span>{formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="prd-card-actions">
+                                    return (
                                         <button
+                                            key={product.id}
                                             type="button"
-                                            className="prd-card-btn"
-                                            onClick={(e) => { e.stopPropagation(); handleEdit(product) }}
-                                            title="Editar"
+                                            className={`prd-list-row ${isActive ? 'active' : ''} ${!product.active ? 'inactive' : ''}`}
+                                            onClick={() => setSelectedProductId(product.id)}
                                         >
-                                            <i className="fa-solid fa-pen" />
-                                            Editar
+                                            <div className={`prd-list-avatar ${low ? 'warn' : ''} ${!product.active ? 'muted' : ''}`}>
+                                                {initial}
+                                            </div>
+                                            <div className="prd-list-info">
+                                                <strong>{product.name}</strong>
+                                                <small>{product.category_name || 'Sem categoria'}</small>
+                                            </div>
+                                            <div className="prd-list-right">
+                                                <span className="prd-list-price">{formatMoney(product.sale_price || 0)}</span>
+                                                {low ? (
+                                                    <span className="prd-list-stock-warn">
+                                                        <i className="fa-solid fa-triangle-exclamation" />
+                                                        {formatNumber(product.stock_quantity || 0)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="prd-list-stock">
+                                                        {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </button>
-                                        <button
-                                            type="button"
-                                            className="prd-card-btn prd-card-btn--danger"
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(product) }}
-                                            title="Excluir"
-                                        >
-                                            <i className="fa-solid fa-trash-can" />
-                                        </button>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <div className="prd-list-empty">
+                                <i className="fa-solid fa-box-open" />
+                                <strong>{hasAppliedFilters ? 'Nenhum produto encontrado' : 'Filtre para ver produtos'}</strong>
+                                <small>{hasAppliedFilters ? 'Tente outro filtro ou clique em Limpar.' : 'Use a busca acima ou clique em Filtrar.'}</small>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Painel direito — detalhe */}
+                    <div className="prd-detail-panel">
+                        {detailProduct ? (
+                            <>
+                                {/* Header do produto */}
+                                <div className="prd-detail-head">
+                                    <div className={`prd-detail-avatar ${detailLow ? 'warn' : ''} ${!detailProduct.active ? 'muted' : ''}`}>
+                                        {detailInitial}
+                                    </div>
+                                    <div className="prd-detail-head-info">
+                                        <h2>{detailProduct.name}</h2>
+                                        <span>{detailProduct.category_name || 'Sem categoria'}</span>
+                                    </div>
+                                    <span className={`prd-status-chip prd-status-chip--${detailStatus?.tone}`}>
+                                        {detailStatus?.label}
+                                    </span>
+                                </div>
+
+                                {/* Seção: Preços */}
+                                <div className="prd-detail-section">
+                                    <div className="prd-detail-section-title">
+                                        <i className="fa-solid fa-tag" />
+                                        Preços
+                                    </div>
+                                    <div className="prd-detail-kpis">
+                                        <div className="prd-detail-kpi prd-detail-kpi--primary">
+                                            <span>Preço de venda</span>
+                                            <strong>{formatMoney(detailProduct.sale_price || 0)}</strong>
+                                        </div>
+                                        <div className="prd-detail-kpi">
+                                            <span>Custo</span>
+                                            <strong>{formatMoney(detailProduct.cost_price || 0)}</strong>
+                                        </div>
+                                        <div className="prd-detail-kpi">
+                                            <span>Margem</span>
+                                            <strong>{formatNumber(detailMargin)}%</strong>
+                                        </div>
                                     </div>
                                 </div>
-                            )
-                        })}
+
+                                {/* Seção: Estoque */}
+                                <div className="prd-detail-section">
+                                    <div className="prd-detail-section-title">
+                                        <i className="fa-solid fa-box" />
+                                        Estoque
+                                    </div>
+                                    <div className="prd-detail-kpis">
+                                        <div className={`prd-detail-kpi ${detailLow ? 'prd-detail-kpi--warn' : 'prd-detail-kpi--primary'}`}>
+                                            <span>Em estoque</span>
+                                            <strong>{formatNumber(detailProduct.stock_quantity || 0)} {detailProduct.unit || 'UN'}</strong>
+                                        </div>
+                                        <div className="prd-detail-kpi">
+                                            <span>Estoque mínimo</span>
+                                            <strong>{formatNumber(detailProduct.min_stock || 0)} {detailProduct.unit || 'UN'}</strong>
+                                        </div>
+                                    </div>
+                                    {detailLow ? (
+                                        <div className="prd-detail-alert">
+                                            <i className="fa-solid fa-triangle-exclamation" />
+                                            Estoque abaixo do mínimo — repor o quanto antes.
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                {/* Seção: Identificação */}
+                                <div className="prd-detail-section">
+                                    <div className="prd-detail-section-title">
+                                        <i className="fa-solid fa-fingerprint" />
+                                        Identificação
+                                    </div>
+                                    <div className="prd-detail-fields">
+                                        <div className="prd-detail-field">
+                                            <span>Fornecedor</span>
+                                            <strong>{detailProduct.supplier_name || '—'}</strong>
+                                        </div>
+                                        <div className="prd-detail-field">
+                                            <span>Código interno</span>
+                                            <strong>{detailProduct.code || '—'}</strong>
+                                        </div>
+                                        <div className="prd-detail-field">
+                                            <span>EAN / Código de barras</span>
+                                            <strong>{detailProduct.barcode || '—'}</strong>
+                                        </div>
+                                        <div className="prd-detail-field">
+                                            <span>Unidade</span>
+                                            <strong>{detailProduct.unit || 'UN'}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Ações */}
+                                <div className="prd-detail-actions">
+                                    <button type="button" className="prd-detail-btn-edit" onClick={() => handleEdit(detailProduct)}>
+                                        <i className="fa-solid fa-pen" />
+                                        Editar produto
+                                    </button>
+                                    <button type="button" className="prd-detail-btn-delete" onClick={() => handleDelete(detailProduct)}>
+                                        <i className="fa-solid fa-trash-can" />
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="prd-detail-empty">
+                                <div className="prd-detail-empty-icon">
+                                    <i className="fa-solid fa-boxes-stacked" />
+                                </div>
+                                <strong>Selecione um produto</strong>
+                                <p>Clique em qualquer item da lista para ver os detalhes.</p>
+                                <button type="button" className="prd-topbar-cta" onClick={handleCreate}>
+                                    <i className="fa-solid fa-plus" />
+                                    Cadastrar produto
+                                </button>
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="prd-empty">
-                        <i className="fa-solid fa-box-open" />
-                        <strong>{hasAppliedFilters ? 'Nenhum produto encontrado' : 'Clique em Filtrar para buscar'}</strong>
-                        {!hasAppliedFilters && <p>Use a busca acima para encontrar seus produtos.</p>}
-                    </div>
-                )}
+                </div>
             </div>
 
             <ProductFormModal
