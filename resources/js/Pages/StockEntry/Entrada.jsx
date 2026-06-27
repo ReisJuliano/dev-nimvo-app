@@ -248,12 +248,7 @@ export default function StockEntradaPage({ payload }) {
                                 <li>Informe o custo se quiser atualizar</li>
                                 <li>Confirme — estoque é atualizado na hora</li>
                             </ol>
-                            <div className="se-info-divider" />
-                            <p className="se-info-note">
-                                Para entrada com nota fiscal completa,
-                                use <Link href="/entrada-estoque/manutencao">Compras com nota</Link>.
-                            </p>
-                        </div>
+                            </div>
                     </div>
                 </div>
             </div>
