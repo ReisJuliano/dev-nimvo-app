@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePage } from '@inertiajs/react'
-import PageContainer from '@/Components/UI/PageContainer'
 import CompactModal from '@/Components/UI/CompactModal'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
 import DenseTable from '@/Components/UI/DenseTable'
-import QuickActionBar from '@/Components/UI/QuickActionBar'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import AppLayout from '@/Layouts/AppLayout'
@@ -547,87 +545,108 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
 
     return (
         <AppLayout title="Caixa">
-            <div className="cash-register-page cash-register-page-compact">
+            <div className="cr-page">
                 {feedback ? (
-                    <div className={`ui-alert ${feedback.type}`}>
+                    <div className={`ui-alert ${feedback.type}`} style={{ marginTop: '0.875rem' }}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
                         <div>
-                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
+                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir' : 'Atualização realizada'}</strong>
                             <p>{feedback.text}</p>
                         </div>
                     </div>
                 ) : null}
 
-                <PageContainer
-                    className="cash-page-container"
-                    sidebar={(
-                        <QuickActionBar
-                            className="cash-quick-actions"
-                            items={quickActions}
-                            title="Acoes rapidas"
-                        />
-                    )}
-                >
-                    {openRegisterState ? (
-                        <div className="cash-compact-grid">
-                            <section className="cash-compact-hero">
-                                <div className="cash-compact-hero-copy">
-                                    <div className="cash-compact-hero-headline">
-                                        <StatusBadge icon="fa-vault" label="Caixa aberto" tone="success" />
-                                        <StatusBadge
-                                            compact
-                                            icon="fa-user"
-                                            label={openRegisterState.cashRegister.user_name || 'Operador'}
-                                            tone="info"
-                                        />
-                                    </div>
-                                    <strong>{formatMoney(openRegisterState.total_sales)}</strong>
-                                    <p>{openRegisterState.sales_count} venda(s) registradas no turno atual.</p>
+                {openRegisterState ? (
+                    <>
+                        {/* Status hero — mostra o essencial + botões de ação inline */}
+                        <div className="cr-hero">
+                            <div className="cr-hero-left">
+                                <div className="cr-hero-status">
+                                    <i className="fa-solid fa-circle-check" />
+                                    Caixa aberto
+                                    <span className="cr-hero-operator">· {openRegisterState.cashRegister.user_name || 'Operador'}</span>
                                 </div>
-                                <div className="cash-compact-hero-meta">
-                                    <div>
-                                        <span>Abertura</span>
-                                        <strong>{formatDateTime(openRegisterState.cashRegister.opened_at)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Dinheiro vendido</span>
-                                        <strong>{formatMoney(openRegisterState.cash_sales)}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Conferencia</span>
-                                        <strong>{requireConference ? 'Obrigatoria' : 'Simplificada'}</strong>
-                                    </div>
+                                <div className="cr-hero-amount">{formatMoney(openRegisterState.total_sales)}</div>
+                                <div className="cr-hero-meta">
+                                    {openRegisterState.sales_count} venda(s) registrada(s) · Abertura {formatDateTime(openRegisterState.cashRegister.opened_at)}
                                 </div>
-                            </section>
+                            </div>
 
-                            <section className="cash-compact-metrics">
-                                {summaryTiles.map((tile) => (
-                                    <article key={tile.key}>
-                                        <span>{tile.label}</span>
-                                        <strong>{tile.value}</strong>
-                                        <small>{tile.meta}</small>
-                                    </article>
-                                ))}
-                            </section>
-
-                            <PaymentSummaryTable report={openRegisterState} />
+                            <div className="cr-hero-actions">
+                                <button
+                                    type="button"
+                                    className="cr-action cr-action--ghost"
+                                    onClick={() => { setHistoryDrawerTab('movements'); setHistoryDrawerOpen(true) }}
+                                >
+                                    <i className="fa-solid fa-clock-rotate-left" />
+                                    Histórico
+                                </button>
+                                <button
+                                    type="button"
+                                    className="cr-action cr-action--supply"
+                                    disabled={!openRegisterState}
+                                    onClick={() => setMovementModalType('supply')}
+                                >
+                                    <i className="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center" />
+                                    Suprimento
+                                </button>
+                                <button
+                                    type="button"
+                                    className="cr-action cr-action--withdraw"
+                                    disabled={!openRegisterState}
+                                    onClick={() => setMovementModalType('withdrawal')}
+                                >
+                                    <i className="fa-solid fa-arrow-up-right-from-square" />
+                                    Sangria
+                                </button>
+                                <button
+                                    type="button"
+                                    className="cr-action cr-action--close"
+                                    disabled={!openRegisterState || loading}
+                                    onClick={handleStartCloseConference}
+                                >
+                                    <i className="fa-solid fa-lock" />
+                                    Fechar caixa
+                                </button>
+                            </div>
                         </div>
-                    ) : (
-                        <section className="cash-compact-closed-state">
-                            <CashRegisterEmpty
-                                action={(
-                                    <button type="button" className="ui-button" onClick={() => setOpenModalVisible(true)}>
-                                        <i className="fa-solid fa-lock-open" />
-                                        <span>Abrir caixa</span>
-                                    </button>
-                                )}
-                                icon="fa-vault"
-                                text="Nenhum caixa aberto no momento. Use apenas o valor inicial e siga com a operação."
-                                title="Caixa fechado"
-                            />
-                        </section>
-                    )}
-                </PageContainer>
+
+                        {/* Métricas do turno */}
+                        <div className="cr-metrics">
+                            {summaryTiles.map((tile) => (
+                                <div key={tile.key} className="cr-metric">
+                                    <span>{tile.label}</span>
+                                    <strong>{tile.value}</strong>
+                                    <small>{tile.meta}</small>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Pagamentos */}
+                        <PaymentSummaryTable report={openRegisterState} />
+                    </>
+                ) : (
+                    /* Caixa fechado — estado limpo e focado */
+                    <div className="cr-closed">
+                        <div className="cr-closed-icon">
+                            <i className="fa-solid fa-vault" />
+                        </div>
+                        <h2 className="cr-closed-title">Caixa fechado</h2>
+                        <p className="cr-closed-text">Abra o caixa para começar a registrar vendas do turno.</p>
+                        <button type="button" className="cr-open-btn" onClick={() => setOpenModalVisible(true)}>
+                            <i className="fa-solid fa-lock-open" />
+                            Abrir caixa agora
+                        </button>
+                        <button
+                            type="button"
+                            className="cr-history-link"
+                            onClick={() => { setHistoryDrawerTab('closings'); setHistoryDrawerOpen(true) }}
+                        >
+                            <i className="fa-solid fa-clock-rotate-left" />
+                            Ver histórico de fechamentos
+                        </button>
+                    </div>
+                )}
             </div>
 
             <CompactModal

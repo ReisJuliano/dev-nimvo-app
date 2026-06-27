@@ -1,3 +1,277 @@
+/* ─── New Cash Register layout ───────────────────────────── */
+
+.cr-page {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    padding-top: 0.875rem;
+}
+
+/* Hero — status + ações num só card */
+.cr-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.75rem 2rem;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #1e4d80 60%, #1a3a6b 100%);
+    box-shadow: 0 8px 32px rgba(30, 58, 95, 0.35);
+    flex-wrap: wrap;
+}
+
+.cr-hero-left {
+    display: grid;
+    gap: 0.35rem;
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.cr-hero-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #86efac;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.cr-hero-status i {
+    font-size: 0.75rem;
+}
+
+.cr-hero-operator {
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.cr-hero-amount {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.cr-hero-meta {
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Botões de ação dentro do hero */
+.cr-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.cr-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.cr-action:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.cr-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.cr-action--supply {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: #c7d2fe;
+}
+
+.cr-action--supply:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.32);
+    color: #e0e7ff;
+}
+
+.cr-action--withdraw {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fde68a;
+}
+
+.cr-action--withdraw:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fef3c7;
+}
+
+.cr-action--close {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.cr-action--close:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.28);
+    color: #fee2e2;
+}
+
+/* Métricas do turno */
+.cr-metrics {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cr-metric {
+    padding: 1rem 1.125rem;
+    border-radius: 14px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+    display: grid;
+    gap: 0.3rem;
+    transition: box-shadow 0.15s ease;
+}
+
+.cr-metric:hover {
+    box-shadow: var(--app-shadow);
+}
+
+.cr-metric span {
+    color: var(--app-text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.cr-metric strong {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--app-text-primary);
+    line-height: 1;
+}
+
+.cr-metric small {
+    color: var(--app-text-muted);
+    font-size: 0.76rem;
+}
+
+/* Estado fechado */
+.cr-closed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    min-height: 420px;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    border-radius: 20px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.cr-closed-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 22px;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    color: var(--app-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+
+.cr-closed-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--app-text-primary);
+}
+
+.cr-closed-text {
+    margin: 0;
+    color: var(--app-text-muted);
+    max-width: 36ch;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.cr-open-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border-radius: 12px;
+    border: none;
+    background: var(--app-primary);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    font-family: inherit;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
+}
+
+.cr-open-btn:hover {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+}
+
+.cr-history-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    color: var(--app-text-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0.25rem 0;
+    transition: color 0.15s ease;
+}
+
+.cr-history-link:hover {
+    color: var(--app-primary);
+}
+
+@media (max-width: 900px) {
+    .cr-hero { flex-direction: column; align-items: flex-start; }
+    .cr-hero-actions { width: 100%; justify-content: flex-start; }
+    .cr-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 500px) {
+    .cr-metrics { grid-template-columns: 1fr; }
+}
+
+/* ─── Legacy cash register classes (mantidas por compatibilidade) ── */
+
 .cash-register-page,
 .cash-register-grid {
     display: grid;
