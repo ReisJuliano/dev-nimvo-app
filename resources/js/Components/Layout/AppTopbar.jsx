@@ -1,3 +1,11 @@
+function getTodayLabel() {
+    return new Intl.DateTimeFormat('pt-BR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+    }).format(new Date())
+}
+
 export default function AppTopbar({ title, collapsed, onToggleSidebar, onToggleMobileSidebar }) {
     return (
         <header className="app-topbar">
@@ -15,6 +23,13 @@ export default function AppTopbar({ title, collapsed, onToggleSidebar, onToggleM
                 </button>
                 <div className="app-topbar-heading">
                     <span className="app-page-title">{title}</span>
+                </div>
+            </div>
+
+            <div className="app-topbar-right">
+                <div className="app-topbar-date-chip">
+                    <i className="fas fa-calendar-day" />
+                    {getTodayLabel()}
                 </div>
             </div>
         </header>
