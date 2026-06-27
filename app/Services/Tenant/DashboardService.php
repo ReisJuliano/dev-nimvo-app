@@ -188,7 +188,7 @@ class DashboardService
         $overduePayables = Payable::query()
             ->whereIn('status', ['open', 'overdue'])
             ->where('due_date', '<', $today)
-            ->selectRaw('COUNT(*) as count, COALESCE(SUM(remaining_amount), 0) as total')
+            ->selectRaw('COUNT(*) as count, COALESCE(SUM(amount - COALESCE(amount_paid, 0)), 0) as total')
             ->first();
 
         $averageTicket = (int) ($monthSales->qty ?? 0) > 0
