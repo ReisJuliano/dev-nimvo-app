@@ -159,10 +159,6 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                 <span className="cfg-active-chip cfg-active-chip--more">+{activeLabels.length - 5}</span>
                             ) : null}
                         </div>
-                        <button type="submit" className="cfg-save-btn" disabled={saving}>
-                            <i className={`fa-solid ${saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
-                            {saving ? 'Salvando...' : 'Salvar configurações'}
-                        </button>
                     </div>
 
                     {/* ─── Seção: Tipo de operação ─── */}

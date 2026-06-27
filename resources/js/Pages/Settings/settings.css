@@ -321,14 +321,14 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--app-border-strong);
+    background: #cbd5e1;
     flex-shrink: 0;
-    transition: background 0.18s ease;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 
 .cfg-module-dot.active {
     background: var(--app-success);
-    box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.22);
 }
 
 .cfg-module-info { flex: 1; min-width: 0; }

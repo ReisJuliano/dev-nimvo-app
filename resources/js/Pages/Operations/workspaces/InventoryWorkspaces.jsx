@@ -382,20 +382,21 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                 >
                     {/* Scan + seleção manual */}
                     <div className="inv-adder-row">
-                        <form className="inv-scan-group" onSubmit={handleScanSubmit}>
+                        <div className="inv-scan-group">
                             <input
                                 ref={scanInputRef}
                                 className="ui-input"
                                 value={scanCode}
                                 onChange={(e) => setScanCode(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleScanSubmit(e) } }}
                                 placeholder="Bipe EAN / código..."
                                 autoComplete="off"
                             />
-                            <button type="submit" className="ui-button">
+                            <button type="button" className="ui-button" onClick={handleScanSubmit}>
                                 <i className="fa-solid fa-barcode" />
                                 Bipar
                             </button>
-                        </form>
+                        </div>
 
                         <div className="inv-scan-group">
                             <select

@@ -1771,7 +1771,11 @@ export default function OrdersIndex({
                 {/* ─── Feedback ─── */}
                 {feedback ? (
                     <div className={`ord-feedback ord-feedback--${feedback.type}`}>
-                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : feedback.type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-check'}`} />
+                        <i className={`fa-solid ${
+                            feedback.type === 'error'   ? 'fa-circle-exclamation'   :
+                            feedback.type === 'warning' ? 'fa-triangle-exclamation' :
+                            'fa-circle-check'
+                        }`} />
                         <span>{feedback.text}</span>
                     </div>
                 ) : null}

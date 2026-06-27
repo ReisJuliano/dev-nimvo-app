@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup, showErrorPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
+import './products-modal.css'
 
 const ADD_NEW_OPTION = '__add_new__'
 
@@ -423,14 +424,26 @@ export default function ProductFormModal({
                                 {renderFieldError('cost_price')}
                             </label>
 
-                            <label className={`products-editor-field ${errors.stock_quantity ? 'has-error' : ''}`}>
-                                <span>Estoque atual</span>
-                                <div className="products-editor-input-wrap">
-                                    <i className="fa-solid fa-boxes-stacked" />
-                                    <input type="number" step="0.001" min="0" value={form.stock_quantity ?? ''} onChange={(event) => updateField('stock_quantity', event.target.value)} placeholder="Opcional" disabled={Boolean(product)} />
+                            {product ? (
+                                <div className="products-editor-field">
+                                    <span>Estoque atual</span>
+                                    <div className="products-editor-input-wrap" style={{ background: 'var(--app-surface-muted)', cursor: 'default' }}>
+                                        <i className="fa-solid fa-boxes-stacked" style={{ color: 'var(--app-text-muted)' }} />
+                                        <span style={{ fontSize: '0.875rem', color: 'var(--app-text-muted)' }}>
+                                            Use <strong>Entrada de mercadoria</strong> ou <strong>Ajuste de estoque</strong> para alterar.
+                                        </span>
+                                    </div>
                                 </div>
-                                {renderFieldError('stock_quantity')}
-                            </label>
+                            ) : (
+                                <label className={`products-editor-field ${errors.stock_quantity ? 'has-error' : ''}`}>
+                                    <span>Estoque inicial</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-boxes-stacked" />
+                                        <input type="number" step="0.001" min="0" value={form.stock_quantity ?? ''} onChange={(event) => updateField('stock_quantity', event.target.value)} placeholder="Opcional" />
+                                    </div>
+                                    {renderFieldError('stock_quantity')}
+                                </label>
+                            )}
 
                             <label className={`products-editor-field ${errors.min_stock ? 'has-error' : ''}`}>
                                 <span>Estoque minimo</span>

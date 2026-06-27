@@ -254,6 +254,7 @@
     padding: 0.18rem 0.5rem;
     white-space: nowrap;
     flex-shrink: 0;
+    border: 1px solid transparent;
 }
 
 .ds-kpi-badge.positive { background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.18); }
@@ -586,7 +587,7 @@
     .ds-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ds-quick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .ds-sale-row { grid-template-columns: 30px minmax(0, 1fr) auto; }
-    .ds-sale-time { display: none; }
+    .ds-sale-time { display: none !important; }
 }
 
 @media (max-width: 480px) {

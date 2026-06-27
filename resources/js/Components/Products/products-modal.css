@@ -1,0 +1,491 @@
+/* ─── Product Form Modal ────────────────────────────────── */
+
+.products-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 18, 31, 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.products-modal {
+    width: min(580px, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    border-radius: 16px;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: prd-modal-enter 0.18s ease;
+}
+
+@keyframes prd-modal-enter {
+    from { opacity: 0; transform: translateY(8px) scale(0.99); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ─── Header ─── */
+
+.products-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    flex-shrink: 0;
+}
+
+.products-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--app-text-primary);
+    letter-spacing: -0.02em;
+}
+
+.products-modal-header p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+}
+
+/* ─── Close button ─── */
+
+.products-icon-button {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    color: var(--app-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    transition: var(--app-transition);
+}
+
+.products-icon-button:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: var(--app-danger);
+}
+
+/* ─── Body ─── */
+
+.products-editor-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.125rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* ─── 2-column grid ─── */
+
+.products-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem 1rem;
+}
+
+.products-editor-grid.span-2,
+.products-editor-grid > .span-2 {
+    grid-column: span 2;
+}
+
+.span-2 { grid-column: span 2; }
+
+/* ─── Section title ─── */
+
+.products-editor-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0.25rem;
+}
+
+.products-editor-section-title:first-child { margin-top: 0; }
+
+.products-editor-section-title h3 {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--app-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* ─── Field ─── */
+
+.products-editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.products-editor-field > span {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--app-text-secondary);
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.products-editor-field.has-error .products-editor-input-wrap {
+    border-color: var(--app-danger);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* ─── Input wrap (icon + input) ─── */
+
+.products-editor-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-strong);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    transition: var(--app-transition);
+}
+
+.products-editor-input-wrap:focus-within {
+    border-color: rgba(79, 70, 229, 0.45);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.09);
+}
+
+.products-editor-input-wrap i {
+    color: var(--app-text-muted);
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+}
+
+.products-editor-input-wrap input,
+.products-editor-input-wrap select,
+.products-editor-input-wrap textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--app-text-primary);
+    min-width: 0;
+}
+
+.products-editor-input-wrap input::placeholder { color: var(--app-text-muted); }
+
+.products-editor-input-wrap input:disabled {
+    color: var(--app-text-muted);
+    cursor: not-allowed;
+}
+
+.products-editor-field textarea {
+    width: 100%;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    background: var(--app-surface);
+    color: var(--app-text-primary);
+    font: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+    outline: none;
+    transition: var(--app-transition);
+    min-height: 70px;
+}
+
+.products-editor-field textarea:focus {
+    border-color: rgba(79, 70, 229, 0.45);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.09);
+}
+
+/* ─── Error & help ─── */
+
+.products-editor-error {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--app-danger);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.products-field-help {
+    font-size: 0.74rem;
+    color: var(--app-text-muted);
+    line-height: 1.4;
+}
+
+/* ─── Inline create card ─── */
+
+.products-inline-create-card {
+    background: rgba(79, 70, 229, 0.04);
+    border: 1px solid rgba(79, 70, 229, 0.18);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    display: grid;
+    gap: 0.625rem;
+    grid-column: span 2;
+}
+
+.products-inline-create-card strong {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--app-primary);
+}
+
+.products-inline-create-grid {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.products-inline-create-grid input {
+    width: 100%;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 7px;
+    padding: 0.5rem 0.65rem;
+    background: var(--app-surface);
+    color: var(--app-text-primary);
+    font: inherit;
+    font-size: 0.84rem;
+    outline: none;
+    transition: var(--app-transition);
+}
+
+.products-inline-create-grid input:focus {
+    border-color: rgba(79, 70, 229, 0.45);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.09);
+}
+
+.products-inline-create-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* ─── Status card ─── */
+
+.products-editor-card {
+    background: var(--app-surface-muted);
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    display: grid;
+    gap: 0.625rem;
+    grid-column: span 2;
+}
+
+.products-editor-card h3 {
+    margin: 0;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--app-text-secondary);
+}
+
+.products-editor-card small {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--app-text-muted);
+    margin-top: -0.25rem;
+}
+
+/* ─── Toggle row (Ativo/Inativo, Fiscal/Não usa) ─── */
+
+.products-editor-toggle-row {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.products-editor-toggle {
+    flex: 1;
+    padding: 0.45rem 0.75rem;
+    border-radius: 7px;
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-surface);
+    color: var(--app-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--app-transition);
+    text-align: center;
+}
+
+.products-editor-toggle:hover { border-color: var(--app-primary); color: var(--app-primary); }
+
+.products-editor-toggle.active {
+    background: var(--app-primary);
+    border-color: var(--app-primary-dark);
+    color: white;
+    font-weight: 700;
+}
+
+/* ─── Advanced toggle link ─── */
+
+.products-advanced-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.5rem 0;
+    border: none;
+    background: transparent;
+    color: var(--app-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.13s ease;
+    grid-column: span 2;
+}
+
+.products-advanced-link:hover { opacity: 0.75; }
+.products-advanced-link i { font-size: 0.7rem; }
+
+/* ─── Switch (checkbox style) ─── */
+
+.products-editor-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.products-editor-switch-row h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--app-text-primary);
+}
+
+.products-editor-switch-row small {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--app-text-muted);
+    margin-top: 0.15rem;
+}
+
+.products-editor-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.products-editor-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.products-editor-switch span {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--app-border-strong);
+    cursor: pointer;
+    transition: background 0.18s ease;
+    border: 2px solid transparent;
+}
+
+.products-editor-switch span::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.18s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.products-editor-switch input:checked + span {
+    background: var(--app-primary);
+}
+
+.products-editor-switch input:checked + span::before {
+    transform: translateX(20px);
+}
+
+/* ─── Footer / actions ─── */
+
+.products-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.products-editor-submit-hint {
+    font-size: 0.78rem;
+    color: var(--app-text-muted);
+}
+
+.products-editor-submit-error {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-danger);
+}
+
+.products-editor-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.products-primary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--app-primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+
+.products-primary-button:hover { filter: brightness(0.9); transform: translateY(-1px); }
+.products-primary-button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ─── Responsivo ─── */
+
+@media (max-width: 580px) {
+    .products-editor-grid { grid-template-columns: 1fr; }
+    .span-2 { grid-column: span 1; }
+    .products-modal-actions { flex-direction: column; align-items: flex-start; }
+    .products-editor-action-buttons { width: 100%; }
+    .products-editor-action-buttons > * { flex: 1; }
+}

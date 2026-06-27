@@ -93,45 +93,6 @@ function parseNumber(value) {
     return Number.isFinite(parsed) ? parsed : 0
 }
 
-function TopProductsCard({ topProducts }) {
-    return (
-        <section className="products-table-card conditional-side-card">
-            <div className="products-table-header conditional-side-head">
-                <div>
-                    <h2>Top saidas</h2>
-                    <p>Resumo rapido da carteira</p>
-                </div>
-            </div>
-            <div className="conditional-table-wrap">
-                {topProducts.length ? (
-                    <table className="conditional-table conditional-table-dense">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Saida</th>
-                                <th>Aberto</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {topProducts.map((product) => (
-                                <tr key={product.product_id}>
-                                    <td>{product.product_name}</td>
-                                    <td>{formatNumber(product.sent_quantity)}</td>
-                                    <td>{formatNumber(product.outstanding_quantity)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <div className="conditional-empty conditional-empty-tight">
-                        <i className="fa-solid fa-box-open" />
-                        <span>Sem historico</span>
-                    </div>
-                )}
-            </div>
-        </section>
-    )
-}
 
 export default function ConditionalSalesPage({
     conditionals = [],

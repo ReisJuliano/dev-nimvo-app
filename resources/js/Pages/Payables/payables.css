@@ -365,6 +365,7 @@
 
 .pay-row:hover { background: rgba(79,70,229,0.03); }
 .pay-row.selected { background: rgba(79,70,229,0.05); }
+.pay-row.overdue { background: rgba(239,68,68,0.03); border-left: 3px solid rgba(239,68,68,0.45); }
 .pay-row.overdue td { color: #b91c1c; }
 .pay-row.overdue .pay-row-desc strong { color: #b91c1c; }
 .pay-row.paid { opacity: 0.65; }

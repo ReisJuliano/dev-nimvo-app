@@ -322,12 +322,13 @@
 
 .cs-overdue-tag i { font-size: 0.64rem; }
 
-.cs-code-col  { font-size: 0.8rem; color: var(--app-text-muted); font-family: monospace; }
+.cs-code-col  { font-size: 0.8rem; color: var(--app-text-muted); font-family: monospace; white-space: nowrap; }
 .cs-date-col  { font-size: 0.84rem; color: var(--app-text-secondary); white-space: nowrap; }
-.cs-money-col { text-align: right; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--app-text-secondary); }
+.cs-money-col { text-align: right; font-size: 0.875rem; font-variant-numeric: tabular-nums; color: var(--app-text-secondary); white-space: nowrap; }
 
-.cs-outstanding strong { color: #dc2626; }
-.cs-paid strong        { color: #059669; }
+.cs-outstanding         { background: rgba(239,68,68,0.03); }
+.cs-outstanding strong  { color: #dc2626; font-size: 0.95rem; }
+.cs-paid strong         { color: #059669; }
 
 .cs-row-actions {
     display: flex;

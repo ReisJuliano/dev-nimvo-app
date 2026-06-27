@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import CompactModal from '@/Components/UI/CompactModal'
-import DataTable from '@/Components/UI/DataTable'
-import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
@@ -11,7 +9,6 @@ import { formatDate, formatMoney } from '@/lib/format'
 import './payables.css'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import { buildRecordsUrl, upsertRecord } from '@/Pages/Operations/workspaces/shared'
-import '../Operations/backoffice-workspace.css'
 
 const STATUS_FILTERS = [
     { key: 'open', label: 'Em aberto' },
@@ -154,13 +151,13 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     )
 
     const totals = useMemo(() => ({
-        open: records
+        open: filteredRecords
             .filter((record) => ['open', 'overdue'].includes(record.status))
             .reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
-        overdue: records
+        overdue: filteredRecords
             .filter((record) => record.status === 'overdue')
             .reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
-    }), [records])
+    }), [filteredRecords])
 
     const statusCounts = useMemo(() => ({
         open: backendStatusCounts?.open ?? records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
@@ -169,44 +166,6 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         all: backendStatusCounts?.all ?? records.length,
     }), [backendStatusCounts, records])
 
-    const tableColumns = useMemo(() => ([
-        {
-            key: 'description',
-            label: 'Descrição',
-            render: (record) => (
-                <div className="proc-ui-record-card-copy">
-                    <strong>{record.description}</strong>
-                    <span>{record.purchase_code || record.code || 'Sem referência'}</span>
-                </div>
-            ),
-        },
-        {
-            key: 'supplier_name',
-            label: 'Fornecedor',
-            render: (record) => record.supplier_name || 'Credor avulso',
-        },
-        {
-            key: 'amount',
-            label: 'Valor',
-            align: 'right',
-            render: (record) => <strong>{formatMoney(record.amount)}</strong>,
-        },
-        {
-            key: 'due_date',
-            label: 'Vencimento',
-            render: (record) => record.due_date ? formatDate(record.due_date) : 'Não informado',
-        },
-        {
-            key: 'payment_method',
-            label: 'Forma',
-            render: (record) => record.payment_method || 'Livre',
-        },
-        {
-            key: 'status',
-            label: 'Status',
-            render: (record) => <StatusBadge compact label={record.status_label} tone={record.status_tone} />,
-        },
-    ]), [])
 
     function openCreateModal() {
         setLaunchModalMode('create')
