@@ -139,13 +139,6 @@ class TenantNavigationService
                         'request_patterns' => ['fornecedores'],
                     ],
                     [
-                        'href' => '/entrada-estoque/manutencao',
-                        'label' => 'Compras com nota',
-                        'icon' => 'fa-clipboard-check',
-                        'access_key' => 'entrada_estoque_avancado',
-                        'request_patterns' => ['entrada-estoque/manutencao*'],
-                    ],
-                    [
                         'href' => '/movimentacao-estoque',
                         'label' => 'Histórico de estoque',
                         'icon' => 'fa-clock-rotate-left',
