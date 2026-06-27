@@ -1,256 +1,375 @@
 import { Link } from '@inertiajs/react'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
-import './stock-entry-simple.css'
+import './entrada.css'
 
-function ProductPicker({ products, query, setQuery, selected, onSelect, onClear }) {
-    const results = useMemo(() => {
-        const q = normalizeTextSearch(query)
-        if (!q) return []
-        return products.filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q)).slice(0, 10)
-    }, [products, query])
+/* ─── helpers ─── */
 
-    if (selected) {
-        return (
-            <div className="se-selected-product">
-                <div className="se-selected-info">
-                    <strong>{selected.name}</strong>
-                    <small>
-                        Estoque atual: {formatNumber(selected.stock_quantity || 0)} {selected.unit || 'UN'}
-                        {selected.cost_price ? ` · Custo: ${formatMoney(selected.cost_price)}` : ''}
-                    </small>
-                </div>
-                <button type="button" className="se-deselect-btn" onClick={onClear}>
-                    <i className="fa-solid fa-xmark" /> Trocar
-                </button>
-            </div>
-        )
+function findByBarcode(products, raw) {
+    const v = String(raw || '').trim()
+    if (!v) return null
+    return products.find(
+        (p) => String(p.barcode || '').trim() === v || String(p.code || '').trim() === v,
+    ) ?? null
+}
+
+function upsertItem(items, product) {
+    const idx = items.findIndex((i) => i.product.id === product.id)
+    if (idx === -1) {
+        return [...items, { product, quantity: 1, cost: product.cost_price || 0 }]
     }
-
-    return (
-        <div className="se-product-search">
-            <label className="se-search-wrap">
-                <i className="fa-solid fa-magnifying-glass" />
-                <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Nome, código ou EAN do produto..."
-                    autoFocus
-                    autoComplete="off"
-                />
-                {query ? (
-                    <button type="button" className="se-clear-search" onClick={() => setQuery('')}>
-                        <i className="fa-solid fa-xmark" />
-                    </button>
-                ) : null}
-            </label>
-            {query.trim() ? (
-                <div className="se-search-results">
-                    {results.length ? results.map((p) => (
-                        <button key={p.id} type="button" className="se-search-result" onClick={() => onSelect(p)}>
-                            <div>
-                                <strong>{p.name}</strong>
-                                <small>{p.code || p.barcode || 'Sem código'}</small>
-                            </div>
-                            <span className={`se-stock-badge se-stock-badge--${Number(p.stock_quantity || 0) <= 0 ? 'zero' : Number(p.stock_quantity) <= Number(p.min_stock || 0) ? 'low' : 'ok'}`}>
-                                {formatNumber(p.stock_quantity || 0)} {p.unit || 'UN'}
-                            </span>
-                        </button>
-                    )) : (
-                        <div className="se-search-empty">Nenhum produto encontrado para &ldquo;{query}&rdquo;</div>
-                    )}
-                </div>
-            ) : null}
-        </div>
+    return items.map((item, i) =>
+        i === idx ? { ...item, quantity: item.quantity + 1 } : item,
     )
 }
 
+/* ─── Componente ─── */
+
 export default function StockEntradaPage({ payload }) {
-    const products = Array.isArray(payload?.products) ? payload.products : []
-    const [localProducts, setLocalProducts] = useState(products)
-    const [query, setQuery] = useState('')
-    const [selected, setSelected] = useState(null)
-    const [qty, setQty] = useState('')
-    const [cost, setCost] = useState('')
-    const [notes, setNotes] = useState('')
+    const products = useMemo(
+        () => (Array.isArray(payload?.products) ? payload.products : []),
+        [payload],
+    )
+
+    const [items, setItems] = useState([])
+    const [scanValue, setScanValue] = useState('')
+    const [textSearch, setTextSearch] = useState('')
+    const [searchResults, setSearchResults] = useState([])
+    const [flash, setFlash] = useState(null)   // {type:'ok'|'err', text}
     const [saving, setSaving] = useState(false)
-    const [feedback, setFeedback] = useState(null)
-    const qtyRef = useRef(null)
+    const [progress, setProgress] = useState(null) // {done, total}
 
-    function selectProduct(product) {
-        setSelected(product)
-        setQuery('')
-        setCost(String(product.cost_price || ''))
-        setQty('')
-        setFeedback(null)
-        setTimeout(() => qtyRef.current?.focus(), 50)
-    }
+    const scanRef = useRef(null)
+    const flashTimer = useRef(null)
 
-    function reset() {
-        setSelected(null)
-        setQuery('')
-        setQty('')
-        setCost('')
-        setNotes('')
-        setFeedback(null)
-    }
+    const totalItems = items.reduce((s, i) => s + i.quantity, 0)
+    const totalValue = items.reduce((s, i) => s + i.quantity * Number(i.cost || 0), 0)
 
-    async function handleSubmit(e) {
-        e.preventDefault()
-        if (!selected) { setFeedback({ type: 'error', text: 'Selecione um produto.' }); return }
-        if (!qty || Number(qty) <= 0) { setFeedback({ type: 'error', text: 'Informe a quantidade recebida.' }); return }
+    /* Mantém o input de scan sempre focado */
+    const refocus = useCallback(() => {
+        setTimeout(() => scanRef.current?.focus(), 30)
+    }, [])
 
-        setSaving(true)
-        setFeedback(null)
-        try {
-            const res = await apiRequest('/api/stock/quick-receive', {
-                method: 'post',
-                data: {
-                    product_id: selected.id,
-                    quantity: Number(qty),
-                    cost_price: cost ? Number(cost) : null,
-                    notes: notes.trim() || null,
-                },
-            })
-            const updated = res.product
-            setLocalProducts((prev) => prev.map((p) => String(p.id) === String(updated.id) ? { ...p, ...updated } : p))
-            setSelected((prev) => prev ? { ...prev, ...updated } : prev)
-            setFeedback({ type: 'success', text: res.message })
-            setQty('')
-            setNotes('')
-        } catch (err) {
-            setFeedback({ type: 'error', text: err.message })
-        } finally {
-            setSaving(false)
+    useEffect(() => {
+        refocus()
+    }, [refocus])
+
+    /* Clique em qualquer lugar da página → volta o foco pro scan */
+    useEffect(() => {
+        function handleClick(e) {
+            const tag = e.target.tagName
+            if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag)) return
+            refocus()
         }
+        document.addEventListener('click', handleClick)
+        return () => document.removeEventListener('click', handleClick)
+    }, [refocus])
+
+    function showFlash(type, text) {
+        clearTimeout(flashTimer.current)
+        setFlash({ type, text })
+        flashTimer.current = setTimeout(() => setFlash(null), 2200)
+    }
+
+    /* Busca de texto para dropdown */
+    useEffect(() => {
+        const q = normalizeTextSearch(textSearch)
+        if (!q) { setSearchResults([]); return }
+        setSearchResults(
+            products
+                .filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q))
+                .slice(0, 8),
+        )
+    }, [textSearch, products])
+
+    /* Adiciona produto à lista (barcode ou seleção manual) */
+    function addProduct(product) {
+        setItems((prev) => upsertItem(prev, product))
+        setScanValue('')
+        setTextSearch('')
+        setSearchResults([])
+        showFlash('ok', `${product.name} adicionado`)
+        refocus()
+    }
+
+    /* Tenta resolver um código bipado */
+    function handleScan() {
+        const raw = scanValue.trim()
+        if (!raw) return
+
+        const found = findByBarcode(products, raw)
+        if (found) {
+            addProduct(found)
+        } else {
+            showFlash('err', `Produto não encontrado: "${raw}"`)
+            setScanValue('')
+            refocus()
+        }
+    }
+
+    /* Edição inline na tabela */
+    function updateItem(idx, field, val) {
+        setItems((prev) =>
+            prev.map((item, i) => (i === idx ? { ...item, [field]: val } : item)),
+        )
+    }
+
+    function removeItem(idx) {
+        setItems((prev) => prev.filter((_, i) => i !== idx))
+        refocus()
+    }
+
+    /* Confirma tudo */
+    async function handleConfirm() {
+        if (!items.length) return
+        setSaving(true)
+        setProgress({ done: 0, total: items.length })
+
+        let erros = 0
+        for (let i = 0; i < items.length; i++) {
+            const { product, quantity, cost } = items[i]
+            try {
+                await apiRequest('/api/stock/quick-receive', {
+                    method: 'post',
+                    data: {
+                        product_id: product.id,
+                        quantity: Number(quantity),
+                        cost_price: cost ? Number(cost) : null,
+                    },
+                })
+            } catch {
+                erros++
+            }
+            setProgress({ done: i + 1, total: items.length })
+        }
+
+        setSaving(false)
+        setProgress(null)
+
+        if (erros === 0) {
+            showFlash('ok', `${items.length} produto(s) registrado(s) com sucesso!`)
+            setItems([])
+        } else {
+            showFlash('err', `${erros} produto(s) falharam. Verifique e tente novamente.`)
+        }
+        refocus()
     }
 
     return (
         <AppLayout title="Entrada de mercadoria">
-            <div className="se-page">
+            <div className="ent-page">
 
-                <div className="se-header">
-                    <div className="se-header-left">
-                        <div className="se-header-icon" style={{ background: 'rgba(6,182,212,0.1)', color: '#06b6d4', borderColor: 'rgba(6,182,212,0.2)' }}>
+                {/* Header */}
+                <div className="ent-header">
+                    <div className="ent-header-left">
+                        <div className="ent-header-icon">
                             <i className="fa-solid fa-arrow-down-to-bracket" />
                         </div>
                         <div>
-                            <h1 className="se-header-title">Entrada de mercadoria</h1>
-                            <p className="se-header-sub">Registre o que chegou na loja. Rápido, sem nota fiscal.</p>
+                            <h1 className="ent-header-title">Entrada de mercadoria</h1>
+                            <p className="ent-header-sub">
+                                Bipe os produtos — eles vão acumulando na lista abaixo.
+                            </p>
                         </div>
                     </div>
-                    <div className="se-header-actions">
-                        <Link href="/estoque" className="se-action-btn se-action-btn--ghost">
-                            <i className="fa-solid fa-arrow-left" /> Ver estoque
-                        </Link>
+                    <Link href="/estoque" className="se-action-btn se-action-btn--ghost">
+                        <i className="fa-solid fa-arrow-left" /> Voltar
+                    </Link>
+                </div>
+
+                {/* Flash feedback */}
+                {flash ? (
+                    <div className={`ent-flash ent-flash--${flash.type}`}>
+                        <i className={`fa-solid ${flash.type === 'ok' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                        {flash.text}
+                    </div>
+                ) : null}
+
+                {/* Zona de scan — sempre focada */}
+                <div className="ent-scan-zone">
+                    <div className="ent-scan-main">
+                        <div className="ent-scan-icon">
+                            <i className="fa-solid fa-barcode" />
+                        </div>
+                        <input
+                            ref={scanRef}
+                            className="ent-scan-input"
+                            value={scanValue}
+                            onChange={(e) => setScanValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleScan()
+                                }
+                            }}
+                            placeholder="Bipe o código de barras aqui..."
+                            autoComplete="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                        />
+                        {scanValue ? (
+                            <button type="button" className="ent-scan-add" onClick={handleScan}>
+                                <i className="fa-solid fa-plus" />
+                            </button>
+                        ) : null}
+                    </div>
+
+                    {/* Busca por nome (alternativa ao barcode) */}
+                    <div className="ent-search-wrap">
+                        <div className="ent-search-field">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                className="ent-search-input"
+                                value={textSearch}
+                                onChange={(e) => setTextSearch(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && searchResults.length) {
+                                        e.preventDefault()
+                                        addProduct(searchResults[0])
+                                    }
+                                    if (e.key === 'Escape') {
+                                        setTextSearch('')
+                                        setSearchResults([])
+                                        refocus()
+                                    }
+                                }}
+                                placeholder="Ou busque pelo nome..."
+                                autoComplete="off"
+                            />
+                            {textSearch ? (
+                                <button type="button" onClick={() => { setTextSearch(''); setSearchResults([]) }}>
+                                    <i className="fa-solid fa-xmark" />
+                                </button>
+                            ) : null}
+                        </div>
+
+                        {searchResults.length > 0 ? (
+                            <div className="ent-search-dropdown">
+                                {searchResults.map((p) => (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        className="ent-search-result"
+                                        onMouseDown={(e) => { e.preventDefault(); addProduct(p) }}
+                                    >
+                                        <div>
+                                            <strong>{p.name}</strong>
+                                            <small>{p.code || p.barcode || 'Sem código'}</small>
+                                        </div>
+                                        <span className="ent-stock-tag">
+                                            {formatNumber(p.stock_quantity || 0)} {p.unit || 'UN'}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
-                <div className="se-entry-layout">
-                    <div className="se-form-card">
-                        <div className="se-form-card-header">
-                            <div className="se-form-card-icon se-form-card-icon--teal">
-                                <i className="fa-solid fa-dolly" />
-                            </div>
-                            <div>
-                                <h2>Registrar entrada</h2>
-                                <p>Busque o produto e informe a quantidade que chegou.</p>
-                            </div>
+                {/* Lista de itens acumulados */}
+                {items.length > 0 ? (
+                    <div className="ent-table-card">
+                        <div className="ent-table-head">
+                            <span>{items.length} produto(s) · {formatNumber(totalItems)} unidade(s)</span>
+                            <button type="button" className="ent-clear-btn" onClick={() => { setItems([]); refocus() }}>
+                                <i className="fa-solid fa-trash" /> Limpar tudo
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="se-form-body">
-                            <div className="se-form-section">
-                                <label className="se-form-label">Produto</label>
-                                <ProductPicker
-                                    products={localProducts}
-                                    query={query}
-                                    setQuery={setQuery}
-                                    selected={selected}
-                                    onSelect={selectProduct}
-                                    onClear={reset}
-                                />
-                            </div>
+                        <div className="ent-table-wrap">
+                            <table className="ent-table">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th style={{ width: 90 }}>Qtd</th>
+                                        <th style={{ width: 110 }}>Custo unit.</th>
+                                        <th style={{ width: 100, textAlign: 'right' }}>Subtotal</th>
+                                        <th style={{ width: 36 }} />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {items.map((item, idx) => (
+                                        <tr key={item.product.id} className="ent-row">
+                                            <td>
+                                                <div className="ent-product-cell">
+                                                    <strong>{item.product.name}</strong>
+                                                    <small>{item.product.code || item.product.barcode || '—'}</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input
+                                                    className="ent-num-input"
+                                                    type="number"
+                                                    min="0.001"
+                                                    step="1"
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    className="ent-num-input"
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={item.cost}
+                                                    onChange={(e) => updateItem(idx, 'cost', e.target.value)}
+                                                    placeholder="0,00"
+                                                />
+                                            </td>
+                                            <td className="ent-subtotal">
+                                                {formatMoney(item.quantity * Number(item.cost || 0))}
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="ent-remove-btn"
+                                                    onClick={() => removeItem(idx)}
+                                                    title="Remover"
+                                                >
+                                                    <i className="fa-solid fa-xmark" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
 
-                            {selected ? (
-                                <>
-                                    <div className="se-form-row">
-                                        <div className="se-form-section">
-                                            <label className="se-form-label">Quantidade recebida *</label>
-                                            <input
-                                                ref={qtyRef}
-                                                className="ui-input"
-                                                type="number"
-                                                min="0.001"
-                                                step="0.001"
-                                                value={qty}
-                                                onChange={(e) => setQty(e.target.value)}
-                                                placeholder={`Em ${selected.unit || 'UN'}`}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="se-form-section">
-                                            <label className="se-form-label">Custo unitário (opcional)</label>
-                                            <input
-                                                className="ui-input"
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={cost}
-                                                onChange={(e) => setCost(e.target.value)}
-                                                placeholder="R$ 0,00"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Observação (opcional)</label>
-                                        <input
-                                            className="ui-input"
-                                            value={notes}
-                                            onChange={(e) => setNotes(e.target.value)}
-                                            placeholder="Ex: chegou no caminhão da manhã..."
-                                        />
-                                    </div>
-                                </>
-                            ) : null}
-
-                            {feedback ? (
-                                <div className={`se-feedback se-feedback--${feedback.type}`}>
-                                    <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                    {feedback.text}
-                                </div>
-                            ) : null}
-
-                            {selected ? (
-                                <div className="se-form-actions">
-                                    <button type="button" className="ui-button-ghost" onClick={reset}>
-                                        <i className="fa-solid fa-rotate-left" /> Limpar
-                                    </button>
-                                    <button type="submit" className="se-submit-btn se-submit-btn--teal" disabled={saving}>
+                        <div className="ent-table-footer">
+                            <span className="ent-total-label">
+                                Total da entrada: <strong>{formatMoney(totalValue)}</strong>
+                            </span>
+                            <button
+                                type="button"
+                                className="ent-confirm-btn"
+                                onClick={handleConfirm}
+                                disabled={saving || !items.length}
+                            >
+                                {saving ? (
+                                    <>
+                                        <i className="fa-solid fa-spinner fa-spin" />
+                                        {progress ? `${progress.done}/${progress.total}` : 'Salvando...'}
+                                    </>
+                                ) : (
+                                    <>
                                         <i className="fa-solid fa-check" />
-                                        {saving ? 'Registrando...' : 'Confirmar entrada'}
-                                    </button>
-                                </div>
-                            ) : null}
-                        </form>
+                                        Confirmar entrada ({items.length})
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
-
-                    <div className="se-tab-side">
-                        <div className="se-info-card">
-                            <div className="se-info-card-header">
-                                <i className="fa-solid fa-circle-info" /> Como funciona
-                            </div>
-                            <ol className="se-info-steps">
-                                <li>Busque o produto pelo nome ou código</li>
-                                <li>Informe a quantidade que chegou</li>
-                                <li>Informe o custo se quiser atualizar</li>
-                                <li>Confirme — estoque é atualizado na hora</li>
-                            </ol>
-                            </div>
+                ) : (
+                    <div className="ent-empty">
+                        <i className="fa-solid fa-barcode" />
+                        <strong>Nenhum produto bipado ainda</strong>
+                        <p>Bipe os produtos acima — eles aparecem aqui automaticamente.</p>
                     </div>
-                </div>
+                )}
             </div>
         </AppLayout>
     )
