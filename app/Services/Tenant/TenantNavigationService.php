@@ -41,11 +41,25 @@ class TenantNavigationService
                         'request_patterns' => ['produtos', 'api/products*'],
                     ],
                     [
-                        'href' => '/entrada-estoque',
+                        'href' => '/estoque',
                         'label' => 'Estoque',
+                        'icon' => 'fa-warehouse',
+                        'access_key' => 'entrada_estoque',
+                        'request_patterns' => ['^estoque$'],
+                    ],
+                    [
+                        'href' => '/entrada-estoque',
+                        'label' => 'Entrada de mercadoria',
                         'icon' => 'fa-arrow-down-to-bracket',
                         'access_key' => 'entrada_estoque',
                         'request_patterns' => ['entrada-estoque'],
+                    ],
+                    [
+                        'href' => '/ajuste-estoque',
+                        'label' => 'Ajuste de estoque',
+                        'icon' => 'fa-scale-balanced',
+                        'access_key' => 'entrada_estoque',
+                        'request_patterns' => ['ajuste-estoque', 'movimentacao-estoque'],
                     ],
                     [
                         'href' => '/fiado',
@@ -133,10 +147,10 @@ class TenantNavigationService
                     ],
                     [
                         'href' => '/movimentacao-estoque',
-                        'label' => 'Historico do estoque',
-                        'icon' => 'fa-arrows-rotate',
+                        'label' => 'Histórico de estoque',
+                        'icon' => 'fa-clock-rotate-left',
                         'access_key' => 'movimentacao_estoque',
-                        'request_patterns' => ['movimentacao-estoque', 'ajuste-estoque'],
+                        'request_patterns' => ['movimentacao-estoque'],
                     ],
                     [
                         'href' => '/relatorios',
