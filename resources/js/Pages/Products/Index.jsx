@@ -505,7 +505,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     const filtersList = [
         { key: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : visibleCollectionItems.length },
         { key: 'active', label: 'Ativos', count: filterCounts.active },
-        { key: 'low_stock', label: 'Estoque baixo', count: filterCounts.low_stock },
         { key: 'inactive', label: 'Inativos', count: filterCounts.inactive },
     ]
 
@@ -530,13 +529,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                             <strong>{visibleCollectionItems.length}</strong>
                             <span>Total</span>
                         </div>
-                        {filterCounts.low_stock > 0 ? (
-                            <div className="prd-stat-pill prd-stat-pill--warn">
-                                <i className="fa-solid fa-triangle-exclamation" />
-                                <strong>{filterCounts.low_stock}</strong>
-                                <span>Estoque baixo</span>
-                            </div>
-                        ) : null}
                         <div className="prd-stat-pill prd-stat-pill--value">
                             <strong>{formatMoney(totalCatalogValue)}</strong>
                             <span>Valor em catálogo</span>
