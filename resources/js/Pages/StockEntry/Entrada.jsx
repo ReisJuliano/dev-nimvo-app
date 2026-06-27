@@ -159,9 +159,18 @@ export default function StockEntradaPage({ payload }) {
 
     async function handleConfirm() {
         setSaving(true)
-        setProgress({ done: 0, total: items.length })
+        const hasBoleto = Boolean(boletoAmount && Number(boletoAmount) > 0)
+        const totalSteps = items.length + (hasBoleto ? 1 : 0)
+        setProgress({ done: 0, total: totalSteps })
         let errors = 0
 
+        const entryNotes = [
+            reference      ? `Ref: ${reference}`             : null,
+            supplierName   ? `Fornecedor: ${supplierName}`   : null,
+            boletoNotes    || null,
+        ].filter(Boolean).join(' | ') || null
+
+        // 1. Registrar estoque de cada produto
         for (let i = 0; i < items.length; i++) {
             const { product, quantity, cost } = items[i]
             try {
@@ -171,21 +180,40 @@ export default function StockEntradaPage({ payload }) {
                         product_id: product.id,
                         quantity: Number(quantity),
                         cost_price: cost ? Number(cost) : null,
-                        notes: [
-                            reference ? `Ref: ${reference}` : null,
-                            supplierName ? `Fornecedor: ${supplierName}` : null,
-                            boletoNotes || null,
-                        ].filter(Boolean).join(' | ') || null,
+                        notes: entryNotes,
                     },
                 })
             } catch { errors++ }
-            setProgress({ done: i + 1, total: items.length })
+            setProgress({ done: i + 1, total: totalSteps })
+        }
+
+        // 2. Criar conta a pagar se boleto preenchido
+        if (hasBoleto && errors === 0) {
+            try {
+                await apiRequest('/api/operations/contas-a-pagar/records', {
+                    method: 'post',
+                    data: {
+                        description: reference
+                            ? `Entrada de mercadoria — ${reference}`
+                            : `Entrada de mercadoria${supplierName ? ` — ${supplierName}` : ''}`,
+                        supplier_id: supplierId ? Number(supplierId) : null,
+                        category: 'supplier',
+                        payment_method: 'boleto',
+                        amount: Number(boletoAmount),
+                        due_date: boletoDue || null,
+                        barcode: boletoCode || null,
+                        notes: entryNotes,
+                        status: 'open',
+                    },
+                })
+            } catch { errors++ }
+            setProgress({ done: totalSteps, total: totalSteps })
         }
 
         setSaving(false)
         setProgress(null)
         if (errors === 0) setDone(true)
-        else showFlash('err', `${errors} produto(s) com erro ao salvar.`)
+        else showFlash('err', `${errors} item(ns) com erro. Verifique e tente novamente.`)
     }
 
     function startNew() {

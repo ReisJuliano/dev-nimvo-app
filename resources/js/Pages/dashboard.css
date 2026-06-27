@@ -181,6 +181,64 @@
     color: rgba(148, 163, 184, 0.85);
 }
 
+/* ─── Alerta boletos vencidos ─── */
+
+.ds-overdue-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1.125rem;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-left: 4px solid var(--app-danger);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ds-overdue-alert:hover {
+    background: rgba(239,68,68,0.1);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.ds-overdue-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(239,68,68,0.12);
+    color: var(--app-danger);
+    border: 1px solid rgba(239,68,68,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.ds-overdue-body {
+    flex: 1;
+    display: grid;
+    gap: 0.1rem;
+}
+
+.ds-overdue-body strong {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #b91c1c;
+}
+
+.ds-overdue-body span {
+    font-size: 0.8rem;
+    color: #dc2626;
+}
+
+.ds-overdue-arrow {
+    color: #dc2626;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
 /* ─── KPI Cards ─── */
 
 .ds-kpis {

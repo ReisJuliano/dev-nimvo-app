@@ -204,6 +204,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/cash-registers/{cashRegister}/report', [CashRegisterApiController::class, 'report'])->name('api.cash-registers.report');
             Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
             Route::post('/stock/quick-adjust', [StockEntryPageController::class, 'quickAdjust'])->name('api.stock.quick-adjust');
+            Route::get('/stock/products/{product}/movements', [StockEntryPageController::class, 'productMovements'])->name('api.stock.product-movements');
 
             Route::post('/products', [ProductsApiController::class, 'store'])->name('api.products.store');
             Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');

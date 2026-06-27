@@ -2,9 +2,10 @@
 
 namespace App\Services\Tenant;
 
+use App\Models\Tenant\CashRegister;
+use App\Models\Tenant\Payable;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
-use App\Models\Tenant\CashRegister;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -184,6 +185,12 @@ class DashboardService
             ->latest('opened_at')
             ->first();
 
+        $overduePayables = Payable::query()
+            ->whereIn('status', ['open', 'overdue'])
+            ->where('due_date', '<', $today)
+            ->selectRaw('COUNT(*) as count, COALESCE(SUM(remaining_amount), 0) as total')
+            ->first();
+
         $averageTicket = (int) ($monthSales->qty ?? 0) > 0
             ? (float) $monthSales->total / (int) $monthSales->qty
             : 0;
@@ -211,6 +218,8 @@ class DashboardService
                 'profit_margin' => (float) ($monthSales->total ?? 0) > 0
                     ? ((float) ($monthSales->profit ?? 0) / (float) $monthSales->total) * 100
                     : 0,
+                'overdue_payables_count' => (int) ($overduePayables->count ?? 0),
+                'overdue_payables_total' => (float) ($overduePayables->total ?? 0),
                 'today_growth' => $this->growthPercentage(
                     (float) ($todaySales->total ?? 0),
                     (float) ($yesterdaySales->total ?? 0),

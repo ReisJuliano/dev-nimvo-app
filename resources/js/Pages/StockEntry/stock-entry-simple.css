@@ -816,16 +816,236 @@
     color: var(--app-primary);
 }
 
+/* ─── Split layout (lista + painel) ─── */
+
+.se-split {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    min-height: 0;
+}
+
+.se-page--panel .se-split {
+    grid-template-columns: 1fr 360px;
+}
+
+.se-list-col { display: grid; gap: 1rem; align-content: start; }
+
+/* ─── Row clicável ─── */
+
+.se-row--clickable { cursor: pointer; }
+
+.se-row--clickable:hover { background: rgba(79,70,229,0.04) !important; }
+
+.se-row--selected {
+    background: rgba(79,70,229,0.07) !important;
+    border-left: 3px solid var(--app-primary);
+}
+
+/* ─── Painel de movimentação ─── */
+
+.se-mov-panel {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    box-shadow: var(--app-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: calc(100dvh - var(--app-topbar-height) - 2rem);
+    position: sticky;
+    top: calc(var(--app-topbar-height) + 0.5rem);
+}
+
+.se-mov-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+}
+
+.se-mov-product-info { flex: 1; min-width: 0; }
+
+.se-mov-product-info strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--app-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.se-mov-stock-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.se-mov-label { font-size: 0.74rem; color: var(--app-text-muted); }
+
+.se-mov-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--app-border);
+    background: transparent;
+    color: var(--app-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    transition: var(--app-transition);
+}
+
+.se-mov-close:hover { background: rgba(239,68,68,0.08); color: var(--app-danger); border-color: rgba(239,68,68,0.25); }
+
+/* Filtros */
+
+.se-mov-filters {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--app-border);
+    flex-wrap: wrap;
+}
+
+.se-mov-filter-select,
+.se-mov-filter-date {
+    border: 1px solid var(--app-border-strong);
+    border-radius: 7px;
+    padding: 0.38rem 0.5rem;
+    background: var(--app-surface);
+    color: var(--app-text-primary);
+    font: inherit;
+    font-size: 0.78rem;
+    outline: none;
+    transition: var(--app-transition);
+}
+
+.se-mov-filter-select { flex: 1; min-width: 0; }
+.se-mov-filter-date   { width: 110px; }
+
+.se-mov-filter-select:focus,
+.se-mov-filter-date:focus {
+    border-color: rgba(79,70,229,0.4);
+    box-shadow: 0 0 0 2px rgba(79,70,229,0.09);
+}
+
+.se-mov-filter-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    border: 1px solid var(--app-primary);
+    background: var(--app-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    transition: var(--app-transition);
+}
+
+.se-mov-filter-btn:hover { filter: brightness(0.9); }
+
+/* Lista de movimentos */
+
+.se-mov-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.se-mov-loading,
+.se-mov-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    font-size: 0.84rem;
+    color: var(--app-text-muted);
+}
+
+.se-mov-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border-bottom: 1px solid var(--app-border);
+    transition: background 0.1s ease;
+}
+
+.se-mov-row:last-child { border-bottom: none; }
+.se-mov-row:hover { background: rgba(79,70,229,0.03); }
+
+.se-mov-type-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.35rem;
+    flex-shrink: 0;
+}
+
+.se-mov-type-dot--green { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+.se-mov-type-dot--amber { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
+.se-mov-type-dot--red   { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.12); }
+.se-mov-type-dot--blue  { background: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.se-mov-type-dot--gray  { background: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,0.12); }
+
+.se-mov-info {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 0.05rem;
+}
+
+.se-mov-info strong { font-size: 0.82rem; font-weight: 600; color: var(--app-text-primary); }
+.se-mov-info small  { font-size: 0.72rem; color: var(--app-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.se-mov-date { color: var(--app-text-muted) !important; }
+
+.se-mov-delta-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.05rem;
+    flex-shrink: 0;
+}
+
+.se-mov-delta {
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.se-mov-delta.positive { color: #059669; }
+.se-mov-delta.negative { color: #dc2626; }
+
+.se-mov-stock-after {
+    font-size: 0.7rem;
+    color: var(--app-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
 /* ─── Responsivo ─── */
 
-@media (max-width: 768px) {
-    .se-header { flex-direction: column; align-items: flex-start; }
-    .se-header-actions { width: 100%; }
-    .se-action-btn { flex: 1 1 auto; justify-content: center; }
-    .se-search-bar { flex-direction: column; align-items: flex-start; }
-    .se-search-wrap { width: 100%; }
+@media (max-width: 900px) {
+    .se-page--panel .se-split { grid-template-columns: 1fr; }
+    .se-mov-panel {
+        position: static;
+        max-height: 480px;
+    }
 }
 
 @media (max-width: 480px) {
     .se-header-kpis { display: none; }
+    .se-mov-filter-date { display: none; }
 }

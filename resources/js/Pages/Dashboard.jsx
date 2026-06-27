@@ -56,7 +56,9 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
     const profitMargin = Number(summary.today_sales_total || 0) > 0
         ? (Number(summary.today_profit || 0) / Number(summary.today_sales_total || 0)) * 100
         : 0
-    const hasOpenCashRegister = Boolean(summary.open_cash_register_id)
+    const hasOpenCashRegister     = Boolean(summary.open_cash_register_id)
+    const overduePayablesCount    = Number(summary.overdue_payables_count || 0)
+    const overduePayablesTotal    = Number(summary.overdue_payables_total || 0)
 
     const shortcuts = [
         { href: '/caixa', label: 'Abrir caixa', icon: 'fa-lock-open', tone: 'green', visible: !hasOpenCashRegister },
@@ -156,6 +158,26 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                         ))}
                     </div>
                 </section>
+
+                {/* ─── ALERTA DE BOLETOS VENCIDOS ─── */}
+                {overduePayablesCount > 0 ? (
+                    <Link href="/contas-a-pagar" className="ds-overdue-alert">
+                        <div className="ds-overdue-icon">
+                            <i className="fa-solid fa-triangle-exclamation" />
+                        </div>
+                        <div className="ds-overdue-body">
+                            <strong>
+                                {overduePayablesCount === 1
+                                    ? '1 conta vencida'
+                                    : `${formatNumber(overduePayablesCount)} contas vencidas`}
+                            </strong>
+                            <span>
+                                Total em atraso: {formatMoney(overduePayablesTotal)} — clique para ver e pagar.
+                            </span>
+                        </div>
+                        <i className="fa-solid fa-arrow-right ds-overdue-arrow" />
+                    </Link>
+                ) : null}
 
                 {/* ─── KPI CARDS ─── */}
                 <section className="ds-kpis">

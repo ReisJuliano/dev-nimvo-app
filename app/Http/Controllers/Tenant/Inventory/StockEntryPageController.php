@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant\Inventory;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Supplier;
 use App\Services\Tenant\InventoryMovementService;
@@ -120,6 +121,59 @@ class StockEntryPageController extends Controller
             'message' => 'Estoque ajustado com sucesso.',
             'product' => $this->formatProduct($updated),
         ]);
+    }
+
+    // API — movimentações de estoque de um produto
+    public function productMovements(Request $request, int $productId): JsonResponse
+    {
+        $product = Product::query()->findOrFail($productId);
+
+        $query = InventoryMovement::query()
+            ->where('product_id', $productId)
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id');
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('from')) {
+            $query->whereDate('occurred_at', '>=', $request->from);
+        }
+
+        if ($request->filled('to')) {
+            $query->whereDate('occurred_at', '<=', $request->to);
+        }
+
+        $movements = $query->limit(100)->get()->map(fn ($m) => [
+            'id'             => $m->id,
+            'type'           => $m->type,
+            'type_label'     => $this->movementTypeLabel($m->type),
+            'quantity_delta' => (float) $m->quantity_delta,
+            'stock_before'   => (float) $m->stock_before,
+            'stock_after'    => (float) $m->stock_after,
+            'unit_cost'      => $m->unit_cost ? (float) $m->unit_cost : null,
+            'notes'          => $m->notes,
+            'occurred_at'    => $m->occurred_at?->toIso8601String(),
+        ]);
+
+        return response()->json([
+            'product'   => $this->formatProduct($product),
+            'movements' => $movements,
+        ]);
+    }
+
+    private function movementTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'manual_inbound'    => 'Entrada manual',
+            'manual_adjustment' => 'Ajuste de estoque',
+            'sale'              => 'Saída por venda',
+            'purchase_return'   => 'Devolução de compra',
+            'sale_cancellation' => 'Cancelamento de venda',
+            'initial'           => 'Estoque inicial',
+            default             => ucfirst(str_replace('_', ' ', $type)),
+        };
     }
 
     private function buildProductPayload(): array
