@@ -1,296 +1,369 @@
-.settings-page,
-.settings-form,
-.settings-modules-stack {
+/* ─── Settings Page ─────────────────────────────────────── */
+
+.cfg-page {
     display: grid;
     gap: 1rem;
+    padding-top: 1rem;
+    max-width: 860px;
 }
 
-.settings-hero,
-.settings-section,
-.settings-module-section,
-.settings-inline-option {
-    border: 1px solid var(--app-border);
-    border-radius: 28px;
-    background:
-        radial-gradient(circle at top right, rgba(47, 124, 246, 0.12), transparent 28%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 248, 252, 0.92));
-    box-shadow: var(--app-shadow-sm);
-}
+/* ─── Header ─── */
 
-.settings-hero {
+.cfg-header {
     display: flex;
-    justify-content: space-between;
-    gap: 1.2rem;
-    padding: 1.55rem 1.65rem;
-}
-
-.settings-hero span,
-.settings-section-header span {
-    display: inline-flex;
     align-items: center;
-    padding: 0.38rem 0.82rem;
-    border-radius: 999px;
-    background: rgba(47, 124, 246, 0.12);
-    color: var(--app-primary-dark);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.settings-hero h1,
-.settings-section-header h2 {
-    margin: 0.9rem 0 0.35rem;
-    color: var(--app-text-primary);
-    letter-spacing: -0.04em;
-}
-
-.settings-hero h1 {
-    font-size: clamp(1.95rem, 4vw, 2.8rem);
-}
-
-.settings-hero p,
-.settings-section-header p,
-.settings-toggle-card p,
-.settings-inline-option p,
-.settings-preset-card p {
-    margin: 0.35rem 0 0;
-    color: var(--app-text-secondary);
-    line-height: 1.55;
-}
-
-.settings-hero-metrics,
-.settings-card-grid,
-.settings-preset-grid {
-    display: grid;
-    gap: 0.9rem;
-}
-
-.settings-hero-metrics {
-    grid-template-columns: repeat(3, minmax(135px, 1fr));
-    min-width: min(100%, 520px);
-}
-
-.settings-hero-metrics div,
-.settings-toggle-card,
-.settings-preset-card {
-    padding: 1rem 1.05rem;
-    border-radius: 22px;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--app-surface);
     border: 1px solid var(--app-border);
-    background: rgba(255, 255, 255, 0.86);
+    border-top: 3px solid #64748b;
+    border-radius: 14px;
+    box-shadow: var(--app-shadow-sm);
+    flex-wrap: wrap;
 }
 
-.settings-hero-metrics small,
-.settings-toggle-card p,
-.settings-module-section header small,
-.settings-preset-card small {
+.cfg-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.cfg-header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    background: rgba(100,116,139,0.1);
+    color: #64748b;
+    border: 1px solid rgba(100,116,139,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.cfg-header-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--app-text-primary);
+    letter-spacing: -0.025em;
+}
+
+.cfg-header-sub {
+    margin: 0.1rem 0 0;
+    font-size: 0.78rem;
     color: var(--app-text-muted);
 }
 
-.settings-hero-metrics strong,
-.settings-toggle-card strong,
-.settings-module-section header strong,
-.settings-preset-card strong {
-    color: var(--app-text-primary);
-}
-
-.settings-hero-metrics strong {
-    display: block;
-    margin-top: 0.32rem;
-    font-size: 1.1rem;
-}
-
-.settings-section,
-.settings-module-section {
-    padding: 1.25rem;
-}
-
-.settings-inline-option {
+.cfg-active-chips {
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    flex: 1;
+    justify-content: center;
+}
+
+.cfg-active-chip {
+    display: inline-flex;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(79,70,229,0.08);
+    color: var(--app-primary);
+    border: 1px solid rgba(79,70,229,0.16);
 }
 
-.settings-inline-option.active,
-.settings-toggle-card.active,
-.settings-preset-card.active {
-    border-color: rgba(47, 124, 246, 0.18);
-    box-shadow: 0 18px 34px rgba(47, 124, 246, 0.08);
+.cfg-active-chip--more {
+    background: var(--app-surface-muted);
+    color: var(--app-text-muted);
+    border-color: var(--app-border);
 }
 
-.settings-inline-option strong {
+.cfg-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--app-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.84rem;
+    cursor: pointer;
+    font-family: inherit;
+    flex-shrink: 0;
+    transition: filter 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+
+.cfg-save-btn:hover { filter: brightness(0.9); transform: translateY(-1px); }
+.cfg-save-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ─── Sections ─── */
+
+.cfg-section {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    box-shadow: var(--app-shadow-sm);
+    overflow: hidden;
+}
+
+.cfg-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.125rem;
+    border-bottom: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--app-text-primary);
 }
 
-.settings-section-header,
-.settings-module-section header,
-.settings-toggle-card,
-.settings-actions,
-.settings-preset-top {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
+.cfg-section-title i {
+    color: var(--app-primary);
+    font-size: 0.84rem;
 }
 
-.settings-section-header {
-    margin-bottom: 1rem;
+.cfg-section-title p {
+    margin: 0 0 0 0.5rem;
+    font-size: 0.78rem;
+    color: var(--app-text-muted);
+    font-weight: 400;
 }
 
-.settings-preset-grid {
+/* ─── Preset cards ─── */
+
+.cfg-preset-grid {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
-.settings-preset-card {
-    text-align: left;
+.cfg-preset-card {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1rem 1.125rem;
+    border-radius: 12px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
     cursor: pointer;
-    transition: var(--app-transition);
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
-.settings-preset-card span {
-    font-size: 0.94rem;
+.cfg-preset-card:hover {
+    border-color: rgba(79,70,229,0.3);
+    background: rgba(79,70,229,0.03);
+    box-shadow: var(--app-shadow-sm);
+}
+
+.cfg-preset-card.active {
+    border-color: rgba(79,70,229,0.35);
+    background: rgba(79,70,229,0.05);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+
+.cfg-preset-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.cfg-preset-top span {
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--app-text-primary);
 }
 
-.settings-preset-card small {
-    display: inline-block;
-    margin-top: 0.8rem;
-    font-weight: 700;
-}
-
-.settings-card-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
-.settings-toggle-button,
-.settings-save-button {
-    border: 1px solid transparent;
-    border-radius: 999px;
-    padding: 0.8rem 1rem;
-    cursor: pointer;
-    font-weight: 700;
-    transition: var(--app-transition);
-}
-
-.settings-toggle-button {
-    min-width: 118px;
-    background: linear-gradient(180deg, #eef4ff, #f7faff);
-    color: var(--app-text-secondary);
-}
-
-.settings-toggle-button.active,
-.settings-save-button {
-    background: linear-gradient(135deg, var(--app-primary), #57a1ff);
-    color: #fff;
-    box-shadow: 0 18px 30px rgba(47, 124, 246, 0.2);
-}
-
-.settings-module-section {
-    display: grid;
-    gap: 1rem;
-}
-
-.settings-summary-badges {
-    display: flex;
-    gap: 0.55rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.settings-summary-badge {
+.cfg-preset-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.42rem 0.76rem;
-    border-radius: 999px;
-    background: rgba(47, 124, 246, 0.1);
-    color: var(--app-primary-dark);
-    font-size: 0.78rem;
+    gap: 0.3rem;
+    font-size: 0.7rem;
     font-weight: 700;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(16,185,129,0.1);
+    color: #059669;
+    border: 1px solid rgba(16,185,129,0.2);
 }
 
-.settings-summary-badge.muted {
-    background: rgba(17, 24, 39, 0.08);
-    color: var(--app-text-secondary);
+.cfg-preset-apply {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--app-primary);
 }
 
-.settings-actions {
+.cfg-preset-card p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    line-height: 1.45;
+}
+
+/* ─── Options list ─── */
+
+.cfg-options-list { display: grid; gap: 0; }
+
+.cfg-option {
+    display: flex;
     align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1.125rem;
+    border-top: 1px solid var(--app-border);
+    transition: background 0.1s ease;
 }
 
-.settings-feedback {
-    flex: 1;
-    padding: 1rem 1.05rem;
-    border-radius: 18px;
-    border: 1px solid var(--app-border);
-    background: rgba(255, 255, 255, 0.88);
+.cfg-option:first-child { border-top: none; }
+.cfg-option.active { background: rgba(79,70,229,0.025); }
+
+.cfg-option-info { flex: 1; }
+.cfg-option-info strong { display: block; font-size: 0.875rem; font-weight: 600; color: var(--app-text-primary); }
+.cfg-option-info p { margin: 0.18rem 0 0; font-size: 0.78rem; color: var(--app-text-muted); line-height: 1.4; }
+
+/* ─── Toggle switch ─── */
+
+.cfg-toggle {
+    width: 44px;
+    height: 24px;
+    border-radius: 999px;
+    border: 2px solid var(--app-border-strong);
+    background: var(--app-surface-muted);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+    flex-shrink: 0;
 }
 
-.settings-feedback.success {
-    color: #0f7f52;
-    border-color: rgba(26, 168, 111, 0.18);
-    background: rgba(241, 253, 246, 0.96);
+.cfg-toggle.active {
+    background: var(--app-primary);
+    border-color: var(--app-primary-dark);
 }
 
-.settings-feedback.error {
-    color: #b53c51;
-    border-color: rgba(216, 78, 97, 0.16);
-    background: rgba(255, 244, 246, 0.96);
+.cfg-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.18s ease;
 }
 
-.settings-feedback.info,
-.settings-feedback.neutral {
+.cfg-toggle.active .cfg-toggle-knob {
+    transform: translateX(20px);
+}
+
+/* ─── Modules grid ─── */
+
+.cfg-modules-grid {
+    display: grid;
+    gap: 0;
+    padding: 0;
+}
+
+.cfg-module-group {
+    border-top: 1px solid var(--app-border);
+}
+
+.cfg-module-group:first-child { border-top: none; }
+
+.cfg-module-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.625rem 1.125rem;
+    background: rgba(15,23,42,0.025);
+}
+
+.cfg-module-group-header span {
+    font-size: 0.76rem;
+    font-weight: 700;
     color: var(--app-text-secondary);
-    border-color: rgba(47, 124, 246, 0.14);
-    background: rgba(248, 250, 255, 0.96);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
-@media (max-width: 980px) {
-    .settings-hero {
-        flex-direction: column;
-    }
-
-    .settings-hero-metrics {
-        grid-template-columns: 1fr;
-        min-width: 100%;
-    }
+.cfg-module-group-header small {
+    font-size: 0.7rem;
+    color: var(--app-text-muted);
 }
 
-@media (max-width: 840px) {
-    .settings-section-header,
-    .settings-module-section header,
-    .settings-inline-option,
-    .settings-toggle-card,
-    .settings-actions,
-    .settings-preset-top {
-        flex-direction: column;
-    }
+.cfg-module-list { display: grid; gap: 0; }
 
-    .settings-summary-badges {
-        justify-content: flex-start;
-    }
-
-    .settings-toggle-button,
-    .settings-save-button,
-    .settings-preset-card {
-        width: 100%;
-    }
-}
-.settings-section-header p,
-.settings-preset-card p,
-.settings-toggle-card p {
-    color: #64748b;
-    font-size: 0.86rem;
-    line-height: 1.35;
-    margin: 6px 0 0;
+.cfg-module-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 1.125rem;
+    border-top: 1px solid var(--app-border);
+    transition: background 0.1s ease;
 }
 
-.settings-preset-card {
-    text-align: left;
+.cfg-module-item:first-child { border-top: none; }
+.cfg-module-item.active { background: rgba(79,70,229,0.025); }
+
+.cfg-module-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--app-border-strong);
+    flex-shrink: 0;
+    transition: background 0.18s ease;
 }
 
-.settings-toggle-card > div {
-    min-width: 0;
+.cfg-module-dot.active {
+    background: var(--app-success);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+}
+
+.cfg-module-info { flex: 1; min-width: 0; }
+.cfg-module-info strong { display: block; font-size: 0.875rem; font-weight: 600; color: var(--app-text-primary); }
+.cfg-module-info p { margin: 0.12rem 0 0; font-size: 0.76rem; color: var(--app-text-muted); line-height: 1.4; }
+
+/* ─── Footer ─── */
+
+.cfg-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.875rem 1.125rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    box-shadow: var(--app-shadow-sm);
+    flex-wrap: wrap;
+}
+
+.cfg-footer p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    flex: 1;
+    min-width: 200px;
+}
+
+/* ─── Responsivo ─── */
+
+@media (max-width: 768px) {
+    .cfg-page { max-width: 100%; }
+    .cfg-header { flex-direction: column; align-items: flex-start; }
+    .cfg-active-chips { justify-content: flex-start; }
+    .cfg-preset-grid { grid-template-columns: 1fr; }
+    .cfg-footer { flex-direction: column; align-items: flex-start; }
 }

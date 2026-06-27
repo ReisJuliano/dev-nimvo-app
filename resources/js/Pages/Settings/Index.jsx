@@ -134,158 +134,154 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     }
 
     return (
-        <AppLayout title="Configuracoes" settingsOverride={form}>
-            <div className="settings-page">
-                <form className="settings-form" onSubmit={handleSubmit}>
-                    <PageContainer
-                        sidebar={(
-                            <RightSidebarPanel>
-                                <RightSidebarSection title="Contexto" subtitle="Estado atual">
-                                    <div className="right-sidebar-meta">
-                                        <div className="right-sidebar-meta-item">
-                                            <span>Tipo de operacao</span>
-                                            <strong>{moduleState.presetLabel}</strong>
-                                        </div>
-                                        <div className="right-sidebar-meta-item">
-                                            <span>Recursos ativos</span>
-                                            <strong>{enabledModulesCount}</strong>
-                                        </div>
-                                        <div className="right-sidebar-meta-item">
-                                            <span>Telas visiveis</span>
-                                            <strong>{enabledCapabilitiesCount}</strong>
-                                        </div>
-                                    </div>
-                                </RightSidebarSection>
+        <AppLayout title="Configurações" settingsOverride={form}>
+            <div className="cfg-page">
+                <form onSubmit={handleSubmit}>
 
-                                <RightSidebarSection title="Ativos" subtitle="Resumo rapido">
-                                    <div className="settings-summary-badges">
-                                        {activeLabels.slice(0, 6).map((label) => (
-                                            <span key={label} className="settings-summary-badge">
-                                                {label}
-                                            </span>
-                                        ))}
-                                        {activeLabels.length > 6 ? (
-                                            <span className="settings-summary-badge muted">+{activeLabels.length - 6}</span>
-                                        ) : null}
-                                    </div>
-                                </RightSidebarSection>
-
-                                <RightSidebarSection title="Publicar" subtitle="Aplicar no tenant">
-                                    {feedback ? (
-                                        <div className={`settings-feedback ${feedback.type}`}>
-                                            <strong>{feedback.text}</strong>
-                                        </div>
-                                    ) : (
-                                        <div className="settings-feedback neutral">
-                                            <strong>O menu lateral acompanha os recursos ligados aqui.</strong>
-                                        </div>
-                                    )}
-
-                                    <ActionButton icon="fa-floppy-disk" type="submit" disabled={saving}>
-                                        {saving ? 'Salvando...' : 'Salvar configuracoes'}
-                                    </ActionButton>
-                                </RightSidebarSection>
-                            </RightSidebarPanel>
-                        )}
-                    >
-                        <section className="settings-section">
-                            <div className="settings-section-header">
-                                <div>
-                                    <h2>Tipo de operacao</h2>
-                                    <p>Escolha como a loja trabalha no dia a dia.</p>
-                                </div>
+                    {/* ─── Header ─── */}
+                    <div className="cfg-header">
+                        <div className="cfg-header-left">
+                            <div className="cfg-header-icon">
+                                <i className="fa-solid fa-gear" />
                             </div>
+                            <div>
+                                <h1 className="cfg-header-title">Configurações da loja</h1>
+                                <p className="cfg-header-sub">
+                                    {enabledModulesCount} recurso(s) ativo(s) · {enabledCapabilitiesCount} tela(s) visível(is)
+                                </p>
+                            </div>
+                        </div>
+                        <div className="cfg-active-chips">
+                            {activeLabels.slice(0, 5).map((label) => (
+                                <span key={label} className="cfg-active-chip">{label}</span>
+                            ))}
+                            {activeLabels.length > 5 ? (
+                                <span className="cfg-active-chip cfg-active-chip--more">+{activeLabels.length - 5}</span>
+                            ) : null}
+                        </div>
+                        <button type="submit" className="cfg-save-btn" disabled={saving}>
+                            <i className={`fa-solid ${saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
+                            {saving ? 'Salvando...' : 'Salvar configurações'}
+                        </button>
+                    </div>
 
-                            <div className="settings-preset-grid">
+                    {/* ─── Seção: Tipo de operação ─── */}
+                    {visibleBusinessPresets.length > 0 ? (
+                        <div className="cfg-section">
+                            <div className="cfg-section-title">
+                                <i className="fa-solid fa-store" />
+                                Tipo de operação
+                                <p>Escolha como a loja trabalha no dia a dia.</p>
+                            </div>
+                            <div className="cfg-preset-grid">
                                 {visibleBusinessPresets.map((preset) => {
                                     const isActive = preset.key === activePreset
-                                    const activeCount = Object.values(preset.modules || {}).filter(Boolean).length
-
                                     return (
                                         <button
                                             key={preset.key}
                                             type="button"
-                                            className={`settings-preset-card ${isActive ? 'active' : ''}`}
+                                            className={`cfg-preset-card ${isActive ? 'active' : ''}`}
                                             onClick={() => applyPreset(preset)}
                                         >
-                                            <div className="settings-preset-top">
+                                            <div className="cfg-preset-top">
                                                 <span>{preset.label}</span>
-                                                <strong>{activeCount} recursos</strong>
+                                                {isActive ? (
+                                                    <span className="cfg-preset-badge">
+                                                        <i className="fa-solid fa-circle-check" /> Ativo
+                                                    </span>
+                                                ) : (
+                                                    <span className="cfg-preset-apply">Aplicar</span>
+                                                )}
                                             </div>
                                             <p>{preset.description}</p>
-                                            <small>{isActive ? 'Ativo' : 'Aplicar'}</small>
                                         </button>
                                     )
                                 })}
                             </div>
-                        </section>
+                        </div>
+                    ) : null}
 
-                        {generalOptions.map((option) => {
-                            const active = Boolean(getValueByPath(form, option.key))
-
-                            return (
-                                <section key={option.key} className={`settings-inline-option ${active ? 'active' : ''}`}>
-                                    <div>
-                                        <strong>{option.label}</strong>
-                                        <p>{option.description}</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className={`settings-toggle-button ${active ? 'active' : ''}`}
-                                        onClick={() => handleToggle(option.key)}
-                                    >
-                                        <span>{active ? 'Ativado' : 'Desativado'}</span>
-                                    </button>
-                                </section>
-                            )
-                        })}
-
-                        <section className="settings-section">
-                            <div className="settings-section-header">
-                                <div>
-                                    <h2>Recursos da loja</h2>
-                                    <p>Deixe ligado apenas o que a loja usa no dia a dia.</p>
-                                </div>
+                    {/* ─── Seção: Opções gerais ─── */}
+                    {generalOptions.length > 0 ? (
+                        <div className="cfg-section">
+                            <div className="cfg-section-title">
+                                <i className="fa-solid fa-sliders" />
+                                Preferências gerais
+                                <p>Opções que afetam o comportamento geral do sistema.</p>
                             </div>
-
-                            <div className="settings-modules-stack">
-                                {visibleModuleSections.map((section) => (
-                                    <section key={section.section} className="settings-module-section">
-                                        <header>
-                                            <div>
-                                                <strong>{section.section}</strong>
-                                                <small>
-                                                    {section.items.filter((item) => moduleState.modules?.[item.key]).length} ativo(s)
-                                                </small>
+                            <div className="cfg-options-list">
+                                {generalOptions.map((option) => {
+                                    const active = Boolean(getValueByPath(form, option.key))
+                                    return (
+                                        <div key={option.key} className={`cfg-option ${active ? 'active' : ''}`}>
+                                            <div className="cfg-option-info">
+                                                <strong>{option.label}</strong>
+                                                <p>{option.description}</p>
                                             </div>
-                                        </header>
-
-                                        <div className="settings-card-grid">
-                                            {section.items.map((item) => {
-                                                const active = Boolean(moduleState.modules?.[item.key])
-
-                                                return (
-                                                    <article key={item.key} className={`settings-toggle-card ${active ? 'active' : ''}`}>
-                                                        <div>
-                                                            <strong>{item.label}</strong>
-                                                            <p>{item.description}</p>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            className={`settings-toggle-button ${active ? 'active' : ''}`}
-                                                            onClick={() => handleToggle(`modules.${item.key}`)}
-                                                        >
-                                                            <span>{active ? 'Ligado' : 'Desligado'}</span>
-                                                        </button>
-                                                    </article>
-                                                )
-                                            })}
+                                            <button
+                                                type="button"
+                                                className={`cfg-toggle ${active ? 'active' : ''}`}
+                                                onClick={() => handleToggle(option.key)}
+                                            >
+                                                <span className="cfg-toggle-knob" />
+                                            </button>
                                         </div>
-                                    </section>
-                                ))}
+                                    )
+                                })}
                             </div>
-                        </section>
-                    </PageContainer>
+                        </div>
+                    ) : null}
+
+                    {/* ─── Seção: Recursos da loja ─── */}
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-puzzle-piece" />
+                            Recursos da loja
+                            <p>Ative apenas o que a loja usa no dia a dia. O menu lateral reflete as opções ligadas aqui.</p>
+                        </div>
+                        <div className="cfg-modules-grid">
+                            {visibleModuleSections.map((section) => (
+                                <div key={section.section} className="cfg-module-group">
+                                    <div className="cfg-module-group-header">
+                                        <span>{section.section}</span>
+                                        <small>
+                                            {section.items.filter((item) => moduleState.modules?.[item.key]).length} / {section.items.length} ativo(s)
+                                        </small>
+                                    </div>
+                                    <div className="cfg-module-list">
+                                        {section.items.map((item) => {
+                                            const active = Boolean(moduleState.modules?.[item.key])
+                                            return (
+                                                <div key={item.key} className={`cfg-module-item ${active ? 'active' : ''}`}>
+                                                    <div className={`cfg-module-dot ${active ? 'active' : ''}`} />
+                                                    <div className="cfg-module-info">
+                                                        <strong>{item.label}</strong>
+                                                        <p>{item.description}</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className={`cfg-toggle ${active ? 'active' : ''}`}
+                                                        onClick={() => handleToggle(`modules.${item.key}`)}
+                                                    >
+                                                        <span className="cfg-toggle-knob" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ─── Footer com salvar ─── */}
+                    <div className="cfg-footer">
+                        <p>As configurações afetam todos os usuários da loja imediatamente após salvar.</p>
+                        <button type="submit" className="cfg-save-btn" disabled={saving}>
+                            <i className={`fa-solid ${saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'}`} />
+                            {saving ? 'Salvando...' : 'Salvar configurações'}
+                        </button>
+                    </div>
                 </form>
             </div>
         </AppLayout>

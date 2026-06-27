@@ -1728,137 +1728,165 @@ export default function OrdersIndex({
     return (
         <AppLayout title="Pedidos">
             <div className="orders-screen">
-                <div className="page-hero page-hero--violet">
-                    <div className="page-hero-left">
-                        <div className="page-hero-icon">
+
+                {/* ─── Header ─── */}
+                <div className="ord-header">
+                    <div className="ord-header-left">
+                        <div className="ord-header-icon">
                             <i className="fa-solid fa-clipboard-list" />
                         </div>
                         <div>
-                            <h1 className="page-hero-title">Pedidos</h1>
-                            <p className="page-hero-sub">Gerencie e acompanhe todos os pedidos</p>
+                            <h1 className="ord-header-title">Pedidos</h1>
+                            <p className="ord-header-sub">Gerencie e acompanhe todos os atendimentos</p>
                         </div>
                     </div>
-                    <div className="page-hero-stats">
-                        <div className="page-hero-stat page-hero-stat--accent">
+                    <div className="ord-header-stats">
+                        <div className="ord-stat ord-stat--violet">
                             <strong>{filterCounts.open ?? 0}</strong>
                             <span>Em aberto</span>
                         </div>
-                        <div className="page-hero-stat">
+                        <div className="ord-stat">
+                            <strong>{filterCounts.preparing ?? 0}</strong>
+                            <span>Preparando</span>
+                        </div>
+                        <div className="ord-stat ord-stat--green">
+                            <strong>{filterCounts.ready ?? 0}</strong>
+                            <span>Prontos</span>
+                        </div>
+                        <div className="ord-stat ord-stat--value">
                             <strong>{formatMoney(filteredDraftsValue)}</strong>
-                            <span>Total filtrado</span>
+                            <span>Valor filtrado</span>
                         </div>
                     </div>
+                    <button
+                        type="button"
+                        className="ord-new-btn"
+                        onClick={() => { setNewDraftForm(getInitialNewDraftForm()); setNewDraftModalOpen(true) }}
+                    >
+                        <i className="fa-solid fa-plus" />
+                        Novo pedido
+                    </button>
                 </div>
 
+                {/* ─── Feedback ─── */}
                 {feedback ? (
-                    <div className={`ui-alert ${feedback.type}`}>
-                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
-                        <div>
-                            <strong>{feedback.type === 'error' ? 'Não foi possível concluir a ação' : 'Atualização realizada'}</strong>
-                            <p>{feedback.text}</p>
-                        </div>
+                    <div className={`ord-feedback ord-feedback--${feedback.type}`}>
+                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : feedback.type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-check'}`} />
+                        <span>{feedback.text}</span>
                     </div>
                 ) : null}
 
-                <div className="ui-list-page-shell">
-                    <div className="ui-list-page-main">
-                        <PageHeader
-                            title="Pedidos"
-                            search={{
-                                placeholder: 'Buscar por numero ou cliente',
-                                value: listSearchTerm,
-                                onChange: listSearchControl.setDraftValue,
-                            }}
-                            filters={ORDER_LIST_FILTERS.map((filter) => ({
-                                ...filter,
-                                value: filter.key,
-                                count: filterCounts[filter.key] || 0,
-                            }))}
-                            activeFilter={listFilter}
-                            onFilterChange={setListFilter}
-                            dateRange={{
-                                from: listRange.from,
-                                to: listRange.to,
-                                onChange: setListRange,
-                            }}
-                            quickDates
-                            onApply={handleApplyListFilters}
-                            onReset={handleResetListFilters}
-                        />
-
-                        <section className="ui-list-page-table-card">
-                            <DataTable
-                                columns={[
-                                    {
-                                        key: 'number',
-                                        label: 'Numero',
-                                        render: (draft) => <strong>{getDraftNumberLabel(draft)}</strong>,
-                                    },
-                                    {
-                                        key: 'customer',
-                                        label: 'Cliente',
-                                        render: (draft) => draft.customer?.name || 'Cliente avulso',
-                                    },
-                                    {
-                                        key: 'items_count',
-                                        label: 'Itens',
-                                        align: 'center',
-                                        render: (draft) => draft.items_count || 0,
-                                    },
-                                    {
-                                        key: 'total',
-                                        label: 'Total',
-                                        align: 'right',
-                                        render: (draft) => <strong>{formatMoney(draft.total)}</strong>,
-                                    },
-                                    {
-                                        key: 'type',
-                                        label: 'Canal',
-                                        render: (draft) => getOrderTypeLabel(draft.type),
-                                    },
-                                    {
-                                        key: 'status',
-                                        label: 'Status',
-                                        render: (draft) => {
-                                            const statusMeta = getOrderStatusMeta(draft.status)
-                                            return <StatusBadge compact label={statusMeta.label} tone={statusMeta.badge} />
-                                        },
-                                    },
-                                ]}
-                                rows={filteredDrafts}
-                                rowKey="id"
-                                selectedRowKey={selectedListDraftId}
-                                onRowClick={(draft) => setSelectedListDraftId(draft.id)}
-                                onRowDoubleClick={(draft) => { setSelectedListDraftId(draft.id); openDraft(draft.id) }}
-                                emptyMessage="Nenhum resultado. Ajuste os filtros e clique em Filtrar."
-                                actions={(draft) => {
-                                    const statusMeta = getOrderStatusMeta(draft.status)
-                                    const canAdvance = Boolean(statusMeta?.can_advance)
-                                    const canCancel = Boolean(statusMeta?.can_cancel)
-
-                                    return [
-                                        { key: 'view', icon: 'fa-eye', tone: 'primary', onClick: () => openDraft(draft.id) },
-                                        canAdvance ? { key: 'advance', icon: 'fa-play', tone: 'primary', onClick: () => void handleAdvanceListDraft(draft) } : null,
-                                        canCancel ? { key: 'cancel', icon: 'fa-xmark', tone: 'danger', onClick: () => void handleCancelListDraft(draft) } : null,
-                                    ].filter(Boolean)
-                                }}
-                            />
-                        </section>
-
-                        <footer className="purchases-table-footer">
-                            <span>{filteredDrafts.length} pedido(s) · {filteredDraftsItems} item(ns)</span>
-                            <span>Total filtrado: <strong>{formatMoney(filteredDraftsValue)}</strong></span>
+                {/* ─── Toolbar ─── */}
+                <div className="ord-toolbar">
+                    <div className="ord-filter-tabs">
+                        {ORDER_LIST_FILTERS.map((filter) => (
                             <button
+                                key={filter.key}
                                 type="button"
-                                className="action-button tone-primary"
-                                onClick={() => { setNewDraftForm(getInitialNewDraftForm()); setNewDraftModalOpen(true) }}
+                                className={`ord-filter-tab ${listFilter === filter.key ? 'active' : ''}`}
+                                onClick={() => setListFilter(filter.key)}
                             >
-                                <i className="fa-solid fa-plus" />
-                                Novo pedido
+                                {filter.label}
+                                {(filterCounts[filter.key] ?? 0) > 0 ? (
+                                    <span>{filterCounts[filter.key]}</span>
+                                ) : null}
                             </button>
-                        </footer>
+                        ))}
+                    </div>
+
+                    <div className="ord-toolbar-right">
+                        <label className="ord-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                placeholder="Número, cliente..."
+                                value={listSearchTerm}
+                                onChange={(e) => listSearchControl.setDraftValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleApplyListFilters()}
+                            />
+                        </label>
+                        <div className="ord-date-row">
+                            <input type="date" className="ord-date-input" value={listRange.from} onChange={(e) => setListRange((r) => ({ ...r, from: e.target.value }))} />
+                            <span>até</span>
+                            <input type="date" className="ord-date-input" value={listRange.to} onChange={(e) => setListRange((r) => ({ ...r, to: e.target.value }))} />
+                        </div>
+                        <button type="button" className="ord-apply-btn" onClick={handleApplyListFilters}>
+                            <i className="fa-solid fa-magnifying-glass" /> Filtrar
+                        </button>
+                        <button type="button" className="ord-reset-btn" onClick={handleResetListFilters}>
+                            <i className="fa-solid fa-xmark" />
+                        </button>
                     </div>
                 </div>
+
+                {/* ─── Tabela ─── */}
+                <div className="ord-table-card">
+                    <DataTable
+                        columns={[
+                            {
+                                key: 'number',
+                                label: 'Número',
+                                render: (draft) => (
+                                    <div className="ord-draft-cell">
+                                        <strong>{getDraftNumberLabel(draft)}</strong>
+                                        {draft.reference ? <small>{draft.reference}</small> : null}
+                                    </div>
+                                ),
+                            },
+                            {
+                                key: 'customer',
+                                label: 'Cliente',
+                                render: (draft) => draft.customer?.name || <span className="ord-muted">Avulso</span>,
+                            },
+                            {
+                                key: 'items_count',
+                                label: 'Itens',
+                                align: 'center',
+                                render: (draft) => <span className="ord-count">{draft.items_count || 0}</span>,
+                            },
+                            {
+                                key: 'total',
+                                label: 'Total',
+                                align: 'right',
+                                render: (draft) => <strong className="ord-total">{formatMoney(draft.total)}</strong>,
+                            },
+                            {
+                                key: 'type',
+                                label: 'Canal',
+                                render: (draft) => <span className="ord-type-chip">{getOrderTypeLabel(draft.type)}</span>,
+                            },
+                            {
+                                key: 'status',
+                                label: 'Status',
+                                render: (draft) => {
+                                    const statusMeta = getOrderStatusMeta(draft.status)
+                                    return <StatusBadge compact label={statusMeta.label} tone={statusMeta.badge} />
+                                },
+                            },
+                        ]}
+                        rows={filteredDrafts}
+                        rowKey="id"
+                        selectedRowKey={selectedListDraftId}
+                        onRowClick={(draft) => setSelectedListDraftId(draft.id)}
+                        onRowDoubleClick={(draft) => { setSelectedListDraftId(draft.id); openDraft(draft.id) }}
+                        emptyMessage="Nenhum resultado. Ajuste os filtros e clique em Filtrar."
+                        actions={(draft) => {
+                            const statusMeta = getOrderStatusMeta(draft.status)
+                            return [
+                                { key: 'view', icon: 'fa-eye', tone: 'primary', onClick: () => openDraft(draft.id) },
+                                statusMeta?.can_advance ? { key: 'advance', icon: 'fa-play', tone: 'primary', onClick: () => void handleAdvanceListDraft(draft) } : null,
+                                statusMeta?.can_cancel ? { key: 'cancel', icon: 'fa-xmark', tone: 'danger', onClick: () => void handleCancelListDraft(draft) } : null,
+                            ].filter(Boolean)
+                        }}
+                    />
+
+                    {filteredDrafts.length > 0 ? (
+                        <div className="ord-footer">
+                            <span>{filteredDrafts.length} pedido(s) · {filteredDraftsItems} item(ns)</span>
+                            <span>Total: <strong>{formatMoney(filteredDraftsValue)}</strong></span>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
 
                 {draftModalOpen ? (
                     <OrderDetailModal

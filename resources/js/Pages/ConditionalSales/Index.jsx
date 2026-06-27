@@ -457,118 +457,201 @@ export default function ConditionalSalesPage({
     )
     const owingCount = visibleConditionals.filter((c) => Number(c.outstanding_total || 0) > 0).length
 
+    const overdueCount = visibleConditionals.filter((c) => Number(c.days_overdue || 0) > 0).length
+
+    function resetFilters() {
+        setSearch('')
+        setActiveFilter('all')
+        setAppliedSearch('')
+        setAppliedFilter('all')
+        setHasAppliedFilters(false)
+        setSelectedRecordId(null)
+        setOpenedRecordId(null)
+        router.get('/venda-condicional', {}, { preserveScroll: true, preserveState: true, replace: true })
+    }
+
+    const csFilters = [
+        { key: 'all', label: 'Todos', count: visibleConditionals.length },
+        { key: 'owing', label: 'Devendo', count: visibleConditionals.filter((e) => Number(e.outstanding_total || 0) > 0).length },
+        { key: 'alert', label: 'Em atraso', count: overdueCount },
+    ]
+
     return (
         <AppLayout title="Venda Condicional">
-            <div className="page-hero page-hero--rose">
-                <div className="page-hero-left">
-                    <div className="page-hero-icon">
-                        <i className="fa-solid fa-handshake" />
+            <div className="cs-page">
+
+                {/* ─── Header ─── */}
+                <div className="cs-header">
+                    <div className="cs-header-left">
+                        <div className="cs-header-icon">
+                            <i className="fa-solid fa-handshake" />
+                        </div>
+                        <div>
+                            <h1 className="cs-header-title">Venda Condicional</h1>
+                            <p className="cs-header-sub">Controle de entregas e recebimentos pendentes</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="page-hero-title">Venda Condicional</h1>
-                        <p className="page-hero-sub">Clientes com valores pendentes a receber</p>
-                    </div>
-                </div>
-                <div className="page-hero-stats">
-                    <div className="page-hero-stat page-hero-stat--danger">
-                        <strong>{formatMoney(totalOutstanding)}</strong>
-                        <span>A receber</span>
-                    </div>
-                    <div className="page-hero-stat page-hero-stat--accent">
-                        <strong>{owingCount}</strong>
-                        <span>Clientes devendo</span>
-                    </div>
-                </div>
-                <button className="page-hero-cta" onClick={() => setCreateOpen(true)} type="button">
-                    <i className="fa-solid fa-plus" />
-                    Nova venda condicional
-                </button>
-            </div>
-
-            {/* Barra de busca + filtros */}
-            <PageHeader
-                search={{
-                    placeholder: 'Buscar cliente por nome',
-                    value: search,
-                    onChange: setSearch,
-                }}
-                filters={[
-                    { key: 'all', value: 'all', label: 'Todos', count: visibleConditionals.length },
-                    { key: 'owing', value: 'owing', label: 'Devendo', count: visibleConditionals.filter((e) => Number(e.outstanding_total || 0) > 0).length },
-                    { key: 'alert', value: 'alert', label: 'Em alerta', count: visibleConditionals.filter((e) => Number(e.days_overdue || 0) > 0).length },
-                ]}
-                activeFilter={activeFilter}
-                onFilterChange={setActiveFilter}
-                onApply={applyFilters}
-                onReset={() => {
-                    setSearch(''); setActiveFilter('all'); setAppliedSearch(''); setAppliedFilter('all')
-                    setHasAppliedFilters(false); setSelectedRecordId(null); setOpenedRecordId(null)
-                    router.get('/venda-condicional', {}, { preserveScroll: true, preserveState: true, replace: true })
-                }}
-            />
-
-            {/* Cards de cliente */}
-            {filteredRows.length > 0 ? (
-                <div className="cs-grid">
-                    {filteredRows.map((sale) => {
-                        const customerMeta = customerMetaById.get(String(sale.customer?.id || '')) || {}
-                        const outstanding = Number(sale.outstanding_total || 0)
-                        const overdue = Number(sale.days_overdue || 0)
-                        const initials = (sale.customer?.name || '?').slice(0, 2).toUpperCase()
-                        const isSelected = selectedRecordId === sale.id
-
-                        return (
-                            <div
-                                key={sale.id}
-                                className={`cs-card ${isSelected ? 'cs-card--selected' : ''} ${overdue > 0 ? 'cs-card--alert' : ''}`}
-                                onClick={() => setSelectedRecordId(sale.id)}
-                                onDoubleClick={() => { setSelectedRecordId(sale.id); setDetailPanel('overview'); setOpenedRecordId(sale.id) }}
-                                role="button"
-                                tabIndex={0}
-                            >
-                                <div className="cs-card-head">
-                                    <div className={`cs-avatar ${overdue > 0 ? 'cs-avatar--danger' : outstanding > 0 ? 'cs-avatar--warning' : 'cs-avatar--ok'}`}>
-                                        {initials}
-                                    </div>
-                                    <div className="cs-card-info">
-                                        <strong>{sale.customer?.name || 'Cliente não informado'}</strong>
-                                        {overdue > 0 && <span className="cs-overdue">{overdue} dia(s) em atraso</span>}
-                                    </div>
-                                    <StatusBadge compact label={sale.status_label} tone={sale.status_tone} />
-                                </div>
-
-                                <div className="cs-card-amounts">
-                                    <div className="cs-amount cs-amount--main">
-                                        <span>Deve</span>
-                                        <strong>{formatMoney(outstanding)}</strong>
-                                    </div>
-                                    {Number(customerMeta.credit_limit || 0) > 0 && (
-                                        <div className="cs-amount">
-                                            <span>Limite</span>
-                                            <strong>{formatMoney(customerMeta.credit_limit)}</strong>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="cs-card-actions">
-                                    <button type="button" className="cs-btn" onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('overview'); setOpenedRecordId(sale.id) }}>
-                                        <i className="fa-solid fa-eye" /> Ver
-                                    </button>
-                                    <button type="button" className="cs-btn cs-btn--pay" onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('finalize'); setOpenedRecordId(sale.id) }}>
-                                        <i className="fa-solid fa-money-bill-wave" /> Receber
-                                    </button>
+                    <div className="cs-header-kpis">
+                        <div className="cs-kpi cs-kpi--rose">
+                            <i className="fa-solid fa-circle-dollar-to-slot" />
+                            <div>
+                                <strong>{formatMoney(totalOutstanding)}</strong>
+                                <span>A receber</span>
+                            </div>
+                        </div>
+                        <div className="cs-kpi cs-kpi--amber">
+                            <i className="fa-solid fa-users" />
+                            <div>
+                                <strong>{owingCount}</strong>
+                                <span>Devendo</span>
+                            </div>
+                        </div>
+                        {overdueCount > 0 ? (
+                            <div className="cs-kpi cs-kpi--danger">
+                                <i className="fa-solid fa-triangle-exclamation" />
+                                <div>
+                                    <strong>{overdueCount}</strong>
+                                    <span>Em atraso</span>
                                 </div>
                             </div>
-                        )
-                    })}
+                        ) : null}
+                    </div>
+                    <button className="cs-new-btn" onClick={() => setCreateOpen(true)} type="button">
+                        <i className="fa-solid fa-plus" />
+                        Nova condicional
+                    </button>
                 </div>
-            ) : (
-                <div className="cs-empty">
-                    <i className="fa-solid fa-handshake" />
-                    <strong>Nenhum resultado encontrado</strong>
-                    <p>Ajuste os filtros ou crie uma nova venda condicional.</p>
+
+                {/* ─── Toolbar ─── */}
+                <div className="cs-toolbar">
+                    <div className="cs-filter-tabs">
+                        {csFilters.map((f) => (
+                            <button
+                                key={f.key}
+                                type="button"
+                                className={`cs-filter-tab ${activeFilter === f.key ? 'active' : ''}`}
+                                onClick={() => setActiveFilter(f.key)}
+                            >
+                                {f.label}
+                                {f.count != null ? <span>{f.count}</span> : null}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="cs-toolbar-right">
+                        <label className="cs-search">
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <input
+                                placeholder="Buscar por cliente ou código..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+                            />
+                        </label>
+                        <button type="button" className="cs-apply-btn" onClick={applyFilters}>
+                            <i className="fa-solid fa-magnifying-glass" />
+                            Filtrar
+                        </button>
+                        <button type="button" className="cs-reset-btn" onClick={resetFilters}>
+                            <i className="fa-solid fa-xmark" />
+                        </button>
+                    </div>
                 </div>
-            )}
+
+                {/* ─── Tabela ─── */}
+                <div className="cs-table-card">
+                    {filteredRows.length > 0 ? (
+                        <table className="cs-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Código</th>
+                                    <th style={{ textAlign: 'right' }}>Valor total</th>
+                                    <th style={{ textAlign: 'right' }}>A receber</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th style={{ width: 150 }}>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredRows.map((sale) => {
+                                    const customerMeta = customerMetaById.get(String(sale.customer?.id || '')) || {}
+                                    const outstanding = Number(sale.outstanding_total || 0)
+                                    const overdue = Number(sale.days_overdue || 0)
+                                    const initials = (sale.customer?.name || '?').slice(0, 2).toUpperCase()
+                                    const isSelected = selectedRecordId === sale.id
+
+                                    return (
+                                        <tr
+                                            key={sale.id}
+                                            className={`cs-row ${isSelected ? 'selected' : ''} ${overdue > 0 ? 'overdue' : ''}`}
+                                            onClick={() => setSelectedRecordId(sale.id)}
+                                        >
+                                            <td>
+                                                <div className="cs-customer-cell">
+                                                    <div className={`cs-avatar-sm ${overdue > 0 ? 'danger' : outstanding > 0 ? 'warning' : 'ok'}`}>
+                                                        {initials}
+                                                    </div>
+                                                    <div>
+                                                        <strong>{sale.customer?.name || 'Sem cliente'}</strong>
+                                                        {overdue > 0 ? (
+                                                            <small className="cs-overdue-tag">
+                                                                <i className="fa-solid fa-triangle-exclamation" />
+                                                                {overdue} dia(s) em atraso
+                                                            </small>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="cs-code-col">{sale.code || '—'}</td>
+                                            <td className="cs-money-col">{formatMoney(Number(sale.total || 0))}</td>
+                                            <td className={`cs-money-col ${outstanding > 0 ? 'cs-outstanding' : 'cs-paid'}`}>
+                                                <strong>{formatMoney(outstanding)}</strong>
+                                            </td>
+                                            <td className="cs-date-col">
+                                                {sale.due_at ? formatDate(sale.due_at) : '—'}
+                                            </td>
+                                            <td>
+                                                <StatusBadge compact label={sale.status_label} tone={sale.status_tone} />
+                                            </td>
+                                            <td>
+                                                <div className="cs-row-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="cs-row-btn"
+                                                        title="Ver detalhes"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('overview'); setOpenedRecordId(sale.id) }}
+                                                    >
+                                                        <i className="fa-solid fa-eye" />
+                                                        Ver
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="cs-row-btn cs-row-btn--pay"
+                                                        title="Receber pagamento"
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedRecordId(sale.id); setDetailPanel('finalize'); setOpenedRecordId(sale.id) }}
+                                                    >
+                                                        <i className="fa-solid fa-money-bill-wave" />
+                                                        Receber
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="cs-empty">
+                            <div className="cs-empty-icon">
+                                <i className="fa-solid fa-handshake" />
+                            </div>
+                            <strong>{hasAppliedFilters ? 'Nenhum resultado encontrado' : 'Filtre para ver as condicionais'}</strong>
+                            <p>{hasAppliedFilters ? 'Ajuste os filtros acima.' : 'Use a busca acima e clique em Filtrar.'}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             <ModalForm
                 description="Preencha cliente, datas e itens. O estoque será reservado na abertura."
