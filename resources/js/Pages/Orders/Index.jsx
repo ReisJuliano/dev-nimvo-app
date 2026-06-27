@@ -1886,7 +1886,6 @@ export default function OrdersIndex({
                         </div>
                     ) : null}
                 </div>
-            </div>
 
                 {draftModalOpen ? (
                     <OrderDetailModal
