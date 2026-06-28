@@ -44,14 +44,13 @@ function isNavigationGroupEnabled(group, preset) {
     return true
 }
 
-export function buildNavigationGroups({ authRole, modules, capabilities, catalog, preset }) {
+export function buildNavigationGroups({ authRole, modules, catalog }) {
     return (catalog ?? [])
-        .filter((group) => isNavigationGroupEnabled(group, preset))
         .map((group) => ({
             ...group,
             items: (group.items ?? [])
                 .filter((item) => !item.hidden)
-                .filter((item) => isNavigationItemEnabled(item, authRole, modules, capabilities))
+                .filter((item) => !item.required_role || authRole === item.required_role)
                 .map((item) => ({
                     ...item,
                     label: resolveNavigationLabel(item, modules),

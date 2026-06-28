@@ -106,11 +106,9 @@ export default function AppLayout({
         () => buildNavigationGroups({
             authRole: auth?.user?.role,
             modules: moduleState.modules,
-            capabilities: moduleState.capabilities,
             catalog: tenantNavigationCatalog,
-            preset: moduleState.preset,
         }),
-        [auth?.user?.role, moduleState.capabilities, moduleState.modules, moduleState.preset, tenantNavigationCatalog],
+        [auth?.user?.role, moduleState.modules, tenantNavigationCatalog],
     )
     const shouldShowOfflineBanner = Boolean(
         tenant?.id
