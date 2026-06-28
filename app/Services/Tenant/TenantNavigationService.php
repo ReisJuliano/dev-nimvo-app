@@ -79,7 +79,6 @@ class TenantNavigationService
             ],
             [
                 'section' => 'Avancado',
-                'hidden_for_presets' => ['venda_direta'],
                 'items' => [
                     [
                         'href' => '/pedidos',
