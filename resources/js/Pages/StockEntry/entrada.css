@@ -4,7 +4,8 @@
     display: grid;
     gap: 1rem;
     padding-top: 1rem;
-    max-width: 820px;
+    width: 100%;
+    max-width: none;
 }
 
 /* ─── Header ─── */
@@ -659,6 +660,24 @@
 }
 
 /* ─── Responsivo ─── */
+
+@media (min-width: 1180px) {
+    .ent-form-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .ent-field--full {
+        grid-column: span 3;
+    }
+
+    .ent-summary-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .ent-summary-item--wide {
+        grid-column: span 2;
+    }
+}
 
 @media (max-width: 640px) {
     .ent-step span { display: none; }

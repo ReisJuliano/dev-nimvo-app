@@ -139,3 +139,5 @@ Visual Studio, que so afetam builds Web/Windows desktop.
 - 2026-07-01: A workspace tenant de movimentacao/historico de estoque usa a
   chave ASCII `movimentacao-estoque` vinda do backend. No React, comparar com
   uma variante acentuada impede a tela de renderizar e deixa a pagina em branco.
+- 2026-07-01: Em contas a pagar, a tela deve abrir sem registros nem contadores
+  carregados; o carregamento acontece apenas apos o usuario clicar em Filtrar.

@@ -17,15 +17,69 @@ const STATUS_FILTERS = [
     { key: 'all', label: 'Todos' },
 ]
 
+const QUICK_DATE_FILTERS = [
+    { key: 'current-month', label: 'Mês atual', getRange: currentMonthRange },
+    { key: 'today', label: 'Hoje', getRange: todayRange },
+    { key: 'yesterday', label: 'Ontem', getRange: yesterdayRange },
+    { key: 'current-week', label: 'Semana atual', getRange: currentWeekRange },
+    { key: 'last-week', label: 'Semana passada', getRange: lastWeekRange },
+]
+
+function formatInputDate(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function addDays(date, days) {
+    const nextDate = new Date(date)
+    nextDate.setDate(nextDate.getDate() + days)
+
+    return nextDate
+}
+
 function todayInput() {
-    return new Date().toISOString().slice(0, 10)
+    return formatInputDate(new Date())
 }
 
 function currentMonthRange() {
     const today = new Date()
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
 
-    return { from: firstDay.toISOString().slice(0, 10), to: todayInput() }
+    return { from: formatInputDate(firstDay), to: todayInput() }
+}
+
+function todayRange() {
+    const today = todayInput()
+
+    return { from: today, to: today }
+}
+
+function yesterdayRange() {
+    const yesterday = formatInputDate(addDays(new Date(), -1))
+
+    return { from: yesterday, to: yesterday }
+}
+
+function currentWeekRange() {
+    const today = new Date()
+    const weekday = today.getDay()
+    const mondayOffset = weekday === 0 ? -6 : 1 - weekday
+    const monday = addDays(today, mondayOffset)
+
+    return { from: formatInputDate(monday), to: todayInput() }
+}
+
+function lastWeekRange() {
+    const today = new Date()
+    const weekday = today.getDay()
+    const mondayOffset = weekday === 0 ? -13 : -6 - weekday
+    const monday = addDays(today, mondayOffset)
+    const sunday = addDays(monday, 6)
+
+    return { from: formatInputDate(monday), to: formatInputDate(sunday) }
 }
 
 function createLaunchForm() {
@@ -103,14 +157,14 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const categories = Array.isArray(payload?.categories) ? payload.categories : []
     const paymentMethods = Array.isArray(payload?.payment_methods) ? payload.payment_methods : []
     const recurrences = Array.isArray(payload?.recurrences) ? payload.recurrences : []
-    const backendStatusCounts = payload?.status_counts || null
-    const [records, setRecords] = useState(Array.isArray(payload?.records) ? payload.records : [])
+    const [records, setRecords] = useState([])
     const searchControl = useConfirmedSearch('')
     const [activeFilter, setActiveFilter] = useState('open')
     const [appliedFilter, setAppliedFilter] = useState('open')
     const [range, setRange] = useState(defaultRange)
     const [appliedRange, setAppliedRange] = useState(defaultRange)
-    const [selectedId, setSelectedId] = useState((payload?.records || [])[0]?.id ?? null)
+    const [activeQuickRange, setActiveQuickRange] = useState('current-month')
+    const [selectedId, setSelectedId] = useState(null)
     const [detailModalOpen, setDetailModalOpen] = useState(false)
     const [launchModalOpen, setLaunchModalOpen] = useState(false)
     const [launchModalMode, setLaunchModalMode] = useState('create')
@@ -118,7 +172,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const [paymentModal, setPaymentModal] = useState(null)
     const [busy, setBusy] = useState(false)
     const [feedback, setFeedback] = useState(null)
-    const [hasLoadedRecords, setHasLoadedRecords] = useState(Array.isArray(payload?.records) && payload.records.length > 0)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState(false)
 
     const normalizedSearch = normalizeTextSearch(searchControl.value)
     const filteredRecords = useMemo(() => (
@@ -159,12 +213,18 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             .reduce((carry, record) => carry + Number(record.remaining_amount || 0), 0),
     }), [filteredRecords])
 
-    const statusCounts = useMemo(() => ({
-        open: backendStatusCounts?.open ?? records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
-        overdue: backendStatusCounts?.overdue ?? records.filter((record) => record.status === 'overdue').length,
-        paid: backendStatusCounts?.paid ?? records.filter((record) => record.status === 'paid').length,
-        all: backendStatusCounts?.all ?? records.length,
-    }), [backendStatusCounts, records])
+    const statusCounts = useMemo(() => {
+        if (!hasLoadedRecords) {
+            return { open: null, overdue: null, paid: null, all: null }
+        }
+
+        return {
+            open: records.filter((record) => ['open', 'overdue'].includes(record.status)).length,
+            overdue: records.filter((record) => record.status === 'overdue').length,
+            paid: records.filter((record) => record.status === 'paid').length,
+            all: records.length,
+        }
+    }, [hasLoadedRecords, records])
 
 
     function openCreateModal() {
@@ -313,12 +373,23 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         }
     }
 
+    function handleQuickRange(filter) {
+        setRange(filter.getRange())
+        setActiveQuickRange(filter.key)
+    }
+
+    function handleDateChange(field, value) {
+        setRange((current) => ({ ...current, [field]: value }))
+        setActiveQuickRange(null)
+    }
+
     function handleResetFilters() {
         searchControl.clear()
         setActiveFilter('open')
         setAppliedFilter('open')
         setRange(defaultRange)
         setAppliedRange(defaultRange)
+        setActiveQuickRange('current-month')
         setRecords([])
         setSelectedId(null)
         setHasLoadedRecords(false)
@@ -354,8 +425,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="pay-kpi-body">
                             <span>Em aberto</span>
-                            <strong>{formatMoney(totals.open)}</strong>
-                            <small>{statusCounts.open ?? 0} conta(s)</small>
+                            <strong>{hasLoadedRecords ? formatMoney(totals.open) : '—'}</strong>
+                            <small>{hasLoadedRecords ? `${statusCounts.open ?? 0} conta(s)` : 'filtre para carregar'}</small>
                         </div>
                     </div>
                     <div className="pay-kpi pay-kpi--danger">
@@ -364,8 +435,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="pay-kpi-body">
                             <span>Vencidas</span>
-                            <strong>{formatMoney(totals.overdue)}</strong>
-                            <small>{statusCounts.overdue ?? 0} conta(s)</small>
+                            <strong>{hasLoadedRecords ? formatMoney(totals.overdue) : '—'}</strong>
+                            <small>{hasLoadedRecords ? `${statusCounts.overdue ?? 0} conta(s)` : 'filtre para carregar'}</small>
                         </div>
                     </div>
                     <div className="pay-kpi pay-kpi--green">
@@ -374,8 +445,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="pay-kpi-body">
                             <span>Pagas</span>
-                            <strong>{statusCounts.paid ?? 0}</strong>
-                            <small>neste período</small>
+                            <strong>{hasLoadedRecords ? (statusCounts.paid ?? 0) : '—'}</strong>
+                            <small>{hasLoadedRecords ? 'neste período' : 'filtre para carregar'}</small>
                         </div>
                     </div>
                     <div className="pay-kpi pay-kpi--default">
@@ -384,8 +455,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="pay-kpi-body">
                             <span>Total carregado</span>
-                            <strong>{statusCounts.all ?? 0}</strong>
-                            <small>lançamentos</small>
+                            <strong>{hasLoadedRecords ? (statusCounts.all ?? 0) : '—'}</strong>
+                            <small>{hasLoadedRecords ? 'lançamentos' : 'aguardando filtro'}</small>
                         </div>
                     </div>
                 </div>
@@ -408,6 +479,19 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         ))}
                     </div>
 
+                    <div className="pay-quick-dates">
+                        {QUICK_DATE_FILTERS.map((filter) => (
+                            <button
+                                key={filter.key}
+                                type="button"
+                                className={`pay-quick-date ${activeQuickRange === filter.key ? 'active' : ''}`}
+                                onClick={() => handleQuickRange(filter)}
+                            >
+                                {filter.label}
+                            </button>
+                        ))}
+                    </div>
+
                     <div className="pay-toolbar-right">
                         <label className="pay-search">
                             <i className="fa-solid fa-magnifying-glass" />
@@ -424,14 +508,14 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                                 type="date"
                                 className="pay-date-input"
                                 value={range.from}
-                                onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+                                onChange={(e) => handleDateChange('from', e.target.value)}
                             />
                             <span>até</span>
                             <input
                                 type="date"
                                 className="pay-date-input"
                                 value={range.to}
-                                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+                                onChange={(e) => handleDateChange('to', e.target.value)}
                             />
                         </div>
 

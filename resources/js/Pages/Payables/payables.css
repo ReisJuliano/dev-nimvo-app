@@ -155,6 +155,7 @@
     border-right: 1px solid var(--app-border);
     padding-right: 0.75rem;
     margin-right: 0.125rem;
+    flex-wrap: wrap;
 }
 
 .pay-filter-tab {
@@ -201,6 +202,42 @@
 .pay-filter-tab.active span {
     background: rgba(79,70,229,0.1);
     border-color: rgba(79,70,229,0.2);
+    color: var(--app-primary);
+}
+
+.pay-quick-dates {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-right: 0.75rem;
+    border-right: 1px solid var(--app-border);
+    flex-wrap: wrap;
+}
+
+.pay-quick-date {
+    border: 1px solid var(--app-border);
+    border-radius: 999px;
+    background: var(--app-surface);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.42rem 0.68rem;
+    white-space: nowrap;
+    transition: var(--app-transition);
+}
+
+.pay-quick-date:hover {
+    border-color: rgba(79,70,229,0.28);
+    color: var(--app-primary);
+    background: rgba(79,70,229,0.05);
+}
+
+.pay-quick-date.active {
+    background: var(--app-primary-soft);
+    border-color: rgba(79,70,229,0.3);
     color: var(--app-primary);
 }
 
@@ -456,6 +493,7 @@
 
 @media (max-width: 768px) {
     .pay-filter-tabs { border-right: none; padding-right: 0; }
+    .pay-quick-dates { border-right: none; padding-right: 0; width: 100%; }
     .pay-toolbar { flex-direction: column; align-items: flex-start; }
     .pay-toolbar-right { width: 100%; }
     .pay-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

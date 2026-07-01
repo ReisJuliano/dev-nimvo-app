@@ -340,7 +340,7 @@ class OperationsWorkspaceService
     {
         return [
             'records' => $includeRecords ? $this->payableRecords(['applied' => true]) : [],
-            'status_counts' => $this->payableStatusCounts(),
+            'status_counts' => $includeRecords ? $this->payableStatusCounts() : null,
             'suppliers' => $this->supplierOptions(),
             'categories' => [
                 ['value' => 'supplier', 'label' => 'Fornecedor'],
