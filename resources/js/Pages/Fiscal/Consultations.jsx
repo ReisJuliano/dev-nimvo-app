@@ -203,7 +203,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                             <div className="fiscal-compact-heading">
                                 <StatusBadge compact icon="fa-wave-square" label={range.label} tone="info" />
                                 <div>
-                                    <strong>Vendas do periodo</strong>
+                                    <strong>Vendas do período</strong>
                                     <span>Acompanhe faturamento, cancelamentos e documentos emitidos.</span>
                                 </div>
                             </div>
@@ -239,7 +239,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                         />
                                     </label>
                                     <label>
-                                        <span>Ate</span>
+                                        <span>Até</span>
                                         <input
                                             type="date"
                                             value={rangeForm.data.to}
@@ -302,7 +302,7 @@ export default function FiscalConsultationsPage({ filters, periods, summary, ran
                                 selectedRowKey={selectedSale?.id}
                                 onRowClick={openSale}
                                 showActionLabels
-                                emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas no periodo selecionado.</span></div>}
+                                emptyState={<div className="fiscal-dense-empty"><i className="fa-solid fa-receipt" /><span>Sem vendas no período selecionado.</span></div>}
                                 getRowActions={(sale) => [
                                     {
                                         key: 'view',
@@ -453,7 +453,7 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                                 items={[
                                     ['Modelo', fiscalDocument.document_model],
                                     ['Modo', fiscalDocument.mode === 'contingency_offline' ? 'Offline legal' : (fiscalDocument.mode || '--')],
-                                    ['Numero', `${fiscalDocument.number} / ${fiscalDocument.series}`],
+                                    ['Número', `${fiscalDocument.number} / ${fiscalDocument.series}`],
                                     ['Status', fiscalDocument.status_label],
                                     ['Protocolo', fiscalDocument.protocol || fiscalDocument.cancellation_protocol || '--'],
                                     ['Chave', fiscalDocument.access_key || '--', true],
@@ -520,13 +520,13 @@ function SaleDetailsModal({ sale, onClose, cancelForm, onCancelSubmit }) {
                 <form className="fiscal-detail-actions" onSubmit={onCancelSubmit}>
                     <div className="fiscal-cancel-signal fiscal-cancel-signal-stack compact">
                         <span><i className="fa-solid fa-circle-info" />{sale.cancel_hint || 'Sem cancelamento disponível'}</span>
-                        <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingencia disponível'}</span>
+                        <span><i className="fa-solid fa-triangle-exclamation" />{sale.contingency_hint || 'Sem contingência disponível'}</span>
                     </div>
 
                     <textarea
                         name="reason"
                         onChange={(event) => cancelForm.setData('reason', event.target.value)}
-                        placeholder="Motivo do cancelamento ou da contingencia"
+                        placeholder="Motivo do cancelamento ou da contingência"
                         value={cancelForm.data.reason}
                     />
 

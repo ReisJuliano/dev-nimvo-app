@@ -127,7 +127,7 @@ export function getPresetLabel(preset) {
 }
 
 export function getPdvLabel(modules) {
-    return modules.pdv_avancado ? 'PDV avancado' : 'Vender'
+    return modules.pdv_avancado ? 'PDV avançado' : 'Vender'
 }
 
 export function getOrdersLabel(modules) {

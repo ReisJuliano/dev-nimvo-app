@@ -77,7 +77,7 @@ function PurchaseItemsEditor({ products, items, onChange }) {
             </div>
             <div className="ops-workspace-table-wrap span-2">
                 <table className="ui-table">
-                    <thead><tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th><th>Total</th><th>Acao</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>Qtd</th><th>Custo unit.</th><th>Total</th><th>Ação</th></tr></thead>
                     <tbody>
                         {items.length ? items.map((item, index) => (
                             <tr key={`${item.product_id}-${index}`}>
@@ -468,7 +468,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
             <ActionDrawer
                 open={drawerOpen}
                 title={form.id ? 'Detalhes da entrega' : 'Nova entrega'}
-                description={form.id ? 'Edite dados, status e observacoes.' : 'Preencha os dados básicos para entrar na fila.'}
+                description={form.id ? 'Edite dados, status e observações.' : 'Preencha os dados básicos para entrar na fila.'}
                 icon="fa-motorcycle"
                 size="lg"
                 onClose={closeDrawer}
@@ -483,10 +483,10 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
 
                     <form className="ops-workspace-form-grid" onSubmit={handleSubmit}>
                         <label><span>Cliente</span><select value={form.customer_id} onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}><option value="">Não informado</option>{payload.customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
-                        <label><span>Referencia</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
+                        <label><span>Referência</span><input value={form.reference} onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))} /></label>
                         <label><span>Status</span><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="pending">Pendente</option><option value="dispatched">Em rota</option><option value="delivered">Entregue</option></select></label>
                         <label><span>Canal</span><select value={form.channel} onChange={(event) => setForm((current) => ({ ...current, channel: event.target.value }))}><option value="delivery">Delivery</option><option value="retirada">Retirada</option></select></label>
-                        <label><span>Destinatario</span><input value={form.recipient_name} onChange={(event) => setForm((current) => ({ ...current, recipient_name: event.target.value }))} /></label>
+                        <label><span>Destinatário</span><input value={form.recipient_name} onChange={(event) => setForm((current) => ({ ...current, recipient_name: event.target.value }))} /></label>
                         <label><span>Telefone</span><input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
                         <label className="span-2"><span>Endereço</span><input value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} required={form.channel !== 'retirada'} /></label>
                         <label><span>Bairro</span><input value={form.neighborhood} onChange={(event) => setForm((current) => ({ ...current, neighborhood: event.target.value }))} /></label>
@@ -494,7 +494,7 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
                         <label><span>Taxa</span><input type="number" min="0" step="0.01" value={form.delivery_fee} onChange={(event) => setForm((current) => ({ ...current, delivery_fee: event.target.value }))} /></label>
                         <label><span>Total do pedido</span><input type="number" min="0" step="0.01" value={form.order_total} onChange={(event) => setForm((current) => ({ ...current, order_total: event.target.value }))} /></label>
                         <label className="span-2"><span>Agendado para</span><input type="datetime-local" value={form.scheduled_for} onChange={(event) => setForm((current) => ({ ...current, scheduled_for: event.target.value }))} /></label>
-                        <label className="span-2"><span>Observacoes</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
+                        <label className="span-2"><span>Observações</span><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
                         <div className="ops-workspace-actions span-2">
                             <button type="button" className="ui-button-ghost" onClick={closeDrawer}>Cancelar</button>
                             {form.id ? <button type="button" className="ui-button-ghost danger" onClick={() => handleDelete(form)}>Excluir</button> : null}
@@ -599,11 +599,11 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
                                 <label><FieldLabel icon="fa-truck-ramp-box" text="Fornecedor" /><select value={form.supplier_id} onChange={(event) => setForm((current) => ({ ...current, supplier_id: event.target.value }))}><option value="">Não informado</option>{payload.suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
                                 <label><FieldLabel icon="fa-flag" text="Status" /><select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}><option value="draft">Rascunho</option><option value="ordered">Solicitada</option><option value="received">Recebida</option></select></label>
                                 <label><FieldLabel icon="fa-calendar-day" text="Previsão" /><input type="date" value={form.expected_at} onChange={(event) => setForm((current) => ({ ...current, expected_at: event.target.value }))} /></label>
-                                <label className="span-2"><FieldLabel icon="fa-note-sticky" text="Observacoes" /><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
+                                <label className="span-2"><FieldLabel icon="fa-note-sticky" text="Observações" /><textarea rows="4" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label>
                                 <PurchaseItemsEditor products={payload.products} items={form.items} onChange={(items) => setForm((current) => ({ ...current, items }))} />
                                 <label><FieldLabel icon="fa-truck-fast" text="Frete" /><input type="number" min="0" step="0.01" value={form.freight} onChange={(event) => setForm((current) => ({ ...current, freight: event.target.value }))} /></label>
                                 <div className="ops-workspace-total-bar"><span>Subtotal / Total</span><strong>{`${formatMoney(subtotalPreview)} / ${formatMoney(totalPreview)}`}</strong></div>
-                                {form.stock_applied_at ? <div className="ops-workspace-inline-alert span-2">Esta compra ja entrou no estoque e não pode mais ser alterada.</div> : null}
+                                {form.stock_applied_at ? <div className="ops-workspace-inline-alert span-2">Esta compra já entrou no estoque e não pode mais ser alterada.</div> : null}
                                 <div className="ops-workspace-actions span-2"><button type="button" className="ui-button-ghost" onClick={() => setForm(emptyForm)}>Limpar</button>{form.id ? <button type="button" className="ui-button-ghost danger" onClick={handleDelete}>Excluir</button> : null}<button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : form.id ? 'Atualizar compra' : 'Salvar compra'}</button></div>
                             </form>
                         </section>

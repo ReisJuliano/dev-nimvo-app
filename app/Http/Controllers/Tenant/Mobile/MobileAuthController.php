@@ -34,7 +34,7 @@ class MobileAuthController extends Controller
 
         if (! in_array($user->role, self::ALLOWED_ROLES, true)) {
             throw ValidationException::withMessages([
-                'username' => ['Este usuario nao tem permissao para acessar o app mobile.'],
+                'username' => ['Este usuário não tem permissóo para acessar o app mobile.'],
             ]);
         }
 

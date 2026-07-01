@@ -12,7 +12,7 @@ export default function PendingOrdersPanel({
         <section className="pos-card">
             <div className="pos-card-header pos-pending-orders-header">
                 <div>
-                    <h2>Atendimentos prontos para cobranca</h2>
+                    <h2>Atendimentos prontos para cobrança</h2>
                 </div>
 
                 <button type="button" className="ui-button-ghost" onClick={onRefresh} disabled={refreshing}>
@@ -32,7 +32,7 @@ export default function PendingOrdersPanel({
                                 <div className="pos-pending-order-copy">
                                     <div className="pos-pending-order-top">
                                         <span className={`ui-badge ${isActive ? 'success' : 'info'}`}>
-                                            {isActive ? 'Em cobranca' : 'Aguardando cobranca'}
+                                            {isActive ? 'Em cobrança' : 'Aguardando cobrança'}
                                         </span>
                                         <strong>{order.label}</strong>
                                     </div>
@@ -44,7 +44,7 @@ export default function PendingOrdersPanel({
                                     </div>
 
                                     <small>
-                                        {order.created_by ? `Lancado por ${order.created_by}` : 'Pedido registrado'}{' '}
+                                        {order.created_by ? `Lançado por ${order.created_by}` : 'Pedido registrado'}{' '}
                                         {order.sent_to_cashier_at ? `em ${formatDateTime(order.sent_to_cashier_at)}` : ''}
                                     </small>
                                 </div>
@@ -58,7 +58,7 @@ export default function PendingOrdersPanel({
                     })}
                 </div>
             ) : (
-                <div className="pos-empty-state">Nenhum atendimento aguardando cobranca.</div>
+                <div className="pos-empty-state">Nenhum atendimento aguardando cobrança.</div>
             )}
         </section>
     )

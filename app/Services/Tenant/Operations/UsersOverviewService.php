@@ -51,7 +51,7 @@ class UsersOverviewService
                     ['key' => 'status', 'label' => 'Status'],
                     ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
                     ['key' => 'sales_total', 'label' => 'Faturamento', 'format' => 'money'],
-                ], $users, 'Nenhum usuario cadastrado.'),
+                ], $users, 'Nenhum usuário cadastrado.'),
             ],
             $from,
             $to,

@@ -25,7 +25,7 @@ function readCollapsedPreference(storageKey, initialCollapsed, persistCollapsed)
 export default function ActionSidebar({
     storageKey,
     actions = [],
-    title = 'Acoes',
+    title = 'A??es',
     initialCollapsed = true,
     persistCollapsed = true,
     className = '',
@@ -67,7 +67,7 @@ export default function ActionSidebar({
             <button
                 type="button"
                 className="ui-action-sidebar-toggle"
-                title={collapsed ? 'Expandir acoes' : 'Recolher acoes'}
+                title={collapsed ? 'Expandir ações' : 'Recolher ações'}
                 onClick={() => setCollapsed((current) => !current)}
             >
                 <i className={`fa-solid ${collapsed ? 'fa-angles-left' : 'fa-angles-right'}`} />

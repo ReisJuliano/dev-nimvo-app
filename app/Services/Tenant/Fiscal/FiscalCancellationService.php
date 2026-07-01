@@ -80,8 +80,8 @@ class FiscalCancellationService
                     'status' => $document->status,
                     'source' => 'backend',
                     'message' => $decision['mode'] === 'local_cancelled'
-                        ? 'Venda cancelada localmente sem transmissao fiscal.'
-                        : 'Venda cancelada antes da autorizacao fiscal.',
+                        ? 'Venda cancelada localmente sem transmissão fiscal.'
+                        : 'Venda cancelada antes da autorização fiscal.',
                     'payload' => [
                         'reason' => $reason,
                     ],

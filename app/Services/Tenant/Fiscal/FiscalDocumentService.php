@@ -110,7 +110,7 @@ class FiscalDocumentService
                     ? 'Documento fiscal reservado e enviado para ensaio local.'
                     : ($offlineContingency
                         ? 'Documento fiscal reservado e enviado para contingencia offline legal.'
-                        : 'Documento fiscal reservado e enviado para a fila de emissao.'),
+                        : 'Documento fiscal reservado e enviado para a fila de emissão.'),
             ]);
 
             return $document->fresh(['events']);
@@ -146,7 +146,7 @@ class FiscalDocumentService
     {
         if (in_array($document->status, ['authorized', 'printed', 'signed_local', 'printed_local'], true)) {
             throw ValidationException::withMessages([
-                'document' => 'Este documento fiscal ja foi concluido e nao pode ser reenfileirado.',
+                'document' => 'Este documento fiscal já foi concluído e não pode ser reenfileirado.',
             ]);
         }
 
@@ -250,17 +250,17 @@ class FiscalDocumentService
         $missing = [];
 
         foreach ([
-            'company_name' => 'razao social',
+            'company_name' => 'razão social',
             'cnpj' => 'CNPJ',
-            'ie' => 'inscricao estadual',
+            'ie' => 'inscrição estadual',
             'street' => 'logradouro',
-            'number' => 'numero',
+            'number' => 'número',
             'district' => 'bairro',
-            'city_code' => 'codigo do municipio',
-            'city_name' => 'municipio',
+            'city_code' => 'código do município',
+            'city_name' => 'município',
             'state' => 'UF',
             'zip_code' => 'CEP',
-            'operation_nature' => 'natureza da operacao',
+            'operation_nature' => 'natureza da operação',
         ] as $field => $label) {
             if (blank($profile->{$field})) {
                 $missing[] = "Configure {$label} no perfil fiscal.";
@@ -268,11 +268,11 @@ class FiscalDocumentService
         }
 
         if (! preg_match('/^\d{14}$/', (string) $profile->cnpj)) {
-            $missing[] = 'O CNPJ do perfil fiscal precisa ter 14 digitos numericos.';
+            $missing[] = 'O CNPJ do perfil fiscal precisa ter 14 digitos numéricos.';
         }
 
         if (! preg_match('/^\d{7}$/', (string) $profile->city_code)) {
-            $missing[] = 'O codigo do municipio precisa ter 7 digitos.';
+            $missing[] = 'O código do município precisa ter 7 dígitos.';
         }
 
         if (! preg_match('/^\d{8}$/', (string) $profile->zip_code)) {
@@ -292,7 +292,7 @@ class FiscalDocumentService
         }
 
         if ((int) $profile->next_number < 1) {
-            $missing[] = 'O proximo numero fiscal precisa ser maior que zero.';
+            $missing[] = 'O próximo número fiscal precisa ser maior que zero.';
         }
 
         if ((string) $profile->invoice_model !== $documentModel) {
@@ -300,14 +300,14 @@ class FiscalDocumentService
         }
 
         if (! in_array((string) $profile->crt, ['1', '2', '4'], true)) {
-            $missing[] = 'O emissor atual suporta somente CRT 1, 2 ou 4. Regime normal ainda nao esta implementado neste fluxo.';
+            $missing[] = 'O emissor atual suporta somente CRT 1, 2 ou 4. Regime normal ainda não está implementado neste fluxo.';
         }
 
         if (preg_match('/^\d{7}$/', (string) $profile->city_code)) {
             $expectedPrefix = $this->ufCode((string) $profile->state);
 
             if (substr((string) $profile->city_code, 0, 2) !== $expectedPrefix) {
-                $missing[] = 'O codigo IBGE do municipio nao corresponde a UF configurada no perfil fiscal.';
+                $missing[] = 'O código IBGE do município não corresponde à UF configurada no perfil fiscal.';
             }
         }
 
@@ -317,10 +317,10 @@ class FiscalDocumentService
 
         if ($requireTransmission) {
             foreach ([
-                'technical_contact_name' => 'nome do responsavel tecnico',
-                'technical_contact_email' => 'email do responsavel tecnico',
-                'technical_contact_phone' => 'telefone do responsavel tecnico',
-                'technical_contact_cnpj' => 'CNPJ do responsavel tecnico',
+                'technical_contact_name' => 'nome do responsóvel técnico',
+                'technical_contact_email' => 'email do responsóvel técnico',
+                'technical_contact_phone' => 'telefone do responsóvel técnico',
+                'technical_contact_cnpj' => 'CNPJ do responsóvel técnico',
             ] as $field => $label) {
                 if (blank($profile->{$field})) {
                     $missing[] = "Configure {$label} no perfil fiscal.";
@@ -331,21 +331,21 @@ class FiscalDocumentService
                 filled($profile->technical_contact_email)
                 && filter_var((string) $profile->technical_contact_email, FILTER_VALIDATE_EMAIL) === false
             ) {
-                $missing[] = 'O e-mail do responsavel tecnico precisa ser valido.';
+                $missing[] = 'O e-mail do responsóvel técnico precisa ser válido.';
             }
 
             if (
                 filled($profile->technical_contact_cnpj)
                 && ! preg_match('/^\d{14}$/', (string) $profile->technical_contact_cnpj)
             ) {
-                $missing[] = 'O CNPJ do responsavel tecnico precisa ter 14 digitos numericos.';
+                $missing[] = 'O CNPJ do responsóvel técnico precisa ter 14 digitos numéricos.';
             }
 
             if (
                 filled($profile->technical_contact_phone)
                 && ! preg_match('/^\d{10,11}$/', (string) $profile->technical_contact_phone)
             ) {
-                $missing[] = 'O telefone do responsavel tecnico precisa ter 10 ou 11 digitos.';
+                $missing[] = 'O telefone do responsóvel técnico precisa ter 10 ou 11 digitos.';
             }
         }
 
@@ -640,7 +640,7 @@ class FiscalDocumentService
     ): void {
         if ($sale->items->isEmpty()) {
             throw ValidationException::withMessages([
-                'sale' => 'A venda precisa ter itens para emissao fiscal.',
+                'sale' => 'A venda precisa ter itens para emissão fiscal.',
             ]);
         }
 
@@ -651,12 +651,12 @@ class FiscalDocumentService
             $product = $item->product;
 
             if (! $product) {
-                $missing[] = "Produto vinculado ao item {$item->id} nao encontrado.";
+                $missing[] = "Produto vinculado ao item {$item->id} não encontrado.";
                 continue;
             }
 
             if (array_key_exists('fiscal_enabled', $product->getAttributes()) && ! $product->fiscal_enabled) {
-                $missing[] = "Produto {$product->name} esta com movimentacao fiscal desativada e nao pode ser emitido.";
+                $missing[] = "Produto {$product->name} está com movimentação fiscal desativada e não pode ser emitido.";
                 continue;
             }
 
@@ -681,16 +681,16 @@ class FiscalDocumentService
             }
 
             if (! in_array((string) $product->icms_csosn, $allowedCsosn, true)) {
-                $missing[] = "Produto {$product->name} usa CSOSN nao suportado pelo emissor atual.";
+                $missing[] = "Produto {$product->name} usa CSOSN não suportado pelo emissor atual.";
             }
         }
 
         $paymentsTotal = round((float) $sale->payments->sum('amount'), 2);
 
         if ($paymentsTotal <= 0) {
-            $missing[] = 'A venda precisa ter pagamentos validos para emissao fiscal.';
+            $missing[] = 'A venda precisa ter pagamentos válidos para emissão fiscal.';
         } elseif ($paymentsTotal !== round((float) $sale->total, 2)) {
-            $missing[] = 'A soma dos pagamentos da venda precisa ser igual ao total antes da emissao fiscal.';
+            $missing[] = 'A soma dos pagamentos da venda precisa ser igual ao total antes da emissão fiscal.';
         }
 
         foreach ($sale->payments as $payment) {
@@ -698,7 +698,7 @@ class FiscalDocumentService
 
             if (($mapped['tPag'] ?? '99') === '99') {
                 $missing[] = sprintf(
-                    'A forma de pagamento "%s" ainda nao possui mapeamento fiscal valido para a SEFAZ.',
+                    'A forma de pagamento "%s" ainda não possui mapeamento fiscal válido para a SEFAZ.',
                     (string) $payment->payment_method,
                 );
             }
@@ -726,10 +726,10 @@ class FiscalDocumentService
             'name' => 'nome ou razao social',
             'document' => 'CPF/CNPJ',
             'street' => 'logradouro',
-            'number' => 'numero',
+            'number' => 'número',
             'district' => 'bairro',
-            'city_code' => 'codigo do municipio',
-            'city_name' => 'municipio',
+            'city_code' => 'código do município',
+            'city_name' => 'município',
             'state' => 'UF',
             'zip_code' => 'CEP',
         ] as $field => $label) {
@@ -741,11 +741,11 @@ class FiscalDocumentService
         $document = (string) ($recipient['document'] ?? '');
 
         if ($document !== '' && ! preg_match('/^\d{11}$|^\d{14}$/', $document)) {
-            $missing[] = 'O destinatario da NF-e precisa ter CPF ou CNPJ numerico valido.';
+            $missing[] = 'O destinatário da NF-e precisa ter CPF ou CNPJ numérico válido.';
         }
 
         if (filled($recipient['city_code'] ?? null) && ! preg_match('/^\d{7}$/', (string) $recipient['city_code'])) {
-            $missing[] = 'O codigo do municipio do destinatario precisa ter 7 digitos.';
+            $missing[] = 'O código do município do destinatário precisa ter 7 dígitos.';
         }
 
         if (filled($recipient['zip_code'] ?? null) && ! preg_match('/^\d{8}$/', (string) $recipient['zip_code'])) {
@@ -761,7 +761,7 @@ class FiscalDocumentService
             && filled($recipient['state'] ?? null)
             && substr((string) $recipient['city_code'], 0, 2) !== $this->ufCode((string) $recipient['state'])
         ) {
-            $missing[] = 'O codigo IBGE do destinatario nao corresponde a UF informada.';
+            $missing[] = 'O código IBGE do destinatário não corresponde à UF informada.';
         }
     }
 

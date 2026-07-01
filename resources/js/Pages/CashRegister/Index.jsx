@@ -103,7 +103,7 @@ function PaymentSummaryTable({ report }) {
                 columns={[
                     { key: 'label', label: 'Forma' },
                     { key: 'total', label: 'Total' },
-                    { key: 'entries', label: 'Lancamentos' },
+                    { key: 'entries', label: 'Lançamentos' },
                 ]}
                 rows={rows}
                 rowKey="key"
@@ -287,7 +287,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 setFeedback({
                     type: 'error',
-                    text: 'Movimentacoes manuais do caixa ainda exigem conexão ativa.',
+                    text: 'Movimentações manuais do caixa ainda exigem conexão ativa.',
                 })
                 return
             }
@@ -539,7 +539,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             key: 'manual',
             label: 'Movimentos',
             value: `${movementRows.length}`,
-            meta: `${formatMoney(openRegisterState.total_supplies)} entrada / ${formatMoney(openRegisterState.total_withdrawals)} saida`,
+            meta: `${formatMoney(openRegisterState.total_supplies)} entrada / ${formatMoney(openRegisterState.total_withdrawals)} saída`,
         },
     ] : []
 
@@ -719,7 +719,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                             onClick={() => setHistoryDrawerTab('movements')}
                         >
                             <i className="fa-solid fa-arrow-right-arrow-left" />
-                            <span>Movimentacoes</span>
+                            <span>Movimentações</span>
                         </button>
                         <button
                             type="button"
@@ -741,10 +741,10 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                 },
                                 { key: 'reason', label: 'Motivo' },
                                 { key: 'amount', label: 'Valor' },
-                                { key: 'createdAt', label: 'Horario' },
+                                { key: 'createdAt', label: 'Horário' },
                             ]}
                             rows={movementRows}
-                            emptyState={<CashRegisterEmpty icon="fa-arrow-right-arrow-left" text="Os movimentos manuais do turno aparecerao aqui." title="Sem movimentacoes" />}
+                            emptyState={<CashRegisterEmpty icon="fa-arrow-right-arrow-left" text="Os movimentos manuais do turno aparecerão aqui." title="Sem movimentações" />}
                             rowKey="id"
                         />
                     ) : (
@@ -756,12 +756,12 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                 { key: 'totalSales', label: 'Total' },
                                 {
                                     key: 'difference',
-                                    label: 'Diferenca',
+                                    label: 'Diferença',
                                     render: (row) => <StatusBadge compact label={row.difference} tone={row.tone} />,
                                 },
                             ]}
                             rows={historyRows}
-                            emptyState={<CashRegisterEmpty icon="fa-file-lines" text="Os fechamentos concluidos aparecerao nesta fila." title="Sem fechamentos" />}
+                            emptyState={<CashRegisterEmpty icon="fa-file-lines" text="Os fechamentos concluídos aparecerão nesta fila." title="Sem fechamentos" />}
                             getRowActions={(row) => [
                                 {
                                     key: 'report',
@@ -795,7 +795,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                             <span>{row.label}</span>
                                             <strong>{formatMoney(row.expected)}</strong>
                                         </div>
-                                        <StatusBadge compact label={row.key === 'cash' ? 'Obrigatorio' : 'Conferir'} tone={row.key === 'cash' ? 'info' : 'warning'} />
+                                        <StatusBadge compact label={row.key === 'cash' ? 'Obrigatório' : 'Conferir'} tone={row.key === 'cash' ? 'info' : 'warning'} />
                                     </div>
                                     <label>
                                         <span>Valor informado</span>
@@ -809,7 +809,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                         />
                                     </label>
                                     <div className={`cash-close-difference ${Math.abs(row.difference || 0) > 0.009 ? 'alert' : ''}`}>
-                                        <small>Diferenca</small>
+                                        <small>Diferença</small>
                                         <strong>{row.difference === null ? 'A conferir' : formatMoney(row.difference)}</strong>
                                     </div>
                                 </article>

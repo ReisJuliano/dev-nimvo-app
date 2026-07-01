@@ -79,7 +79,7 @@ export default function ReportsShowcase({ module }) {
         return (
             <section className="operations-report-preview-hero">
                 <div>
-                    <span className="operations-section-kicker">Relatorios</span>
+                    <span className="operations-section-kicker">Relatórios</span>
                     <h2>Nenhum relatório disponível</h2>
                 </div>
             </section>
@@ -129,7 +129,7 @@ export default function ReportsShowcase({ module }) {
                     <h2>{currentCategory.label}</h2>
                 </div>
                 <div className="operations-report-preview-badges">
-                    <span className="ui-badge success">{filteredReports.length} visoes</span>
+                    <span className="ui-badge success">{filteredReports.length} visões</span>
                 </div>
             </section>
 

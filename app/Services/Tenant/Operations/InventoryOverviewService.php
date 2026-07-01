@@ -81,9 +81,9 @@ class InventoryOverviewService
             ],
             [],
             [
-                $this->table('Estrutura do catalogo', [
+                $this->table('Estrutura do catálogo', [
                     ['key' => 'name', 'label' => 'Categoria'],
-                    ['key' => 'description', 'label' => 'Descricao'],
+                    ['key' => 'description', 'label' => 'Descrição'],
                     ['key' => 'products_count', 'label' => 'Produtos', 'format' => 'number'],
                     ['key' => 'stock_value', 'label' => 'Valor estoque', 'format' => 'money'],
                     ['key' => 'status', 'label' => 'Status'],
@@ -113,10 +113,10 @@ class InventoryOverviewService
 
         return $this->page(
             'Produtos acabando',
-            'Itens que precisam de reposicao.',
+            'Itens que precisam de reposição.',
             [
                 $this->metric('Produtos acabando', $products->count()),
-                $this->metric('Reposicao sugerida', $products->sum('suggested_inbound'), 'number'),
+                $this->metric('Reposição sugerida', $products->sum('suggested_inbound'), 'number'),
                 $this->metric('Fornecedores acionados', $products->pluck('supplier_name')->unique()->count()),
                 $this->metric('Itens sem fornecedor', $products->where('supplier_name', 'Sem fornecedor')->count()),
             ],
@@ -132,11 +132,11 @@ class InventoryOverviewService
             ],
             [
                 $this->table('Produtos acabando', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'supplier_name', 'label' => 'Fornecedor'],
                     ['key' => 'stock_quantity', 'label' => 'Atual', 'format' => 'number'],
-                    ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'number'],
+                    ['key' => 'min_stock', 'label' => 'Mínimo', 'format' => 'number'],
                     ['key' => 'suggested_inbound', 'label' => 'Sugerido', 'format' => 'number'],
                 ], $products, 'Tudo certo por enquanto.'),
             ],
@@ -161,24 +161,24 @@ class InventoryOverviewService
             ->values();
 
         return $this->page(
-            'Conferencia de estoque',
-            'Itens para conferencia e ajuste de saldo.',
+            'Conferência de estoque',
+            'Itens para conferência e ajuste de saldo.',
             [
-                $this->metric('Itens criticos', $products->count()),
+                $this->metric('Itens críticos', $products->count()),
                 $this->metric('Sem saldo', $products->where('stock_quantity', '<=', 0)->count()),
-                $this->metric('Abaixo do minimo', $products->where('gap', '<=', 0)->count()),
+                $this->metric('Abaixo do mínimo', $products->where('gap', '<=', 0)->count()),
                 $this->metric('Defasagem total', abs($products->sum('gap')), 'number'),
             ],
             [],
             [
                 $this->table('Itens para revisar', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'stock_quantity', 'label' => 'Atual', 'format' => 'number'],
-                    ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'number'],
-                    ['key' => 'gap', 'label' => 'Diferenca', 'format' => 'number'],
-                    ['key' => 'updated_at', 'label' => 'Ultima revisao', 'format' => 'datetime'],
-                ], $products, 'Nenhum item critico no estoque.'),
+                    ['key' => 'min_stock', 'label' => 'Mínimo', 'format' => 'number'],
+                    ['key' => 'gap', 'label' => 'Diferença', 'format' => 'number'],
+                    ['key' => 'updated_at', 'label' => 'Última revisão', 'format' => 'datetime'],
+                ], $products, 'Nenhum item crítico no estoque.'),
             ],
         );
     }
@@ -216,31 +216,31 @@ class InventoryOverviewService
             ]);
 
         return $this->page(
-            'Historico do estoque',
-            'Entradas, saidas e ajustes do periodo.',
+            'Histórico do estoque',
+            'Entradas, saídas e ajustes do período.',
             [
-                $this->metric('Saidas registradas', $movementSummary->sum('outbound_quantity'), 'number'),
+                $this->metric('Saídas registradas', $movementSummary->sum('outbound_quantity'), 'number'),
                 $this->metric('Entradas registradas', $movementSummary->sum('inbound_quantity'), 'number'),
                 $this->metric('Itens com giro', $movementSummary->count()),
-                $this->metric('Historico recente', $recentMovements->count()),
+                $this->metric('Histórico recente', $recentMovements->count()),
             ],
             [],
             [
-                $this->table('Historico por produto', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                $this->table('Histórico por produto', [
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
-                    ['key' => 'outbound_quantity', 'label' => 'Saidas', 'format' => 'number'],
+                    ['key' => 'outbound_quantity', 'label' => 'Saídas', 'format' => 'number'],
                     ['key' => 'inbound_quantity', 'label' => 'Entradas', 'format' => 'number'],
-                    ['key' => 'balance_delta', 'label' => 'Saldo liquido', 'format' => 'number'],
-                ], $movementSummary, 'Nenhum historico registrado no periodo.'),
-                $this->table('Historico do estoque', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                    ['key' => 'balance_delta', 'label' => 'Saldo líquido', 'format' => 'number'],
+                ], $movementSummary, 'Nenhum histórico registrado no período.'),
+                $this->table('Histórico do estoque', [
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'type', 'label' => 'Tipo'],
                     ['key' => 'quantity_delta', 'label' => 'Delta', 'format' => 'number'],
                     ['key' => 'stock_after', 'label' => 'Saldo final', 'format' => 'number'],
                     ['key' => 'occurred_at', 'label' => 'Data', 'format' => 'datetime'],
-                ], $recentMovements, 'Nenhum historico encontrado.'),
+                ], $recentMovements, 'Nenhum histórico encontrado.'),
             ],
             $from,
             $to,
@@ -267,22 +267,22 @@ class InventoryOverviewService
 
         return $this->page(
             'Produtos acabando',
-            'Itens em falta ou abaixo do estoque minimo.',
+            'Itens em falta ou abaixo do estoque mínimo.',
             [
                 $this->metric('Itens em falta', $products->where('stock_quantity', '<=', 0)->count()),
                 $this->metric('Produtos acabando', $products->count()),
-                $this->metric('Reposicao minima', $products->sum('missing'), 'number'),
+                $this->metric('Reposição mínima', $products->sum('missing'), 'number'),
                 $this->metric('Sem fornecedor', $products->where('supplier_name', 'Sem fornecedor')->count()),
             ],
             [],
             [
                 $this->table('Produtos acabando', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'category_name', 'label' => 'Categoria'],
                     ['key' => 'supplier_name', 'label' => 'Fornecedor'],
                     ['key' => 'stock_quantity', 'label' => 'Atual', 'format' => 'number'],
-                    ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'number'],
+                    ['key' => 'min_stock', 'label' => 'Mínimo', 'format' => 'number'],
                     ['key' => 'missing', 'label' => 'Falta', 'format' => 'number'],
                 ], $products, 'Tudo certo por enquanto.'),
             ],

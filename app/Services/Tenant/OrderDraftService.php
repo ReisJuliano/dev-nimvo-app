@@ -137,7 +137,7 @@ class OrderDraftService
     {
         if ($draft->status === OrderDraft::STATUS_COMPLETED) {
             throw ValidationException::withMessages([
-                'order' => 'Este pedido ja foi concluido e nao pode mais ser alterado.',
+                'order' => 'Este pedido já foi concluído e não pode mais ser alterado.',
             ]);
         }
 
@@ -151,7 +151,7 @@ class OrderDraftService
 
             if ($products->count() !== $itemsPayload->pluck('id')->unique()->count()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Um ou mais produtos informados nao existem mais.',
+                    'items' => 'Um ou mais produtos informados não existem mais.',
                 ]);
             }
 
@@ -212,7 +212,7 @@ class OrderDraftService
     {
         if ($draft->status === OrderDraft::STATUS_COMPLETED) {
             throw ValidationException::withMessages([
-                'order' => 'Este pedido ja foi concluido e nao pode ser enviado novamente.',
+                'order' => 'Este pedido já foi concluído e não pode ser enviado novamente.',
             ]);
         }
 
@@ -251,7 +251,7 @@ class OrderDraftService
     {
         if ($draft->status === OrderDraft::STATUS_COMPLETED || $draft->sale_id) {
             throw ValidationException::withMessages([
-                'order' => 'Este pedido ja foi concluido e nao pode ser removido.',
+                'order' => 'Este pedido já foi concluído e não pode ser removido.',
             ]);
         }
 

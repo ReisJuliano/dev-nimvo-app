@@ -43,7 +43,7 @@ class SpedNfeNfceEmitter
         $documentModel = $this->documentModel($payload);
 
         if ($documentModel !== '65') {
-            throw new RuntimeException('O ensaio local sem SEFAZ esta disponivel apenas para NFC-e modelo 65.');
+            throw new RuntimeException('O ensaio local sem SEFAZ está disponível apenas para NFC-e modelo 65.');
         }
 
         $tools = $this->makeTools($payload, $agentConfig, false);
@@ -79,7 +79,7 @@ class SpedNfeNfceEmitter
         $documentModel = $this->documentModel($payload);
 
         if ($documentModel !== '65') {
-            throw new RuntimeException('A contingencia offline legal esta disponivel apenas para NFC-e modelo 65.');
+            throw new RuntimeException('A contingência offline legal está disponível apenas para NFC-e modelo 65.');
         }
 
         $tools = $this->makeTools($payload, $agentConfig, true);
@@ -116,7 +116,7 @@ class SpedNfeNfceEmitter
         $documentModel = $this->documentModel($payload);
 
         if ($documentModel !== '65') {
-            throw new RuntimeException('A transmissao de contingencia offline esta disponivel apenas para NFC-e modelo 65.');
+            throw new RuntimeException('A transmissão de contingência offline está disponível apenas para NFC-e modelo 65.');
         }
 
         $tools = $this->makeTools($payload, $agentConfig, true);
@@ -248,7 +248,7 @@ class SpedNfeNfceEmitter
                 'protocol' => $protocol,
                 'sefaz_status_code' => $statusCode,
                 'sefaz_status_reason' => $statusReason,
-                'message' => "Inutilizacao nao concluida [{$statusCode}] {$statusReason}",
+                'message' => "Inutilização não concluída [{$statusCode}] {$statusReason}",
             ];
         }
 
@@ -317,7 +317,7 @@ class SpedNfeNfceEmitter
                 $this->extractAccessKey($signedXml),
                 $statusCode,
                 $statusReason,
-                'A SEFAZ nao retornou o protocolo do documento fiscal.',
+                'A SEFAZ não retornou o protocolo do documento fiscal.',
             );
         }
 
@@ -377,7 +377,7 @@ class SpedNfeNfceEmitter
         }
 
         if (!is_file($certificatePath)) {
-            throw new RuntimeException("Certificado nao encontrado em {$certificatePath}.");
+            throw new RuntimeException("Certificado não encontrado em {$certificatePath}.");
         }
 
         $config = [
@@ -399,7 +399,7 @@ class SpedNfeNfceEmitter
         $certificate = $this->certificateReader->readCertificate($certificatePath, $certificatePassword);
 
         if ($certificate->getCnpj() !== ($payload['profile']['cnpj'] ?? null)) {
-            throw new RuntimeException('O certificado configurado no agente nao pertence ao mesmo CNPJ do emitente fiscal.');
+            throw new RuntimeException('O certificado configurado no agente não pertence ao mesmo CNPJ do emitente fiscal.');
         }
 
         return new Tools($configJson, $certificate);

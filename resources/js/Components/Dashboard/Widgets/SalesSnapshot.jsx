@@ -3,8 +3,8 @@ import { formatMoney, formatNumber, formatTime } from '@/lib/format'
 const paymentLabels = {
     cash: 'Dinheiro',
     pix: 'Pix',
-    debit_card: 'Debito',
-    credit_card: 'Credito',
+    debit_card: 'Débito',
+    credit_card: 'Crédito',
     credit: 'Fiado',
     mixed: 'Misto',
 }

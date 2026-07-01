@@ -21,7 +21,7 @@ class IncomingNfeXmlParser
         $infNfe = $xpath->query('//*[local-name()="infNFe"]')->item(0);
 
         if (!$infNfe instanceof DOMElement) {
-            throw new RuntimeException('O XML informado nao contem uma NF-e valida.');
+            throw new RuntimeException('O XML informado não cont?m uma NF-e válida.');
         }
 
         $accessKey = $this->extractAccessKey($xpath, $infNfe);
@@ -44,7 +44,7 @@ class IncomingNfeXmlParser
 
             $taxes = $this->extractTaxes($xpath, $impostoNode instanceof DOMElement ? $impostoNode : null);
             $items[] = [
-                'item_number' => (int) ($detNode->attributes?->getNamedItem('nItem')?->nodeValue ?: ($index + 1)),
+                'item_number' => (int) ($detNode->attributesó->getNamedItem('nItem')?->nodeValue ?: ($index + 1)),
                 'supplier_code' => $this->cleanValue($this->value($xpath, './*[local-name()="cProd"]', $prodNode)),
                 'barcode' => $this->normalizeBarcode(
                     $this->cleanValue($this->value($xpath, './*[local-name()="cEAN"]', $prodNode))
@@ -164,7 +164,7 @@ class IncomingNfeXmlParser
         $root = $document->documentElement;
 
         if (!$root instanceof DOMElement || $root->localName !== 'resNFe') {
-            throw new RuntimeException('O resumo recebido da NF-e nao esta no formato esperado.');
+            throw new RuntimeException('O resumo recebido da NF-e não está no formato esperado.');
         }
 
         return [
@@ -325,7 +325,7 @@ class IncomingNfeXmlParser
     protected function value(DOMXPath $xpath, string $expression, ?DOMElement $context = null): ?string
     {
         $nodes = $xpath->query($expression, $context);
-        $value = $nodes?->item(0)?->textContent;
+        $value = $nodesó->item(0)?->textContent;
 
         return $this->cleanValue($value);
     }

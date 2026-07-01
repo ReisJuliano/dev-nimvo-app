@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout'
 import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, getAmountConfirmationMessage } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatMoney } from '@/lib/format'
 import './payables.css'
@@ -239,8 +239,8 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         setLaunchModalOpen(true)
     }
 
-    async function submitLaunchForm(event) {
-        event.preventDefault()
+    async function submitLaunchForm(event, confirmAmountMismatch = false) {
+        event?.preventDefault?.()
         setBusy(true)
         setFeedback(null)
 
@@ -263,6 +263,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                 amount_paid: launchForm.amount_paid ? Number(launchForm.amount_paid) : 0,
                 paid_at: launchForm.paid_at || null,
                 status: launchForm.amount_paid && Number(launchForm.amount_paid) >= Number(launchForm.amount || 0) ? 'paid' : 'open',
+                confirm_amount_mismatch: confirmAmountMismatch,
             }
 
             const response = launchForm.id
@@ -275,7 +276,24 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             setLaunchModalOpen(false)
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
+            const confirmationMessage = !confirmAmountMismatch ? getAmountConfirmationMessage(error) : null
+
+            if (confirmationMessage) {
+                const confirmed = await confirmPopup({
+                    type: 'warning',
+                    title: 'Valor fora do padrão',
+                    message: confirmationMessage,
+                    confirmLabel: 'Confirmar mesmo assim',
+                    cancelLabel: 'Revisar valor',
+                })
+
+                if (confirmed) {
+                    await submitLaunchForm(event, true)
+                    return
+                }
+            } else {
+                setFeedback({ type: 'error', text: error.message })
+            }
         } finally {
             setBusy(false)
         }
@@ -684,7 +702,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             <div className="proc-ui-card-toolbar">
                                 <div className="proc-ui-section-title">
                                     <h3>{selectedRecord.description}</h3>
-                                    <p>{selectedRecord.supplier_name || 'Credor avulso'} · {selectedRecord.purchase_code || 'Sem vinculo com NF'}</p>
+                                    <p>{selectedRecord.supplier_name || 'Credor avulso'} · {selectedRecord.purchase_code || 'Sem vínculo com NF'}</p>
                                 </div>
                                 <StatusBadge compact label={selectedRecord.status_label} tone={selectedRecord.status_tone} />
                             </div>
@@ -704,7 +722,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                                 </div>
                                 <div className="proc-ui-mini-card">
                                     <span>Parcela</span>
-                                    <strong>{selectedRecord.installment_label || 'Unica'}</strong>
+                                    <strong>{selectedRecord.installment_label || 'Única'}</strong>
                                 </div>
                             </div>
 
@@ -749,7 +767,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
 
             <CompactModal
                 open={launchModalOpen}
-                title={launchModalMode === 'edit' ? 'Editar lancamento' : 'Novo lancamento avulso'}
+                title={launchModalMode === 'edit' ? 'Editar lançamento' : 'Novo lançamento avulso'}
                 description=""
                 icon="fa-file-invoice-dollar"
                 size="lg"
@@ -800,7 +818,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                         </div>
                         <div className="proc-ui-field">
                             <label>
-                                <span>Recorrencia</span>
+                                <span>Recorrência</span>
                                 <select value={launchForm.recurrence} onChange={(event) => setLaunchForm((current) => ({ ...current, recurrence: event.target.value }))}>
                                     {recurrences.map((recurrence) => <option key={recurrence.value} value={recurrence.value}>{recurrence.label}</option>)}
                                 </select>

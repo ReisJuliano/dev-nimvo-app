@@ -184,7 +184,7 @@ class TenantNavigationService
     }
 
     /**
-     * Chave de modulo para o middleware `module.enabled` (inclui fallback por path).
+     * Chave de módulo para o middleware `module.enabled` (inclui fallback por path).
      */
     public function resolveModuleAccessKey(Request $request): ?string
     {

@@ -6,21 +6,21 @@ export const filterMetaByStatus = {
         description: 'Rascunhos em andamento.',
     },
     sent_to_cashier: {
-        title: 'Pendentes de cobranca',
+        title: 'Pendentes de cobrança',
         description: 'Pedidos aguardando fechamento.',
     },
 }
 
 export const paymentTabs = [
     { key: 'cash', label: 'Dinheiro', icon: 'fa-money-bill-wave' },
-    { key: 'card', label: 'Cartao', icon: 'fa-credit-card' },
+    { key: 'card', label: 'Cartão', icon: 'fa-credit-card' },
     { key: 'pix', label: 'Pix', icon: 'fa-qrcode' },
     { key: 'credit', label: 'Fiado', icon: 'fa-handshake' },
 ]
 
 export const cardPaymentOptions = [
-    { key: 'debit_card', label: 'Debito', icon: 'fa-credit-card' },
-    { key: 'credit_card', label: 'Credito', icon: 'fa-credit-card' },
+    { key: 'debit_card', label: 'Débito', icon: 'fa-credit-card' },
+    { key: 'credit_card', label: 'Crédito', icon: 'fa-credit-card' },
 ]
 
 export function getInitialNewDraftForm() {
@@ -134,7 +134,7 @@ export function resolvePricing(items, config, selectedItem) {
     let discountedItems = baseItems
     let summary = {
         title: 'Sem desconto aplicado',
-        description: 'O atendimento segue com o total cheio até que voce aplique um abatimento.',
+        description: 'O atendimento segue com o total cheio até que você aplique um abatimento.',
         itemHint: selectedItem ? `Item em foco: ${selectedItem.name}` : null,
     }
 
@@ -144,7 +144,7 @@ export function resolvePricing(items, config, selectedItem) {
         discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
         summary = {
             title: `${percent}% de desconto no atendimento`,
-            description: `Abatimento total de ${formatMoney(totalDiscount)} distribuido entre os itens.`,
+            description: `Abatimento total de ${formatMoney(totalDiscount)} distribuído entre os itens.`,
             itemHint: null,
         }
     }
@@ -155,7 +155,7 @@ export function resolvePricing(items, config, selectedItem) {
         discountedItems = distributeDiscountAcrossItems(baseItems, totalDiscount)
         summary = {
             title: `Atendimento ajustado para ${formatMoney(targetTotal)}`,
-            description: `Desconto automatico de ${formatMoney(totalDiscount)} no fechamento.`,
+            description: `Desconto automático de ${formatMoney(totalDiscount)} no fechamento.`,
             itemHint: null,
         }
     }
@@ -298,7 +298,7 @@ export function sortDrafts(drafts) {
 
 export function getOrderTypeLabel(type) {
     if (type === 'mesa') {
-        return 'Referencia'
+        return 'Referência'
     }
 
     if (type === 'pedido') {
@@ -313,7 +313,7 @@ export function getOrderStatusMeta(status) {
         return {
             label: 'Pronto',
             badge: 'success',
-            description: 'Atendimento enviado para cobranca e pronto para fechamento.',
+            description: 'Atendimento enviado para cobrança e pronto para fechamento.',
         }
     }
 
@@ -321,7 +321,7 @@ export function getOrderStatusMeta(status) {
         return {
             label: 'Em preparo',
             badge: 'warning',
-            description: 'Pedido em preparo antes da etapa de cobranca.',
+            description: 'Pedido em preparo antes da etapa de cobrança.',
         }
     }
 
@@ -337,14 +337,14 @@ export function getOrderStatusMeta(status) {
         return {
             label: 'Cancelado',
             badge: 'danger',
-            description: 'Pedido encerrado sem conclusao.',
+            description: 'Pedido encerrado sem conclus?.',
         }
     }
 
     return {
         label: 'Aberto',
         badge: 'info',
-        description: 'Edição ativa com salvamento automatico.',
+        description: 'Edição ativa com salvamento automático.',
     }
 }
 
@@ -410,7 +410,7 @@ export function buildPrintMarkup({ draft, customer, statusLabel }) {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <title>${escapeHtml(draft.label)} - Impressao</title>
+                <title>${escapeHtml(draft.label)} - Impressão</title>
                 <style>
                     * { box-sizing: border-box; }
                     body { margin: 0; padding: 24px; font-family: Arial, sans-serif; color: #172131; background: #ffffff; }
@@ -454,7 +454,7 @@ export function buildPrintMarkup({ draft, customer, statusLabel }) {
                             <strong>${escapeHtml(getOrderTypeLabel(draft.type))}</strong>
                         </div>
                         <div class="meta-card">
-                            <span>Referencia</span>
+                            <span>Referência</span>
                             <strong>${escapeHtml(draft.reference || 'Sem referência')}</strong>
                         </div>
                         <div class="meta-card">
@@ -481,7 +481,7 @@ export function buildPrintMarkup({ draft, customer, statusLabel }) {
 
                     ${draft.notes.trim() ? `
                         <div class="notes" style="margin-top: 20px;">
-                            <span>Observacoes</span>
+                            <span>Observações</span>
                             <p>${escapeHtml(draft.notes)}</p>
                         </div>
                     ` : ''}

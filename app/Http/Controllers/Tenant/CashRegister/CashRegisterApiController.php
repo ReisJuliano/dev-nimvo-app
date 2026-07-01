@@ -24,7 +24,7 @@ class CashRegisterApiController extends Controller
             ->exists();
 
         if ($existing) {
-            return response()->json(['message' => 'Voce ja possui um caixa aberto.'], 422);
+            return response()->json(['message' => 'Você já possui um caixa aberto.'], 422);
         }
 
         $cashRegister = CashRegister::query()->create([
@@ -114,7 +114,7 @@ class CashRegisterApiController extends Controller
         );
 
         return response()->json([
-            'message' => 'Edicao liberada pelo supervisor.',
+            'message' => 'Edição liberada pelo supervisor.',
             'supervisor' => [
                 'id' => $supervisor->id,
                 'name' => $supervisor->name,

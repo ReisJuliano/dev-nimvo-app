@@ -103,11 +103,11 @@ class IncomingNfeSefazGateway
         }
 
         if ($certificatePath === '' || $certificatePassword === '') {
-            throw new RuntimeException('O certificado A1 da consulta de NF-e recebida nao foi configurado.');
+            throw new RuntimeException('O certificado A1 da consulta de NF-e recebida não foi configurado.');
         }
 
         if (!is_file($certificatePath)) {
-            throw new RuntimeException("Certificado A1 nao encontrado em {$certificatePath}.");
+            throw new RuntimeException("Certificado A1 não encontrado em {$certificatePath}.");
         }
 
         $payload = [
@@ -130,7 +130,7 @@ class IncomingNfeSefazGateway
         $document = new DOMDocument('1.0', 'UTF-8');
 
         if (!$document->loadXML($xml)) {
-            throw new RuntimeException('A SEFAZ retornou um XML invalido na distribuicao de documentos.');
+            throw new RuntimeException('A SEFAZ retornou um XML inválido na distribuição de documentos.');
         }
 
         $xpath = new DOMXPath($document);
@@ -153,8 +153,8 @@ class IncomingNfeSefazGateway
             }
 
             $documents[] = [
-                'schema' => (string) $docNode->attributes?->getNamedItem('schema')?->nodeValue,
-                'nsu' => (string) $docNode->attributes?->getNamedItem('NSU')?->nodeValue,
+                'schema' => (string) $docNode->attributesó->getNamedItem('schema')?->nodeValue,
+                'nsu' => (string) $docNode->attributesó->getNamedItem('NSU')?->nodeValue,
                 'xml' => $unzipped,
             ];
         }
@@ -173,7 +173,7 @@ class IncomingNfeSefazGateway
         $document = new DOMDocument('1.0', 'UTF-8');
 
         if (!$document->loadXML($xml)) {
-            throw new RuntimeException('A SEFAZ retornou um XML invalido na consulta de chave da NF-e.');
+            throw new RuntimeException('A SEFAZ retornou um XML inválido na consulta de chave da NF-e.');
         }
 
         $xpath = new DOMXPath($document);
@@ -194,7 +194,7 @@ class IncomingNfeSefazGateway
         $document = new DOMDocument('1.0', 'UTF-8');
 
         if (!$document->loadXML($xml)) {
-            throw new RuntimeException('A SEFAZ retornou um XML invalido na manifestacao do destinatario.');
+            throw new RuntimeException('A SEFAZ retornou um XML inválido na manifestação do destinatário.');
         }
 
         $xpath = new DOMXPath($document);

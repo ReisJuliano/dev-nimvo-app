@@ -21,7 +21,7 @@ class NullLicenseBillingGateway implements LicenseBillingGateway
             'pix_payload' => null,
             'metadata' => [
                 'provider_ready' => false,
-                'message' => 'Gateway de cobranca ainda nao configurado.',
+                'message' => 'Gateway de cobrança ainda não configurado.',
             ],
         ];
     }

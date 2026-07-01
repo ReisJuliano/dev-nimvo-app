@@ -33,25 +33,25 @@ class FiscalContingencyService
 
             if (! $document) {
                 throw ValidationException::withMessages([
-                    'sale' => 'A venda nao possui documento fiscal vinculado para entrar em contingencia.',
+                    'sale' => 'A venda não possui documento fiscal vinculado para entrar em contingência.',
                 ]);
             }
 
             if (in_array($document->status, ['queued', 'queued_to_agent', 'processing', 'cancellation_queued', 'cancellation_processing'], true)) {
                 throw ValidationException::withMessages([
-                    'sale' => 'O documento fiscal ainda esta em processamento e nao pode entrar em contingencia agora.',
+                    'sale' => 'O documento fiscal ainda está em processamento e não pode entrar em contingência agora.',
                 ]);
             }
 
             if (in_array($document->status, ['authorized', 'printed', 'cancelled', 'cancelled_local'], true)) {
                 throw ValidationException::withMessages([
-                    'sale' => 'Documentos concluidos nao podem entrar em contingencia operacional.',
+                    'sale' => 'Documentos concluídos não podem entrar em contingência operacional.',
                 ]);
             }
 
             if (! in_array($document->status, ['awaiting_agent', 'failed', 'rejected', 'contingency_pending', 'contingency_failed'], true)) {
                 throw ValidationException::withMessages([
-                    'sale' => 'O status atual nao permite marcar este documento em contingencia operacional.',
+                    'sale' => 'O status atual não permite marcar este documento em contingência operacional.',
                 ]);
             }
 
@@ -184,7 +184,7 @@ class FiscalContingencyService
                     'source' => 'backend',
                     'message' => $offlineStage === 'transmit'
                         ? 'NFC-e de contingencia offline reenfileirada para transmissao posterior.'
-                        : 'Documento retirado da contingencia e reenfileirado para emissao.',
+                        : 'Documento retirado da contingência e reenfileirado para emissão.',
                 ]);
 
                 $shouldDispatch = true;

@@ -221,12 +221,12 @@ function PurchaseDetailsModal({
     return (
         <CompactModal
             open
-            badge="Relatorio"
+            badge="Relatório"
             className="purchases-details-modal"
             description={record.code || `Pedido #${record.id}`}
             icon="fa-receipt"
             size="lg"
-            title="Relatorio do pedido"
+            title="Relatório do pedido"
             onClose={onClose}
         >
             <div className="proc-ui-modal-stack">
@@ -319,10 +319,10 @@ function PurchaseDetailsModal({
                 </section>
 
                 <section className="proc-ui-modal-block">
-                    <h3>Observacoes</h3>
+                    <h3>Observações</h3>
                     <div className="proc-ui-banner info">
                         <i className="fa-solid fa-note-sticky" />
-                        <div>{record.notes || 'Sem observacoes registradas para este pedido.'}</div>
+                        <div>{record.notes || 'Sem observações registradas para este pedido.'}</div>
                     </div>
                 </section>
 
@@ -644,6 +644,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
             cancelLabel: 'Continuar editando',
         })
     }
+
 
     async function clearActiveDraftSelection(options = {}) {
         if (!options.skipConfirm && !(await confirmDiscardUnsavedChanges())) {
@@ -1040,7 +1041,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         const confirmed = await confirmPopup({
             type: 'info',
             title: 'Finalizar compra',
-            message: `Deseja finalizar o pedido ${getPurchaseDisplayName(form)} e mover para Finalizadas?`,
+            message: `Deseja finalizar o pedido ${getPurchaseDisplayName(form)} e mover para Finalizadasó`,
             confirmLabel: 'Finalizar compra',
             cancelLabel: 'Voltar',
         })
@@ -1056,7 +1057,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         const confirmed = await confirmPopup({
             type: 'info',
             title: 'Finalizar compra',
-            message: `Deseja finalizar o pedido ${record.code || `#${record.id}`} e gerar o PDF com os itens?`,
+            message: `Deseja finalizar o pedido ${record.code || `#${record.id}`} e gerar o PDF com os itensó`,
             confirmLabel: 'Finalizar compra',
             cancelLabel: 'Voltar',
         })
@@ -1367,7 +1368,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                                     className="purchases-editor-notes"
                                     aria-label="Observacoes"
                                     disabled={!canEdit}
-                                    placeholder="Adicionar observacoes..."
+                                    placeholder="Adicionar observações..."
                                     rows="3"
                                     value={form.notes}
                                     onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
@@ -1453,7 +1454,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                             <PageHeader
                                 title={moduleTitle}
                                 search={{
-                                    placeholder: 'Buscar por numero, fornecedor ou produto',
+                                    placeholder: 'Buscar por número, fornecedor ou produto',
                                     value: listFilters.search,
                                     onChange: (value) => handleListFilterChange('search', value),
                                 }}
@@ -1595,7 +1596,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     <section className="proc-ui-modal-block purchases-name-stage">
                         <div className="purchases-name-copy">
                             <h3>Comece pelo nome</h3>
-                            <p>Depois de salvar, o pedido vai para Em andamento para voce editar, renomear e incluir produtos.</p>
+                            <p>Depois de salvar, o pedido vai para Em andamento para voc? editar, renomear e incluir produtos.</p>
                         </div>
 
                         <div className="proc-ui-field full">

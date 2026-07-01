@@ -16,7 +16,7 @@ class SettingsApiController extends Controller
         $settings = $settingsService->update($request->validated());
 
         return response()->json([
-            'message' => 'Configuracoes atualizadas com sucesso.',
+            'message' => 'Configurações atualizadas com sucesso.',
             'settings' => $settings,
         ]);
     }

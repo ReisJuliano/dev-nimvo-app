@@ -28,11 +28,11 @@ export default function OrderDeliveriesModal({ open, onClose }) {
             {
                 key: 'pending',
                 title: 'Pendentes',
-                kicker: 'Aguardando saida',
+                kicker: 'Aguardando saída',
                 description: 'Pedidos prontos para separar, revisar e despachar.',
                 icon: 'fa-clock',
                 emptyTitle: 'Sem pedidos pendentes',
-                emptyText: 'As novas entregas vao aparecer aqui.',
+                emptyText: 'As novas entregas vão aparecer aqui.',
                 rows: pending,
             },
             {
@@ -48,7 +48,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
             {
                 key: 'delivered',
                 title: 'Entregues',
-                kicker: 'Fluxo concluido',
+                kicker: 'Fluxo concluído',
                 description: 'Histórico recente das entregas finalizadas.',
                 icon: 'fa-circle-check',
                 emptyTitle: 'Sem entregas concluídas',
@@ -95,7 +95,7 @@ export default function OrderDeliveriesModal({ open, onClose }) {
     return (
         <OrdersModal
             title="Entregas"
-            subtitle="Acompanhe e atualize status de forma rapida."
+            subtitle="Acompanhe e atualize status de forma rápida."
             size="xl"
             className="orders-modal-deliveries-board"
             bodyClassName="orders-modal-deliveries-board-body"

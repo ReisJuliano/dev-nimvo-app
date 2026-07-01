@@ -16,7 +16,7 @@ export default function LicenseBlocked({ license }) {
 
                 <div className="license-blocked-copy">
                     <h1>Acesso bloqueado</h1>
-                    <p>{license?.message || 'Regularize a licenca para liberar o acesso.'}</p>
+                    <p>{license?.message || 'Regularize a licença para liberar o acesso.'}</p>
                 </div>
 
                 <div className="license-blocked-grid">
@@ -25,7 +25,7 @@ export default function LicenseBlocked({ license }) {
                         <strong>{license?.due_date || 'Não informado'}</strong>
                     </article>
                     <article>
-                        <span>Tolerancia ate</span>
+                        <span>Tolerância até</span>
                         <strong>{license?.grace_ends_at || 'Não informado'}</strong>
                     </article>
                     <article>

@@ -141,3 +141,6 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   uma variante acentuada impede a tela de renderizar e deixa a pagina em branco.
 - 2026-07-01: Em contas a pagar, a tela deve abrir sem registros nem contadores
   carregados; o carregamento acontece apenas apos o usuario clicar em Filtrar.
+- 2026-07-01: Compras/entrada de estoque e contas a pagar usam
+  `confirm_amount_mismatch` para exigir uma segunda confirmacao quando o valor
+  informado fica muito acima da referencia historica ou do custo dos itens.

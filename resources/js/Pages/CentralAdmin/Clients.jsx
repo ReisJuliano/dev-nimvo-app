@@ -88,7 +88,7 @@ function normalizeSubdomainInput(value, tenantBaseDomain) {
     const sanitized = String(value || '')
         .trim()
         .toLowerCase()
-        .replace(/^https?:\/\//, '')
+        .replace(/^httpsó:\/\//, '')
         .split(/[/?#]/)[0]
 
     const withoutBaseDomain = tenantBaseDomain && sanitized.endsWith(`.${tenantBaseDomain}`)
@@ -184,7 +184,7 @@ function getLicenseTone(status) {
 }
 
 function getLicenseLabel(status) {
-    if (!status) return 'Sem licenca'
+    if (!status) return 'Sem licença'
     if (status === 'blocked') return 'Bloqueada'
     if (status === 'overdue') return 'Vencida'
     if (status === 'paused') return 'Pausada'
@@ -344,7 +344,7 @@ function TenantFormModal({ open, mode, form, busy, tenantBaseDomain, onClose, on
                         </label>
 
                         <label className="central-admin-field">
-                            <span className="central-admin-field-label">Subdominio</span>
+                            <span className="central-admin-field-label">Subdomínio</span>
                             <span className="central-admin-field-shell">
                                 <span className="central-admin-field-icon">
                                     <i className="fa-solid fa-globe" />
@@ -465,7 +465,7 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
                 <div className="central-admin-modal-body">
                     <div className="central-admin-form-grid">
                         <label className="central-admin-field">
-                            <span className="central-admin-field-label">Início da licenca</span>
+                            <span className="central-admin-field-label">Início da licença</span>
                             <span className="central-admin-field-shell">
                                 <span className="central-admin-field-icon">
                                     <i className="fa-solid fa-calendar-day" />
@@ -498,7 +498,7 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
                         </label>
 
                         <label className="central-admin-field">
-                            <span className="central-admin-field-label">Tolerancia</span>
+                            <span className="central-admin-field-label">Tolerância</span>
                             <span className="central-admin-field-shell">
                                 <span className="central-admin-field-icon">
                                     <i className="fa-solid fa-hourglass-half" />
@@ -596,7 +596,7 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
                     ) : (
                         <div className="central-admin-note-card central-admin-license-card">
                             <h3>Fatura atual</h3>
-                            <p>A fatura será gerada automaticamente assim que a licenca for salva.</p>
+                            <p>A fatura será gerada automaticamente assim que a licença for salva.</p>
                         </div>
                     )}
                 </div>
@@ -607,7 +607,7 @@ function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChan
                     </button>
                     <button type="submit" className="central-admin-primary-button" disabled={busy}>
                         <i className="fa-solid fa-floppy-disk" />
-                        <span>{busy ? 'Salvando...' : 'Salvar licenca'}</span>
+                        <span>{busy ? 'Salvando...' : 'Salvar licença'}</span>
                     </button>
                 </div>
             </form>
@@ -689,8 +689,8 @@ function LocalAgentModal({
                                 </span>
                             </div>
                             <p>
-                                Gere um código temporario e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse código por
-                                credenciais internas e segue com a configuração da impressora na propria máquina do cliente.
+                                Gere um código temporário e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse código por
+                                credenciais internas e segue com a configuração da impressora na própria máquina do cliente.
                             </p>
                             {hasActivationPreview ? (
                                 <div className="central-admin-note-card" style={{ marginBottom: 16 }}>
@@ -744,7 +744,7 @@ function LocalAgentModal({
                             </div>
                             <div className="central-admin-agent-list">
                                 <div className="central-admin-agent-item">
-                                    <strong>Usuario</strong>
+                                    <strong>Usuário</strong>
                                     <span>{agent?.device?.machine_user || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
@@ -780,7 +780,7 @@ function LocalAgentModal({
                                     <span>{agent?.device?.printer_connector || 'Não informado'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
-                                    <strong>Impressao local</strong>
+                                    <strong>Impressão local</strong>
                                     <span>{agent?.device?.printer_enabled ? 'Ativa' : 'Desativada'}</span>
                                 </div>
                                 <div className="central-admin-agent-item">
@@ -793,7 +793,7 @@ function LocalAgentModal({
                                 </div>
                             </div>
                             <p className="central-admin-field-note">
-                                Esses dados sao sincronizados pelo agente instalado. O setup do terminal ja solicita o caminho do certificado A1 e a
+                                Esses dados são sincronizados pelo agente instalado. O setup do terminal já solicita o caminho do certificado A1 e a
                                 senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na máquina do cliente.
                             </p>
                             <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
@@ -865,7 +865,7 @@ function LocalAgentModal({
                             <div className="central-admin-list-row">
                                 <div className="central-admin-list-copy">
                                     <strong>Central: nome, status e polling</strong>
-                                    <small>Impressora, certificado, logo do cupom e API local ficam na máquina e sao definidos pelo instalador do agente.</small>
+                                    <small>Impressora, certificado, logo do cupom e API local ficam na máquina e são definidos pelo instalador do agente.</small>
                                 </div>
                             </div>
                         </div>
@@ -934,7 +934,7 @@ function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) 
 
                             <p className="central-admin-field-note">
                                 {hasProfile
-                                    ? 'Esses dados sao gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                    ? 'Esses dados são gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
                                     : 'Esse tenant ainda não possui um perfil fiscal NFC-e 65 para receber CSC. Cadastre o perfil fiscal primeiro.'}
                             </p>
                         </article>
@@ -1024,7 +1024,7 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicen
                                 <th>NFC-e</th>
                                 <th>Licença</th>
                                 <th>Agente fiscal</th>
-                                <th>Acoes</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1103,7 +1103,7 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
         <section className="central-admin-card">
             <div className="central-admin-section-head">
                 <div>
-                    <h2>Modulos</h2>
+                    <h2>Módulos</h2>
                 </div>
             </div>
 
@@ -1131,7 +1131,7 @@ function FeatureFlagsList({ tenants, moduleSections, rowState, highlightedTenant
                                     </div>
                                     <small>{tenant.id}</small>
                                     <div className="central-admin-feature-tenant-meta">
-                                        <span className="central-admin-badge">{tenant.activeModules} modulos</span>
+                                        <span className="central-admin-badge">{tenant.activeModules} módulos</span>
                                         <span className="central-admin-badge is-info">{tenant.presetLabel}</span>
                                     </div>
                                 </div>
@@ -1403,7 +1403,7 @@ export default function CentralAdminClients({
                 [tenant.id]: normalizeSettings(response.settings || nextState),
             }))
 
-            setFeedback({ type: 'success', text: response.message || `Configuracoes de ${tenant.name} atualizadas.` })
+            setFeedback({ type: 'success', text: response.message || `Configurações de ${tenant.name} atualizadas.` })
             setRowState((current) => {
                 const next = { ...current }
                 delete next[tenant.id]
@@ -1695,12 +1695,12 @@ export default function CentralAdminClients({
     }
 
     return (
-        <AdminLayout title={isFeatureFlagsPage ? 'Configuracoes' : 'Tenants'}>
+        <AdminLayout title={isFeatureFlagsPage ? 'Configurações' : 'Tenants'}>
             <div className="central-admin-page">
                 <PageContainer
                     sidebar={(
                         <RightSidebarPanel>
-                            <RightSidebarSection title="Contexto" subtitle={isFeatureFlagsPage ? 'Configuracoes por tenant' : 'Base de tenants'}>
+                            <RightSidebarSection title="Contexto" subtitle={isFeatureFlagsPage ? 'Configurações por tenant' : 'Base de tenants'}>
                                 <div className="right-sidebar-meta">
                                     <div className="right-sidebar-meta-item">
                                         <span>Tenants</span>
@@ -1715,13 +1715,13 @@ export default function CentralAdminClients({
                                         <strong>{safeTenantStats.inactive}</strong>
                                     </div>
                                     <div className="right-sidebar-meta-item">
-                                        <span>{isFeatureFlagsPage ? 'Modulos' : 'Agentes online'}</span>
+                                        <span>{isFeatureFlagsPage ? 'Módulos' : 'Agentes online'}</span>
                                         <strong>{isFeatureFlagsPage ? trackedModules.length : `${safeAgentStats.online}/${safeAgentStats.total}`}</strong>
                                     </div>
                                 </div>
                             </RightSidebarSection>
 
-                            <RightSidebarSection title="Acoes" subtitle="Atalhos">
+                            <RightSidebarSection title="Ações" subtitle="Atalhos">
                                 {isFeatureFlagsPage ? (
                                     <Link href="/admin/clientes" className="action-button tone-ghost">
                                         <i className="fa-solid fa-table-list" />
@@ -1739,7 +1739,7 @@ export default function CentralAdminClients({
                                     className="action-button tone-ghost"
                                 >
                                     <i className={`fa-solid ${isFeatureFlagsPage ? 'fa-house' : 'fa-sliders'}`} />
-                                    <span>{isFeatureFlagsPage ? 'Home' : 'Modulos'}</span>
+                                    <span>{isFeatureFlagsPage ? 'Home' : 'Módulos'}</span>
                                 </Link>
 
                                 {feedback ? (

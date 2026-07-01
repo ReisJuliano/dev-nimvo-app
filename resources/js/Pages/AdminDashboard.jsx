@@ -293,7 +293,7 @@ export default function AdminDashboard({
             icon: 'fa-sliders',
             meta: tenantSummaries.length > 0 ? `${tenantSummaries.length} tenants cadastrados` : 'Nenhum tenant cadastrado',
         },
-        { key: 'reports', label: 'Relatorios', icon: 'fa-chart-column', meta: 'Visao administrativa' },
+        { key: 'reports', label: 'Relatórios', icon: 'fa-chart-column', meta: 'Visão administrativa' },
     ]
 
     return (
@@ -301,9 +301,9 @@ export default function AdminDashboard({
             <div className="admin-dashboard-shell">
                 <aside className="admin-sidebar">
                     <section className="admin-card admin-brand-card">
-                        <div className="admin-card-kicker">Area administrativa</div>
+                        <div className="admin-card-kicker">Área administrativa</div>
                         <h1>Admin</h1>
-                        <p>Botoes laterais para criar, configurar e acompanhar tenants.</p>
+                        <p>Botões laterais para criar, configurar e acompanhar tenants.</p>
                     </section>
 
                     <section className="admin-card admin-nav-card">
@@ -344,7 +344,7 @@ export default function AdminDashboard({
                                 <div>
                                     <div className="admin-card-kicker">Criação de tenant</div>
                                     <h2>Novo cadastro</h2>
-                                    <p>Area exclusiva para cadastrar novos tenants e deixar pronto para operação.</p>
+                                    <p>Área exclusiva para cadastrar novos tenants e deixar pronto para operaç?.</p>
                                 </div>
 
                                 {tenantSummaries.length > 0 ? (
@@ -361,7 +361,7 @@ export default function AdminDashboard({
                                 <section className="admin-card">
                                     <div className="admin-card-head">
                                         <div>
-                                            <div className="admin-card-kicker">Formulario</div>
+                                            <div className="admin-card-kicker">Formulário</div>
                                             <h2>Dados do tenant</h2>
                                         </div>
                                     </div>
@@ -389,7 +389,7 @@ export default function AdminDashboard({
                                         </label>
 
                                         <label>
-                                            <span>Dominio</span>
+                                            <span>Domínio</span>
                                             <input
                                                 type="text"
                                                 value={createForm.domain}
@@ -441,7 +441,7 @@ export default function AdminDashboard({
                                     <div className="admin-card-head">
                                         <div>
                                             <div className="admin-card-kicker">Recentes</div>
-                                            <h2>Ultimos tenants</h2>
+                                            <h2>Últimos tenants</h2>
                                         </div>
                                     </div>
 
@@ -507,7 +507,7 @@ export default function AdminDashboard({
                                         <div className="admin-card-head">
                                             <div>
                                                 <div className="admin-card-kicker">Preset</div>
-                                                <h2>Tipo rapido</h2>
+                                                <h2>Tipo rápido</h2>
                                             </div>
                                             <span className="admin-count-pill">{selectedTenant.presetLabel}</span>
                                         </div>
@@ -562,7 +562,7 @@ export default function AdminDashboard({
                                         <section key={section.section} className="admin-card">
                                             <div className="admin-card-head">
                                                 <div>
-                                                    <div className="admin-card-kicker">Area</div>
+                                                    <div className="admin-card-kicker">Área</div>
                                                     <h2>{section.section}</h2>
                                                 </div>
                                                 <span className="admin-count-pill">{selectedSectionCounts[section.section]} ativos</span>
@@ -595,7 +595,7 @@ export default function AdminDashboard({
                                     <div>
                                         <div className="admin-card-kicker">Publicar</div>
                                         <h2>Salvar tenant</h2>
-                                        <p>Aplica as configuracoes compactas do tenant selecionado.</p>
+                                        <p>Aplica as configurações compactas do tenant selecionado.</p>
                                     </div>
 
                                     <button
@@ -614,7 +614,7 @@ export default function AdminDashboard({
                                     <div>
                                         <div className="admin-card-kicker">Configs por tenant</div>
                                         <h2>Escolha um tenant</h2>
-                                        <p>Clique em um tenant abaixo para abrir e editar as configuracoes dele.</p>
+                                        <p>Clique em um tenant abaixo para abrir e editar as configurações dele.</p>
                                     </div>
                                 </section>
 
@@ -631,7 +631,7 @@ export default function AdminDashboard({
                                         <div className="admin-empty-main">
                                             <div className="admin-card-kicker">Configs por tenant</div>
                                             <h2>Nenhum tenant criado ainda</h2>
-                                            <p>Crie um tenant primeiro para liberar essa area de configuracoes.</p>
+                                            <p>Crie um tenant primeiro para liberar essa área de configurações.</p>
                                         </div>
                                     ) : (
                                         <div className="admin-config-tenant-list">
@@ -649,7 +649,7 @@ export default function AdminDashboard({
                                                     <small>{tenant.domain || tenant.id}</small>
                                                     <div className="admin-tenant-card-meta">
                                                         <span>{tenant.presetLabel}</span>
-                                                        <span>{tenant.activeModules} modulos</span>
+                                                        <span>{tenant.activeModules} módulos</span>
                                                     </div>
                                                 </button>
                                             ))}
@@ -663,9 +663,9 @@ export default function AdminDashboard({
                         <>
                             <section className="admin-card admin-section-hero">
                                 <div>
-                                    <div className="admin-card-kicker">Relatorios</div>
+                                    <div className="admin-card-kicker">Relatórios</div>
                                     <h2>Painel administrativo</h2>
-                                    <p>Visao geral da sua base de tenants e uso das configuracoes.</p>
+                                    <p>Visão geral da sua base de tenants e uso das configurações.</p>
                                 </div>
 
                                 <div className="admin-section-hero-actions">
@@ -686,7 +686,7 @@ export default function AdminDashboard({
                                     <strong>{tenantStats.inactive}</strong>
                                 </article>
                                 <article className="admin-card admin-report-card">
-                                    <small>Media de modulos</small>
+                                    <small>Média de módulos</small>
                                     <strong>{averageModules}</strong>
                                 </article>
                                 <article className="admin-card admin-report-card">
@@ -721,7 +721,7 @@ export default function AdminDashboard({
                                     <div className="admin-card-head">
                                         <div>
                                             <div className="admin-card-kicker">Uso</div>
-                                            <h2>Modulos mais ligados</h2>
+                                            <h2>Módulos mais ligados</h2>
                                         </div>
                                     </div>
 
@@ -730,7 +730,7 @@ export default function AdminDashboard({
                                             <div key={module.label} className="admin-compact-row">
                                                 <div>
                                                     <strong>{module.label}</strong>
-                                                    <small>Tenants com esse modulo ativo</small>
+                                                    <small>Tenants com esse módulo ativo</small>
                                                 </div>
                                                 <span className="admin-count-pill">{module.count}</span>
                                             </div>
@@ -756,7 +756,7 @@ export default function AdminDashboard({
                                             </div>
                                             <div className="admin-inline-report-meta">
                                                 <span className="admin-count-pill">{tenant.presetLabel}</span>
-                                                <span className="admin-count-pill">{tenant.activeModules} modulos</span>
+                                                <span className="admin-count-pill">{tenant.activeModules} módulos</span>
                                                 <span className="admin-count-pill">{tenant.active ? 'Ativo' : 'Inativo'}</span>
                                             </div>
                                         </div>

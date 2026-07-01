@@ -34,7 +34,7 @@ class ShopApiController extends Controller
 
         if (!$this->hasColumn('order_drafts', 'channel')) {
             return response()->json([
-                'message' => 'O tenant ainda nao esta pronto para receber pedidos do shop.',
+                'message' => 'O tenant ainda não está pronto para receber pedidos do shop.',
             ], 409);
         }
 
@@ -59,7 +59,7 @@ class ShopApiController extends Controller
 
         if ($availableProducts !== $items->pluck('id')->unique()->count()) {
             return response()->json([
-                'message' => 'Um ou mais produtos nao estao disponiveis no shop.',
+                'message' => 'Um ou mais produtos não estão disponíveis no shop.',
             ], 422);
         }
 
@@ -67,7 +67,7 @@ class ShopApiController extends Controller
 
         if (!$ownerUserId) {
             return response()->json([
-                'message' => 'Nao existe usuario ativo configurado para receber pedidos do shop.',
+                'message' => 'Não existe usuário ativo configurado para receber pedidos do shop.',
             ], 422);
         }
 
@@ -157,7 +157,7 @@ class ShopApiController extends Controller
         }
 
         if (trim($notes) !== '') {
-            $lines[] = 'Observacoes: ' . trim($notes);
+            $lines[] = 'Observações: ' . trim($notes);
         }
 
         return implode(PHP_EOL, $lines);
@@ -183,7 +183,7 @@ class ShopApiController extends Controller
         );
 
         $greeting = trim((string) ($settings['greeting'] ?? ''));
-        $fullText = trim($greeting . PHP_EOL . PHP_EOL . $message . PHP_EOL . 'Referencia: ' . $draft->reference);
+        $fullText = trim($greeting . PHP_EOL . PHP_EOL . $message . PHP_EOL . 'Referência: ' . $draft->reference);
 
         return 'https://wa.me/' . $phone . '?text=' . rawurlencode($fullText);
     }

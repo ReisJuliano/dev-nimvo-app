@@ -30,7 +30,7 @@ class LoginController extends Controller
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return back()->withErrors([
-                'username' => 'Usuario ou senha incorretos.',
+                'username' => 'Usuário ou senha incorretos.',
             ]);
         }
 

@@ -73,7 +73,7 @@ class TenantSettingsService
             [
                 'key' => self::DIRECT_SALES_PRESET,
                 'label' => 'Balcao simples',
-                'description' => 'Para loja que vende no balcao, controla caixa, estoque e fiado sem complicacao.',
+                'description' => 'Para loja que vende no balcão, controla caixa, estoque e fiado sem complicação.',
                 'modules' => $this->presetModules(self::DIRECT_SALES_PRESET),
             ],
             [
@@ -107,13 +107,13 @@ class TenantSettingsService
                 'section' => 'Loja',
                 'items' => [
                     ['key' => 'relatorios_basicos', 'label' => 'Resumo', 'description' => 'Mostra como a loja esta hoje.'],
-                    ['key' => 'pdv_simples', 'label' => 'Vender', 'description' => 'Venda rapida no balcao.'],
+                    ['key' => 'pdv_simples', 'label' => 'Vender', 'description' => 'Venda rápida no balcão.'],
                     ['key' => 'caixa', 'label' => 'Caixa', 'description' => 'Acompanha dinheiro, Pix e cartoes do dia.'],
                     ['key' => 'estoque', 'label' => 'Estoque', 'description' => 'Controla o que entrou, saiu e esta acabando.'],
                     ['key' => 'prazo', 'label' => 'Fiado', 'description' => 'Permite vender para receber depois.'],
                     ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Cadastro de quem compra na loja.'],
                     ['key' => 'categorias', 'label' => 'Categorias', 'description' => 'Organiza produtos por categoria.'],
-                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'De quem voce compra.'],
+                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'De quem voc? compra.'],
                     ['key' => 'controle_validade', 'label' => 'Validade', 'description' => 'Avisa produtos perto de vencer.'],
                 ],
             ],
@@ -121,10 +121,10 @@ class TenantSettingsService
                 'section' => 'Avancado',
                 'items' => [
                     ['key' => 'comandas', 'label' => 'Mesas e comandas', 'description' => 'Atendimento por mesa ou comanda.'],
-                    ['key' => 'pdv_avancado', 'label' => 'PDV avancado', 'description' => 'Integra pedidos, comandas e cobranca.'],
+                    ['key' => 'pdv_avancado', 'label' => 'PDV avançado', 'description' => 'Integra pedidos, comandas e cobrança.'],
                     ['key' => 'mesas', 'label' => 'Mesas', 'description' => 'Agrupa atendimentos por mesa.'],
                     ['key' => 'delivery', 'label' => 'Entregas', 'description' => 'Acompanha pedidos externos.'],
-                    ['key' => 'compras', 'label' => 'Compras e contas a pagar', 'description' => 'Habilita compras com NF-e e o modulo de contas a pagar.'],
+                    ['key' => 'compras', 'label' => 'Compras e contas a pagar', 'description' => 'Habilita compras com NF-e e o módulo de contas a pagar.'],
                     ['key' => 'entrada_estoque_avancado', 'label' => 'Entrada por NF-e', 'description' => 'Fluxo completo de entrada de estoque via XML da nota fiscal.'],
                     ['key' => 'consultas_fiscais', 'label' => 'Suporte fiscal', 'description' => 'Consulta, cancela e acompanha cupons fiscais.'],
                     ['key' => 'controle_lotes', 'label' => 'Lotes', 'description' => 'Rastreia itens por lote.'],

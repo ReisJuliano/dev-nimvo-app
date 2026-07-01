@@ -15,7 +15,7 @@ class SupervisorAuthorizationService
 
         if (!$user || !$user->active || !$this->isSupervisor($user)) {
             throw ValidationException::withMessages([
-                'supervisor_user_id' => 'Selecione um supervisor valido para liberar a edicao.',
+                'supervisor_user_id' => 'Selecione um supervisor válido para liberar a edição.',
             ]);
         }
 

@@ -69,7 +69,7 @@ class PosService
 
                 if (!$orderDraft || $orderDraft->status === OrderDraft::STATUS_COMPLETED || $orderDraft->sale_id) {
                     throw ValidationException::withMessages([
-                        'order_draft_id' => 'Este pedido nao esta mais disponivel para cobranca.',
+                        'order_draft_id' => 'Este pedido não está mais disponível para cobrança.',
                     ]);
                 }
             }
@@ -93,7 +93,7 @@ class PosService
 
                 if ($lineDiscount < 0 || $lineDiscount > $lineSubtotal) {
                     throw ValidationException::withMessages([
-                        'items' => "Desconto invalido para {$product->name}.",
+                        'items' => "Desconto inválido para {$product->name}.",
                     ]);
                 }
 
@@ -107,7 +107,7 @@ class PosService
 
                 if ($lineDiscount > 0 && !$discountAuthorizer) {
                     throw ValidationException::withMessages([
-                        'items' => "O desconto do produto {$product->name} precisa de autorizacao gerencial.",
+                        'items' => "O desconto do produto {$product->name} precisa de autorização gerencial.",
                     ]);
                 }
 
@@ -130,13 +130,13 @@ class PosService
 
             if (abs($itemDiscountTotal - $discount) > 0.02) {
                 throw ValidationException::withMessages([
-                    'discount' => 'O desconto total nao confere com os descontos aplicados nos itens.',
+                    'discount' => 'O desconto total não confere com os descontos aplicados nos itens.',
                 ]);
             }
 
             if ($discount > $subtotal) {
                 throw ValidationException::withMessages([
-                    'discount' => 'O desconto nao pode ser maior que o subtotal da venda.',
+                    'discount' => 'O desconto não pode ser maior que o subtotal da venda.',
                 ]);
             }
 
@@ -177,7 +177,7 @@ class PosService
 
             if ($resolvedPayments->contains(fn (array $payment) => $payment['method'] === PaymentMethod::CONDITIONAL) && ! $isConditionalPayment) {
                 throw ValidationException::withMessages([
-                    'payments' => 'Venda condicional deve ser usada como forma unica de pagamento.',
+                    'payments' => 'Venda condicional deve ser usada como forma única de pagamento.',
                 ]);
             }
 
@@ -192,7 +192,7 @@ class PosService
                 && !$this->settingsService->isModuleEnabled('prazo')
             ) {
                 throw ValidationException::withMessages([
-                    'payments' => 'O fiado nao esta ativado nesta loja.',
+                    'payments' => 'O fiado não está ativado nesta loja.',
                 ]);
             }
 
@@ -318,7 +318,7 @@ class PosService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor do fiado ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor do fiado ultrapassa o limite disponível deste cliente.',
                     ]);
                 }
             }

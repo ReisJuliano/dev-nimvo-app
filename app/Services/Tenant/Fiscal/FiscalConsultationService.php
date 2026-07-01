@@ -89,7 +89,7 @@ class FiscalConsultationService
             'periods' => [
                 ['key' => 'day', 'label' => 'Hoje'],
                 ['key' => 'week', 'label' => 'Semana'],
-                ['key' => 'month', 'label' => 'Mes'],
+                ['key' => 'month', 'label' => 'Mês'],
             ],
             'summary' => [
                 [
@@ -361,7 +361,7 @@ class FiscalConsultationService
             'last_error' => $document->last_error,
             'can_retry' => ! in_array($document->status, ['queued', 'queued_to_agent', 'processing'], true),
             'can_cancel_sale' => $sale ? $this->saleCanBeCancelled($sale, $document) : false,
-            'cancel_hint' => $sale ? $this->cancelHint($sale, $document) : 'Venda nao encontrada',
+            'cancel_hint' => $sale ? $this->cancelHint($sale, $document) : 'Venda não encontrada',
             'files' => $files,
         ];
     }
@@ -514,9 +514,9 @@ class FiscalConsultationService
         return match ($period) {
             'custom' => $from->isSameDay($to)
                 ? sprintf('Dia personalizado - %s', $from->format('d/m/Y'))
-                : sprintf('Periodo personalizado - %s ate %s', $from->format('d/m/Y'), $to->format('d/m/Y')),
-            'week' => sprintf('Semana - %s ate %s', $from->format('d/m'), $to->format('d/m')),
-            'month' => sprintf('Mes - %s', $from->translatedFormat('F \\d\\e Y')),
+                : sprintf('Período personalizado - %s até %s', $from->format('d/m/Y'), $to->format('d/m/Y')),
+            'week' => sprintf('Semana - %s até %s', $from->format('d/m'), $to->format('d/m')),
+            'month' => sprintf('Mês - %s', $from->translatedFormat('F \\d\\e Y')),
             default => sprintf('Hoje - %s', $from->format('d/m/Y')),
         };
     }
@@ -532,7 +532,7 @@ class FiscalConsultationService
             return 'Sem documento fiscal';
         }
 
-        return (string) data_get($this->cancellationRules->evaluate($sale, $document), 'message', 'Sem cancelamento disponivel');
+        return (string) data_get($this->cancellationRules->evaluate($sale, $document), 'message', 'Sem cancelamento disponível');
     }
 
     protected function canFlagContingency(?FiscalDocument $document): bool
@@ -555,15 +555,15 @@ class FiscalConsultationService
         }
 
         return match ($document->status) {
-            'awaiting_agent' => 'Sem agente local; contingencia offline indisponivel',
-            'failed', 'rejected' => 'Falha fiscal pronta para emissao offline',
-            'contingency_pending' => 'Em contingencia operacional aguardando agente',
+            'awaiting_agent' => 'Sem agente local; contingência offline indisponível',
+            'failed', 'rejected' => 'Falha fiscal pronta para emissão offline',
+            'contingency_pending' => 'Em contingência operacional aguardando agente',
             'contingency_failed' => (bool) data_get($document->payload, 'flags.offline_contingency', false)
-                ? 'Falha ao regularizar a contingencia offline'
-                : 'Falha ao reenfileirar contingencia',
-            'contingency_offline_signed' => 'NFC-e offline assinada e pendente de impressao/transmissao',
-            'contingency_offline_printed' => 'NFC-e impressa offline e pendente de transmissao',
-            default => 'Sem contingencia disponivel',
+                ? 'Falha ao regularizar a contingência offline'
+                : 'Falha ao reenfileirar contingência',
+            'contingency_offline_signed' => 'NFC-e offline assinada e pendente de impressão/transmissão',
+            'contingency_offline_printed' => 'NFC-e impressa offline e pendente de transmissão',
+            default => 'Sem contingência disponível',
         };
     }
 
@@ -598,7 +598,7 @@ class FiscalConsultationService
             'printed_local' => 'Ensaio impresso',
             'cancellation_queued', 'cancellation_processing' => 'Cancelando',
             'cancellation_failed' => 'Falha cancel.',
-            'contingency_pending' => 'Contingencia',
+            'contingency_pending' => 'Contingência',
             'contingency_failed' => 'Falha conting.',
             'contingency_offline_signed' => 'Offline ass.',
             'contingency_offline_printed' => 'Offline imp.',
@@ -627,7 +627,7 @@ class FiscalConsultationService
         return match ($status) {
             'queued' => 'Na fila',
             'processing' => 'Processando',
-            'processed' => 'Concluida',
+            'processed' => 'Concluída',
             'rejected' => 'Rejeitada',
             'failed' => 'Falhou',
             default => ucfirst(str_replace('_', ' ', $status)),

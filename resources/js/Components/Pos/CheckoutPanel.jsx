@@ -60,10 +60,10 @@ export default function CheckoutPanel({
                 {cashRegister ? (
                     <div className="pos-cash-register-actions">
                         <div className="pos-cash-register-status">
-                            <span>{requireCashClosingConference ? 'Conferencia obrigatoria' : 'Fechamento rapido'}</span>
+                            <span>{requireCashClosingConference ? 'Conferência obrigatória' : 'Fechamento rápido'}</span>
                             <strong>
                                 {requireCashClosingConference
-                                    ? 'Conferencia por forma de pagamento'
+                                    ? 'Conferência por forma de pagamento'
                                     : 'Somente o valor contado em dinheiro'}
                             </strong>
                         </div>
@@ -103,7 +103,7 @@ export default function CheckoutPanel({
                         <small>
                             {activeOrderDraftLabel
                                 ? 'Os itens vieram de um pedido enviado para o caixa.'
-                                : 'Limpe a venda atual para iniciar uma nova cobranca.'}
+                                : 'Limpe a venda atual para iniciar uma nova cobrança.'}
                         </small>
                     </div>
 
@@ -157,7 +157,7 @@ export default function CheckoutPanel({
                         <button
                             type="button"
                             className="pos-inline-button pos-customer-action ui-tooltip"
-                            data-tooltip="Cadastrar cliente rapido"
+                            data-tooltip="Cadastrar cliente rápido"
                             onClick={onQuickCustomer}
                         >
                             <i className="fa-solid fa-user-plus" />

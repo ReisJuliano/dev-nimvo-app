@@ -45,7 +45,7 @@ class OrderPartialCheckoutService
 
             if ($orderDraft->status === OrderDraft::STATUS_COMPLETED || $orderDraft->sale_id) {
                 throw ValidationException::withMessages([
-                    'order_draft_id' => 'Este pedido nao esta mais disponivel para cobranca.',
+                    'order_draft_id' => 'Este pedido não está mais disponível para cobrança.',
                 ]);
             }
 
@@ -71,13 +71,13 @@ class OrderPartialCheckoutService
                 $draftItem = $draftItemsByProduct->get($item['id']);
                 if (! $draftItem) {
                     throw ValidationException::withMessages([
-                        'items' => 'Um ou mais itens nao pertencem a este atendimento.',
+                        'items' => 'Um ou mais itens não pertencem a este atendimento.',
                     ]);
                 }
 
                 if ($item['qty'] <= 0 || $item['qty'] - (float) $draftItem->quantity > 0.0001) {
                     throw ValidationException::withMessages([
-                        'items' => 'A quantidade selecionada nao pode ser maior que a quantidade do atendimento.',
+                        'items' => 'A quantidade selecionada não pode ser maior que a quantidade do atendimento.',
                     ]);
                 }
             }
@@ -90,7 +90,7 @@ class OrderPartialCheckoutService
 
             if ($products->count() !== $itemsPayload->pluck('id')->unique()->count()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Um ou mais produtos informados nao existem mais.',
+                    'items' => 'Um ou mais produtos informados não existem mais.',
                 ]);
             }
 
@@ -110,7 +110,7 @@ class OrderPartialCheckoutService
 
                 if ($lineDiscount < 0 || $lineDiscount > $lineSubtotal) {
                     throw ValidationException::withMessages([
-                        'items' => "Desconto invalido para {$product->name}.",
+                        'items' => "Desconto inválido para {$product->name}.",
                     ]);
                 }
 
@@ -124,13 +124,13 @@ class OrderPartialCheckoutService
 
             if (abs($itemDiscountTotal - $discount) > 0.02) {
                 throw ValidationException::withMessages([
-                    'discount' => 'O desconto total nao confere com os descontos aplicados nos itens.',
+                    'discount' => 'O desconto total não confere com os descontos aplicados nos itens.',
                 ]);
             }
 
             if ($discount > $subtotal) {
                 throw ValidationException::withMessages([
-                    'discount' => 'O desconto nao pode ser maior que o subtotal da venda.',
+                    'discount' => 'O desconto não pode ser maior que o subtotal da venda.',
                 ]);
             }
 
@@ -174,7 +174,7 @@ class OrderPartialCheckoutService
                 && ! $this->settingsService->isModuleEnabled('prazo')
             ) {
                 throw ValidationException::withMessages([
-                    'payments' => 'O fiado nao esta ativado nesta loja.',
+                    'payments' => 'O fiado não está ativado nesta loja.',
                 ]);
             }
 
@@ -215,7 +215,7 @@ class OrderPartialCheckoutService
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
                     throw ValidationException::withMessages([
-                        'payments' => 'O valor do fiado ultrapassa o limite disponivel deste cliente.',
+                        'payments' => 'O valor do fiado ultrapassa o limite disponível deste cliente.',
                     ]);
                 }
             }

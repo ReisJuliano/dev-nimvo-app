@@ -132,7 +132,7 @@ class FiscalNumberInutilizationService
         }
 
         if ($numberEnd < $numberStart) {
-            $errors[] = 'O numero final precisa ser maior ou igual ao numero inicial.';
+            $errors[] = 'O número final precisa ser maior ou igual ao número inicial.';
         }
 
         if ($errors !== []) {

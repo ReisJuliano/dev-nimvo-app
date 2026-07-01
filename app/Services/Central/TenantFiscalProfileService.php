@@ -44,7 +44,7 @@ class TenantFiscalProfileService
         return $this->tenantContext->run($tenantId, function () use ($data) {
             if (! $this->fiscalProfilesTableExists()) {
                 throw ValidationException::withMessages([
-                    'fiscal' => 'A tabela fiscal ainda nao existe neste tenant. Rode as migrations do tenant antes de configurar o emitente.',
+                    'fiscal' => 'A tabela fiscal ainda não existe neste tenant. Rode as migrations do tenant antes de configurar o emitente.',
                 ]);
             }
 
@@ -253,17 +253,17 @@ class TenantFiscalProfileService
         $missing = [];
 
         foreach ([
-            'company_name' => 'Razao social',
+            'company_name' => 'Razão social',
             'cnpj' => 'CNPJ',
-            'ie' => 'Inscricao estadual',
+            'ie' => 'Inscrição estadual',
             'street' => 'Logradouro',
-            'number' => 'Numero',
+            'number' => 'Número',
             'district' => 'Bairro',
-            'city_code' => 'Codigo IBGE',
-            'city_name' => 'Municipio',
+            'city_code' => 'Código IBGE',
+            'city_name' => 'Município',
             'state' => 'UF',
             'zip_code' => 'CEP',
-            'operation_nature' => 'Natureza da operacao',
+            'operation_nature' => 'Natureza da operação',
         ] as $field => $label) {
             if (blank($profile->{$field})) {
                 $missing[] = $label;
@@ -271,19 +271,19 @@ class TenantFiscalProfileService
         }
 
         if (! preg_match('/^\d{14}$/', (string) $profile->cnpj)) {
-            $missing[] = 'CNPJ valido';
+            $missing[] = 'CNPJ válido';
         }
 
         if (! preg_match('/^\d{7}$/', (string) $profile->city_code)) {
-            $missing[] = 'Codigo IBGE valido';
+            $missing[] = 'Código IBGE válido';
         }
 
         if (! preg_match('/^\d{8}$/', (string) $profile->zip_code)) {
-            $missing[] = 'CEP valido';
+            $missing[] = 'CEP válido';
         }
 
         if (! preg_match('/^[A-Z]{2}$/', strtoupper((string) $profile->state))) {
-            $missing[] = 'UF valida';
+            $missing[] = 'UF válida';
         }
 
         if ((int) $profile->environment < 1 || (int) $profile->environment > 2) {
@@ -291,11 +291,11 @@ class TenantFiscalProfileService
         }
 
         if ((int) $profile->series < 1 || (int) $profile->series > 999) {
-            $missing[] = 'Serie fiscal';
+            $missing[] = 'Série fiscal';
         }
 
         if ((int) $profile->next_number < 1) {
-            $missing[] = 'Proximo numero';
+            $missing[] = 'Próximo número';
         }
 
         if ((string) $profile->invoice_model !== '65') {
@@ -310,15 +310,15 @@ class TenantFiscalProfileService
             preg_match('/^\d{7}$/', (string) $profile->city_code)
             && substr((string) $profile->city_code, 0, 2) !== $this->ufCode((string) $profile->state)
         ) {
-            $missing[] = 'IBGE compativel com a UF';
+            $missing[] = 'IBGE compatível com a UF';
         }
 
         if (filled($profile->cnae) && ! preg_match('/^\d{7}$/', (string) $profile->cnae)) {
-            $missing[] = 'CNAE valido';
+            $missing[] = 'CNAE válido';
         }
 
         if (filled($profile->phone) && ! preg_match('/^\d{10,11}$/', (string) $profile->phone)) {
-            $missing[] = 'Telefone valido';
+            $missing[] = 'Telefone válido';
         }
 
         return array_values(array_unique($missing));
@@ -337,10 +337,10 @@ class TenantFiscalProfileService
         }
 
         foreach ([
-            'technical_contact_name' => 'Responsavel tecnico',
-            'technical_contact_email' => 'Email do responsavel tecnico',
-            'technical_contact_phone' => 'Telefone do responsavel tecnico',
-            'technical_contact_cnpj' => 'CNPJ do responsavel tecnico',
+            'technical_contact_name' => 'Responsável técnico',
+            'technical_contact_email' => 'Email do responsável técnico',
+            'technical_contact_phone' => 'Telefone do responsável técnico',
+            'technical_contact_cnpj' => 'CNPJ do responsável técnico',
         ] as $field => $label) {
             if (blank($profile->{$field})) {
                 $missing[] = $label;
@@ -351,21 +351,21 @@ class TenantFiscalProfileService
             filled($profile->technical_contact_email)
             && filter_var((string) $profile->technical_contact_email, FILTER_VALIDATE_EMAIL) === false
         ) {
-            $missing[] = 'Email do responsavel tecnico valido';
+            $missing[] = 'Email do responsável técnico válido';
         }
 
         if (
             filled($profile->technical_contact_phone)
             && ! preg_match('/^\d{10,11}$/', (string) $profile->technical_contact_phone)
         ) {
-            $missing[] = 'Telefone do responsavel tecnico valido';
+            $missing[] = 'Telefone do responsável técnico válido';
         }
 
         if (
             filled($profile->technical_contact_cnpj)
             && ! preg_match('/^\d{14}$/', (string) $profile->technical_contact_cnpj)
         ) {
-            $missing[] = 'CNPJ do responsavel tecnico valido';
+            $missing[] = 'CNPJ do responsável técnico válido';
         }
 
         return array_values(array_unique($missing));

@@ -21,7 +21,7 @@ class LocalAgentPrintQueueService
         if (!filled($tenantId)) {
             return [
                 'status' => 'unavailable',
-                'message' => 'Nao foi possivel identificar o tenant para enfileirar a impressao.',
+                'message' => 'Não foi possível identificar o tenant para enfileirar a impressão.',
             ];
         }
 
@@ -39,14 +39,14 @@ class LocalAgentPrintQueueService
         if (!$agent) {
             return [
                 'status' => 'skipped',
-                'message' => 'Nenhum agente de impressao compativel foi encontrado para este tenant.',
+                'message' => 'Nenhum agente de impressão compatível foi encontrado para este tenant.',
             ];
         }
 
         if (data_get($agent->metadata, 'device.printer.enabled') === false) {
             return [
                 'status' => 'skipped',
-                'message' => 'O agente local esta com a impressora desativada.',
+                'message' => 'O agente local está com a impressora desativada.',
             ];
         }
 
@@ -58,7 +58,7 @@ class LocalAgentPrintQueueService
 
         return [
             'status' => 'queued',
-            'message' => 'O comprovante foi enviado para a fila central de impressao do agente.',
+            'message' => 'O comprovante foi enviado para a fila central de impressão do agente.',
             'command_id' => $command->id,
             'queued_at' => optional($command->created_at)?->toIso8601String(),
         ];

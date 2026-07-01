@@ -28,7 +28,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'already_cancelled',
-                'message' => 'Essa venda ja esta cancelada.',
+                'message' => 'Essa venda já está cancelada.',
             ];
         }
 
@@ -44,7 +44,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'blocked_processing',
-                'message' => 'O documento fiscal ainda esta em processamento.',
+                'message' => 'O documento fiscal ainda está em processamento.',
             ];
         }
 
@@ -55,7 +55,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'blocked_offline_contingency',
-                'message' => 'A NFC-e em contingencia offline precisa ser transmitida ou regularizada antes do cancelamento.',
+                'message' => 'A NFC-e em contingência offline precisa ser transmitida ou regularizada antes do cancelamento.',
             ];
         }
 
@@ -64,8 +64,8 @@ class FiscalCancellationRules
                 'allowed' => true,
                 'mode' => in_array($document->status, ['signed_local', 'printed_local'], true) ? 'local_cancelled' : 'commercial_cancelled',
                 'message' => in_array($document->status, ['signed_local', 'printed_local'], true)
-                    ? 'Cancela localmente sem transmissao SEFAZ.'
-                    : 'Cancela a venda antes da autorizacao fiscal.',
+                    ? 'Cancela localmente sem transmissão SEFAZ.'
+                    : 'Cancela a venda antes da autorização fiscal.',
             ];
         }
 
@@ -73,7 +73,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'blocked_status',
-                'message' => 'O status atual do documento nao permite cancelamento por este fluxo.',
+                'message' => 'O status atual do documento não permite cancelamento por este fluxo.',
             ];
         }
 
@@ -81,7 +81,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'missing_artifacts',
-                'message' => 'O documento nao possui chave, protocolo e XML autorizado suficientes para cancelamento.',
+                'message' => 'O documento não possui chave, protocolo e XML autorizado suficientes para cancelamento.',
             ];
         }
 
@@ -89,7 +89,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'missing_authorization_time',
-                'message' => 'O documento nao possui data de autorizacao para validar o prazo de cancelamento.',
+                'message' => 'O documento não possui data de autorização para validar o prazo de cancelamento.',
             ];
         }
 
@@ -98,7 +98,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'expired_deadline',
-                'message' => sprintf('O prazo operacional de cancelamento (%d horas) ja foi excedido.', $maxHours),
+                'message' => sprintf('O prazo operacional de cancelamento (%d horas) já foi excedido.', $maxHours),
             ];
         }
 
@@ -112,7 +112,7 @@ class FiscalCancellationRules
             return [
                 'allowed' => false,
                 'mode' => 'retry_cooldown',
-                'message' => sprintf('A ultima tentativa de cancelamento falhou recentemente. Aguarde %d minuto(s) para tentar de novo.', $cooldown),
+                'message' => sprintf('A última tentativa de cancelamento falhou recentemente. Aguarde %d minuto(s) para tentar de novo.', $cooldown),
             ];
         }
 

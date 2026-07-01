@@ -150,7 +150,7 @@ export default function OrderDetailModal({
                                         <div className="orders-terminal-item-columns" aria-hidden="true">
                                             <span>Descrição</span>
                                             <span>EAN</span>
-                                            <span>Preco un.</span>
+                                            <span>Preço un.</span>
                                             <span>Quantidade</span>
                                             <span />
                                         </div>
@@ -210,7 +210,7 @@ export default function OrderDetailModal({
                                         <i className="fa-solid fa-box-open" />
                                         <div>
                                             <strong>Sem produtos no atendimento</strong>
-                                            <p>Abra o catalogo na sidebar para adicionar itens.</p>
+                                            <p>Abra o catálogo na sidebar para adicionar itens.</p>
                                         </div>
                                     </div>
                                 )}

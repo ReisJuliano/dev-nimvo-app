@@ -43,13 +43,13 @@ const emptyForm = {
 
 const numericFieldLabels = {
     cost_price: 'Custo',
-    sale_price: 'Preco de venda',
+    sale_price: 'Preço de venda',
     stock_quantity: 'Estoque atual',
-    min_stock: 'Estoque minimo',
-    icms_rate: 'Aliquota de ICMS',
-    pis_rate: 'Aliquota de PIS',
-    cofins_rate: 'Aliquota de COFINS',
-    ipi_rate: 'Aliquota de IPI',
+    min_stock: 'Estoque mínimo',
+    icms_rate: 'Alíquota de ICMS',
+    pis_rate: 'Alíquota de PIS',
+    cofins_rate: 'Alíquota de COFINS',
+    ipi_rate: 'Alíquota de IPI',
 }
 
 const icmsOptions = ['101', '102', '103', '201', '202', '203', '300', '400', '500', '900']
@@ -106,24 +106,24 @@ function validateForm(form) {
     const cest = String(form.cest || '').trim()
 
     if (!String(form.name || '').trim()) errors.name = 'Informe o nome do produto.'
-    if (form.sale_price === '' || form.sale_price === null || form.sale_price === undefined) errors.sale_price = 'Informe o preco de venda.'
-    if (ncm !== '' && !/^\d{8}$/.test(ncm)) errors.ncm = 'NCM deve ter 8 digitos.'
-    if (cfop !== '' && !/^\d{4}$/.test(cfop)) errors.cfop = 'CFOP deve ter 4 digitos.'
-    if (cest !== '' && !/^\d{7}$/.test(cest)) errors.cest = 'CEST deve ter 7 digitos.'
+    if (form.sale_price === '' || form.sale_price === null || form.sale_price === undefined) errors.sale_price = 'Informe o preço de venda.'
+    if (ncm !== '' && !/^\d{8}$/.test(ncm)) errors.ncm = 'NCM deve ter 8 dígitos.'
+    if (cfop !== '' && !/^\d{4}$/.test(cfop)) errors.cfop = 'CFOP deve ter 4 dígitos.'
+    if (cest !== '' && !/^\d{7}$/.test(cest)) errors.cest = 'CEST deve ter 7 dígitos.'
 
     Object.entries(numericFieldLabels).forEach(([field, label]) => {
         const numericValue = getNumberValue(form[field])
         if (Number.isNaN(numericValue)) {
-            errors[field] = `${label} precisa ser um numero valido.`
+            errors[field] = `${label} precisa ser um número válido.`
             return
         }
 
         if (numericValue !== null && numericValue < 0) {
-            errors[field] = `${label} nao pode ser negativo.`
+            errors[field] = `${label} não pode ser negativo.`
         }
 
         if (numericValue !== null && ['icms_rate', 'pis_rate', 'cofins_rate', 'ipi_rate'].includes(field) && numericValue > 100) {
-            errors[field] = `${label} nao pode ser maior que 100%.`
+            errors[field] = `${label} não pode ser maior que 100%.`
         }
     })
 
@@ -215,7 +215,7 @@ export default function ProductFormModal({
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Descartar alteracoes',
+            title: 'Descartar alterações',
             message: 'Fechar sem salvar este produto?',
             confirmLabel: 'Descartar',
             cancelLabel: 'Continuar',
@@ -246,7 +246,7 @@ export default function ProductFormModal({
                 taxable_unit: form.taxable_unit || form.commercial_unit || form.unit || 'UN',
             })
         } catch (error) {
-            const message = error.message || 'Nao foi possivel salvar o produto.'
+            const message = error.message || 'Não foi possível salvar o produto.'
             setSubmitError(message)
             showErrorPopup(message)
         }
@@ -334,7 +334,7 @@ export default function ProductFormModal({
                 <header className="products-modal-header products-editor-header">
                     <div>
                         <h2>{product ? 'Editar produto' : 'Novo produto'}</h2>
-                        <p>Cadastro rapido para comecar a vender sem complicacao.</p>
+                        <p>Cadastro rápido para começar a vender sem complicaç?.</p>
                     </div>
                     <button
                         className="products-icon-button ui-tooltip"
@@ -364,7 +364,7 @@ export default function ProductFormModal({
                             </label>
 
                             <label className="products-editor-field">
-                                <span>Codigo de barras</span>
+                                <span>Código de barras</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-camera" />
                                     <input value={form.barcode ?? ''} onChange={(event) => updateField('barcode', event.target.value)} placeholder="Opcional" />
@@ -392,7 +392,7 @@ export default function ProductFormModal({
                                     <strong>Nova categoria</strong>
                                     <div className="products-inline-create-grid">
                                         <input placeholder="Nome" value={quickCategory.name} onChange={(event) => setQuickCategory((current) => ({ ...current, name: event.target.value }))} />
-                                        <input placeholder="Descricao opcional" value={quickCategory.description} onChange={(event) => setQuickCategory((current) => ({ ...current, description: event.target.value }))} />
+                                        <input placeholder="Descrição opcional" value={quickCategory.description} onChange={(event) => setQuickCategory((current) => ({ ...current, description: event.target.value }))} />
                                     </div>
                                     <div className="products-inline-create-actions">
                                         <button type="button" className="ui-button-ghost" onClick={() => setShowQuickCategory(false)}>Cancelar</button>
@@ -402,11 +402,11 @@ export default function ProductFormModal({
                             ) : null}
 
                             <div className="products-editor-section-title span-2">
-                                <h3>Preco e estoque</h3>
+                                <h3>Preço e estoque</h3>
                             </div>
 
                             <label className={`products-editor-field ${errors.sale_price ? 'has-error' : ''}`}>
-                                <span>Preco de venda *</span>
+                                <span>Preço de venda *</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-receipt" />
                                     <input type="number" step="0.01" min="0" value={form.sale_price ?? ''} onChange={(event) => updateField('sale_price', event.target.value)} required />
@@ -446,7 +446,7 @@ export default function ProductFormModal({
                             )}
 
                             <label className={`products-editor-field ${errors.min_stock ? 'has-error' : ''}`}>
-                                <span>Estoque minimo</span>
+                                <span>Estoque mínimo</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-triangle-exclamation" />
                                     <input type="number" step="0.001" min="0" value={form.min_stock ?? ''} onChange={(event) => updateField('min_stock', event.target.value)} placeholder="Opcional" />
@@ -457,13 +457,13 @@ export default function ProductFormModal({
 
                             <button type="button" className="products-advanced-link span-2" onClick={() => setShowAdvanced((current) => !current)}>
                                 <i className={`fa-solid ${showAdvanced ? 'fa-chevron-up' : 'fa-chevron-down'}`} />
-                                <span>{showAdvanced ? 'Ocultar dados avancados' : 'Ver dados avancados'}</span>
+                                <span>{showAdvanced ? 'Ocultar dados avançados' : 'Ver dados avançados'}</span>
                             </button>
 
                             {showAdvanced ? (
                                 <>
                                     <label className="products-editor-field">
-                                        <span>Fornecedor - de quem voce compra</span>
+                                        <span>Fornecedor - de quem você compra</span>
                                         <div className="products-editor-input-wrap">
                                             <i className="fa-solid fa-building" />
                                             <select value={form.supplier_id ?? ''} onChange={(event) => handleSupplierSelect(event.target.value)}>
@@ -492,7 +492,7 @@ export default function ProductFormModal({
                                     </label>
 
                                     <label className="products-editor-field">
-                                        <span>Codigo interno</span>
+                                        <span>Código interno</span>
                                         <div className="products-editor-input-wrap">
                                             <i className="fa-solid fa-hashtag" />
                                             <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} placeholder="Opcional" />
@@ -515,12 +515,12 @@ export default function ProductFormModal({
                                     ) : null}
 
                                     <label className="products-editor-field span-2">
-                                        <span>Descricao</span>
+                                        <span>Descrição</span>
                                         <textarea rows="3" value={form.description ?? ''} onChange={(event) => updateField('description', event.target.value)} />
                                     </label>
 
                                     <label className="products-editor-field span-2">
-                                        <span>Observacoes internas</span>
+                                        <span>Observações internas</span>
                                         <textarea rows="3" value={form.internal_notes ?? ''} onChange={(event) => updateField('internal_notes', event.target.value)} />
                                     </label>
 
@@ -535,7 +535,7 @@ export default function ProductFormModal({
                                     {fashionFieldsEnabled ? (
                                         <>
                                             <div className="products-editor-section-title span-2">
-                                                <h3>Moda e catalogo</h3>
+                                                <h3>Moda e catálogo</h3>
                                             </div>
 
                                             <label className="products-editor-field">
@@ -555,7 +555,7 @@ export default function ProductFormModal({
                                             </label>
 
                                             <label className="products-editor-field">
-                                                <span>Colecao</span>
+                                                <span>Coleção</span>
                                                 <div className="products-editor-input-wrap">
                                                     <i className="fa-solid fa-layer-group" />
                                                     <input value={form.collection ?? ''} onChange={(event) => updateField('collection', event.target.value)} placeholder="Opcional" />
@@ -563,7 +563,7 @@ export default function ProductFormModal({
                                             </label>
 
                                             <label className="products-editor-field">
-                                                <span>Referencia de estilo</span>
+                                                <span>Referência de estilo</span>
                                                 <div className="products-editor-input-wrap">
                                                     <i className="fa-solid fa-shirt" />
                                                     <input value={form.style_reference ?? ''} onChange={(event) => updateField('style_reference', event.target.value)} placeholder="Opcional" />
@@ -573,7 +573,7 @@ export default function ProductFormModal({
                                             <article className="products-editor-card span-2">
                                                 <div className="products-editor-switch-row">
                                                     <div>
-                                                        <h3>Visivel no catalogo</h3>
+                                                        <h3>Visível no catálogo</h3>
                                                         <small>Mostra este produto nos canais de venda online.</small>
                                                     </div>
                                                     <label className="products-editor-switch">
@@ -605,7 +605,7 @@ export default function ProductFormModal({
                                         <small>Preencha com o seu contador.</small>
                                         <div className="products-editor-toggle-row">
                                             <button type="button" className={`products-editor-toggle ${form.fiscal_enabled ? 'active' : ''}`} onClick={() => updateField('fiscal_enabled', true)}>Usa fiscal</button>
-                                            <button type="button" className={`products-editor-toggle ${!form.fiscal_enabled ? 'active' : ''}`} onClick={() => updateField('fiscal_enabled', false)}>Nao usa fiscal</button>
+                                            <button type="button" className={`products-editor-toggle ${!form.fiscal_enabled ? 'active' : ''}`} onClick={() => updateField('fiscal_enabled', false)}>Não usa fiscal</button>
                                         </div>
                                     </article>
 
@@ -674,7 +674,7 @@ export default function ProductFormModal({
                         {submitError ? (
                             <span className="products-editor-submit-error">{submitError}</span>
                         ) : (
-                            <span className="products-editor-submit-hint">Obrigatorio: nome e preco de venda.</span>
+                            <span className="products-editor-submit-hint">Obrigatório: nome e preço de venda.</span>
                         )}
                         <div className="products-editor-action-buttons">
                             <button className="ui-button-ghost" type="button" onClick={requestClose}>Cancelar</button>

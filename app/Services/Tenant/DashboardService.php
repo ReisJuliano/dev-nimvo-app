@@ -125,7 +125,7 @@ class DashboardService
             ->map(fn (Sale $sale) => [
                 'id' => $sale->id,
                 'sale_number' => $sale->sale_number,
-                'customer_name' => $sale->customer?->name ?? 'Nao identificado',
+                'customer_name' => $sale->customer?->name ?? 'Não identificado',
                 'user_name' => $sale->user?->name,
                 'payment_method' => $sale->payment_method,
                 'total' => (float) $sale->total,
@@ -252,8 +252,8 @@ class DashboardService
         return match ($paymentMethod) {
             'cash' => 'Dinheiro',
             'pix' => 'Pix',
-            'debit_card' => 'Debito',
-            'credit_card' => 'Credito',
+            'debit_card' => 'Débito',
+            'credit_card' => 'Crédito',
             'credit' => 'Fiado',
             'mixed' => 'Misto',
             default => ucfirst(str_replace('_', ' ', $paymentMethod)),

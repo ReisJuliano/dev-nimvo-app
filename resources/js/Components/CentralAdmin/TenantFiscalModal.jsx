@@ -30,7 +30,7 @@ const ADDRESS_FIELDS = [
 const TRANSMISSION_FIELDS = [
     { name: 'csc_id', label: 'CSC ID', icon: 'fa-hashtag', placeholder: '000001' },
     { name: 'csc_token', label: 'CSC Token', icon: 'fa-key', placeholder: 'Cole o token da SEFAZ', note: 'Deixe em branco para manter o token atual.' },
-    { name: 'technical_contact_name', label: 'Responsavel tecnico', icon: 'fa-user-tie', placeholder: 'Equipe fiscal ou software house', full: true },
+    { name: 'technical_contact_name', label: 'Responsóvel técnico', icon: 'fa-user-tie', placeholder: 'Equipe fiscal ou software house', full: true },
     { name: 'technical_contact_email', label: 'Email resptec', icon: 'fa-envelope', placeholder: 'fiscal@empresa.com' },
     { name: 'technical_contact_phone', label: 'Telefone resptec', icon: 'fa-phone-volume', placeholder: '11999999999' },
     { name: 'technical_contact_cnpj', label: 'CNPJ resptec', icon: 'fa-id-card-clip', placeholder: '12345678000123' },
@@ -201,7 +201,7 @@ export default function TenantFiscalModal({
                                     {fiscal?.status === 'missing_table'
                                         ? 'Esse tenant ainda não recebeu as migrations fiscais. Sem a tabela fiscal não ha como salvar o emitente.'
                                         : hasProfile
-                                            ? 'Os dados sao gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                            ? 'Os dados s?o gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
                                             : 'Ao salvar este formulario, o painel cria o perfil fiscal NFC-e 65 diretamente no banco do tenant.'}
                                 </p>
                             </article>

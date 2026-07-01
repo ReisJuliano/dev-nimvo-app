@@ -207,7 +207,7 @@ export default function OrderProductModal({
 
                 <div className="orders-product-compact-hint">
                     <i className="fa-solid fa-bolt" />
-                    <span>{quickQuantityLabel} unidade(s) por clique no botao + Add</span>
+                    <span>{quickQuantityLabel} unidade(s) por clique no botão + Add</span>
                 </div>
             </div>
         </OrdersModal>

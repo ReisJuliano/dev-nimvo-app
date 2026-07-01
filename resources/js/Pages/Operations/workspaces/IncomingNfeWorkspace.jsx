@@ -350,7 +350,7 @@ export default function IncomingNfeWorkspace({ payload }) {
         const confirmed = await confirmPopup({
             type: 'warning',
             title: 'Confirmar entrada por NF-e',
-            message: `Lancar a NF-e ${selectedRecord.number}/${selectedRecord.series} no estoque agora?`,
+            message: `Lançar a NF-e ${selectedRecord.number}/${selectedRecord.series} no estoque agora?`,
             confirmLabel: 'Confirmar entrada',
             cancelLabel: 'Cancelar',
         })
@@ -394,15 +394,15 @@ export default function IncomingNfeWorkspace({ payload }) {
                     </div>
                     <div className="ops-workspace-form-grid">
                         <label>
-                            <FieldLabel icon="fa-calendar-day" text="Periodo inicial" />
+                            <FieldLabel icon="fa-calendar-day" text="Período inicial" />
                             <input type="date" value={filters.from} onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))} />
                         </label>
                         <label>
-                            <FieldLabel icon="fa-calendar-check" text="Periodo final" />
+                            <FieldLabel icon="fa-calendar-check" text="Período final" />
                             <input type="date" value={filters.to} onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))} />
                         </label>
                         <label>
-                            <FieldLabel icon="fa-hashtag" text="Numero da nota" />
+                            <FieldLabel icon="fa-hashtag" text="Número da nota" />
                             <input value={filters.number} onChange={(event) => setFilters((current) => ({ ...current, number: event.target.value }))} placeholder="Ex.: 1523" />
                         </label>
                         <label>
@@ -496,7 +496,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                             {busyAction === 'supplier' ? 'Vinculando...' : 'Vincular fornecedor'}
                                         </button>
                                         <button type="button" className="ui-button-ghost" onClick={handleQuickSupplierCreate} disabled={busyAction === 'quick-supplier' || !selectedRecord.supplier_document}>
-                                            {busyAction === 'quick-supplier' ? 'Cadastrando...' : 'Cadastro rapido'}
+                                            {busyAction === 'quick-supplier' ? 'Cadastrando...' : 'Cadastro rápido'}
                                         </button>
                                     </div>
                                 </div>
@@ -517,7 +517,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                         </select>
                                     </label>
                                     <label>
-                                        <FieldLabel icon="fa-box-open" text="Recebimento fisico" />
+                                        <FieldLabel icon="fa-box-open" text="Recebimento físico" />
                                         <input type="datetime-local" value={receiptAt} onChange={(event) => setReceiptAt(event.target.value)} />
                                     </label>
                                     <div className="ops-workspace-actions span-2">
@@ -536,15 +536,15 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <strong>{selectedRecord.validation?.matched_items || 0}</strong>
                                 </article>
                                 <article>
-                                    <span>Pendencias</span>
+                                    <span>Pendências</span>
                                     <strong>{selectedRecord.validation?.pending_items || 0}</strong>
                                 </article>
                                 <article>
-                                    <span>Alertas de preco</span>
+                                    <span>Alertas de preço</span>
                                     <strong>{selectedRecord.validation?.price_changes || 0}</strong>
                                 </article>
                                 <article>
-                                    <span>Divergencias NCM</span>
+                                    <span>Divergências NCM</span>
                                     <strong>{selectedRecord.validation?.ncm_mismatches || 0}</strong>
                                 </article>
                                 <article>
@@ -556,7 +556,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <strong>{selectedRecord.validation?.three_way_divergences || 0}</strong>
                                 </article>
                                 <article>
-                                    <span>Creditos</span>
+                                    <span>Créditos</span>
                                     <strong>{selectedRecord.validation?.credit_suggestions || 0}</strong>
                                 </article>
                                 <article>
@@ -595,7 +595,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                                     <label>
                                         <FieldLabel icon="fa-eye" text="Evento" />
                                         <select value={manifestEvent} onChange={(event) => setManifestEvent(event.target.value)}>
-                                            <option value="science">Ciencia</option>
+                                            <option value="science">Ciência</option>
                                             <option value="confirm">Confirmação</option>
                                             <option value="unknown">Desconhecimento</option>
                                             <option value="not_realized">Não realizada</option>

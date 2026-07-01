@@ -66,7 +66,7 @@ class FiscalDocumentsApiController extends Controller
                 ? $fiscalDocument->signed_xml
                 : null);
 
-        abort_unless(filled($xml), 422, 'O documento fiscal ainda nao possui XML disponivel para visualizacao.');
+        abort_unless(filled($xml), 422, 'O documento fiscal ainda não possui XML disponível para visualização.');
 
         $documentModel = (string) data_get($fiscalDocument->payload, 'flags.document_model', '65');
         $pdf = $documentModel === '55'
@@ -85,7 +85,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function signedXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->signed_xml), 422, 'O documento fiscal ainda nao possui XML assinado.');
+        abort_unless(filled($fiscalDocument->signed_xml), 422, 'O documento fiscal ainda não possui XML assinado.');
 
         return response($fiscalDocument->signed_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
@@ -95,7 +95,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function authorizedXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->authorized_xml), 422, 'O documento fiscal ainda nao possui XML autorizado.');
+        abort_unless(filled($fiscalDocument->authorized_xml), 422, 'O documento fiscal ainda não possui XML autorizado.');
 
         return response($fiscalDocument->authorized_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
@@ -105,7 +105,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function responseXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->response_xml), 422, 'O documento fiscal ainda nao possui retorno XML da SEFAZ.');
+        abort_unless(filled($fiscalDocument->response_xml), 422, 'O documento fiscal ainda não possui retorno XML da SEFAZ.');
 
         return response($fiscalDocument->response_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
@@ -115,7 +115,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function cancellationRequestXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->cancellation_request_xml), 422, 'O documento fiscal ainda nao possui XML de pedido de cancelamento.');
+        abort_unless(filled($fiscalDocument->cancellation_request_xml), 422, 'O documento fiscal ainda não possui XML de pedido de cancelamento.');
 
         return response($fiscalDocument->cancellation_request_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
@@ -125,7 +125,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function cancellationResponseXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->cancellation_response_xml), 422, 'O documento fiscal ainda nao possui XML de retorno de cancelamento.');
+        abort_unless(filled($fiscalDocument->cancellation_response_xml), 422, 'O documento fiscal ainda não possui XML de retorno de cancelamento.');
 
         return response($fiscalDocument->cancellation_response_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
@@ -135,7 +135,7 @@ class FiscalDocumentsApiController extends Controller
 
     public function cancelledXml(FiscalDocument $fiscalDocument): Response
     {
-        abort_unless(filled($fiscalDocument->cancelled_xml), 422, 'O documento fiscal ainda nao possui XML cancelado.');
+        abort_unless(filled($fiscalDocument->cancelled_xml), 422, 'O documento fiscal ainda não possui XML cancelado.');
 
         return response($fiscalDocument->cancelled_xml, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',

@@ -10,8 +10,8 @@ class FashionModuleSettingsService
     public function catalogDefaults(): array
     {
         return [
-            'title' => 'Catalogo online',
-            'subtitle' => 'Colecoes e produtos publicados para vitrine digital.',
+            'title' => 'Catálogo online',
+            'subtitle' => 'Coleções e produtos publicados para vitrine digital.',
             'featured_collection' => '',
             'show_prices' => true,
         ];
@@ -23,7 +23,7 @@ class FashionModuleSettingsService
             'phone' => '',
             'greeting' => 'Oi! Quero fechar este pedido.',
             'checkout_template' => "Pedido: {{items}}\nTotal: {{total}}\nCliente: {{customer}}",
-            'business_hours' => 'Seg a Sab 09:00 as 18:00',
+            'business_hours' => 'Seg a Sáb 09:00 às 18:00',
         ];
     }
 

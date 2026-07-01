@@ -20,20 +20,26 @@ function buildApiError(error) {
         return sessionError
     }
 
+    const errors = error?.response?.data?.errors || null
     const message =
         error?.response?.data?.message ||
-        Object.values(error?.response?.data?.errors || {})?.[0]?.[0] ||
-        (error?.response ? 'Não foi possível concluir a solicitação.' : 'A conexão com o servidor foi interrompida.')
+        Object.values(errors || {})?.[0]?.[0] ||
+        (error?.response ? 'Não foi possível concluir a solicitaç?.' : 'A conexão com o servidor foi interrompida.')
 
     const normalizedError = new Error(message)
     normalizedError.status = error?.response?.status ?? null
     normalizedError.isNetworkError = !error?.response
+    normalizedError.errors = errors
 
     return normalizedError
 }
 
 export function isNetworkApiError(error) {
     return Boolean(error?.isNetworkError)
+}
+
+export function getAmountConfirmationMessage(error) {
+    return error?.errors?.confirm_amount_mismatch?.[0] || null
 }
 
 export async function apiRequest(url, options = {}) {

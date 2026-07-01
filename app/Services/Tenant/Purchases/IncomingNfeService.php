@@ -120,7 +120,7 @@ class IncomingNfeService
 
         if (filled($document->purchase?->stock_applied_at)) {
             throw ValidationException::withMessages([
-                'document' => 'Esta NF-e ja gerou entrada no estoque e nao pode ser reprocessada.',
+                'document' => 'Esta NF-e já gerou entrada no estoque e não pode ser reprocessada.',
             ]);
         }
 
@@ -250,7 +250,7 @@ class IncomingNfeService
 
         if ($name === '' || $documentNumber === '') {
             throw ValidationException::withMessages([
-                'supplier' => 'Informe nome e CNPJ do fornecedor para o cadastro rapido.',
+                'supplier' => 'Informe nome e CNPJ do fornecedor para o cadastro rápido.',
             ]);
         }
 
@@ -294,7 +294,7 @@ class IncomingNfeService
 
             if (filled($document->purchase?->stock_applied_at)) {
                 throw ValidationException::withMessages([
-                    'document' => 'A NF-e ja foi confirmada no estoque e nao aceita remapeamento.',
+                    'document' => 'A NF-e já foi confirmada no estoque e não aceita remapeamento.',
                 ]);
             }
 
@@ -309,7 +309,7 @@ class IncomingNfeService
 
                 if ($purchase && filled($purchase->stock_applied_at) && $purchase->id !== $document->purchase_id) {
                     throw ValidationException::withMessages([
-                        'purchase_id' => 'Selecione um pedido de compra ainda nao consolidado no estoque.',
+                        'purchase_id' => 'Selecione um pedido de compra ainda não consolidado no estoque.',
                     ]);
                 }
 
@@ -676,7 +676,7 @@ class IncomingNfeService
 
             if ($existing && filled($existing->purchase?->stock_applied_at)) {
                 throw ValidationException::withMessages([
-                    'access_key' => 'Essa NF-e ja gerou entrada no estoque e nao pode ser atualizada.',
+                    'access_key' => 'Essa NF-e já gerou entrada no estoque e não pode ser atualizada.',
                 ]);
             }
 
@@ -766,7 +766,7 @@ class IncomingNfeService
                     $previous = $existingMap->get($itemData['item_number']);
                     $matched = $this->resolveProductMatch($itemData, $products, $previous);
                     $document->items()->create([
-                        'purchase_item_id' => $previous?->purchase_item_id,
+                        'purchase_item_id' => $previousó->purchase_item_id,
                         'product_id' => $matched['product_id'],
                         'item_number' => $itemData['item_number'],
                         'supplier_code' => $itemData['supplier_code'],
@@ -1046,7 +1046,7 @@ class IncomingNfeService
         if (!$product) {
             return [[
                 'code' => 'product_missing',
-                'message' => 'Produto ainda nao cadastrado no sistema.',
+                'message' => 'Produto ainda não cadastrado no sistema.',
             ]];
         }
 
@@ -1105,7 +1105,7 @@ class IncomingNfeService
 
         if ($normalized !== '' && $normalized !== $expected) {
             throw ValidationException::withMessages([
-                'recipient' => 'A NF-e selecionada nao pertence a empresa destinataria configurada neste tenant.',
+                'recipient' => 'A NF-e selecionada não pertence à empresa destinat?ria configurada neste tenant.',
             ]);
         }
     }

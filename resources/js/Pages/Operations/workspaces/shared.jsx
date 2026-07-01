@@ -122,7 +122,7 @@ export function WorkspaceCollectionShell({
                 sidebar={hasSidebar ? (
                     <RightSidebarPanel>
                         {summaryItems.length ? (
-                            <RightSidebarSection title="Contexto" subtitle="Resumo do modulo">
+                            <RightSidebarSection title="Contexto" subtitle="Resumo do módulo">
                                 <div className="ops-workspace-sidebar-meta">
                                     {summaryItems.map((item) => (
                                         <div key={item.label} className="right-sidebar-meta-item">

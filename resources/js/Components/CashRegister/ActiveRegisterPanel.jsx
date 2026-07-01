@@ -76,14 +76,14 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                 <div className="cash-register-section-header">
                     <div>
                         <span className="cash-register-section-kicker">Operação manual</span>
-                        <h2>Movimentacoes</h2>
+                        <h2>Movimentações</h2>
                         <p>Registre entradas e retiradas.</p>
                     </div>
                 </div>
 
                 <div className="cash-register-actions-grid">
                     <form className="cash-register-action-form tone-danger" onSubmit={(event) => onMovement(event, 'withdrawal')}>
-                        <span className="cash-register-form-chip">Saida</span>
+                        <span className="cash-register-form-chip">Saída</span>
                         <strong>Sangria</strong>
                         <input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" />
                         <input name="reason" placeholder="Motivo" />
@@ -128,7 +128,7 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
             <section className="cash-register-card">
                 <div className="cash-register-section-header">
                     <div>
-                        <span className="cash-register-section-kicker">Conferencia final</span>
+                        <span className="cash-register-section-kicker">Conferência final</span>
                         <h2>Fechamento</h2>
                         <p>Saldo esperado em dinheiro: {formatMoney(expected_cash)}</p>
                     </div>
@@ -137,8 +137,8 @@ export default function ActiveRegisterPanel({ report, onMovement, onClose, onSta
                 {requireConference ? (
                     <div className="cash-register-form">
                         <div className="cash-register-inline-alert">
-                            <strong>Conferencia guiada habilitada</strong>
-                            <span>Revise dinheiro, Pix, cartoes, fiado, sangrias e suprimentos antes de concluir.</span>
+                            <strong>Conferência guiada habilitada</strong>
+                            <span>Revise dinheiro, Pix, cartões, fiado, sangrias e suprimentos antes de concluir.</span>
                         </div>
                         <button className="cash-register-danger-button" type="button" onClick={onStartCloseConference}>
                             <i className="fa-solid fa-clipboard-check" />

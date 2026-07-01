@@ -29,7 +29,7 @@ class FashionModuleApiController extends Controller
         $promotion = Promotion::query()->create($this->validatePromotion($request));
 
         return response()->json([
-            'message' => 'Promocao cadastrada com sucesso.',
+            'message' => 'Promoção cadastrada com sucesso.',
             'promotion' => $this->serializePromotion($promotion),
         ], 201);
     }
@@ -43,7 +43,7 @@ class FashionModuleApiController extends Controller
         $promotion->update($this->validatePromotion($request));
 
         return response()->json([
-            'message' => 'Promocao atualizada com sucesso.',
+            'message' => 'Promoção atualizada com sucesso.',
             'promotion' => $this->serializePromotion($promotion),
         ]);
     }
@@ -56,13 +56,13 @@ class FashionModuleApiController extends Controller
 
         $promotion->delete();
 
-        return response()->json(['message' => 'Promocao removida com sucesso.']);
+        return response()->json(['message' => 'Promoção removida com sucesso.']);
     }
 
     public function storeReturn(Request $request): JsonResponse
     {
         if (!$this->hasTable('return_exchanges')) {
-            return $this->schemaNotReadyResponse('trocas e devolucoes');
+            return $this->schemaNotReadyResponse('trocas e devoluções');
         }
 
         $record = ReturnExchange::query()->create($this->validateReturn($request));
@@ -76,7 +76,7 @@ class FashionModuleApiController extends Controller
     public function updateReturn(Request $request, ReturnExchange $returnExchange): JsonResponse
     {
         if (!$this->hasTable('return_exchanges')) {
-            return $this->schemaNotReadyResponse('trocas e devolucoes');
+            return $this->schemaNotReadyResponse('trocas e devoluções');
         }
 
         $returnExchange->update($this->validateReturn($request));
@@ -90,7 +90,7 @@ class FashionModuleApiController extends Controller
     public function destroyReturn(ReturnExchange $returnExchange): JsonResponse
     {
         if (!$this->hasTable('return_exchanges')) {
-            return $this->schemaNotReadyResponse('trocas e devolucoes');
+            return $this->schemaNotReadyResponse('trocas e devoluções');
         }
 
         $returnExchange->delete();
@@ -110,7 +110,7 @@ class FashionModuleApiController extends Controller
         ]));
 
         return response()->json([
-            'message' => 'Configuracoes do catalogo salvas com sucesso.',
+            'message' => 'Configurações do catálogo salvas com sucesso.',
             'settings' => $settings,
         ]);
     }
@@ -118,7 +118,7 @@ class FashionModuleApiController extends Controller
     public function updateCatalogProduct(Request $request, Product $product): JsonResponse
     {
         if (!$this->hasColumn('products', 'catalog_visible')) {
-            return $this->schemaNotReadyResponse('catalogo online');
+            return $this->schemaNotReadyResponse('catálogo online');
         }
 
         $payload = $request->validate([
@@ -221,7 +221,7 @@ class FashionModuleApiController extends Controller
         ]));
 
         return response()->json([
-            'message' => 'Configuracoes do WhatsApp salvas com sucesso.',
+            'message' => 'Configurações do WhatsApp salvas com sucesso.',
             'settings' => $settings,
         ]);
     }
@@ -330,7 +330,7 @@ class FashionModuleApiController extends Controller
     protected function schemaNotReadyResponse(string $module): JsonResponse
     {
         return response()->json([
-            'message' => "O schema do tenant ainda nao foi atualizado para {$module}. Execute a migration do tenant e tente novamente.",
+            'message' => "O schema do tenant ainda não foi atualizado para {$module}. Execute a migration do tenant e tente novamente.",
         ], 409);
     }
 

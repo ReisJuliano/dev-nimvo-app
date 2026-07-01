@@ -694,7 +694,7 @@ export default function OrdersIndex({
             return
         }
 
-        const nextUrl = draftId ? `/pedidos?draft=${draftId}` : '/pedidos'
+        const nextUrl = draftId ? `/pedidosódraft=${draftId}` : '/pedidos'
         const currentState = window.history.state
         const currentPage = currentState?.page
         const isEncryptedPage = typeof ArrayBuffer !== 'undefined' && currentPage instanceof ArrayBuffer
@@ -1235,12 +1235,12 @@ export default function OrdersIndex({
         }
 
         if (['sent_to_cashier', 'ready', 'delivered', 'cancelled', 'canceled'].includes(draft.status)) {
-            showFeedback('warning', 'Esse pedido ja esta na etapa mais avancada disponível nesta tela.')
+            showFeedback('warning', 'Esse pedido já está na etapa mais avançada disponível nesta tela.')
             return
         }
 
         if (Number(draft.items_count || 0) <= 0) {
-            showFeedback('warning', 'Adicione ao menos um produto antes de avancar o status do pedido.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de avançar o status do pedido.')
             return
         }
 
@@ -1252,7 +1252,7 @@ export default function OrdersIndex({
                 const offlineOrder = sendOfflineOrderToCashier(tenantId, draft.id)
                 syncDraftSummary(offlineOrder)
                 setListFilter(resolveOrdersFilter(offlineOrder.status))
-                showFeedback('warning', 'Pedido enviado para a proxima etapa no modo offline.')
+                showFeedback('warning', 'Pedido enviado para a próxima etapa no modo offline.')
                 return
             }
 
@@ -1266,7 +1266,7 @@ export default function OrdersIndex({
                 const offlineOrder = sendOfflineOrderToCashier(tenantId, draft.id)
                 syncDraftSummary(offlineOrder)
                 setListFilter(resolveOrdersFilter(offlineOrder.status))
-                showFeedback('warning', 'Pedido enviado para a proxima etapa no modo offline.')
+                showFeedback('warning', 'Pedido enviado para a próxima etapa no modo offline.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -1400,7 +1400,7 @@ export default function OrdersIndex({
     async function handlePrintDraft() {
         if (!currentDraft) return
         const printWindow = window.open('', '_blank', 'width=760,height=900')
-        if (!printWindow) return showFeedback('warning', 'O navegador bloqueou a janela de impressão.')
+        if (!printWindow) return showFeedback('warning', 'O navegador bloqueou a janela de impress?.')
 
         setPrintingDraft(true)
         try {

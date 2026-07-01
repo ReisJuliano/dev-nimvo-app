@@ -66,23 +66,23 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
                                         <strong>{tenantStats.inactive}</strong>
                                     </div>
                                     <div className="right-sidebar-meta-item">
-                                        <span>Media de modulos</span>
+                                        <span>Média de módulos</span>
                                         <strong>{averageModules}</strong>
                                     </div>
                                 </div>
                             </RightSidebarSection>
 
-                            <RightSidebarSection title="Acoes" subtitle="Atalhos">
+                            <RightSidebarSection title="Ações" subtitle="Atalhos">
                                 <Link href="/admin/clientes" className="action-button tone-primary">
                                     <i className="fa-solid fa-buildings" />
                                     <span>Tenants</span>
                                 </Link>
                                 <Link href="/admin/feature-flags" className="action-button tone-ghost">
                                     <i className="fa-solid fa-sliders" />
-                                    <span>Configuracoes</span>
+                                    <span>Configurações</span>
                                 </Link>
                                 <div className="right-sidebar-note">
-                                    {trackedModules.length} modulos mapeados e {customPresetCount} tenants personalizados.
+                                    {trackedModules.length} módulos mapeados e {customPresetCount} tenants personalizados.
                                 </div>
                             </RightSidebarSection>
                         </RightSidebarPanel>
@@ -92,7 +92,7 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
                         <article className="central-admin-card">
                             <div className="central-admin-section-head">
                                 <div>
-                                    <h2>Ultimos cadastrados</h2>
+                                    <h2>Últimos cadastrados</h2>
                                 </div>
                                 <div className="central-admin-section-head-actions">
                                     <Link href="/admin/clientes" className="central-admin-secondary-button">
@@ -120,7 +120,7 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
                                             <span className={`central-admin-status-pill ${tenant.active ? 'is-active' : 'is-inactive'}`}>
                                                 {tenant.active ? 'Ativo' : 'Inativo'}
                                             </span>
-                                            <span className="central-admin-badge is-info">{tenant.activeModules} modulos</span>
+                                            <span className="central-admin-badge is-info">{tenant.activeModules} módulos</span>
                                         </div>
                                     </div>
                                 ))}
@@ -130,7 +130,7 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
                         <article className="central-admin-card">
                             <div className="central-admin-section-head">
                                 <div>
-                                    <h2>Modulos mais usados</h2>
+                                    <h2>Módulos mais usados</h2>
                                 </div>
                             </div>
 
@@ -138,7 +138,7 @@ export default function CentralAdminDashboard({ tenantStats, tenants, moduleSect
                                 {moduleUsage.length === 0 ? (
                                     <div className="central-admin-empty-state">
                                         <i className="fa-solid fa-toggle-on" />
-                                        <h3>Sem modulos ativos</h3>
+                                        <h3>Sem módulos ativos</h3>
                                     </div>
                                 ) : null}
 

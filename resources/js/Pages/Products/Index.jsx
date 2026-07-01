@@ -298,7 +298,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operação local e entrara na fila de sincronização.`,
+                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronizaç?.`,
                 })
                 return
             }
@@ -325,7 +325,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 showPopup({
                     type: 'warning',
                     title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operação local e entrara na fila de sincronização.`,
+                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronizaç?.`,
                 })
             } else {
                 showErrorPopup(error.message)
@@ -443,7 +443,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
 
     async function handleQuickCreateCategory(data) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            throw new Error('Criação rapida de categoria exige conexão ativa.')
+            throw new Error('Criação rápida de categoria exige conexão ativa.')
         }
 
         const response = await apiRequest('/api/operations/categorias/records', {
@@ -467,7 +467,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
 
     async function handleQuickCreateSupplier(data) {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            throw new Error('Criação rapida de fornecedor exige conexão ativa.')
+            throw new Error('Criação rápida de fornecedor exige conexão ativa.')
         }
 
         const response = await apiRequest('/api/operations/fornecedores/records', {

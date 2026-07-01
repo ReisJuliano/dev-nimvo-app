@@ -102,7 +102,7 @@ class ConditionalSaleService
 
         if ($dueAt->lt($withdrawnAt->copy()->startOfDay())) {
             throw ValidationException::withMessages([
-                'due_at' => 'A data limite precisa ser igual ou posterior a retirada.',
+                'due_at' => 'A data limite precisa ser igual ou posterior à retirada.',
             ]);
         }
 
@@ -131,7 +131,7 @@ class ConditionalSaleService
 
                 if (! $product || ! $product->active) {
                     throw ValidationException::withMessages([
-                        'items' => 'Existe um produto indisponivel na condicional.',
+                        'items' => 'Existe um produto indisponível na condicional.',
                     ]);
                 }
 
@@ -183,7 +183,7 @@ class ConditionalSaleService
                     'user_id' => $userId,
                     'reference' => $conditionalSale,
                     'unit_cost' => $product->cost_price,
-                    'notes' => "Saida em condicional {$conditionalSale->code}",
+                    'notes' => "Saída em condicional {$conditionalSale->code}",
                     'occurred_at' => $withdrawnAt,
                 ]);
             }
@@ -221,7 +221,7 @@ class ConditionalSaleService
 
                 if (! $item) {
                     throw ValidationException::withMessages([
-                        'items' => 'Item invalido para a devolucao.',
+                        'items' => 'Item inválido para a devolução.',
                     ]);
                 }
 
@@ -235,7 +235,7 @@ class ConditionalSaleService
 
                 if ($returnedQuantity > $remainingQuantity) {
                     throw ValidationException::withMessages([
-                        'items' => "A devolucao de {$item->product_name} ultrapassa o saldo em aberto.",
+                        'items' => "A devolução de {$item->product_name} ultrapassa o saldo em aberto.",
                     ]);
                 }
 
@@ -249,7 +249,7 @@ class ConditionalSaleService
                     'user_id' => $userId,
                     'reference' => $lockedConditional,
                     'unit_cost' => $item->unit_cost,
-                    'notes' => "Devolucao do item {$item->product_name} na condicional {$lockedConditional->code}",
+                    'notes' => "Devolução do item {$item->product_name} na condicional {$lockedConditional->code}",
                     'occurred_at' => $returnedAt,
                 ]);
 
@@ -313,7 +313,7 @@ class ConditionalSaleService
 
                 if (! $item) {
                     throw ValidationException::withMessages([
-                        'items' => 'Item invalido para o fechamento.',
+                        'items' => 'Item inválido para o fechamento.',
                     ]);
                 }
 
@@ -355,7 +355,7 @@ class ConditionalSaleService
 
             if ($returnLines->isEmpty() && $billingLines->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Nao existe saldo para fechar nesta condicional.',
+                    'items' => 'Não existe saldo para fechar nesta condicional.',
                 ]);
             }
 
@@ -372,7 +372,7 @@ class ConditionalSaleService
                     'user_id' => $userId,
                     'reference' => $lockedConditional,
                     'unit_cost' => $item->unit_cost,
-                    'notes' => "Devolucao no fechamento da condicional {$lockedConditional->code}",
+                    'notes' => "Devolução no fechamento da condicional {$lockedConditional->code}",
                     'occurred_at' => $resolvedAt,
                 ]);
             }
@@ -824,7 +824,7 @@ class ConditionalSaleService
 
     protected function buildConvertedSaleNotes(ConditionalSale $conditionalSale, Collection $billingLines, ?string $resolutionNotes): string
     {
-        $segments = ["Conversao da condicional {$conditionalSale->code}."];
+        $segments = ["Conversão da condicional {$conditionalSale->code}."];
 
         foreach ($billingLines as $entry) {
             /** @var ConditionalSaleItem $item */
@@ -836,7 +836,7 @@ class ConditionalSaleService
             }
 
             if ((float) $entry['lost_quantity'] > 0) {
-                $descriptions[] = 'nao devolveu '.$this->formatQuantity((float) $entry['lost_quantity']);
+                $descriptions[] = 'não devolveu '.$this->formatQuantity((float) $entry['lost_quantity']);
             }
 
             if ((float) $entry['damaged_quantity'] > 0) {
@@ -859,7 +859,7 @@ class ConditionalSaleService
     {
         if (! $customer->active) {
             throw ValidationException::withMessages([
-                'customer_id' => 'O cliente selecionado esta inativo.',
+                'customer_id' => 'O cliente selecionado está inativo.',
             ]);
         }
 
@@ -880,7 +880,7 @@ class ConditionalSaleService
 
         if ($hasOverdueConditional) {
             throw ValidationException::withMessages([
-                'customer_id' => 'Este cliente possui condicional atrasado e nao pode retirar novas pecas.',
+                'customer_id' => 'Este cliente possui condicional atrasado e não pode retirar novas peças.',
             ]);
         }
     }
@@ -901,7 +901,7 @@ class ConditionalSaleService
 
         if (round($incomingAmount, 2) > $availableLimit) {
             throw ValidationException::withMessages([
-                'customer_id' => 'O valor da condicional ultrapassa o limite disponivel deste cliente.',
+                'customer_id' => 'O valor da condicional ultrapassa o limite disponível deste cliente.',
             ]);
         }
     }
@@ -910,7 +910,7 @@ class ConditionalSaleService
     {
         if ($conditionalSale->closed_at !== null || $conditionalSale->status === 'closed') {
             throw ValidationException::withMessages([
-                'conditional' => 'Esta condicional ja foi encerrada.',
+                'conditional' => 'Esta condicional já foi encerrada.',
             ]);
         }
     }

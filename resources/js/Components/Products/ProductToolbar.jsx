@@ -79,7 +79,7 @@ export default function ProductToolbar({
             <button
                 className="products-primary-button ui-tooltip"
                 onClick={onCreate}
-                data-tooltip={isFashionMode ? 'Cadastrar nova peca ou variante' : 'Cadastrar novo item'}
+                data-tooltip={isFashionMode ? 'Cadastrar nova peça ou variante' : 'Cadastrar novo item'}
             >
                 <i className="fa-solid fa-plus" />
                 Novo produto

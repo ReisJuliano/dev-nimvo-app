@@ -201,7 +201,7 @@ class PosApiController extends Controller
     {
         if (! $this->hasTable('companies')) {
             throw ValidationException::withMessages([
-                'company' => 'O cadastro de empresas ainda nao esta habilitado neste tenant. Rode as migrations pendentes para usar esse recurso.',
+                'company' => 'O cadastro de empresas ainda não está habilitado neste tenant. Rode as migrations pendentes para usar esse recurso.',
             ]);
         }
 
@@ -354,7 +354,7 @@ class PosApiController extends Controller
                 } catch (\Throwable) {
                     $printResult = [
                         'status' => 'failed',
-                        'message' => 'Venda finalizada. Nao foi possivel enviar o comprovante para a fila central de impressao.',
+                        'message' => 'Venda finalizada. Não foi possível enviar o comprovante para a fila central de impressão.',
                     ];
                 }
             }
@@ -406,7 +406,7 @@ class PosApiController extends Controller
         );
 
         return response()->json([
-            'message' => 'Cupom fiscal enviado para emissao.',
+            'message' => 'Cupom fiscal enviado para emissão.',
             'document' => $this->serializeFiscalDocument($document),
         ]);
     }
@@ -436,7 +436,7 @@ class PosApiController extends Controller
 
             if (! $authorizerId) {
                 throw ValidationException::withMessages([
-                    'items' => 'Todo desconto aplicado no PDV precisa de autorizacao gerencial valida.',
+                    'items' => 'Todo desconto aplicado no PDV precisa de autorização gerencial válida.',
                 ]);
             }
 
@@ -448,7 +448,7 @@ class PosApiController extends Controller
                 }
             } elseif (! $authorizedAt) {
                 throw ValidationException::withMessages([
-                    'items' => 'Todo desconto aplicado no PDV precisa de autorizacao gerencial valida.',
+                    'items' => 'Todo desconto aplicado no PDV precisa de autorização gerencial válida.',
                 ]);
             }
 
@@ -460,7 +460,7 @@ class PosApiController extends Controller
 
             if (! $authorizedAtDate || $authorizedAtDate->lt($minimumAuthorizedAt)) {
                 throw ValidationException::withMessages([
-                    'items' => 'A autorizacao do desconto expirou. Solicite a senha gerencial novamente.',
+                    'items' => 'A autorização do desconto expirou. Solicite a senha gerencial novamente.',
                 ]);
             }
         }

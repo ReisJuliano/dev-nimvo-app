@@ -5,7 +5,7 @@ export default function OpenRegisterCard({ onSubmit, loading }) {
                 <div>
                     <span className="cash-register-section-kicker">Abertura</span>
                     <h2>Caixa fechado</h2>
-                    <p>Informe o valor inicial e siga com a operação.</p>
+                    <p>Informe o valor inicial e siga com a operaç?.</p>
                 </div>
             </div>
 

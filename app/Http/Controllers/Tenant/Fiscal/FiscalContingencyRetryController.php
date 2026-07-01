@@ -15,8 +15,8 @@ class FiscalContingencyRetryController extends Controller
         return back()->with(
             $count > 0 ? 'info' : 'warning',
             $count > 0
-                ? sprintf('%d documento(s) foram reenfileirados a partir da contingencia.', $count)
-                : 'Nao existem documentos pendentes em contingencia para reenfileirar.'
+                ? sprintf('%d documento(s) foram reenfileirados a partir da contingência.', $count)
+                : 'Não existem documentos pendentes em contingência para reenfileirar.'
         );
     }
 }

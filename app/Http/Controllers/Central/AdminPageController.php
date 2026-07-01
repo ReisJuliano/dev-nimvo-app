@@ -56,38 +56,38 @@ class AdminPageController extends Controller
     {
         $pages = [
             'usuarios' => [
-                'title' => 'UsuÃƒÂ¡rios',
-                'description' => 'GestÃƒÂ£o de usuÃƒÂ¡rios do admin central.',
+                'title' => 'Usuários',
+                'description' => 'Gestão de usuários do admin central.',
                 'icon' => 'fa-user-gear',
             ],
             'fornecedores' => [
                 'title' => 'Fornecedores',
-                'description' => 'Cadastro e gestÃƒÂ£o de fornecedores (em construÃƒÂ§ÃƒÂ£o).',
+                'description' => 'Cadastro e gestão de fornecedores (em construção).',
                 'icon' => 'fa-building',
             ],
             'categorias' => [
                 'title' => 'Categorias',
-                'description' => 'Cadastro e gestÃƒÂ£o de categorias (em construÃƒÂ§ÃƒÂ£o).',
+                'description' => 'Cadastro e gestão de categorias (em construção).',
                 'icon' => 'fa-tags',
             ],
             'produtos' => [
                 'title' => 'Produtos',
-                'description' => 'Cadastro e gestÃƒÂ£o de produtos (em construÃƒÂ§ÃƒÂ£o).',
+                'description' => 'Cadastro e gestão de produtos (em construção).',
                 'icon' => 'fa-boxes-stacked',
             ],
             'estoque-entrada' => [
                 'title' => 'Entrada de estoque',
-                'description' => 'Entrada de estoque (em construÃƒÂ§ÃƒÂ£o).',
+                'description' => 'Entrada de estoque (em construção).',
                 'icon' => 'fa-arrow-down',
             ],
             'estoque-conferencia' => [
-                'title' => 'ConferÃƒÂªncia de estoque',
-                'description' => 'ConferÃƒÂªncia e ajustes de estoque (em construÃƒÂ§ÃƒÂ£o).',
+                'title' => 'Conferência de estoque',
+                'description' => 'Conferência e ajustes de estoque (em construção).',
                 'icon' => 'fa-list-check',
             ],
             'estoque-movimentacao' => [
-                'title' => 'MovimentaÃƒÂ§ÃƒÂ£o de estoque',
-                'description' => 'MovimentaÃƒÂ§ÃƒÂ£o e histÃƒÂ³rico (em construÃƒÂ§ÃƒÂ£o).',
+                'title' => 'Movimentação de estoque',
+                'description' => 'Movimentação e histórico (em construção).',
                 'icon' => 'fa-timeline',
             ],
             'comandas' => [
@@ -97,17 +97,17 @@ class AdminPageController extends Controller
             ],
             'vendas' => [
                 'title' => 'Vendas',
-                'description' => 'VisÃƒÂµes de vendas (em construÃƒÂ§ÃƒÂ£o).',
+                'description' => 'Visões de vendas (em construção).',
                 'icon' => 'fa-chart-line',
             ],
             'configuracoes' => [
-                'title' => 'ConfiguraÃƒÂ§ÃƒÂµes gerais',
-                'description' => 'ConfiguraÃƒÂ§ÃƒÂµes do admin central (em construÃƒÂ§ÃƒÂ£o).',
+                'title' => 'Configurações gerais',
+                'description' => 'Configurações do admin central (em construção).',
                 'icon' => 'fa-sliders',
             ],
             'integracoes' => [
-                'title' => 'IntegraÃƒÂ§ÃƒÂµes',
-                'description' => 'IntegraÃƒÂ§ÃƒÂµes do admin central (em construÃƒÂ§ÃƒÂ£o).',
+                'title' => 'Integrações',
+                'description' => 'Integrações do admin central (em construção).',
                 'icon' => 'fa-plug',
             ],
         ];

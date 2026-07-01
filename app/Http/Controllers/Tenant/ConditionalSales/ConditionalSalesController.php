@@ -30,7 +30,7 @@ class ConditionalSalesController extends Controller
         return to_route('conditional-sales.index', [
             'conditional' => $conditionalSale->id,
             'status' => $conditionalSale->closed_at ? 'closed' : 'open',
-        ])->with('success', 'Devolucao registrada com sucesso.');
+        ])->with('success', 'Devolução registrada com sucesso.');
     }
 
     public function finalize(
@@ -50,7 +50,7 @@ class ConditionalSalesController extends Controller
             'success',
             $saleNumber
                 ? "Condicional encerrada e convertida na venda {$saleNumber}."
-                : 'Condicional encerrada com devolucao total.',
+                : 'Condicional encerrada com devolução total.',
         );
     }
 }

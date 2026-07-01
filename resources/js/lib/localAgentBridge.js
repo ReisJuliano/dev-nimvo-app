@@ -35,7 +35,7 @@ export async function requestLocalAgent(bridge, path, options = {}) {
         const payload = raw ? JSON.parse(raw) : {}
 
         if (!response.ok) {
-            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitação.')
+            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitaç?.')
             localAgentError.status = response.status
             throw localAgentError
         }

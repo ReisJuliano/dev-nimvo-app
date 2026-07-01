@@ -28,6 +28,6 @@ class FiscalNumberInutilizationController extends Controller
             auth()->id(),
         );
 
-        return back()->with('info', 'Inutilizacao fiscal enviada para o agente local.');
+        return back()->with('info', 'Inutilização fiscal enviada para o agente local.');
     }
 }

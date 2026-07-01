@@ -13,7 +13,7 @@ class Pkcs12CertificateReader
     public function readCertificate(string $path, string $password): Certificate
     {
         if (!is_file($path)) {
-            throw new RuntimeException("Certificado nao encontrado em {$path}.");
+            throw new RuntimeException("Certificado não encontrado em {$path}.");
         }
 
         $certs = $this->requiresLegacySubprocess()
@@ -65,7 +65,7 @@ class Pkcs12CertificateReader
         $readerScript = base_path('bootstrap/ssl/read-pkcs12.php');
 
         if (!is_file($readerScript)) {
-            throw new RuntimeException('Leitor auxiliar de certificado nao encontrado.');
+            throw new RuntimeException('Leitor auxiliar de certificado não encontrado.');
         }
 
         $environment = is_array(getenv()) ? getenv() : [];
@@ -106,7 +106,7 @@ class Pkcs12CertificateReader
         $decoded = json_decode($output, true);
 
         if (!is_array($decoded) || empty($decoded['cert']) || empty($decoded['pkey'])) {
-            throw new RuntimeException('O leitor auxiliar retornou um certificado invalido.');
+            throw new RuntimeException('O leitor auxiliar retornou um certificado inválido.');
         }
 
         return $decoded;
@@ -183,6 +183,6 @@ class Pkcs12CertificateReader
             }
         }
 
-        throw new RuntimeException('php.exe nao encontrado para ler o certificado em subprocesso.');
+        throw new RuntimeException('php.exe não encontrado para ler o certificado em subprocesso.');
     }
 }

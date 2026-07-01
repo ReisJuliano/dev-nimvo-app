@@ -226,7 +226,7 @@ class ConsultationsPageService
             'type' => 'entry',
             'entity_id' => $purchase->id,
             'title' => $this->purchaseTitle($purchase),
-            'subtitle' => $purchase->supplier?->name ?? 'Fornecedor nao informado',
+            'subtitle' => $purchase->supplier?->name ?? 'Fornecedor não informado',
             'amount' => (float) $purchase->total,
             'date' => $purchase->received_at?->toIso8601String(),
             'date_sort' => $purchase->received_at?->timestamp ?? 0,
@@ -355,7 +355,7 @@ class ConsultationsPageService
                 ? 'success'
                 : (in_array($document->status, ['failed', 'rejected', 'cancelled'], true) ? 'danger' : 'info'),
             'tags' => array_values(array_filter([
-                $document->access_key ? 'Chave disponivel' : null,
+                $document->access_key ? 'Chave disponível' : null,
                 $document->sale?->status === 'cancelled' ? 'Venda cancelada' : null,
             ])),
             'actions' => [

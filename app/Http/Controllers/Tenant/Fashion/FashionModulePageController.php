@@ -69,8 +69,8 @@ class FashionModulePageController extends Controller
 
         return [
             'moduleKey' => 'promotions',
-            'moduleTitle' => 'Promocoes',
-            'moduleDescription' => 'Campanhas reais com cadastro, alvo comercial e persistencia em banco.',
+            'moduleTitle' => 'Promoções',
+            'moduleDescription' => 'Campanhas reais com cadastro, alvo comercial e persistência em banco.',
             'payload' => [
                 'promotions' => $promotions,
                 'products' => Product::query()
@@ -128,8 +128,8 @@ class FashionModulePageController extends Controller
 
         return [
             'moduleKey' => 'returns',
-            'moduleTitle' => 'Trocas e devolucoes',
-            'moduleDescription' => 'Registro de atendimento, motivo, status e credito gerado para o cliente.',
+            'moduleTitle' => 'Trocas e devoluções',
+            'moduleDescription' => 'Registro de atendimento, motivo, status e crédito gerado para o cliente.',
             'payload' => [
                 'records' => $records,
                 'customers' => Customer::query()
@@ -157,8 +157,8 @@ class FashionModulePageController extends Controller
     {
         return [
             'moduleKey' => 'catalog',
-            'moduleTitle' => 'Catalogo online',
-            'moduleDescription' => 'Vitrine digital, colecoes publicadas e configuracoes reais do canal.',
+            'moduleTitle' => 'Catálogo online',
+            'moduleDescription' => 'Vitrine digital, coleções publicadas e configurações reais do canal.',
             'payload' => [
                 'settings' => $settingsService->getCatalog(),
                 'products' => Product::query()
@@ -192,7 +192,7 @@ class FashionModulePageController extends Controller
         return [
             'moduleKey' => 'online-orders',
             'moduleTitle' => 'Pedidos online',
-            'moduleDescription' => 'Fila real por canal digital, com cadastro, edicao e envio ao caixa.',
+            'moduleDescription' => 'Fila real por canal digital, com cadastro, edição e envio ao caixa.',
             'payload' => [
                 'orders' => $this->hasColumn('order_drafts', 'channel')
                     ? $orderDraftService->channelDrafts([
@@ -229,7 +229,7 @@ class FashionModulePageController extends Controller
         return [
             'moduleKey' => 'whatsapp',
             'moduleTitle' => 'WhatsApp',
-            'moduleDescription' => 'Numero oficial, mensagem padrao e preview do fechamento conversacional.',
+            'moduleDescription' => 'Número oficial, mensagem padrão e preview do fechamento conversacional.',
             'payload' => [
                 'settings' => $settingsService->getWhatsApp(),
                 'summary' => [

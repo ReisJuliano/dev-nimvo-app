@@ -10,7 +10,7 @@ class DanfePdfRenderer
     public function render(string $xml, string $logoPath = ''): string
     {
         if (trim($xml) === '') {
-            throw new RuntimeException('Nao existe XML valido para gerar o DANFE.');
+            throw new RuntimeException('Não existe XML válido para gerar o DANFE.');
         }
 
         $danfe = new Danfe($xml);

@@ -16,8 +16,8 @@ const memoryStateByTenant = new Map()
 const CASH_REGISTER_PAYMENT_LABELS = {
     cash: 'Dinheiro',
     pix: 'Pix',
-    debit_card: 'Cartao de debito',
-    credit_card: 'Cartao de credito',
+    debit_card: 'Cartão de débito',
+    credit_card: 'Cartão de crédito',
     credit: 'Fiado',
 }
 
@@ -1358,7 +1358,7 @@ export function registerOfflineCashMovement(tenantId, cashRegisterId, payload = 
 
     updateState(tenantId, (state) => {
         if (!state.cashRegister || String(state.cashRegister.id) !== String(cashRegisterId)) {
-            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentação.')
+            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentaç?.')
         }
 
         const queuedAction = {

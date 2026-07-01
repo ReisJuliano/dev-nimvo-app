@@ -175,11 +175,11 @@ class IncomingNfeFiscalAnalyzer
         $alerts = is_array($item->validation_warnings) ? $item->validation_warnings : [];
 
         if (blank($item->cfop)) {
-            $alerts[] = $this->alert('cfop_missing', 'CFOP nao informado no item da NF-e.');
+            $alerts[] = $this->alert('cfop_missing', 'CFOP não informado no item da NF-e.');
         }
 
         if (blank($item->ncm)) {
-            $alerts[] = $this->alert('ncm_missing', 'NCM nao informado no item da NF-e.');
+            $alerts[] = $this->alert('ncm_missing', 'NCM não informado no item da NF-e.');
         }
 
         if (blank($item->icms_cst_csosn)) {
@@ -195,7 +195,7 @@ class IncomingNfeFiscalAnalyzer
         }
 
         if ($isInterstate && !$this->cfopMatchesInterstate((string) $item->cfop)) {
-            $alerts[] = $this->alert('cfop_interstate_mismatch', "CFOP {$item->cfop} nao parece interestadual para fornecedor e destinatario em UFs diferentes.");
+            $alerts[] = $this->alert('cfop_interstate_mismatch', "CFOP {$item->cfop} não parece interestadual para fornecedor e destinatário em UFs diferentes.");
         }
 
         if ((float) ($item->icms_st_amount ?? 0) > 0) {
@@ -219,7 +219,7 @@ class IncomingNfeFiscalAnalyzer
         }
 
         if ($purchaseMatch['status'] === 'unmatched') {
-            $alerts[] = $this->alert('purchase_item_missing', 'Item da NF-e nao encontrado no pedido de compra vinculado.');
+            $alerts[] = $this->alert('purchase_item_missing', 'Item da NF-e não encontrado no pedido de compra vinculado.');
         }
 
         $credits = $this->buildCredits($document, $item, $profileCrt, $isInterstate);
@@ -278,8 +278,8 @@ class IncomingNfeFiscalAnalyzer
             $description = match ($taxType) {
                 'icms' => 'Credito potencial de ICMS a apropriar conforme regime e destinacao da compra.',
                 'ipi' => 'IPI destacado na entrada; revisar enquadramento do destinatario para apropriacao.',
-                'pis' => 'Credito potencial de PIS condicionado ao regime nao cumulativo.',
-                'cofins' => 'Credito potencial de COFINS condicionado ao regime nao cumulativo.',
+                'pis' => 'Crédito potencial de PIS condicionado ao regime não cumulativo.',
+                'cofins' => 'Crédito potencial de COFINS condicionado ao regime não cumulativo.',
                 'icms_st' => 'ICMS-ST retido pelo fornecedor; revisar ressarcimento ou compensacao.',
                 default => 'Credito fiscal sugerido pela analise da NF-e.',
             };
@@ -391,11 +391,11 @@ class IncomingNfeFiscalAnalyzer
         }
 
         if (!$document->supplier_id) {
-            $alerts[] = $this->alert('supplier_unlinked', 'Fornecedor da NF-e ainda nao foi vinculado ao cadastro.');
+            $alerts[] = $this->alert('supplier_unlinked', 'Fornecedor da NF-e ainda não foi vinculado ao cadastro.');
         }
 
         if (!$purchase) {
-            $alerts[] = $this->alert('purchase_unlinked', 'NF-e ainda nao foi vinculada a um pedido de compra para 3-way match.');
+            $alerts[] = $this->alert('purchase_unlinked', 'NF-e ainda não foi vinculada a um pedido de compra para 3-way match.');
         }
 
         if ($purchase && $document->supplier_id && $purchase->supplier_id && $purchase->supplier_id !== $document->supplier_id) {

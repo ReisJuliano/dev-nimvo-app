@@ -26,6 +26,15 @@ use Illuminate\Validation\ValidationException;
 
 class OperationsWorkspaceService
 {
+    // Alçada de confirmação: valores que estourem N vezes a referência (custo dos itens
+    // ou média histórica de lançamentos) exigem confirmação extra antes de salvar, evitando
+    // d?vidas fictícias por erro de digita??o (ex.: zero a mais, falta de separador decimal).
+    protected const AMOUNT_CONFIRMATION_RATIO = 3.0;
+
+    protected const AMOUNT_CONFIRMATION_MIN_DIFF = 200.0;
+
+    protected const AMOUNT_CONFIRMATION_ABSOLUTE_CEILING = 20000.0;
+
     protected array $schemaTableCache = [];
 
     protected array $schemaColumnCache = [];
@@ -61,7 +70,7 @@ class OperationsWorkspaceService
             'clientes' => [
                 'moduleKey' => 'clientes',
                 'moduleTitle' => 'Clientes',
-                'moduleDescription' => 'Cadastro completo de clientes com contato, limite de credito e status operacional.',
+                'moduleDescription' => 'Cadastro completo de clientes com contato, limite de crédito e status operacional.',
                 'payload' => [
                     'records' => [],
                 ],
@@ -75,13 +84,13 @@ class OperationsWorkspaceService
             'categorias' => [
                 'moduleKey' => 'categorias',
                 'moduleTitle' => 'Categorias',
-                'moduleDescription' => 'Estrutura do catalogo com descricao, status e acompanhamento de itens por categoria.',
+                'moduleDescription' => 'Estrutura do catálogo com descrição, status e acompanhamento de itens por categoria.',
                 'payload' => $this->categoriesPayload(false),
             ],
             'delivery' => [
                 'moduleKey' => 'delivery',
                 'moduleTitle' => 'Delivery',
-                'moduleDescription' => 'Fila de entrega e retirada com taxa, endereco, status e entregador.',
+                'moduleDescription' => 'Fila de entrega e retirada com taxa, endereço, status e entregador.',
                 'payload' => $this->deliveryPayload(false),
             ],
             'compras' => [
@@ -105,13 +114,13 @@ class OperationsWorkspaceService
             'movimentacao-estoque' => [
                 'moduleKey' => 'movimentacao-estoque',
                 'moduleTitle' => 'Movimentacao de estoque',
-                'moduleDescription' => 'Bipe o produto, confira o estoque atual e ajuste a quantidade final com confirmacao.',
+                'moduleDescription' => 'Bipe o produto, confira o estoque atual e ajuste a quantidade final com confirmação.',
                 'payload' => $this->stockMovementsPayload(false),
             ],
             'usuarios' => [
                 'moduleKey' => 'usuarios',
                 'moduleTitle' => 'Usuarios',
-                'moduleDescription' => 'Perfis de acesso, senha de autorizacao gerencial e status operacional.',
+                'moduleDescription' => 'Perfis de acesso, senha de autorização gerencial e status operacional.',
                 'payload' => $this->usersPayload(false),
             ],
             default => abort(404),
@@ -180,7 +189,7 @@ class OperationsWorkspaceService
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar atualizada com sucesso.', 'record' => $this->serializePayable($this->savePayable($this->findRecord(Payable::class, $recordId), $input, $userId))],
             'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
-                'record' => 'Registros de estoque nao podem ser alterados. Crie um novo lancamento.',
+                'record' => 'Registros de estoque não podem ser alterados. Crie um novo lançamento.',
             ]),
             'usuarios' => ['message' => 'Usuario atualizado com sucesso.', 'record' => $this->serializeUser($this->saveUser($this->findRecord(User::class, $recordId), $input))],
             default => abort(404),
@@ -198,7 +207,7 @@ class OperationsWorkspaceService
             'contas-a-pagar' => tap($this->findRecord(Payable::class, $recordId))->delete() ? 'Conta a pagar removida com sucesso.' : 'Conta a pagar removida com sucesso.',
             'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
             'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
-                'record' => 'Registros de estoque nao podem ser excluidos para preservar a rastreabilidade.',
+                'record' => 'Registros de estoque não podem ser excluídos para preservar a rastreabilidade.',
             ]),
             default => abort(404),
         };
@@ -208,7 +217,7 @@ class OperationsWorkspaceService
     {
         if (filled($model->getAttribute('stock_applied_at'))) {
             throw ValidationException::withMessages([
-                'record' => 'Este registro ja impactou o estoque e nao pode ser removido.',
+                'record' => 'Este registro já impactou o estoque e não pode ser removido.',
             ]);
         }
 
@@ -976,6 +985,45 @@ class OperationsWorkspaceService
         return $order->fresh(['customer:id,name,phone']);
     }
 
+    protected function requiresAmountConfirmation(float $amount, float $referenceAmount): bool
+    {
+        if ($amount <= 0) {
+            return false;
+        }
+
+        if ($referenceAmount <= 0) {
+            return $amount > self::AMOUNT_CONFIRMATION_ABSOLUTE_CEILING;
+        }
+
+        return $amount > $referenceAmount * self::AMOUNT_CONFIRMATION_RATIO
+            && ($amount - $referenceAmount) > self::AMOUNT_CONFIRMATION_MIN_DIFF;
+    }
+
+    protected function assertAmountConfirmed(float $amount, float $referenceAmount, bool $confirmed, string $referenceLabel): void
+    {
+        if ($confirmed || ! $this->requiresAmountConfirmation($amount, $referenceAmount)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'confirm_amount_mismatch' => [sprintf(
+                'O valor informado (R$ %s) esta muito acima %s (R$ %s). Confirme se o valor esta correto para continuar.',
+                number_format($amount, 2, ',', '.'),
+                $referenceLabel,
+                number_format($referenceAmount, 2, ',', '.'),
+            )],
+        ]);
+    }
+
+    protected function averagePayableAmount(): float
+    {
+        $average = Payable::query()
+            ->where('status', '!=', 'cancelled')
+            ->avg('amount');
+
+        return $average !== null ? round((float) $average, 2) : 0.0;
+    }
+
     protected function savePayable(?Payable $payable, array $input, int $userId): Payable
     {
         if (($input['action'] ?? null) === 'register_payment') {
@@ -1040,10 +1088,18 @@ class OperationsWorkspaceService
             'recurrence' => ['nullable', Rule::in(['once', 'monthly', 'weekly'])],
             'notes' => ['nullable', 'string'],
             'status' => ['nullable', Rule::in(['open', 'paid', 'cancelled'])],
+            'confirm_amount_mismatch' => ['nullable', 'boolean'],
         ])->validate();
 
         $payable ??= new Payable;
         $amount = round((float) $validated['amount'], 2);
+
+        $this->assertAmountConfirmed(
+            $amount,
+            $this->averagePayableAmount(),
+            (bool) ($validated['confirm_amount_mismatch'] ?? false),
+            'da média dos lançamentos já cadastrados',
+        );
         $amountPaid = round(min($amount, (float) ($validated['amount_paid'] ?? 0)), 2);
         $status = $validated['status'] ?? ($amountPaid >= $amount ? 'paid' : 'open');
         $metadata = is_array($payable->metadata) ? $payable->metadata : [];
@@ -1117,6 +1173,7 @@ class OperationsWorkspaceService
             'items.*.unit_cost' => ['required', 'numeric', 'gte:0'],
             'items.*.sale_price' => ['nullable', 'numeric', 'gte:0'],
             'items.*.apply_sale_price' => ['nullable', 'boolean'],
+            'confirm_amount_mismatch' => ['nullable', 'boolean'],
         ]);
 
         $validator->after(function ($validator) use ($input, $requiresItems) {
@@ -1128,6 +1185,26 @@ class OperationsWorkspaceService
         });
 
         $validated = $validator->validate();
+
+        if ($validated['status'] === 'received') {
+            $itemsSubtotal = collect($validated['items'] ?? [])->sum(
+                fn (array $item) => round((float) $item['quantity'], 3) * round((float) $item['unit_cost'], 2),
+            );
+            $referenceTotal = round($itemsSubtotal + round((float) ($validated['freight'] ?? 0), 2), 2);
+            $payablesTotal = round(collect($validated['payables'] ?? [])->sum(
+                fn (array $entry) => round((float) ($entry['amount'] ?? 0), 2),
+            ), 2);
+            $amountToCheck = $payablesTotal > 0
+                ? $payablesTotal
+                : round((float) ($validated['billing_amount'] ?? 0), 2);
+
+            $this->assertAmountConfirmed(
+                $amountToCheck,
+                $referenceTotal,
+                (bool) ($validated['confirm_amount_mismatch'] ?? false),
+                'do custo dos itens desta entrada de mercadoria',
+            );
+        }
 
         return DB::transaction(function () use ($purchase, $validated, $userId) {
             $products = Product::query()
@@ -1151,7 +1228,7 @@ class OperationsWorkspaceService
 
             if ($purchase && filled($purchase->stock_applied_at)) {
                 throw ValidationException::withMessages([
-                    'record' => 'Esta compra ja entrou no estoque e nao pode mais ser alterada.',
+                    'record' => 'Esta compra já entrou no estoque e não pode mais ser alterada.',
                 ]);
             }
 
@@ -1340,7 +1417,7 @@ class OperationsWorkspaceService
             'payment_method' => filled($billingBarcode) ? 'boleto' : 'cash',
             'bank_name' => null,
             'barcode' => $billingBarcode,
-            'installment_label' => 'Parcela unica',
+            'installment_label' => 'Parcela única',
             'installment_number' => 1,
             'installment_total' => 1,
             'recurrence' => 'once',

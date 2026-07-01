@@ -72,7 +72,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                     >
                         <i className="fa-solid fa-motorcycle" />
                         <span>Delivery</span>
-                        <small>Enviar com endereco, taxa e contato definidos.</small>
+                        <small>Enviar com endereço, taxa e contato definidos.</small>
                     </button>
                     <button
                         type="button"
@@ -93,9 +93,9 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                         <input
                             className="ui-input"
                             value={form.reference}
-                            placeholder="Referencia"
+                            placeholder="Referência"
                             onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
-                            aria-label="Referencia"
+                            aria-label="Referência"
                         />
                     </label>
                     <label className="orders-action-field">
@@ -173,7 +173,7 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                             <i className="fa-solid fa-store" />
                             <div>
                                 <strong>Retirada no balcão</strong>
-                                <p>O sistema vai registrar um endereco interno padrao para manter o fluxo consistente.</p>
+                                <p>O sistema vai registrar um endereço interno padrão para manter o fluxo consistente.</p>
                             </div>
                         </div>
                     )}
@@ -183,9 +183,9 @@ export default function OrderDeliveryModal({ draft, selectedCustomer, submitting
                         <textarea
                             className="ui-textarea"
                             value={form.notes}
-                            placeholder="Observacoes para entrega, retirada ou conferência"
+                            placeholder="Observações para entrega, retirada ou conferência"
                             onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                            aria-label="Observacoes"
+                            aria-label="Observações"
                             rows={3}
                         />
                     </label>

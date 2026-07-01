@@ -70,8 +70,8 @@ class SalesOverviewService
 
         return [
             'view' => 'reports_showcase',
-            'title' => 'Relatorios',
-            'description' => 'Resumo financeiro em uma unica tela.',
+            'title' => 'Relatórios',
+            'description' => 'Resumo financeiro em uma única tela.',
             'metrics' => data_get($currentSection, 'metrics', []),
             'panels' => data_get($currentSection, 'panels', []),
             'tables' => data_get($currentSection, 'tables', []),
@@ -140,12 +140,12 @@ class SalesOverviewService
         $registersWithDifference = $reports->filter(fn (array $report) => abs((float) $report['difference']) > 0.009);
         $page = $this->page(
             'Caixas fechados',
-            'Historico de caixas ja encerrados.',
+            'Histórico de caixas já encerrados.',
             [
                 $this->metric('Fechamentos', $reports->count()),
                 $this->metric('Total vendido', $reports->sum('total_sales'), 'money'),
-                $this->metric('Diferenca liquida', $reports->sum('difference'), 'money'),
-                $this->metric('Com divergencia', $registersWithDifference->count()),
+                $this->metric('Diferença líquida', $reports->sum('difference'), 'money'),
+                $this->metric('Com divergência', $registersWithDifference->count()),
             ],
             [
                 $this->panel('Operadores', $reports
@@ -157,7 +157,7 @@ class SalesOverviewService
                     ])),
             ],
             [
-                $this->table('Fechamentos do periodo', [
+                $this->table('Fechamentos do período', [
                     ['key' => 'user_name', 'label' => 'Operador'],
                     ['key' => 'opened_at', 'label' => 'Abertura', 'format' => 'datetime'],
                     ['key' => 'closed_at', 'label' => 'Fechamento', 'format' => 'datetime'],
@@ -165,9 +165,9 @@ class SalesOverviewService
                     ['key' => 'total_sales', 'label' => 'Total vendido', 'format' => 'money'],
                     ['key' => 'expected_cash', 'label' => 'Esperado', 'format' => 'money'],
                     ['key' => 'closing_amount', 'label' => 'Contado', 'format' => 'money'],
-                    ['key' => 'difference', 'label' => 'Diferenca', 'format' => 'money'],
+                    ['key' => 'difference', 'label' => 'Diferença', 'format' => 'money'],
                     ['key' => 'details_action', 'label' => 'Abrir', 'format' => 'action'],
-                ], $reports, 'Nenhum caixa fechado no periodo.'),
+                ], $reports, 'Nenhum caixa fechado no período.'),
             ],
             $from,
             $to,
@@ -202,11 +202,11 @@ class SalesOverviewService
 
         return $this->page(
             'Pedidos e atendimentos',
-            'Pedidos do periodo e operadores com vendas.',
+            'Pedidos do período e operadores com vendas.',
             [
                 $this->metric('Atendimentos', $sales->count()),
-                $this->metric('Faturamento', $sales->sum('total'), 'money', 'Periodo selecionado'),
-                $this->metric('Ticket medio', $sales->avg('total'), 'money'),
+                $this->metric('Faturamento', $sales->sum('total'), 'money', 'Período selecionado'),
+                $this->metric('Ticket médio', $sales->avg('total'), 'money'),
                 $this->metric('Caixas abertos', CashRegister::query()->where('status', 'open')->count()),
             ],
             [
@@ -227,11 +227,11 @@ class SalesOverviewService
                 ], $sales->map(fn (Sale $sale) => [
                     'sale_number' => $sale->sale_number,
                     'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
+                    'customer_name' => $sale->customer?->name ?? 'Não identificado',
                     'user_name' => $sale->user?->name ?? '-',
                     'payment_method' => $this->paymentLabel($sale->payment_method),
                     'total' => (float) $sale->total,
-                ]), 'Nenhum atendimento encontrado no periodo.'),
+                ]), 'Nenhum atendimento encontrado no período.'),
             ],
             $from,
             $to,
@@ -255,16 +255,16 @@ class SalesOverviewService
                         ['key' => 'phone', 'label' => 'Telefone'],
                         ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
                         ['key' => 'open_credit', 'label' => 'Em aberto', 'format' => 'money'],
-                        ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
+                        ['key' => 'available_credit', 'label' => 'Disponível', 'format' => 'money'],
                         ['key' => 'utilization_percent', 'label' => 'Uso', 'format' => 'percent'],
                     ], [], 'Clique em Filtrar para buscar.'),
-                    $this->table('Lancamentos recentes', [
+                    $this->table('Lançamentos recentes', [
                         ['key' => 'sale_number', 'label' => 'Venda'],
                         ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
                         ['key' => 'customer_name', 'label' => 'Cliente'],
                         ['key' => 'user_name', 'label' => 'Operador'],
                         ['key' => 'credit_amount', 'label' => 'Fiado', 'format' => 'money'],
-                    ], [], 'Quando vender fiado, as cobrancas aparecerao aqui.'),
+                    ], [], 'Quando vender fiado, as cobranças aparecerão aqui.'),
                 ],
                 $from,
                 $to,
@@ -346,7 +346,7 @@ class SalesOverviewService
                 'sale_number' => $sale->sale_number,
                 'created_at' => $sale->created_at?->toIso8601String(),
                 'customer_id' => $sale->customer_id,
-                'customer_name' => $sale->customer?->name ?? 'Nao identificado',
+                'customer_name' => $sale->customer?->name ?? 'Não identificado',
                 'user_name' => $sale->user?->name ?? '-',
                 'total' => (float) $sale->total,
                 'credit_amount' => (float) $sale->payments
@@ -366,16 +366,16 @@ class SalesOverviewService
                     ['key' => 'phone', 'label' => 'Telefone'],
                     ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
                     ['key' => 'open_credit', 'label' => 'Em aberto', 'format' => 'money'],
-                    ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
+                    ['key' => 'available_credit', 'label' => 'Disponível', 'format' => 'money'],
                     ['key' => 'utilization_percent', 'label' => 'Uso', 'format' => 'percent'],
                 ], $customers, 'Nenhum cliente com limite configurado.'),
-                $this->table('Lancamentos recentes', [
+                $this->table('Lançamentos recentes', [
                     ['key' => 'sale_number', 'label' => 'Venda'],
                     ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
                     ['key' => 'customer_name', 'label' => 'Cliente'],
                     ['key' => 'user_name', 'label' => 'Operador'],
                     ['key' => 'credit_amount', 'label' => 'Fiado', 'format' => 'money'],
-                ], $recentSales, 'Quando vender fiado, as cobrancas aparecerao aqui.'),
+                ], $recentSales, 'Quando vender fiado, as cobranças aparecerão aqui.'),
             ],
             $from,
             $to,
@@ -418,11 +418,11 @@ class SalesOverviewService
 
         return $this->page(
             'Clientes',
-            'Clientes, vendas e limite disponivel.',
+            'Clientes, vendas e limite disponível.',
             [
                 $this->metric('Total', $customers->count()),
                 $this->metric('Ativos', $customers->where('status', 'Ativo')->count()),
-                $this->metric('Novos no periodo', Customer::query()->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count()),
+                $this->metric('Novos no período', Customer::query()->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])->count()),
                 $this->metric('Limite concedido', $customers->sum('credit_limit'), 'money'),
             ],
             [],
@@ -482,7 +482,7 @@ class SalesOverviewService
             ->get(['products.name', DB::raw('SUM(sale_items.quantity) as qty'), DB::raw('SUM(sale_items.total) as revenue'), DB::raw('SUM(sale_items.profit) as profit')]);
 
         return $this->page(
-            'Relatorios',
+            'Relatórios',
             'Faturamento, custo, lucro e pagamentos.',
             [
                 $this->metric('Vendas', (int) ($summary->qty ?? 0)),
@@ -491,7 +491,7 @@ class SalesOverviewService
                 $this->metric('Lucro', (float) ($summary->profit ?? 0), 'money'),
             ],
             [
-                $this->panel('Pagamento no periodo', $payments->map(fn ($payment) => [
+                $this->panel('Pagamento no período', $payments->map(fn ($payment) => [
                     'label' => $this->paymentLabel($payment->payment_method),
                     'value' => $this->currency($payment->total),
                     'meta' => "{$payment->qty} lancamento(s)",
@@ -503,13 +503,13 @@ class SalesOverviewService
                     ['key' => 'qty', 'label' => 'Vendas', 'format' => 'number'],
                     ['key' => 'total', 'label' => 'Faturamento', 'format' => 'money'],
                     ['key' => 'profit', 'label' => 'Lucro', 'format' => 'money'],
-                ], $salesByDay, 'Nenhuma venda registrada no periodo.'),
+                ], $salesByDay, 'Nenhuma venda registrada no período.'),
                 $this->table('Top produtos', [
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'qty', 'label' => 'Quantidade', 'format' => 'number'],
                     ['key' => 'revenue', 'label' => 'Faturamento', 'format' => 'money'],
                     ['key' => 'profit', 'label' => 'Lucro', 'format' => 'money'],
-                ], $topProducts, 'Nenhum produto com venda no periodo.'),
+                ], $topProducts, 'Nenhum produto com venda no período.'),
             ],
             $from,
             $to,
@@ -543,13 +543,13 @@ class SalesOverviewService
 
         return $this->page(
             'Vendas gerais',
-            'Vendas, lucro e formas de pagamento no periodo.',
+            'Vendas, lucro e formas de pagamento no período.',
             [
                 $this->metric('Vendas', (int) ($summary->qty ?? 0)),
                 $this->metric('Faturamento', (float) ($summary->total ?? 0), 'money'),
                 $this->metric('Lucro', (float) ($summary->profit ?? 0), 'money'),
                 $this->metric(
-                    'Margem media',
+                    'Margem média',
                     (float) ($summary->total ?? 0) > 0 ? ((float) ($summary->profit ?? 0) / (float) ($summary->total ?? 0)) * 100 : 0,
                     'percent',
                 ),
@@ -567,12 +567,12 @@ class SalesOverviewService
                 ], $sales->map(fn (Sale $sale) => [
                     'sale_number' => $sale->sale_number,
                     'created_at' => $sale->created_at?->toIso8601String(),
-                    'customer_name' => $sale->customer?->name ?? 'Nao identificado',
+                    'customer_name' => $sale->customer?->name ?? 'Não identificado',
                     'user_name' => $sale->user?->name ?? '-',
                     'payment_method' => $this->paymentLabel($sale->payment_method),
                     'total' => (float) $sale->total,
                     'profit' => (float) $sale->profit,
-                ]), 'Nenhuma venda registrada no periodo.'),
+                ]), 'Nenhuma venda registrada no período.'),
             ],
             $from,
             $to,
@@ -616,7 +616,7 @@ class SalesOverviewService
 
         return $this->page(
             'Vendas por produto',
-            'Quantidade vendida por produto no periodo.',
+            'Quantidade vendida por produto no período.',
             [
                 $this->metric('Itens com giro', (int) ($summary->items_count ?? 0)),
                 $this->metric('Quantidade vendida', (float) ($summary->qty ?? 0), 'number'),
@@ -626,13 +626,13 @@ class SalesOverviewService
             [],
             [
                 $this->table('Curva de demanda', [
-                    ['key' => 'code', 'label' => 'Codigo'],
+                    ['key' => 'code', 'label' => 'Código'],
                     ['key' => 'name', 'label' => 'Produto'],
                     ['key' => 'category_name', 'label' => 'Categoria'],
                     ['key' => 'qty', 'label' => 'Quantidade', 'format' => 'number'],
                     ['key' => 'revenue', 'label' => 'Receita', 'format' => 'money'],
                     ['key' => 'profit', 'label' => 'Lucro', 'format' => 'money'],
-                ], $products, 'Nenhuma saida registrada no periodo.'),
+                ], $products, 'Nenhuma saída registrada no período.'),
             ],
             $from,
             $to,
@@ -656,7 +656,7 @@ class SalesOverviewService
 
         return empty($normalized)
             ? '/relatorios'
-            : '/relatorios?'.http_build_query($normalized);
+            : '/relatoriosó'.http_build_query($normalized);
     }
 
     protected function resolveProductFilter(array $filters): ?string

@@ -9,7 +9,7 @@ function getStockTone(product) {
 function getStockLabel(product) {
     if (Number(product.stock_quantity) <= 0) return 'Sem saldo'
     if (Number(product.stock_quantity) <= Number(product.min_stock)) return 'Baixo'
-    return 'Saudavel'
+    return 'Saudável'
 }
 
 export default function ProductsTable({ products, onEdit, onDelete }) {

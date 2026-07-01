@@ -16,7 +16,7 @@ class AuthenticateLocalAgent
         $secret = (string) $request->header('X-Agent-Secret');
 
         if ($agentKey === '' || $secret === '') {
-            abort(401, 'Cabecalhos do agente local nao informados.');
+            abort(401, 'Cabeçalhos do agente local não informados.');
         }
 
         $agent = LocalAgent::query()

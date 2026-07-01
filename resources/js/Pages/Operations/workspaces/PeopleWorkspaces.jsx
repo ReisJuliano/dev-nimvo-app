@@ -70,7 +70,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
         }
 
         if (!validateEmail(form.email)) {
-            setFeedback({ type: 'warning', text: 'Informe um endereco de e-mail valido.' })
+            setFeedback({ type: 'warning', text: 'Informe um endereço de e-mail válido.' })
             return
         }
 
@@ -177,7 +177,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                                 </ActionButton>
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar produtor'}
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar produtor'}
                             </ActionButton>
                         </div>
                     </form>
@@ -253,7 +253,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
         () => [
             { label: 'Usuarios', value: records.length, caption: 'Base total cadastrada' },
             { label: 'Gerentes', value: records.filter((record) => record.role === 'manager').length, caption: 'Podem autorizar descontos' },
-            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edicao do fechamento' },
+            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edição do fechamento' },
             { label: 'Com senha gerencial', value: records.filter((record) => record.has_discount_authorization_password).length, caption: 'Senha dedicada cadastrada' },
         ],
         [records],
@@ -322,8 +322,8 @@ export function UsersWorkspace({ moduleKey, payload }) {
         event.preventDefault()
         setFeedback(null)
 
-        const requiredError = requiredMessage(form.name, 'o nome do usuario')
-            || requiredMessage(form.username, 'o usuario de acesso')
+        const requiredError = requiredMessage(form.name, 'o nome do usuário')
+            || requiredMessage(form.username, 'o usuário de acesso')
 
         if (requiredError) {
             setFeedback({ type: 'warning', text: requiredError })
@@ -356,7 +356,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Remover usuario',
+            title: 'Remover usuário',
             message: `Remover "${record.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
@@ -397,7 +397,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                                     {loading ? 'Buscando...' : 'Buscar'}
                                 </ActionButton>
                                 <ActionButton icon="fa-plus" onClick={handleCreate}>
-                                    Novo usuario
+                                    Novo usuário
                                 </ActionButton>
                                 <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => handleEdit(selectedRecord)}>
                                     Editar
@@ -457,7 +457,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                             selectedRowKey={selectedId}
                             onRowClick={(record) => setSelectedId(record.id)}
                             onRowDoubleClick={(record) => handleEdit(record)}
-                            emptyMessage={loading ? 'Buscando usuarios' : hasLoadedRecords ? 'Nenhum usuario encontrado' : 'Clique em Buscar para listar'}
+                            emptyMessage={loading ? 'Buscando usuários' : hasLoadedRecords ? 'Nenhum usuário encontrado' : 'Clique em Buscar para listar'}
                             emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-user-check'}
                             actions={(record) => [
                                 {
@@ -475,7 +475,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
             <ModalForm
                 open={modalOpen}
-                title={form.id ? 'Editar usuario' : 'Novo usuario'}
+                title={form.id ? 'Editar usuário' : 'Novo usuário'}
                 description="Perfis e autorizacoes"
                 icon="fa-user-shield"
                 size="lg"
@@ -488,7 +488,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                             </ActionButton>
                         ) : <span />}
                         <ActionButton form="user-modal-form" type="submit" disabled={saving}>
-                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar usuario'}
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar usuário'}
                         </ActionButton>
                     </>
                 )}
@@ -522,7 +522,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
                         />
                     </label>
                     <label className="span-2">
-                        <FieldLabel icon="fa-money-check-dollar" text="Senha de autorizacao gerencial" />
+                        <FieldLabel icon="fa-money-check-dollar" text="Senha de autorização gerencial" />
                         <input
                             type="password"
                             value={form.discount_authorization_password}

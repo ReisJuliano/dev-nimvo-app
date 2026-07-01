@@ -4,8 +4,8 @@ import { getOrderTypeLabel } from './orderUtils'
 const TYPE_META = {
     comanda: {
         icon: 'fa-receipt',
-        hint: 'Balcao',
-        description: 'Consumo rapido',
+        hint: 'Balcão',
+        description: 'Consumo rápido',
     },
     mesa: {
         icon: 'fa-table-cells-large',
@@ -122,7 +122,7 @@ export default function OrderDraftFormModal({
                                 </div>
                                 <span className="orders-terminal-inline-chip soft">
                                     <i className="fa-solid fa-pen" />
-                                    Editavel depois
+                                    Editável depois
                                 </span>
                             </div>
 
@@ -186,7 +186,7 @@ export default function OrderDraftFormModal({
                                             <i className="fa-solid fa-address-book" />
                                             Clientes
                                         </span>
-                                        <h4>Sugestoes</h4>
+                                        <h4>Sugestões</h4>
                                     </div>
                                     <span className="orders-terminal-inline-chip">
                                         <i className="fa-solid fa-users" />

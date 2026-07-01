@@ -112,7 +112,7 @@ export default function AppSidebar({
             <div className="app-sidebar-user">
                 <div className="app-user-avatar">{userInitials}</div>
                 <div className="app-user-info">
-                    <span className="app-user-name">{auth?.user?.name || 'Usuario'}</span>
+                    <span className="app-user-name">{auth?.user?.name || 'Usuário'}</span>
                     <span className="app-user-role">{userRole}</span>
                 </div>
             </div>

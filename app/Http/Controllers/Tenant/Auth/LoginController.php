@@ -41,7 +41,7 @@ class LoginController extends Controller
             ]);
 
             return back()->withErrors([
-                'username' => 'Usuario ou senha incorretos.',
+                'username' => 'Usuário ou senha incorretos.',
             ]);
         }
 

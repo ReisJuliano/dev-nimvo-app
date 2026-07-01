@@ -34,7 +34,7 @@ class IncomingNfeApiController extends Controller
 
         if (trim($xml) === '') {
             throw ValidationException::withMessages([
-                'xml' => 'Informe o XML da NF-e ou selecione um arquivo para importacao.',
+                'xml' => 'Informe o XML da NF-e ou selecione um arquivo para importação.',
             ]);
         }
 
@@ -55,7 +55,7 @@ class IncomingNfeApiController extends Controller
         $document = $service->updateMappings($document, $request->all());
 
         return response()->json([
-            'message' => 'Vinculos atualizados com sucesso.',
+            'message' => 'Vínculos atualizados com sucesso.',
             'record' => $service->serializeDocument($document),
         ]);
     }
@@ -68,7 +68,7 @@ class IncomingNfeApiController extends Controller
         $document = $service->quickCreateSupplier($document, $request->all());
 
         return response()->json([
-            'message' => 'Fornecedor vinculado a NF-e com sucesso.',
+            'message' => 'Fornecedor vinculado à NF-e com sucesso.',
             'record' => $service->serializeDocument($document),
         ], 201);
     }
@@ -115,7 +115,7 @@ class IncomingNfeApiController extends Controller
         $document = $service->manifest($document, $request->all());
 
         return response()->json([
-            'message' => 'Manifestacao do destinatario registrada com sucesso.',
+            'message' => 'Manifestação do destinatário registrada com sucesso.',
             'record' => $service->serializeDocument($document),
         ]);
     }
@@ -128,7 +128,7 @@ class IncomingNfeApiController extends Controller
         $document = $service->recordPhysicalReceipt($document, $request->all());
 
         return response()->json([
-            'message' => 'Recebimento fisico registrado com sucesso.',
+            'message' => 'Recebimento físico registrado com sucesso.',
             'record' => $service->serializeDocument($document),
         ]);
     }

@@ -12,13 +12,13 @@ export default function OrderSearchModal({ term, setTerm, onSearchSubmit, inputR
         >
             <div className="orders-modal-stack">
                 <label className="orders-form-field">
-                    <span>Buscar por numero, cliente ou referência</span>
+                    <span>Buscar por número, cliente ou referência</span>
                     <input
                         ref={inputRef}
                         className="ui-input"
                         type="search"
                         value={term}
-                        placeholder="Ex.: Joao, referência 12, atendimento 5"
+                        placeholder="Ex.: João, referência 12, atendimento 5"
                         onChange={(event) => setTerm(event.target.value)}
                         onKeyDown={(event) => {
                             if (event.key !== 'Enter') {

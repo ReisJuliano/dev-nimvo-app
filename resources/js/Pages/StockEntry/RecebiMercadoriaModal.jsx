@@ -97,7 +97,7 @@ export default function RecebiMercadoriaModal({
             setFeedback({ type: 'success', text: response.message || 'Entrada registrada.' })
             setTimeout(() => onClose?.(), 450)
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message || 'Nao foi possivel atualizar o estoque.' })
+            setFeedback({ type: 'error', text: error.message || 'Não foi possível atualizar o estoque.' })
         } finally {
             setSaving(false)
         }
@@ -126,7 +126,7 @@ export default function RecebiMercadoriaModal({
                         <span>Qual produto chegou?</span>
                         <input
                             autoFocus
-                            placeholder="Busque por nome ou codigo"
+                            placeholder="Busque por nome ou código"
                             value={query}
                             onChange={(event) => {
                                 setQuery(event.target.value)
@@ -179,12 +179,12 @@ export default function RecebiMercadoriaModal({
                     </label>
 
                     <label className="stock-receive-field">
-                        <span>Custo unitario</span>
+                        <span>Custo unitário</span>
                         <input type="number" min="0" step="0.01" value={form.cost_price} onChange={(event) => updateForm('cost_price', event.target.value)} placeholder="Opcional" />
                     </label>
 
                     <label className="stock-receive-field span-2">
-                        <span>Observacao</span>
+                        <span>Observação</span>
                         <input value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} placeholder="Opcional" />
                     </label>
 

@@ -116,7 +116,7 @@ class LocalAgentBootstrapService
         $normalized = $this->normalizeActivationCode($code);
 
         if ($normalized === '') {
-            throw new RuntimeException('Informe um codigo de ativacao valido para conectar o agente.');
+            throw new RuntimeException('Informe um código de ativação válido para conectar o agente.');
         }
 
         $agent = LocalAgent::query()
@@ -125,12 +125,12 @@ class LocalAgentBootstrapService
             ->first(fn (LocalAgent $candidate) => $this->activationMatches($candidate, $normalized));
 
         if (!$agent) {
-            throw new RuntimeException('Codigo de ativacao invalido ou expirado. Gere um novo codigo no admin do Nimvo.');
+            throw new RuntimeException('Código de ativação inválido ou expirado. Gere um novo código no admin do Nimvo.');
         }
 
         $secret = $this->secret($agent);
         if (!$secret) {
-            throw new RuntimeException('As credenciais permanentes do agente ainda nao estao disponiveis para esta ativacao.');
+            throw new RuntimeException('As credenciais permanentes do agente ainda não estão disponíveis para esta ativação.');
         }
 
         $metadata = is_array($agent->metadata) ? $agent->metadata : [];
@@ -160,7 +160,7 @@ class LocalAgentBootstrapService
         $secret = $this->secret($agent);
 
         if (!$secret) {
-            throw new RuntimeException('Este agente ainda nao possui bootstrap disponivel. Gere um novo bootstrap antes de instalar no cliente.');
+            throw new RuntimeException('Este agente ainda não possui bootstrap disponível. Gere um novo bootstrap antes de instalar no cliente.');
         }
 
         $runtime = $this->configService->buildRuntimeConfig($agent);

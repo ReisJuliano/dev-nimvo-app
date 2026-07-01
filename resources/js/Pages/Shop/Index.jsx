@@ -251,7 +251,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                 <article key={product.id} className="shop-product-card">
                                     <div className="shop-product-surface">
                                         <div className="shop-product-topline">
-                                            <span>{product.collection || product.category_name || 'Colecao principal'}</span>
+                                            <span>{product.collection || product.category_name || 'Coleção principal'}</span>
                                             {product.promotion ? (
                                                 <span className="shop-product-promo">
                                                     {product.promotion.highlight_text || product.promotion.name}
@@ -267,7 +267,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
 
                                             <div className="shop-product-meta">
                                                 <span>{product.style_reference || product.code}</span>
-                                                <span>{[product.color, product.size].filter(Boolean).join(' / ') || 'Grade unica'}</span>
+                                                <span>{[product.color, product.size].filter(Boolean).join(' / ') || 'Grade única'}</span>
                                             </div>
                                         </div>
 
@@ -296,7 +296,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                         ) : (
                             <section className="shop-empty-state">
                                 <strong>Nenhum item encontrado</strong>
-                                <p>Ajuste a busca ou a coleção.</p>
+                                <p>Ajuste a busca ou a coleç?.</p>
                             </section>
                         )}
                     </div>
@@ -361,7 +361,7 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                 <input
                                     value={customer.name}
                                     onChange={(event) => setCustomer((current) => ({ ...current, name: event.target.value }))}
-                                    placeholder="Quem esta comprando?"
+                                    placeholder="Quem está comprando?"
                                     required
                                 />
                             </label>
@@ -374,12 +374,12 @@ export default function ShopIndex({ store, catalog, whatsApp, collections, produ
                                 />
                             </label>
                             <label>
-                                <span>Observacoes</span>
+                                <span>Observações</span>
                                 <textarea
                                     rows="4"
                                     value={customer.notes}
                                     onChange={(event) => setCustomer((current) => ({ ...current, notes: event.target.value }))}
-                                    placeholder="Ex.: entregar em horario comercial"
+                                    placeholder="Ex.: entregar em horário comercial"
                                 />
                             </label>
 

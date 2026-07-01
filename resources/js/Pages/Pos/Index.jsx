@@ -177,7 +177,7 @@ function writeCashPanelCollapsedPreference(tenantId, collapsed) {
 
 function formatShortDateTime(value) {
     if (!value) {
-        return 'Sem horario'
+        return 'Sem horário'
     }
 
     return new Date(value).toLocaleString('pt-BR', {
@@ -207,7 +207,7 @@ function buildCashActivityRows(report) {
     const movementRows = (report.movements || []).map((movement, index) => ({
         id: `movement-${movement.id ?? movement.created_at ?? index}`,
         type: movement.type,
-        label: movement.type === 'supply' ? 'Suprimento' : 'Sangria',
+        label: movement.type === 'supply' ? 'Suprimento' : 'Sangria', // ok already accented
         amount: Number(movement.amount || 0),
         detail: movement.reason || movement.user_name || 'Movimento manual',
         created_at: movement.created_at || null,
@@ -634,7 +634,7 @@ export default function PosIndex({
 
     function openCashMovementModal(type) {
         if (!cashRegisterState) {
-            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentação.')
+            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentaç?.')
             return
         }
 
@@ -1291,7 +1291,7 @@ export default function PosIndex({
         if (String(selectedSupervisorId) !== String(auth.user.id)) {
             setCloseCashRegisterModal((current) => (
                 current
-                    ? { ...current, supervisorError: 'No modo offline, selecione o próprio supervisor logado para liberar a edição.' }
+                    ? { ...current, supervisorError: 'No modo offline, selecione o próprio supervisor logado para liberar a ediç?.' }
                     : current
             ))
             return false
@@ -1426,7 +1426,7 @@ export default function PosIndex({
         setCreditStatus(null)
         setActiveOrderDraftId(orderDraft.id)
         setPendingSaleServerState(null)
-        setFeedback(showLoadedFeedback ? { type: 'success', text: `${orderDraft.label} carregado para cobranca.` } : null)
+        setFeedback(showLoadedFeedback ? { type: 'success', text: `${orderDraft.label} carregado para cobrança.` } : null)
     }
 
     function applyPendingSale() {
@@ -1591,7 +1591,7 @@ export default function PosIndex({
         }
 
         if (salePrice < 0 || quickProductForm.sale_price === '') {
-            showFeedback('warning', 'Informe o preco de venda.')
+            showFeedback('warning', 'Informe o preço de venda.')
             return
         }
 
@@ -1672,12 +1672,12 @@ export default function PosIndex({
 
     function handlePaymentMethodChange(value) {
         if (value === conditionalPaymentMethod && !supportsConditionalSale) {
-            showFeedback('warning', 'Venda condicional e um recurso avancado e nao esta ativada nesta loja.')
+            showFeedback('warning', 'Venda condicional é um recurso avançado e não está ativada nesta loja.')
             return
         }
 
         if (!supportsDeferredPayment && (value === 'credit' || value === conditionalPaymentMethod)) {
-            showFeedback('warning', 'O fiado nao esta ativado nesta loja.')
+            showFeedback('warning', 'O fiado não está ativado nesta loja.')
             return
         }
 
@@ -1857,7 +1857,7 @@ export default function PosIndex({
             }
 
             if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
-                showFeedback('warning', 'Selecione um gerente e informe a senha de autorização.')
+                showFeedback('warning', 'Selecione um gerente e informe a senha de autorizaç?.')
                 return
             }
 
@@ -1965,7 +1965,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
                     return
                 }
 
@@ -1981,7 +1981,7 @@ export default function PosIndex({
             const match = resolveProductMatch(response.products || [], term)
 
             if (!match) {
-                showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
+                showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
                 return
             }
 
@@ -1999,7 +1999,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
                 } else {
                     handleAddProduct(fallbackMatch)
                     setSelectedCartItemId(fallbackMatch.id)
@@ -2358,7 +2358,7 @@ export default function PosIndex({
         }
 
         if (!supervisors.length) {
-            showFeedback('warning', 'Cadastre ao menos um usuario como supervisor para liberar a edição apos a conferência.')
+            showFeedback('warning', 'Cadastre ao menos um usuário como supervisor para liberar a edição após a conferência.')
             return
         }
 
@@ -2413,7 +2413,7 @@ export default function PosIndex({
         if (!closeCashRegisterModal.supervisorUserId || !closeCashRegisterModal.supervisorPassword) {
             setCloseCashRegisterModal((current) => (
                 current
-                    ? { ...current, supervisorError: 'Selecione o supervisor e informe a senha para liberar a edição.' }
+                    ? { ...current, supervisorError: 'Selecione o supervisor e informe a senha para liberar a ediç?.' }
                     : current
             ))
             return
@@ -2681,7 +2681,7 @@ export default function PosIndex({
             }
 
             if (mixedPayments.some((payment) => payment.method === conditionalPaymentMethod)) {
-                throw new Error('Venda condicional nao pode ser usada dentro de pagamento misto.')
+                throw new Error('Venda condicional não pode ser usada dentro de pagamento misto.')
             }
 
             if (mixedPayments.some((payment) => payment.method === 'credit') && !selectedCustomer) {
@@ -2735,7 +2735,7 @@ export default function PosIndex({
 
     function openInvoiceStep() {
         if (!cart.length) {
-            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emissão.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emiss?.')
             return
         }
 
@@ -2751,7 +2751,7 @@ export default function PosIndex({
         }
 
         if (paymentMethod === conditionalPaymentMethod) {
-            showFeedback('warning', 'Venda condicional nao gera documento fiscal agora. Finalize para registrar na tela de Condicionais.')
+            showFeedback('warning', 'Venda condicional não gera documento fiscal agora. Finalize para registrar na tela de Condicionais.')
             return
         }
 
@@ -2882,7 +2882,7 @@ export default function PosIndex({
 
         if (manualName && manualDocument) {
             if (requireEmail && !manualEmail) {
-                throw new Error('Informe um e-mail do consumidor antes de usar essa opção.')
+                throw new Error('Informe um e-mail do consumidor antes de usar essa opç?.')
             }
 
             const payload = buildManualRecipientPayload(manualRecipient)
@@ -2892,7 +2892,7 @@ export default function PosIndex({
                 const hasAllFields = requiredFields.every((field) => Boolean(payload[field]))
 
                 if (!hasAllFields) {
-                    throw new Error('Informe o endereco completo do destinatário antes de emitir NF-e.')
+                    throw new Error('Informe o endereço completo do destinatário antes de emitir NF-e.')
                 }
             }
 
@@ -2917,11 +2917,11 @@ export default function PosIndex({
         }
 
         if (documentModel === '55') {
-            throw new Error('Use a etapa de destinatário da NF-e para informar endereco completo do recebedor.')
+            throw new Error('Use a etapa de destinatário da NF-e para informar endereço completo do recebedor.')
         }
 
         if (requireEmail && !email) {
-            throw new Error('Informe um e-mail do consumidor antes de usar essa opção.')
+            throw new Error('Informe um e-mail do consumidor antes de usar essa opç?.')
         }
 
         return {
@@ -3173,7 +3173,7 @@ export default function PosIndex({
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizaç?.')
                 return
             }
 
@@ -3185,13 +3185,13 @@ export default function PosIndex({
             ])
             setSelectedCompany(String(response.company.id))
             setQuickCompanyForm(initialQuickCompanyForm)
-            showFeedback('success', 'Empresa cadastrada e pronta para reutilização.')
+            showFeedback('success', 'Empresa cadastrada e pronta para reutilizaç?.')
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizaç?.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -3214,7 +3214,7 @@ export default function PosIndex({
 
         if (recipientSelectionMode === 'customer') {
             const customer = customers.find((entry) => String(entry.id) === String(selectedCustomer))
-            if (!customer) throw new Error('Selecione um cliente valido para emitir o cupom fiscal / NFC-e.')
+            if (!customer) throw new Error('Selecione um cliente válido para emitir o cupom fiscal / NFC-e.')
             return {
                 type: 'customer',
                 customer_id: customer.id,
@@ -3944,7 +3944,7 @@ export default function PosIndex({
                         <div className="pos-card-header">
                             <div>
                                 <h2>Etapas da venda</h2>
-                                <p>Produtos, pagamento e finalizacao organizados para vender rapido.</p>
+                                <p>Produtos, pagamento e finalização organizados para vender rápido.</p>
                             </div>
                         </div>
                         <div className="pos-stage-list">
@@ -4034,7 +4034,7 @@ export default function PosIndex({
                                     {activeOrderDraftId
                                         ? `Pedido carregado: #${activeOrderDraftId}`
                                         : supportsPendingSales
-                                            ? 'A venda atual pode ser restaurada se a pagina recarregar.'
+                                            ? 'A venda atual pode ser restaurada se a página recarregar.'
                                             : 'A restauração automatica depende das migrations novas deste tenant.'}
                                 </small>
                                 <div className="pos-review-actions">
@@ -4383,7 +4383,7 @@ function QuickProductModal({ open, form, saving, onChange, onSubmit, onClose }) 
                 <div className="pos-quick-customer-header">
                     <div>
                         <h2>Cadastrar e vender</h2>
-                        <p>Informe apenas o essencial. Depois voce pode completar o cadastro em Produtos.</p>
+                        <p>Informe apenas o essencial. Depois voc? pode completar o cadastro em Produtos.</p>
                     </div>
                     <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={onClose}>
                         <i className="fa-solid fa-xmark" />
@@ -4629,7 +4629,7 @@ function PosWorkspace({
                                     </button>
                                 ))
                             ) : (
-                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descrição.</div>
+                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descriç?.</div>
                             )}
                         </div>
                     ) : null}
@@ -5152,7 +5152,7 @@ function PosWorkspace({
 
             <PosModal open={cancelModalOpen} title="Cancelar venda" onClose={onCloseCancelModal} tone="danger">
                 <div className="pos-cancel-copy">
-                    Todos os itens, descontos e pagamentos preparados nesta venda seráo removidos.
+                    Todos os itens, descontos e pagamentos preparados nesta venda serão removidos.
                 </div>
 
                 <div className="pos-modal-actions">
@@ -5185,7 +5185,7 @@ function PendingNfceModal({
         <CompactModal
             open={open}
             title="NFC-e pendentes"
-            description="Documentos fiscais que ainda precisam de ação ou regularização."
+            description="Documentos fiscais que ainda precisam de ação ou regularizaç?."
             icon="fa-file-circle-exclamation"
             size="lg"
             onClose={onClose}
@@ -5242,7 +5242,7 @@ function PendingNfceModal({
                     <div className="pos-pending-nfce-empty">
                         <i className="fa-solid fa-circle-check" />
                         <strong>Nenhuma NFC-e pendente</strong>
-                        <span>As pendencias fiscais sao reenviadas automaticamente quando o caixa abre.</span>
+                        <span>As pendências fiscais sóo reenviadas automaticamente quando o caixa abre.</span>
                     </div>
                 )}
             </div>
@@ -5674,7 +5674,7 @@ function PosCashCloseModal({
 
                     {!supervisors.length ? (
                         <div className="pos-cash-close-edit-note muted">
-                            Cadastre um usuario como supervisor em Usuários para liberar a edição apos a conferência.
+                            Cadastre um usuário como supervisor em Usuários para liberar a edição após a conferência.
                         </div>
                     ) : null}
 
@@ -5742,7 +5742,7 @@ function PosCashCloseModal({
                         <div className="pos-cash-close-prompt-card" onClick={(event) => event.stopPropagation()}>
                             <div className="pos-cash-close-prompt-title">Senha de supervisor</div>
                             <div className="pos-cash-close-prompt-subtitle">
-                                Escolha o supervisor e informe a senha para liberar a edição apos a conferência.
+                                Escolha o supervisor e informe a senha para liberar a edição após a conferência.
                             </div>
 
                             <label className="pos-field">

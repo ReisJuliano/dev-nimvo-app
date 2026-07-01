@@ -124,7 +124,7 @@ function resolveRecordColumns(activeType, recordTypes) {
         return [
             {
                 key: 'number',
-                label: 'Numero',
+                label: 'Número',
                 render: (record) => <strong>{record.details?.sale_number || record.title}</strong>,
             },
             {
@@ -165,7 +165,7 @@ function resolveRecordColumns(activeType, recordTypes) {
         },
         {
             key: 'title',
-            label: 'Numero',
+            label: 'Número',
             render: (record) => <strong>{record.title}</strong>,
         },
         {
@@ -288,7 +288,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
 
         try {
             await apiRequest(url, { method: 'post' })
-            setFeedback({ type: 'success', text: 'Acao reenfileirada com sucesso.' })
+            setFeedback({ type: 'success', text: 'Ação reenfileirada com sucesso.' })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -417,7 +417,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                     <PageHeader
                         title="Consultas"
                         search={{
-                            placeholder: 'Buscar por numero ou valor',
+                            placeholder: 'Buscar por número ou valor',
                             value: searchControl.draftValue,
                             onChange: searchControl.setDraftValue,
                         }}
@@ -498,7 +498,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             label: 'Inutilizar',
                             visible: selectedRecord?.type === 'fiscal' && selectedRecord.actions?.inutilize_supported !== false,
                             disabled: true,
-                            onClick: () => setFeedback({ type: 'error', text: 'Inutilização segue o fluxo fiscal próprio nesta versao.' }),
+                            onClick: () => setFeedback({ type: 'error', text: 'Inutilização segue o fluxo fiscal próprio nesta vers?.' }),
                         },
                         {
                             key: 'print',
@@ -617,14 +617,14 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             <section className="proc-ui-modal-block">
                                 <h3>Detalhes da entrega</h3>
                                 <div className="proc-ui-summary-grid">
-                                    <article className="proc-ui-summary-card"><span>Destinatario</span><strong>{selectedRecord.details.recipient || '-'}</strong></article>
+                                    <article className="proc-ui-summary-card"><span>Destinatário</span><strong>{selectedRecord.details.recipient || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Telefone</span><strong>{selectedRecord.details.phone || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Entregador</span><strong>{selectedRecord.details.courier || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Taxa</span><strong>{formatMoney(selectedRecord.details.delivery_fee || 0)}</strong></article>
                                 </div>
                                 <div className="proc-ui-banner info">
                                     <i className="fa-solid fa-location-dot" />
-                                    <div>{selectedRecord.details.address || 'Sem endereco'} {selectedRecord.details.neighborhood ? ` - ${selectedRecord.details.neighborhood}` : ''}</div>
+                                    <div>{selectedRecord.details.address || 'Sem endereço'} {selectedRecord.details.neighborhood ? ` - ${selectedRecord.details.neighborhood}` : ''}</div>
                                 </div>
                             </section>
                         ) : null}
@@ -647,8 +647,8 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                                 <div className="proc-ui-summary-grid">
                                     <article className="proc-ui-summary-card"><span>Venda</span><strong>{selectedRecord.details.sale_number || '-'}</strong></article>
                                     <article className="proc-ui-summary-card"><span>Status</span><strong>{selectedRecord.details.status || '-'}</strong></article>
-                                    <article className="proc-ui-summary-card"><span>Numero</span><strong>{selectedRecord.details.number || '-'}</strong></article>
-                                    <article className="proc-ui-summary-card"><span>Serie</span><strong>{selectedRecord.details.series || '-'}</strong></article>
+                                    <article className="proc-ui-summary-card"><span>Número</span><strong>{selectedRecord.details.number || '-'}</strong></article>
+                                    <article className="proc-ui-summary-card"><span>Série</span><strong>{selectedRecord.details.series || '-'}</strong></article>
                                 </div>
                                 <div className="proc-ui-banner info">
                                     <i className="fa-solid fa-key" />

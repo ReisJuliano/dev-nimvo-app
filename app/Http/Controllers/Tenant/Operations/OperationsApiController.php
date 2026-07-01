@@ -94,7 +94,7 @@ class OperationsApiController extends Controller
 
             if ($openTotal <= 0) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Este cliente nao tem fiado em aberto.',
+                    'amount' => 'Este cliente não tem fiado em aberto.',
                 ]);
             }
 

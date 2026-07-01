@@ -40,7 +40,9 @@ function resolvePopupMode(mode) {
     return mode === 'confirm' ? 'confirm' : 'message'
 }
 
-export function getErrorMessages(source) {
+const MAX_ERROR_MESSAGE_DEPTH = 6
+
+function collectErrorMessages(source, seen, depth) {
     if (!source) {
         return []
     }
@@ -50,17 +52,31 @@ export function getErrorMessages(source) {
         return message ? [message] : []
     }
 
-    if (Array.isArray(source)) {
-        return [...new Set(source.flatMap((item) => getErrorMessages(item)))]
-    }
-
     if (typeof source === 'object') {
-        return [...new Set(Object.values(source).flatMap((value) => getErrorMessages(value)))]
+        // Guard against circular references (e.g. raw Axios/DOM error objects with
+        // request/config/node back-references) and pathologically deep payloads,
+        // which would otherwise recurse forever and blow the call stack.
+        if (seen.has(source) || depth >= MAX_ERROR_MESSAGE_DEPTH) {
+            return []
+        }
+
+        seen.add(source)
+
+        const values = Array.isArray(source) ? source : Object.values(source)
+        const messages = values.flatMap((value) => collectErrorMessages(value, seen, depth + 1))
+
+        seen.delete(source)
+
+        return [...new Set(messages)]
     }
 
     const message = String(source).trim()
 
     return message ? [message] : []
+}
+
+export function getErrorMessages(source) {
+    return collectErrorMessages(source, new WeakSet(), 0)
 }
 
 export function normalizePopupPayload(payload, fallbackType = 'error') {

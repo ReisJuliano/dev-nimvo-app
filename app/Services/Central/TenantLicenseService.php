@@ -147,21 +147,21 @@ class TenantLicenseService
     {
         return match ($status) {
             'blocked' => sprintf(
-                'Licenca vencida. Regularize ate %s para liberar novamente o sistema.',
+                'Licença vencida. Regularize até %s para liberar novamente o sistema.',
                 optional($graceEndsAt)->format('d/m/Y')
             ),
-            'paused' => 'Licenca pausada temporariamente no painel administrativo.',
+            'paused' => 'Licença pausada temporariamente no painel administrativo.',
             'overdue' => sprintf(
-                'Licenca vencida em %s. O sistema sera bloqueado apos o prazo de tolerancia.',
+                'Licença vencida em %s. O sistema será bloqueado após o prazo de tolerância.',
                 optional($dueDate)->format('d/m/Y')
             ),
             'warning' => sprintf(
-                'Licenca vence em %d dia(s), na data de %s.',
+                'Licença vence em %d dia(s), na data de %s.',
                 max(0, (int) $daysRemaining),
                 optional($dueDate)->format('d/m/Y')
             ),
             default => sprintf(
-                'Licenca ativa ate %s.',
+                'Licença ativa até %s.',
                 optional($dueDate)->format('d/m/Y')
             ),
         };

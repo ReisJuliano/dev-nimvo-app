@@ -181,7 +181,7 @@ export default function ConditionalSaleDetailCard({
                 {isClosed ? <DetailMetric label="Devolvido" value={formatMoney(conditionalSale.returned_total)} /> : null}
             </section>
 
-            <div className="conditional-detail-tabs" role="tablist" aria-label="Acoes da condicional">
+            <div className="conditional-detail-tabs" role="tablist" aria-label="A??es da condicional">
                 {panelOptions.map((panel) => (
                     <button
                         key={panel.key}

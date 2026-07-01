@@ -295,7 +295,7 @@ class NfceLayoutBuilder
             'MT' => '51',
             'GO' => '52',
             'DF' => '53',
-            default => throw new RuntimeException("UF fiscal nao suportada: {$uf}."),
+            default => throw new RuntimeException("UF fiscal não suportada: {$uf}."),
         };
     }
 }

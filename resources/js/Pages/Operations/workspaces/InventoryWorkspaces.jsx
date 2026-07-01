@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import './inventory-workspaces.css'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, getAmountConfirmationMessage } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -249,8 +249,8 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
         setShowBilling(false)
     }
 
-    async function handleSubmit(event) {
-        event.preventDefault()
+    async function handleSubmit(event, confirmAmountMismatch = false) {
+        event?.preventDefault?.()
 
         if (!form.supplier_id) {
             setFeedback({ type: 'error', text: 'Selecione o fornecedor.' })
@@ -283,6 +283,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
                     quantity: parseNumber(item.quantity, 0),
                     unit_cost: parseNumber(item.unit_cost, 0),
                 })),
+                confirm_amount_mismatch: confirmAmountMismatch,
             }
 
             const response = await apiRequest(buildRecordsUrl(moduleKey), { method: 'post', data })
@@ -291,7 +292,24 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
             handleReset()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
+            const confirmationMessage = !confirmAmountMismatch ? getAmountConfirmationMessage(error) : null
+
+            if (confirmationMessage) {
+                const confirmed = await confirmPopup({
+                    type: 'warning',
+                    title: 'Valor fora do padrão',
+                    message: confirmationMessage,
+                    confirmLabel: 'Confirmar mesmo assim',
+                    cancelLabel: 'Revisar valor',
+                })
+
+                if (confirmed) {
+                    await handleSubmit(event, true)
+                    return
+                }
+            } else {
+                setFeedback({ type: 'error', text: error.message })
+            }
         } finally {
             setSaving(false)
         }

@@ -310,7 +310,7 @@ class TenantManagementController extends Controller
         LocalAgentBootstrapService $bootstrapService,
         LocalAgentConfigService $configService,
     ): JsonResponse {
-        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda não foi criada neste ambiente.');
 
         $existingAgent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
         $data = $request->validate([
@@ -341,7 +341,7 @@ class TenantManagementController extends Controller
         LocalAgentBootstrapService $bootstrapService,
         LocalAgentConfigService $configService,
     ): JsonResponse {
-        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda não foi criada neste ambiente.');
 
         $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
         abort_unless($agent, 404, 'Nenhum agente fiscal foi cadastrado para este tenant.');
@@ -350,7 +350,7 @@ class TenantManagementController extends Controller
         $agent = $issued['agent'];
 
         return response()->json([
-            'message' => 'Codigo de ativacao gerado. Use esse codigo no instalador do agente da maquina.',
+            'message' => 'Código de ativação gerado. Use esse código no instalador do agente da máquina.',
             'activation' => [
                 'code' => $issued['code'],
                 'backend_url' => $issued['backend_url'],
@@ -368,11 +368,11 @@ class TenantManagementController extends Controller
         LocalAgentConfigService $configService,
         LocalAgentBootstrapService $bootstrapService,
     ): JsonResponse {
-        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda não foi criada neste ambiente.');
 
         $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
         abort_unless($agent, 404, 'Nenhum agente fiscal foi cadastrado para este tenant.');
-        abort_unless($agent->active, 422, 'Ative o agente fiscal antes de enviar um teste de impressao.');
+        abort_unless($agent->active, 422, 'Ative o agente fiscal antes de enviar um teste de impressão.');
 
         if (data_get($agent->metadata, 'device.printer.enabled') === false) {
             abort(422, 'A impressora local deste agente esta desativada no momento.');
@@ -388,7 +388,7 @@ class TenantManagementController extends Controller
         );
 
         return response()->json([
-            'message' => 'Teste enviado para a fila central de impressao do agente.',
+            'message' => 'Teste enviado para a fila central de impressão do agente.',
             'command' => [
                 'id' => $command->id,
                 'status' => $command->status,

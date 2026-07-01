@@ -49,7 +49,7 @@ class LocalFiscalAgentRunner
                     'backend' => $baseUrl,
                     'error' => $exception->getMessage(),
                 ]);
-                $output('error', sprintf('Falha de comunicacao com o backend fiscal: %s', $exception->getMessage()));
+                $output('error', sprintf('Falha de comunicação com o backend fiscal: %s', $exception->getMessage()));
 
                 if ($once) {
                     return 1;
@@ -92,7 +92,7 @@ class LocalFiscalAgentRunner
                     'invalidate_fiscal_range' => $this->emitter->invalidateRange($command['payload'], $runtimeConfig),
                     'print_payment_receipt' => $this->printPaymentReceipt($command['payload'], $runtimeConfig),
                     'print_test' => $this->printTest($command['payload'], $runtimeConfig),
-                    default => throw new RuntimeException(sprintf('Tipo de comando nao suportado pelo runner PHP: %s.', $command['type'])),
+                    default => throw new RuntimeException(sprintf('Tipo de comando não suportado pelo runner PHP: %s.', $command['type'])),
                 };
 
                 $this->post(
@@ -103,7 +103,7 @@ class LocalFiscalAgentRunner
                     ], $result),
                 );
 
-                $output('info', sprintf('Comando %s concluido com sucesso.', $command['id']));
+                $output('info', sprintf('Comando %s concluído com sucesso.', $command['id']));
                 Log::info('Comando fiscal concluido.', ['command_id' => $command['id']]);
             } catch (Throwable $exception) {
                 $this->post(
@@ -136,24 +136,24 @@ class LocalFiscalAgentRunner
     protected function loadConfig(string $configPath): array
     {
         if (!is_file($configPath)) {
-            throw new RuntimeException("Arquivo de configuracao do agente nao encontrado em {$configPath}.");
+            throw new RuntimeException("Arquivo de configuração do agente não encontrado em {$configPath}.");
         }
 
         $content = file_get_contents($configPath);
 
         if ($content === false) {
-            throw new RuntimeException('Nao foi possivel ler o arquivo de configuracao do agente.');
+            throw new RuntimeException('Não foi possível ler o arquivo de configuração do agente.');
         }
 
         $config = json_decode($content, true);
 
         if (!is_array($config)) {
-            throw new RuntimeException('O arquivo de configuracao do agente nao contem JSON valido.');
+            throw new RuntimeException('O arquivo de configuração do agente não contém JSON válido.');
         }
 
         foreach (['backend', 'agent', 'certificate'] as $required) {
             if (!is_array($config[$required] ?? null)) {
-                throw new RuntimeException("Secao obrigatoria ausente na configuracao: {$required}.");
+                throw new RuntimeException("Seção obrigatória ausente na configuração: {$required}.");
             }
         }
 
@@ -167,7 +167,7 @@ class LocalFiscalAgentRunner
         $retrySleepMs = max(100, (int) ($config['backend']['retry_sleep_ms'] ?? 500));
 
         if ($baseUrl === '') {
-            throw new RuntimeException('A URL base do backend nao foi configurada no agente local.');
+            throw new RuntimeException('A URL base do backend não foi configurada no agente local.');
         }
 
         $response = Http::acceptJson()
@@ -290,7 +290,7 @@ class LocalFiscalAgentRunner
 
         return [
             'status' => 'printed',
-            'message' => 'Teste de impressao concluido.',
+            'message' => 'Teste de impressão concluído.',
         ];
     }
 }

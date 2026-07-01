@@ -14,7 +14,7 @@ class DiscountAuthorizationService
 
         if (!$user || !$user->active || !in_array($user->role, ['admin', 'manager'], true)) {
             throw ValidationException::withMessages([
-                'authorizer_user_id' => 'Selecione um gerente valido para autorizar o desconto.',
+                'authorizer_user_id' => 'Selecione um gerente válido para autorizar o desconto.',
             ]);
         }
 
@@ -32,7 +32,7 @@ class DiscountAuthorizationService
 
         if (!$valid) {
             throw ValidationException::withMessages([
-                'authorizer_password' => 'Senha gerencial invalida.',
+                'authorizer_password' => 'Senha gerencial inválida.',
             ]);
         }
 

@@ -58,10 +58,10 @@ export default function RecommendationRail({
 
     if (!showAssociations && !showCustomerHistory && !topSellers.length && !loading) {
         return (
-            <section className="pos-recommendation-rail" aria-label="Recomendacoes de produtos">
+            <section className="pos-recommendation-rail" aria-label="Recomendações de produtos">
                 <RecommendationLane
                     title="Mais vendidos"
-                    subtitle={`Os cards vao aparecer aqui conforme o historico de vendas ganhar volume em ${resolveWindowLabel(topSellersContext, 'historico recente')}.`}
+                    subtitle={`Os cards vão aparecer aqui conforme o histórico de vendas ganhar volume em ${resolveWindowLabel(topSellersContext, 'histórico recente')}.`}
                     icon="trend"
                     tone="top"
                     products={[]}
@@ -69,19 +69,19 @@ export default function RecommendationRail({
                     onAddProduct={onAddProduct}
                     renderInsight={resolveTopSellerInsight}
                     renderMeta={(product) => resolveProductCode(product)}
-                    emptyMessage="Ainda não ha historico suficiente para montar os acessos rápidos."
+                    emptyMessage="Ainda não há histórico suficiente para montar os acessos rápidos."
                 />
             </section>
         )
     }
 
     return (
-        <section className="pos-recommendation-rail" aria-label="Recomendacoes de produtos">
+        <section className="pos-recommendation-rail" aria-label="Recomendações de produtos">
             {showCustomerHistory ? (
                 loading && customerRecommendations.length === 0 ? (
                     <RecommendationLane
                         title={`Histórico de ${customerContext.customer_name}`}
-                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
+                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'histórico recente')}.`}
                         icon="customer"
                         tone="customer"
                         products={[]}
@@ -94,7 +94,7 @@ export default function RecommendationRail({
                 ) : customerRecommendations.length ? (
                     <RecommendationLane
                         title={`Histórico de ${customerContext.customer_name}`}
-                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'historico recente')}.`}
+                        subtitle={`Itens que esse cliente mais compra em ${resolveWindowLabel(customerContext, 'histórico recente')}.`}
                         icon="customer"
                         tone="customer"
                         products={customerRecommendations}
@@ -109,10 +109,10 @@ export default function RecommendationRail({
                             <RecommendationIcon name="customer" />
                         </span>
                         <div>
-                            <strong>Sem historico suficiente desse cliente</strong>
+                            <strong>Sem histórico suficiente desse cliente</strong>
                             <p>
                                 Assim que <span>{customerContext.customer_name}</span> acumular compras finalizadas,
-                                os acessos rápidos vao destacar os itens recorrentes aqui.
+                                os acessos rápidos vão destacar os itens recorrentes aqui.
                             </p>
                         </div>
                     </div>
@@ -121,7 +121,7 @@ export default function RecommendationRail({
 
             <RecommendationLane
                 title="Mais vendidos"
-                subtitle={`Acesso rapido com base em ${resolveWindowLabel(topSellersContext, 'historico recente')}.`}
+                subtitle={`Acesso rápido com base em ${resolveWindowLabel(topSellersContext, 'histórico recente')}.`}
                 icon="trend"
                 tone="top"
                 products={topSellers}
@@ -129,14 +129,14 @@ export default function RecommendationRail({
                 onAddProduct={onAddProduct}
                 renderInsight={resolveTopSellerInsight}
                 renderMeta={(product) => resolveProductCode(product)}
-                emptyMessage="Ainda não ha historico suficiente para destacar os mais vendidos."
+                emptyMessage="Ainda não há histórico suficiente para destacar os mais vendidos."
             />
 
             {showAssociations ? (
                 loading && associations.length === 0 ? (
                     <RecommendationLane
                         title={`Comprados com ${associationContext.anchor_product_name}`}
-                        subtitle={`Sugestoes dinamicas a partir de ${resolveWindowLabel(associationContext, 'historico recente')}.`}
+                        subtitle={`Sugestões dinâmicas a partir de ${resolveWindowLabel(associationContext, 'histórico recente')}.`}
                         icon="link"
                         tone="association"
                         products={[]}
@@ -149,7 +149,7 @@ export default function RecommendationRail({
                 ) : associations.length ? (
                     <RecommendationLane
                         title={`Comprados com ${associationContext.anchor_product_name}`}
-                        subtitle={`Sugestoes dinamicas a partir de ${resolveWindowLabel(associationContext, 'historico recente')}.`}
+                        subtitle={`Sugestões dinâmicas a partir de ${resolveWindowLabel(associationContext, 'histórico recente')}.`}
                         icon="link"
                         tone="association"
                         products={associations}
@@ -164,10 +164,10 @@ export default function RecommendationRail({
                             <RecommendationIcon name="link" />
                         </span>
                         <div>
-                            <strong>Sem combinacoes fortes ainda</strong>
+                            <strong>Sem combinações fortes ainda</strong>
                             <p>
-                                O item <span>{associationContext.anchor_product_name}</span> ainda não tem historico
-                                suficiente para sugerir um combo confiavel.
+                                O item <span>{associationContext.anchor_product_name}</span> ainda não tem histórico
+                                suficiente para sugerir um combo confiável.
                             </p>
                         </div>
                     </div>

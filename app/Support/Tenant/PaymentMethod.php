@@ -31,8 +31,8 @@ class PaymentMethod
         return match (self::normalize($method)) {
             self::CASH => 'Dinheiro',
             self::PIX => 'Pix',
-            self::DEBIT_CARD => 'Cartao de debito',
-            self::CREDIT_CARD => 'Cartao de credito',
+            self::DEBIT_CARD => 'Cartão de débito',
+            self::CREDIT_CARD => 'Cartão de crédito',
             self::CREDIT => 'Fiado',
             self::CONDITIONAL => 'Venda Condicional',
             self::MIXED => 'Misto',

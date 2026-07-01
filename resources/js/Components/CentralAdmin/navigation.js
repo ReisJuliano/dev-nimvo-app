@@ -4,7 +4,7 @@ export const CENTRAL_ADMIN_NAVIGATION = [
         items: [
             { href: '/admin/painel', label: 'Painel', icon: 'fa-house' },
             { href: '/admin/clientes', label: 'Tenants', icon: 'fa-buildings' },
-            { href: '/admin/feature-flags', label: 'Configuracoes', icon: 'fa-sliders' },
+            { href: '/admin/feature-flags', label: 'Configurações', icon: 'fa-sliders' },
         ],
     },
 ]

@@ -40,14 +40,14 @@ class OperationsOverviewService
                 'Delivery',
                 'Organize entrega e retirada sem misturar o atendimento externo com o fluxo direto.',
                 [
-                    ['label' => 'Fluxo do modulo', 'value' => 'Ativo na configuracao', 'meta' => 'Aparece somente quando o tenant usa entrega.'],
+                    ['label' => 'Fluxo do módulo', 'value' => 'Ativo na configuração', 'meta' => 'Aparece somente quando o tenant usa entrega.'],
                     ['label' => 'Uso recomendado', 'value' => 'Pedidos externos e retirada', 'meta' => 'Separe atendimento presencial do fluxo de entrega.'],
                     ['label' => 'Conexao com vendas', 'value' => 'Expande o atendimento', 'meta' => 'Permite crescer para canais extras sem duplicar o sistema.'],
                 ],
                 [
                     ['item' => 'Cadastro de entregas', 'status' => 'Pronto para configurar', 'observacao' => 'Estruture taxas, bairros e janelas de entrega.'],
                     ['item' => 'Fila de expedicao', 'status' => 'Pronto para configurar', 'observacao' => 'Acompanhe pedidos em preparo, prontos e em saida.'],
-                    ['item' => 'Integracoes externas', 'status' => 'Em evolucao', 'observacao' => 'Conecte canais parceiros quando fizer sentido.'],
+                    ['item' => 'Integrações externas', 'status' => 'Em evolução', 'observacao' => 'Conecte canais parceiros quando fizer sentido.'],
                 ],
             ),
             'compras' => $this->moduleWorkspace(
@@ -60,8 +60,8 @@ class OperationsOverviewService
                 ],
                 [
                     ['item' => 'Planejamento de compras', 'status' => 'Pronto para configurar', 'observacao' => 'Monte listas por necessidade, validade e sazonalidade.'],
-                    ['item' => 'Entrada prevista', 'status' => 'Pronto para configurar', 'observacao' => 'Use o modulo para registrar o que foi pedido e o que chegou.'],
-                    ['item' => 'Historico de abastecimento', 'status' => 'Em evolucao', 'observacao' => 'Padronize comparacoes entre fornecedor, lote e preco medio.'],
+                    ['item' => 'Entrada prevista', 'status' => 'Pronto para configurar', 'observacao' => 'Use o módulo para registrar o que foi pedido e o que chegou.'],
+                    ['item' => 'Histórico de abastecimento', 'status' => 'Em evolução', 'observacao' => 'Padronize comparações entre fornecedor, lote e preço médio.'],
                 ],
             ),
             default => abort(404),
@@ -92,7 +92,7 @@ class OperationsOverviewService
                 'label' => 'Implantacao',
                 'icon' => 'fa-list-check',
                 'title' => 'Implantacao pronta',
-                'description' => 'Escopo fechado para colocar o modulo em operacao sem pendencias abertas nesta tela.',
+                'description' => 'Escopo fechado para colocar o módulo em operação sem pendências abertas nesta tela.',
                 'metrics' => [
                     [
                         'label' => 'Etapas prontas',
@@ -104,7 +104,7 @@ class OperationsOverviewService
                         'label' => 'Modulo ativo',
                         'value' => 1,
                         'format' => 'number',
-                        'caption' => 'A tela so aparece quando o switch do modulo esta ligado.',
+                        'caption' => 'A tela só aparece quando o switch do módulo está ligado.',
                     ],
                     [
                         'label' => 'Escopo definido',
@@ -123,7 +123,7 @@ class OperationsOverviewService
                             ['key' => 'observacao', 'label' => 'Aplicacao'],
                         ],
                         'rows' => $implementationRows,
-                        'emptyText' => 'Nenhum item configurado para este modulo.',
+                        'emptyText' => 'Nenhum item configurado para este módulo.',
                     ],
                 ],
                 'filters' => [
@@ -135,7 +135,7 @@ class OperationsOverviewService
                 'label' => 'Operacao',
                 'icon' => 'fa-gears',
                 'title' => 'Diretrizes de operacao',
-                'description' => 'Orientacoes do modulo consolidadas em uma aba propria, sem card de resumo separado.',
+                'description' => 'Orientações do módulo consolidadas em uma aba própria, sem card de resumo separado.',
                 'metrics' => [
                     [
                         'label' => 'Frentes definidas',
@@ -150,10 +150,10 @@ class OperationsOverviewService
                         'caption' => 'Cada frente desta aba ja tem direcionamento fechado.',
                     ],
                     [
-                        'label' => 'Status do modulo',
+                        'label' => 'Status do módulo',
                         'value' => 100,
                         'format' => 'percent',
-                        'caption' => 'Workspace pronto para servir como referencia operacional.',
+                        'caption' => 'Workspace pronto para servir como referência operacional.',
                     ],
                 ],
                 'panels' => [],
@@ -166,7 +166,7 @@ class OperationsOverviewService
                             ['key' => 'aplicacao', 'label' => 'Aplicacao'],
                         ],
                         'rows' => $guidelineRows,
-                        'emptyText' => 'Nenhuma diretriz configurada para este modulo.',
+                        'emptyText' => 'Nenhuma diretriz configurada para este módulo.',
                     ],
                 ],
                 'filters' => [

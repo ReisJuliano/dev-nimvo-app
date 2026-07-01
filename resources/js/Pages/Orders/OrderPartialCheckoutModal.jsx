@@ -253,7 +253,7 @@ export default function OrderPartialCheckoutModal({
                                     <strong>{formatMoney(creditStatus?.open_credit || 0)}</strong>
                                 </div>
                                 <div>
-                                    <span>Disponivel</span>
+                                    <span>Disponível</span>
                                     <strong>{formatMoney(creditStatus?.available_credit || 0)}</strong>
                                 </div>
                             </div>

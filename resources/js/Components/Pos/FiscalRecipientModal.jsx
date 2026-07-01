@@ -34,7 +34,7 @@ export default function FiscalRecipientModal({
                 <div className="pos-quick-customer-header">
                     <div>
                         <h2>Destinatario e emissão</h2>
-                        <p>{documentModel === '55' ? 'Identifique o CPF/CNPJ e o endereco antes de concluir a etapa fiscal.' : 'Escolha entre identificar o consumidor ou emitir como consumidor final não identificado.'}</p>
+                        <p>{documentModel === '55' ? 'Identifique o CPF/CNPJ e o endereço antes de concluir a etapa fiscal.' : 'Escolha entre identificar o consumidor ou emitir como consumidor final não identificado.'}</p>
                     </div>
                     <button className="ui-button-ghost" type="button" onClick={onClose}>
                         Fechar
@@ -215,7 +215,7 @@ export default function FiscalRecipientModal({
                 ) : null}
 
                 {selectionMode === 'consumer_final' ? (
-                    <div className="pos-empty-state">Consumidor final sem identificação.</div>
+                    <div className="pos-empty-state">Consumidor final sem identificaç?.</div>
                 ) : null}
 
                 {selectionMode === 'customer' ? (

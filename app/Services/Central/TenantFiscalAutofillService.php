@@ -53,13 +53,13 @@ class TenantFiscalAutofillService
         $missingFields = [];
 
         foreach ([
-            'company_name' => 'Razao social',
+            'company_name' => 'Razão social',
             'cnpj' => 'CNPJ',
             'street' => 'Logradouro',
-            'number' => 'Numero',
+            'number' => 'Número',
             'district' => 'Bairro',
-            'city_name' => 'Municipio',
-            'city_code' => 'Codigo IBGE',
+            'city_name' => 'Município',
+            'city_code' => 'Código IBGE',
             'state' => 'UF',
             'zip_code' => 'CEP',
         ] as $field => $label) {
@@ -71,11 +71,11 @@ class TenantFiscalAutofillService
         $warnings = [];
 
         if ($companyLookup === []) {
-            $warnings[] = 'Consulta de CNPJ indisponivel no momento.';
+            $warnings[] = 'Consulta de CNPJ indisponível no momento.';
         }
 
         if (! array_key_exists('city_code', $suggested)) {
-            $warnings[] = 'Codigo IBGE nao foi localizado automaticamente.';
+            $warnings[] = 'Código IBGE não foi localizado automaticamente.';
         }
 
         return [
@@ -106,12 +106,12 @@ class TenantFiscalAutofillService
             'cnpj' => $inputCnpj
                 ? ['source' => 'cnpj', 'label' => 'CNPJ informado', 'cnpj' => $inputCnpj]
                 : throw ValidationException::withMessages([
-                    'cnpj' => 'Informe um CNPJ valido para consultar os dados do emitente.',
+                    'cnpj' => 'Informe um CNPJ válido para consultar os dados do emitente.',
                 ]),
             'certificate' => $certificateCnpj
                 ? ['source' => 'certificate', 'label' => 'Certificado do agente', 'cnpj' => $certificateCnpj]
                 : throw ValidationException::withMessages([
-                    'certificate' => 'O agente ainda nao sincronizou um resumo do certificado para este tenant.',
+                    'certificate' => 'O agente ainda não sincronizou um resumo do certificado para este tenant.',
                 ]),
             default => match (true) {
                 filled($inputCnpj) => ['source' => 'cnpj', 'label' => 'CNPJ informado', 'cnpj' => $inputCnpj],

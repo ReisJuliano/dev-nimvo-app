@@ -118,7 +118,7 @@ class FiscalDocumentResultService
                 data_set($documentPayload, 'flags.offline_contingency_stage', 'transmit_pending');
                 $eventMessage = $printedAt
                     ? 'NFC-e emitida e impressa em contingencia offline legal.'
-                    : 'NFC-e emitida em contingencia offline legal e pendente de impressao.';
+                    : 'NFC-e emitida em contingência offline legal e pendente de impressão.';
             } else {
                 $status = $printedAt ? 'printed' : 'authorized';
                 $authorizedAt = now();
@@ -126,7 +126,7 @@ class FiscalDocumentResultService
                 if ($isOfflineTransmission) {
                     data_set($documentPayload, 'flags.offline_contingency_stage', 'transmitted');
                     $eventMessage = $printedAt
-                        ? 'NFC-e autorizada pela SEFAZ apos contingencia offline, mantendo a impressao local.'
+                        ? 'NFC-e autorizada pela SEFAZ após contingência offline, mantendo a impressão local.'
                         : 'NFC-e autorizada pela SEFAZ apos contingencia offline.';
                 } else {
                     $eventMessage = $printedAt

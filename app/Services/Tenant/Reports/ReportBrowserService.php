@@ -206,7 +206,7 @@ class ReportBrowserService
                 'key' => 'sales-operators',
                 'category' => 'sales',
                 'title' => 'Receita por operador',
-                'description' => 'Compara vendas, ticket medio e lucro por usuario.',
+                'description' => 'Compara vendas, ticket médio e lucro por usuário.',
                 'icon' => 'fa-user-tie',
                 'tags' => ['Equipe', 'Ticket', 'Lucro'],
             ],
@@ -230,7 +230,7 @@ class ReportBrowserService
                 'key' => 'stock-shortages',
                 'category' => 'stock',
                 'title' => 'Faltas e giro',
-                'description' => 'Itens abaixo do minimo com saldo atual, falta e saida no periodo.',
+                'description' => 'Itens abaixo do mínimo com saldo atual, falta e saída no período.',
                 'icon' => 'fa-triangle-exclamation',
                 'tags' => ['Falta', 'Giro', 'Reposicao'],
             ],
@@ -238,7 +238,7 @@ class ReportBrowserService
                 'key' => 'stock-position',
                 'category' => 'stock',
                 'title' => 'Posicao atual do estoque',
-                'description' => 'Saldo atual com minimo, valor estocado e giro do periodo.',
+                'description' => 'Saldo atual com mínimo, valor estocado e giro do período.',
                 'icon' => 'fa-layer-group',
                 'tags' => ['Saldo', 'Minimo', 'Valor'],
             ],
@@ -509,7 +509,7 @@ class ReportBrowserService
                     ['value' => 'name', 'label' => 'Produto'],
                 ],
                 'default_sort' => ['by' => 'quantity_sold', 'direction' => 'desc'],
-                'search_placeholder' => 'Produto ou codigo',
+                'search_placeholder' => 'Produto ou código',
             ],
             'sales-operators' => [
                 'fields' => ['scope', 'operator_id', 'customer_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
@@ -544,7 +544,7 @@ class ReportBrowserService
                     ['value' => 'status', 'label' => 'Status'],
                 ],
                 'default_sort' => ['by' => 'name', 'direction' => 'asc'],
-                'search_placeholder' => 'Produto ou codigo',
+                'search_placeholder' => 'Produto ou código',
             ],
             'stock-shortages' => [
                 'fields' => ['scope', 'query', 'category_id', 'supplier_id', 'sort_by', 'sort_direction', 'per_page'],
@@ -556,7 +556,7 @@ class ReportBrowserService
                     ['value' => 'supplier_name', 'label' => 'Fornecedor'],
                 ],
                 'default_sort' => ['by' => 'missing', 'direction' => 'desc'],
-                'search_placeholder' => 'Produto ou codigo',
+                'search_placeholder' => 'Produto ou código',
             ],
             'stock-inbounds' => [
                 'fields' => ['scope', 'query', 'supplier_id', 'sort_by', 'sort_direction', 'per_page'],
@@ -614,7 +614,7 @@ class ReportBrowserService
             'categories' => $this->namedLookupFilterOptions('categories'),
             'suppliers' => $this->namedLookupFilterOptions('suppliers', 120),
             'stock_statuses' => [
-                ['value' => 'healthy', 'label' => 'Saudavel'],
+                ['value' => 'healthy', 'label' => 'Saudável'],
                 ['value' => 'low', 'label' => 'Baixo estoque'],
                 ['value' => 'out', 'label' => 'Sem saldo'],
             ],
@@ -1349,7 +1349,7 @@ class ReportBrowserService
 
         $statusRows = collect([
             [
-                'label' => 'Saudavel',
+                'label' => 'Saudável',
                 'total' => tap(Product::query()->where('products.active', true), fn ($builder) => $this->applyProductDimensionFilters($builder, array_merge($filters, ['stock_status' => 'healthy'])))->count(),
             ],
             [
@@ -1382,7 +1382,7 @@ class ReportBrowserService
             'stock_value' => (float) $row->stock_value,
             'status' => (float) $row->stock_quantity <= 0
                 ? 'Sem saldo'
-                : ((float) $row->stock_quantity <= (float) $row->min_stock ? 'Abaixo do minimo' : 'Saudavel'),
+                : ((float) $row->stock_quantity <= (float) $row->min_stock ? 'Abaixo do mínimo' : 'Saudável'),
         ])->all();
         $largestCategory = $categoryRows->first();
 
