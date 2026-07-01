@@ -155,6 +155,22 @@
     letter-spacing: -0.02em;
 }
 
+.ui-page-header-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.ui-page-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
 .ui-page-header-row {
     display: flex;
     align-items: center;
@@ -1251,6 +1267,8 @@
 
     .ui-page-header-row,
     .ui-page-header-row.secondary,
+    .ui-page-header-titlebar,
+    .ui-page-header-actions,
     .ui-page-header-date-tools,
     .ui-page-header-filters,
     .ui-page-header-quick-dates {
@@ -1263,12 +1281,14 @@
     }
 
     .ui-page-header-quick-dates,
-    .ui-page-header-filters {
+    .ui-page-header-filters,
+    .ui-page-header-actions {
         width: 100%;
     }
 
     .ui-page-header-filter,
     .ui-page-header-quick-date,
+    .ui-page-header-actions > *,
     .ui-page-header-apply,
     .ui-page-header-reset {
         width: 100%;

@@ -136,3 +136,6 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   que ainda nao tenham essas chaves salvas.
 - 2026-06-23: Os utilitarios visuais compartilhados do frontend ficam em
   `resources/js/styles/nimvo-system.css`, importado por `resources/css/app.css`.
+- 2026-07-01: A workspace tenant de movimentacao/historico de estoque usa a
+  chave ASCII `movimentacao-estoque` vinda do backend. No React, comparar com
+  uma variante acentuada impede a tela de renderizar e deixa a pagina em branco.

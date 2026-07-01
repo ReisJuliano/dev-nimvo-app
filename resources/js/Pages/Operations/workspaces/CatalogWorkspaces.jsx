@@ -7,7 +7,6 @@ import { maskDocument, validateCpfOrCnpj } from '@/lib/validation'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
 import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
 import PageHeader from '@/Components/UI/PageHeader'
@@ -180,7 +179,7 @@ function customerListDescription(record) {
 function customerLocationLabel(record) {
     const location = [record.city_name, record.state].filter(Boolean).join(' / ')
 
-    return location || 'Sem endereco'
+    return location || 'Sem endereço'
 }
 
 function CategoryListCard({ record, active, onClick }) {
@@ -438,6 +437,19 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                 <div className="ui-list-page-main">
                     <PageHeader
                         title="Categorias"
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-plus" onClick={handleCreate}>
+                                    Nova categoria
+                                </ActionButton>
+                                <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => openRecordModal(selectedRecord)}>
+                                    Editar
+                                </ActionButton>
+                                <ActionButton icon="fa-trash-can" tone="danger" disabled={!selectedRecord} onClick={() => handleDelete(selectedRecord)}>
+                                    Excluir
+                                </ActionButton>
+                            </>
+                        )}
                         search={{
                             placeholder: 'Buscar categoria',
                             value: searchControl.draftValue,
@@ -511,35 +523,6 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
                         />
                     </section>
                 </div>
-
-                <ActionSidebar
-                    storageKey="operations-categories"
-                    actions={[
-                        {
-                            key: 'create',
-                            icon: 'fa-plus',
-                            label: 'Nova categoria',
-                            tone: 'primary',
-                            onClick: handleCreate,
-                        },
-                        {
-                            key: 'edit',
-                            icon: 'fa-pen',
-                            label: 'Editar',
-                            disabled: !selectedRecord,
-                            onClick: () => openRecordModal(selectedRecord),
-                        },
-                        {
-                            key: 'delete',
-                            icon: 'fa-trash-can',
-                            label: 'Excluir',
-                            tone: 'danger',
-                            dividerBefore: true,
-                            disabled: !selectedRecord,
-                            onClick: () => handleDelete(selectedRecord),
-                        },
-                    ]}
-                />
             </div>
             <ModalForm
                 open={modalOpen}
@@ -753,6 +736,19 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                 <div className="ui-list-page-main">
                     <PageHeader
                         title="Fornecedores"
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-plus" onClick={handleCreate}>
+                                    Novo fornecedor
+                                </ActionButton>
+                                <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => openRecordModal(selectedRecord)}>
+                                    Editar
+                                </ActionButton>
+                                <ActionButton icon="fa-trash-can" tone="danger" disabled={!selectedRecord} onClick={() => handleDelete(selectedRecord)}>
+                                    Excluir
+                                </ActionButton>
+                            </>
+                        )}
                         search={{
                             placeholder: 'Buscar fornecedor',
                             value: searchControl.draftValue,
@@ -835,35 +831,6 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                         />
                     </section>
                 </div>
-
-                <ActionSidebar
-                    storageKey="operations-suppliers"
-                    actions={[
-                        {
-                            key: 'create',
-                            icon: 'fa-plus',
-                            label: 'Novo fornecedor',
-                            tone: 'primary',
-                            onClick: handleCreate,
-                        },
-                        {
-                            key: 'edit',
-                            icon: 'fa-pen',
-                            label: 'Editar',
-                            disabled: !selectedRecord,
-                            onClick: () => openRecordModal(selectedRecord),
-                        },
-                        {
-                            key: 'delete',
-                            icon: 'fa-trash-can',
-                            label: 'Excluir',
-                            tone: 'danger',
-                            dividerBefore: true,
-                            disabled: !selectedRecord,
-                            onClick: () => handleDelete(selectedRecord),
-                        },
-                    ]}
-                />
             </div>
             <ModalForm
                 open={modalOpen}
@@ -892,7 +859,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                     </label>
                     <label>
                         <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />
-                        <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente numeros ou formatado" />
+                        <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente números ou formatado" />
                     </label>
                     <label>
                         <FieldLabel icon="fa-store" text="Nome fantasia" />
@@ -1194,6 +1161,19 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                 <div className="ui-list-page-main">
                     <PageHeader
                         title="Clientes"
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-plus" onClick={handleCreate}>
+                                    Novo cliente
+                                </ActionButton>
+                                <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => selectedRecord && handleSelectRecord(selectedRecord)}>
+                                    Editar
+                                </ActionButton>
+                                <ActionButton icon="fa-trash-can" tone="danger" disabled={!selectedRecord} onClick={() => handleDelete(selectedRecord)}>
+                                    Excluir
+                                </ActionButton>
+                            </>
+                        )}
                         search={{
                             placeholder: 'Buscar cliente por nome',
                             value: searchControl.draftValue,
@@ -1268,40 +1248,11 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                         />
                     </section>
                 </div>
-
-                <ActionSidebar
-                    storageKey="operations-customers"
-                    actions={[
-                        {
-                            key: 'create',
-                            icon: 'fa-plus',
-                            label: 'Novo cliente',
-                            tone: 'primary',
-                            onClick: handleCreate,
-                        },
-                        {
-                            key: 'edit',
-                            icon: 'fa-pen',
-                            label: 'Editar',
-                            disabled: !selectedRecord,
-                            onClick: () => selectedRecord && handleSelectRecord(selectedRecord),
-                        },
-                        {
-                            key: 'delete',
-                            icon: 'fa-trash-can',
-                            label: 'Excluir',
-                            tone: 'danger',
-                            dividerBefore: true,
-                            disabled: !selectedRecord,
-                            onClick: () => handleDelete(selectedRecord),
-                        },
-                    ]}
-                />
             </div>
             <ModalForm
                 open={modalOpen}
                 title={form.id ? 'Editar cliente' : 'Novo cliente'}
-                description="Dados cadastrais, fiscais e endereco"
+                description="Dados cadastrais, fiscais e endereço"
                 icon="fa-user-pen"
                 size="lg"
                 onClose={handleCloseModal}
@@ -1372,7 +1323,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 <input value={form.street} onChange={(event) => setForm((current) => ({ ...current, street: event.target.value }))} />
                             </label>
                             <label>
-                                <FieldLabel icon="fa-house" text="Numero" />
+                                <FieldLabel icon="fa-house" text="Número" />
                                 <input value={form.number} onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))} />
                             </label>
                             <label>
@@ -1405,7 +1356,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                     {activeModalTab === 'limits' ? (
                         <div className="ops-workspace-form-grid">
                             <label>
-                                <FieldLabel icon="fa-wallet" text="Limite de credito" />
+                                <FieldLabel icon="fa-wallet" text="Limite de crédito" />
                                 <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
                             </label>
                         </div>

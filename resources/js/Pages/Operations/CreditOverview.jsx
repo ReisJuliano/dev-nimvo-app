@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
-import ActionSidebar from '@/Components/UI/ActionSidebar'
+import ActionButton from '@/Components/UI/ActionButton'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
@@ -67,7 +67,7 @@ function getStatusMeta(status) {
         return { label: 'Com saldo', tone: 'primary' }
     }
 
-    return { label: 'Disponivel', tone: 'muted' }
+    return { label: 'Disponível', tone: 'muted' }
 }
 
 function matchesCustomerFilter(customer, activeFilter) {
@@ -98,7 +98,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
     const status = getStatusMeta(customer.status)
     const historyTotal = sales.reduce((total, sale) => total + Number(sale.credit_amount || 0), 0)
     const whatsappMessage = encodeURIComponent(
-        `Oi, ${customer.name}. Aqui e ${storeName || 'a loja'}. Seu fiado em aberto esta em ${formatMoney(customer.open_credit)}. Podemos combinar o pagamento?`,
+        `Oi, ${customer.name}. Aqui é ${storeName || 'a loja'}. Seu fiado em aberto está em ${formatMoney(customer.open_credit)}. Podemos combinar o pagamento?`,
     )
     const whatsappPhone = String(customer.phone || '').replace(/\D+/g, '')
     const whatsappHref = `https://wa.me/${whatsappPhone || ''}?text=${whatsappMessage}`
@@ -127,7 +127,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
             })
             onReceived?.()
         } catch (receiveError) {
-            setError(receiveError.message || 'Nao foi possivel receber o fiado.')
+            setError(receiveError.message || 'Não foi possível receber o fiado.')
         } finally {
             setReceiving(false)
         }
@@ -204,12 +204,12 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
                             >
                                 <option value="pix">Pix</option>
                                 <option value="cash">Dinheiro</option>
-                                <option value="debit_card">Cartao</option>
-                                <option value="credit_card">Cartao de credito</option>
+                                <option value="debit_card">Cartão</option>
+                                <option value="credit_card">Cartão de crédito</option>
                             </select>
                             <input
                                 className="ui-input"
-                                placeholder="Observacao opcional"
+                                placeholder="Observação opcional"
                                 value={receiveForm.notes}
                                 onChange={(event) => setReceiveForm((current) => ({ ...current, notes: event.target.value }))}
                             />
@@ -233,7 +233,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
 
                     <section className="credit-modal-grid compact">
                         <article className="credit-highlight-card">
-                            <span>Ultimo fiado</span>
+                            <span>Último fiado</span>
                             <strong>{customer.last_credit_at ? formatDateTime(customer.last_credit_at) : 'Sem registro'}</strong>
                         </article>
                         <article className="credit-highlight-card">
@@ -247,7 +247,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
                         <header className="credit-panel-header">
                             <div>
                                 <h3>Histórico recente</h3>
-                                <span>{sales.length} registros no periodo</span>
+                                <span>{sales.length} registros no período</span>
                             </div>
                         </header>
 
@@ -275,7 +275,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
                         ) : (
                             <div className="credit-empty-state small">
                                 <i className="fa-solid fa-clock-rotate-left" />
-                                <span>Quando vender fiado, as cobrancas aparecerao aqui.</span>
+                                <span>Quando vender fiado, as cobranças aparecerão aqui.</span>
                             </div>
                         )}
                     </section>
@@ -412,6 +412,19 @@ export default function CreditOverview({ module }) {
                 <div className="ui-list-page-main">
                     <PageHeader
                         title={module.title}
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-eye" tone="secondary" disabled={!selectedCustomer} onClick={openSelectedCustomer}>
+                                    Ver detalhes
+                                </ActionButton>
+                                <ActionButton icon="fa-hand-holding-dollar" tone="secondary" onClick={() => setActiveFilter('debt')}>
+                                    Mostrar devendo
+                                </ActionButton>
+                                <ActionButton icon="fa-users" onClick={() => router.visit('/clientes')}>
+                                    Ir para clientes
+                                </ActionButton>
+                            </>
+                        )}
                         search={{
                             placeholder: 'Buscar cliente por nome ou telefone',
                             value: searchControl.draftValue,
@@ -464,7 +477,7 @@ export default function CreditOverview({ module }) {
                                 },
                                 {
                                     key: 'available_credit',
-                                    label: 'Disponivel',
+                                    label: 'Disponível',
                                     align: 'right',
                                     render: (customer) => formatMoney(customer.available_credit),
                                 },
@@ -486,7 +499,7 @@ export default function CreditOverview({ module }) {
                                 },
                                 {
                                     key: 'last_credit_at',
-                                    label: 'Ultimo lanc.',
+                                    label: 'Último lanç.',
                                     render: (customer) => customer.last_credit_at ? formatDateTime(customer.last_credit_at) : 'Sem registro',
                                 },
                                 {
@@ -507,7 +520,7 @@ export default function CreditOverview({ module }) {
                                 setSelectedCustomerId(customer.id)
                                 setActiveCustomerId(customer.id)
                             }}
-                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Quando vender fiado, as cobrancas aparecerao aqui.'}
+                            emptyMessage={hasAppliedFilters ? 'Nenhum cliente encontrado' : 'Quando vender fiado, as cobranças aparecerão aqui.'}
                             emptyIcon="fa-user-slash"
                             actions={(customer) => [
                                 {
@@ -529,32 +542,6 @@ export default function CreditOverview({ module }) {
                         <span>Limite total: <strong>{formatMoney(module.portfolio_summary?.total_limit || 0)}</strong></span>
                     </div>
                 </div>
-
-                <ActionSidebar
-                    storageKey="credit-overview"
-                    actions={[
-                        {
-                            key: 'view',
-                            icon: 'fa-eye',
-                            label: 'Ver detalhes',
-                            disabled: !selectedCustomer,
-                            onClick: openSelectedCustomer,
-                        },
-                        {
-                            key: 'debt',
-                            icon: 'fa-hand-holding-dollar',
-                            label: 'Mostrar devendo',
-                            onClick: () => setActiveFilter('debt'),
-                        },
-                        {
-                            key: 'customers',
-                            icon: 'fa-users',
-                            label: 'Ir para clientes',
-                            dividerBefore: true,
-                            onClick: () => router.visit('/clientes'),
-                        },
-                    ]}
-                />
             </div>
 
             <CreditCustomerModal

@@ -47,6 +47,7 @@ function resolveQuickDates(enabled, customOptions) {
 export default function PageHeader({
     title,
     search = null,
+    actions = null,
     filters = [],
     activeFilter = null,
     onFilterChange = null,
@@ -61,6 +62,7 @@ export default function PageHeader({
     const quickDateButtons = resolveQuickDates(quickDates, quickDateOptions)
     const hasDateRange = Boolean(dateRange)
     const hasApplyButton = Boolean(onApply || search?.onApply || hasDateRange)
+    const hasPrimaryTools = Boolean(search || hasDateRange || hasApplyButton)
     const hasSecondaryTools = filters.length > 0 || quickDateButtons.length > 0
 
     function handleSearchChange(event) {
@@ -141,68 +143,77 @@ export default function PageHeader({
 
     return (
         <section className={['ui-page-header', className].filter(Boolean).join(' ')}>
-            {title ? <h1 className="ui-page-header-title">{title}</h1> : null}
+            {title || actions ? (
+                <div className="ui-page-header-titlebar">
+                    {title ? <h1 className="ui-page-header-title">{title}</h1> : <span />}
+                    {actions ? <div className="ui-page-header-actions">{actions}</div> : null}
+                </div>
+            ) : null}
 
-            <div className="ui-page-header-row">
-                <label className="ui-page-header-search">
-                    <i className="fa-solid fa-magnifying-glass" />
-                    <input
-                        type="search"
-                        placeholder={search?.placeholder || 'Buscar'}
-                        value={search?.value || ''}
-                        onChange={handleSearchChange}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                                event.preventDefault()
-                                handleApply()
-                            }
-                        }}
-                    />
-                </label>
-
-                <div className="ui-page-header-date-tools">
-                    {hasDateRange ? (
-                        <div className="ui-page-header-date-range">
+            {hasPrimaryTools ? (
+                <div className="ui-page-header-row">
+                    {search ? (
+                        <label className="ui-page-header-search">
+                            <i className="fa-solid fa-magnifying-glass" />
                             <input
-                                aria-label="Data inicial"
-                                type="date"
-                                value={dateRange?.from || ''}
-                                onChange={(event) => handleDateChange('from', event.target.value)}
+                                type="search"
+                                placeholder={search?.placeholder || 'Buscar'}
+                                value={search?.value || ''}
+                                onChange={handleSearchChange}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault()
+                                        handleApply()
+                                    }
+                                }}
                             />
-                            <span className="ui-page-header-date-separator">
-                                <i className="fa-solid fa-arrow-right" />
-                            </span>
-                            <input
-                                aria-label="Data final"
-                                type="date"
-                                value={dateRange?.to || ''}
-                                onChange={(event) => handleDateChange('to', event.target.value)}
-                            />
-                        </div>
+                        </label>
                     ) : null}
 
-                    {hasApplyButton ? (
+                    <div className="ui-page-header-date-tools">
+                        {hasDateRange ? (
+                            <div className="ui-page-header-date-range">
+                                <input
+                                    aria-label="Data inicial"
+                                    type="date"
+                                    value={dateRange?.from || ''}
+                                    onChange={(event) => handleDateChange('from', event.target.value)}
+                                />
+                                <span className="ui-page-header-date-separator">
+                                    <i className="fa-solid fa-arrow-right" />
+                                </span>
+                                <input
+                                    aria-label="Data final"
+                                    type="date"
+                                    value={dateRange?.to || ''}
+                                    onChange={(event) => handleDateChange('to', event.target.value)}
+                                />
+                            </div>
+                        ) : null}
+
+                        {hasApplyButton ? (
+                            <button
+                                type="button"
+                                className="ui-page-header-apply"
+                                onClick={handleApply}
+                            >
+                                <i className="fa-solid fa-filter" />
+                                <span>{applyLabel}</span>
+                            </button>
+                        ) : null}
+
                         <button
                             type="button"
-                            className="ui-page-header-apply"
-                            onClick={handleApply}
+                            className="ui-page-header-reset ui-tooltip"
+                            data-tooltip="Resetar filtros"
+                            title="Resetar filtros"
+                            onClick={handleReset}
                         >
-                            <i className="fa-solid fa-filter" />
-                            <span>{applyLabel}</span>
+                            <i className="fa-solid fa-rotate-left" />
                         </button>
-                    ) : null}
-
-                    <button
-                        type="button"
-                        className="ui-page-header-reset ui-tooltip"
-                        data-tooltip="Resetar filtros"
-                        title="Resetar filtros"
-                        onClick={handleReset}
-                    >
-                        <i className="fa-solid fa-rotate-left" />
-                    </button>
+                    </div>
                 </div>
-            </div>
+            ) : null}
 
             {hasSecondaryTools ? (
                 <div className="ui-page-header-row secondary">

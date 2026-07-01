@@ -3,12 +3,17 @@ import { confirmPopup } from '@/lib/errorPopup'
 import { requiredMessage, validateEmail } from '@/lib/formValidation'
 import { apiRequest } from '@/lib/http'
 import ActionButton from '@/Components/UI/ActionButton'
+import DataTable from '@/Components/UI/DataTable'
+import ModalForm from '@/Components/UI/ModalForm'
+import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import {
     Badge,
     buildRecordsUrl,
     EmptyState,
     Feedback,
     ListCard,
+    MetricGrid,
     WorkspaceCollectionShell,
     upsertRecord,
 } from './shared'
@@ -48,7 +53,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
     const metrics = useMemo(
         () => [
             { label: 'Produtores', value: records.length, caption: 'Base total cadastrada' },
-            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Disponíveis para compras' },
+            { label: 'Ativos', value: records.filter((record) => record.active).length, caption: 'Disponiveis para compras' },
             { label: 'Com contato', value: records.filter((record) => record.phone || record.email).length, caption: 'Telefone ou e-mail preenchido' },
         ],
         [records],
@@ -65,7 +70,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
         }
 
         if (!validateEmail(form.email)) {
-            setFeedback({ type: 'warning', text: 'Informe um endereço de e-mail válido.' })
+            setFeedback({ type: 'warning', text: 'Informe um endereco de e-mail valido.' })
             return
         }
 
@@ -151,7 +156,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                             <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
                         </label>
                         <label className="span-2">
-                            <FieldLabel icon="fa-location-dot" text="Região" />
+                            <FieldLabel icon="fa-location-dot" text="Regiao" />
                             <input value={form.region} onChange={(event) => setForm((current) => ({ ...current, region: event.target.value }))} />
                         </label>
                         <label className="span-2">
@@ -172,7 +177,7 @@ export function ProducersWorkspace({ moduleKey, payload }) {
                                 </ActionButton>
                             ) : null}
                             <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar produtor'}
+                                {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar produtor'}
                             </ActionButton>
                         </div>
                     </form>
@@ -213,10 +218,14 @@ export function UsersWorkspace({ moduleKey, payload }) {
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('active')
     const [form, setForm] = useState(emptyForm)
+    const [selectedId, setSelectedId] = useState((payload.records || [])[0]?.id ?? null)
+    const [modalOpen, setModalOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+
+    const roleOptions = payload.roles || []
 
     const filteredRecords = useMemo(
         () => {
@@ -224,23 +233,69 @@ export function UsersWorkspace({ moduleKey, payload }) {
                 return []
             }
 
+            if (activeTab === 'all') {
+                return records
+            }
+
             return records.filter((record) => (activeTab === 'active' ? record.active : !record.active))
         },
         [hasLoadedRecords, records, activeTab],
     )
 
+    const selectedRecord = useMemo(
+        () => filteredRecords.find((record) => String(record.id) === String(selectedId))
+            || records.find((record) => String(record.id) === String(selectedId))
+            || null,
+        [filteredRecords, records, selectedId],
+    )
+
     const metrics = useMemo(
         () => [
-            { label: 'Usuários', value: records.length, caption: 'Base total cadastrada' },
+            { label: 'Usuarios', value: records.length, caption: 'Base total cadastrada' },
             { label: 'Gerentes', value: records.filter((record) => record.role === 'manager').length, caption: 'Podem autorizar descontos' },
-            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edição do fechamento' },
+            { label: 'Supervisores', value: records.filter((record) => record.is_supervisor).length, caption: 'Liberam edicao do fechamento' },
             { label: 'Com senha gerencial', value: records.filter((record) => record.has_discount_authorization_password).length, caption: 'Senha dedicada cadastrada' },
         ],
         [records],
     )
 
+    const filterCounts = useMemo(() => ({
+        all: records.length,
+        active: records.filter((record) => record.active).length,
+        inactive: records.filter((record) => !record.active).length,
+    }), [records])
+
+    function roleLabel(value) {
+        return roleOptions.find((role) => role.value === value)?.label || value || '-'
+    }
+
+    function buildUserForm(record = null) {
+        return {
+            ...emptyForm,
+            ...(record || {}),
+            password: '',
+            discount_authorization_password: '',
+        }
+    }
+
     function handleCreate() {
-        setForm(emptyForm)
+        setForm(buildUserForm())
+        setModalOpen(true)
+    }
+
+    function handleEdit(record = selectedRecord) {
+        if (!record) {
+            return
+        }
+
+        setSelectedId(record.id)
+        setForm(buildUserForm(record))
+        setModalOpen(true)
+    }
+
+    function handleCloseModal() {
+        setForm(buildUserForm())
+        setModalOpen(false)
     }
 
     async function handleLoadRecords() {
@@ -249,14 +304,13 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
         try {
             const response = await apiRequest(buildRecordsUrl(moduleKey), {
-                params: {
-                    applied: 1,
-                },
+                params: { applied: 1 },
             })
-
-            setRecords(response.records || [])
+            const nextRecords = response.records || []
+            setRecords(nextRecords)
             setHasLoadedRecords(true)
-            setForm(emptyForm)
+            setSelectedId(nextRecords[0]?.id ?? null)
+            setForm(buildUserForm())
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -268,8 +322,8 @@ export function UsersWorkspace({ moduleKey, payload }) {
         event.preventDefault()
         setFeedback(null)
 
-        const requiredError = requiredMessage(form.name, 'o nome do usuário')
-            || requiredMessage(form.username, 'o usuário de acesso')
+        const requiredError = requiredMessage(form.name, 'o nome do usuario')
+            || requiredMessage(form.username, 'o usuario de acesso')
 
         if (requiredError) {
             setFeedback({ type: 'warning', text: requiredError })
@@ -285,10 +339,8 @@ export function UsersWorkspace({ moduleKey, payload }) {
 
             setRecords((current) => upsertRecord(current, response.record))
             setHasLoadedRecords(true)
-            setForm({
-                ...emptyForm,
-                ...response.record,
-            })
+            setSelectedId(response.record.id)
+            handleCloseModal()
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -297,15 +349,15 @@ export function UsersWorkspace({ moduleKey, payload }) {
         }
     }
 
-    async function handleDelete() {
-        if (!form.id) {
+    async function handleDeleteRecord(record = selectedRecord) {
+        if (!record?.id) {
             return
         }
 
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Remover usuário',
-            message: `Remover o usuário "${form.name}"?`,
+            title: 'Remover usuario',
+            message: `Remover "${record.name}"?`,
             confirmLabel: 'Remover',
             cancelLabel: 'Cancelar',
         })
@@ -315,9 +367,17 @@ export function UsersWorkspace({ moduleKey, payload }) {
         }
 
         try {
-            const response = await apiRequest(buildRecordsUrl(moduleKey, form.id), { method: 'delete' })
-            setRecords((current) => current.filter((record) => record.id !== form.id))
-            setForm(emptyForm)
+            const response = await apiRequest(buildRecordsUrl(moduleKey, record.id), { method: 'delete' })
+            setRecords((current) => current.filter((entry) => entry.id !== record.id))
+
+            if (String(selectedId) === String(record.id)) {
+                setSelectedId(null)
+            }
+
+            if (String(form.id) === String(record.id)) {
+                handleCloseModal()
+            }
+
             setFeedback({ type: 'success', text: response.message })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -327,130 +387,175 @@ export function UsersWorkspace({ moduleKey, payload }) {
     return (
         <>
             <Feedback feedback={feedback} />
-            <WorkspaceCollectionShell
-                tabs={[
-                    { key: 'active', label: 'Ativos', icon: 'fa-user-check' },
-                    { key: 'inactive', label: 'Inativos', icon: 'fa-user-slash' },
-                ]}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                listTitle="Usuários"
-                listIcon="fa-user-check"
-                listCount={`${filteredRecords.length} registro(s)`}
-                createLabel="Novo usuário"
-                onCreate={handleCreate}
-                listActions={(
-                    <ActionButton icon="fa-magnifying-glass" onClick={() => void handleLoadRecords()} disabled={loading}>
-                        {loading ? 'Buscando...' : 'Buscar'}
-                    </ActionButton>
-                )}
-                summaryItems={metrics}
-                emptyState={<EmptyState title={hasLoadedRecords ? 'Sem usuários nesse recorte' : 'Clique em Buscar para listar'} text={hasLoadedRecords ? 'Ajuste o recorte ou crie um novo cadastro.' : 'A tela não carrega usuários automaticamente.'} />}
-                formTitle={form.id ? 'Editar usuário' : 'Novo usuário'}
-                formSubtitle="Perfis e autorizações"
-                formChildren={(
-                    <form className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
-                        <label>
-                            <FieldLabel icon="fa-user" text="Nome" />
-                            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-at" text="Usuário" />
-                            <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-user-shield" text="Perfil" />
-                            <select value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
-                                {(payload.roles || []).map((role) => (
-                                    <option key={role.value} value={role.value}>
-                                        {role.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <label>
-                            <FieldLabel icon="fa-key" text={form.id ? 'Nova senha de acesso' : 'Senha de acesso'} />
-                            <input
-                                type="password"
-                                value={form.password}
-                                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                                placeholder={form.id ? 'Preencha apenas para alterar' : 'Minimo de 4 caracteres'}
-                            />
-                        </label>
-                        <label className="span-2">
-                            <FieldLabel icon="fa-money-check-dollar" text="Senha de autorização gerencial" />
-                            <input
-                                type="password"
-                                value={form.discount_authorization_password}
-                                onChange={(event) => setForm((current) => ({ ...current, discount_authorization_password: event.target.value }))}
-                                placeholder={
-                                    form.has_discount_authorization_password
-                                        ? 'Preencha apenas para trocar a senha gerencial'
-                                        : 'Defina a senha usada para autorizar descontos'
-                                }
-                            />
-                        </label>
-                        <label className="ops-workspace-inline-toggle">
-                            <input
-                                type="checkbox"
-                                checked={Boolean(form.is_supervisor)}
-                                onChange={(event) => setForm((current) => ({ ...current, is_supervisor: event.target.checked }))}
-                            />
-                            <span>Pode atuar como supervisor no fechamento de caixa</span>
-                        </label>
-                        <label className="ops-workspace-inline-toggle">
-                            <input type="checkbox" checked={Boolean(form.active)} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} />
-                            <span>Usuario ativo</span>
-                        </label>
-                        <label className="ops-workspace-inline-toggle">
-                            <input
-                                type="checkbox"
-                                checked={Boolean(form.must_change_password)}
-                                onChange={(event) => setForm((current) => ({ ...current, must_change_password: event.target.checked }))}
-                            />
-                            <span>Exigir troca de senha no próximo login</span>
-                        </label>
-                        <div className="ops-workspace-actions span-2">
-                            <ActionButton tone="ghost" onClick={() => setForm(emptyForm)}>
-                                Limpar
-                            </ActionButton>
-                            {form.id ? (
-                                <ActionButton tone="danger" onClick={handleDelete}>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Usuarios"
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-magnifying-glass" tone="secondary" onClick={() => void handleLoadRecords()} disabled={loading}>
+                                    {loading ? 'Buscando...' : 'Buscar'}
+                                </ActionButton>
+                                <ActionButton icon="fa-plus" onClick={handleCreate}>
+                                    Novo usuario
+                                </ActionButton>
+                                <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => handleEdit(selectedRecord)}>
+                                    Editar
+                                </ActionButton>
+                                <ActionButton icon="fa-trash-can" tone="danger" disabled={!selectedRecord} onClick={() => handleDeleteRecord(selectedRecord)}>
                                     Excluir
                                 </ActionButton>
-                            ) : null}
-                            <ActionButton type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : form.id ? 'Salvar alterações' : 'Salvar usuário'}
-                            </ActionButton>
-                        </div>
-                    </form>
-                )}
-            >
-                <div className="ops-workspace-list-stack">
-                    {filteredRecords.map((record) => (
-                        <ListCard
-                            key={record.id}
-                            active={form.id === record.id}
-                            onClick={() =>
-                                setForm({
-                                    ...emptyForm,
-                                    ...record,
-                                    password: '',
-                                    discount_authorization_password: '',
-                                })
-                            }
-                            title={record.name}
-                            badge={<Badge tone={record.active ? 'success' : 'muted'}>{record.role}</Badge>}
-                            description={`Usuario: ${record.username}`}
-                            meta={[
-                                record.must_change_password ? 'Troca obrigatoria de senha' : 'Senha livre',
-                                record.is_supervisor ? 'Supervisor de fechamento' : 'Sem perfil de supervisor',
-                                record.has_discount_authorization_password ? 'Senha gerencial ativa' : 'Sem senha gerencial',
+                            </>
+                        )}
+                        filters={[
+                            { key: 'all', value: 'all', label: 'Todos', count: filterCounts.all },
+                            { key: 'active', value: 'active', label: 'Ativos', count: filterCounts.active },
+                            { key: 'inactive', value: 'inactive', label: 'Inativos', count: filterCounts.inactive },
+                        ]}
+                        activeFilter={activeTab}
+                        onFilterChange={setActiveTab}
+                    />
+
+                    <MetricGrid items={metrics} />
+
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                {
+                                    key: 'name',
+                                    label: 'Nome',
+                                    render: (record) => <strong>{record.name}</strong>,
+                                },
+                                {
+                                    key: 'username',
+                                    label: 'Usuario',
+                                    render: (record) => record.username,
+                                },
+                                {
+                                    key: 'role',
+                                    label: 'Perfil',
+                                    render: (record) => roleLabel(record.role),
+                                },
+                                {
+                                    key: 'supervisor',
+                                    label: 'Supervisor',
+                                    render: (record) => (record.is_supervisor ? 'Sim' : 'Nao'),
+                                },
+                                {
+                                    key: 'manager_password',
+                                    label: 'Senha gerencial',
+                                    render: (record) => (record.has_discount_authorization_password ? 'Ativa' : 'Nao cadastrada'),
+                                },
+                                {
+                                    key: 'status',
+                                    label: 'Status',
+                                    render: (record) => <StatusBadge compact label={record.active ? 'Ativo' : 'Inativo'} tone={record.active ? 'active' : 'inactive'} />,
+                                },
+                            ]}
+                            rows={filteredRecords}
+                            rowKey="id"
+                            selectedRowKey={selectedId}
+                            onRowClick={(record) => setSelectedId(record.id)}
+                            onRowDoubleClick={(record) => handleEdit(record)}
+                            emptyMessage={loading ? 'Buscando usuarios' : hasLoadedRecords ? 'Nenhum usuario encontrado' : 'Clique em Buscar para listar'}
+                            emptyIcon={loading ? 'fa-spinner fa-spin' : 'fa-user-check'}
+                            actions={(record) => [
+                                {
+                                    key: 'view',
+                                    icon: 'fa-eye',
+                                    label: 'Ver detalhes',
+                                    tone: 'primary',
+                                    onClick: () => handleEdit(record),
+                                },
                             ]}
                         />
-                    ))}
+                    </section>
                 </div>
-            </WorkspaceCollectionShell>
+            </div>
+
+            <ModalForm
+                open={modalOpen}
+                title={form.id ? 'Editar usuario' : 'Novo usuario'}
+                description="Perfis e autorizacoes"
+                icon="fa-user-shield"
+                size="lg"
+                onClose={handleCloseModal}
+                footer={(
+                    <>
+                        {form.id ? (
+                            <ActionButton tone="danger" onClick={() => handleDeleteRecord(form)}>
+                                Excluir
+                            </ActionButton>
+                        ) : <span />}
+                        <ActionButton form="user-modal-form" type="submit" disabled={saving}>
+                            {saving ? 'Salvando...' : form.id ? 'Salvar alteracoes' : 'Salvar usuario'}
+                        </ActionButton>
+                    </>
+                )}
+            >
+                <form id="user-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
+                    <label>
+                        <FieldLabel icon="fa-user" text="Nome" />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-at" text="Usuario" />
+                        <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-user-shield" text="Perfil" />
+                        <select value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
+                            {roleOptions.map((role) => (
+                                <option key={role.value} value={role.value}>
+                                    {role.label}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label>
+                        <FieldLabel icon="fa-key" text={form.id ? 'Nova senha de acesso' : 'Senha de acesso'} />
+                        <input
+                            type="password"
+                            value={form.password}
+                            onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+                            placeholder={form.id ? 'Preencha apenas para alterar' : 'Minimo de 4 caracteres'}
+                        />
+                    </label>
+                    <label className="span-2">
+                        <FieldLabel icon="fa-money-check-dollar" text="Senha de autorizacao gerencial" />
+                        <input
+                            type="password"
+                            value={form.discount_authorization_password}
+                            onChange={(event) => setForm((current) => ({ ...current, discount_authorization_password: event.target.value }))}
+                            placeholder={
+                                form.has_discount_authorization_password
+                                    ? 'Preencha apenas para trocar a senha gerencial'
+                                    : 'Defina a senha usada para autorizar descontos'
+                            }
+                        />
+                    </label>
+                    <label className="ops-workspace-inline-toggle">
+                        <input
+                            type="checkbox"
+                            checked={Boolean(form.is_supervisor)}
+                            onChange={(event) => setForm((current) => ({ ...current, is_supervisor: event.target.checked }))}
+                        />
+                        <span>Pode atuar como supervisor no fechamento de caixa</span>
+                    </label>
+                    <label className="ops-workspace-inline-toggle">
+                        <input type="checkbox" checked={Boolean(form.active)} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} />
+                        <span>Usuario ativo</span>
+                    </label>
+                    <label className="ops-workspace-inline-toggle">
+                        <input
+                            type="checkbox"
+                            checked={Boolean(form.must_change_password)}
+                            onChange={(event) => setForm((current) => ({ ...current, must_change_password: event.target.checked }))}
+                        />
+                        <span>Exigir troca de senha no proximo login</span>
+                    </label>
+                </form>
+            </ModalForm>
         </>
     )
 }
