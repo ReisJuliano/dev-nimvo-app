@@ -489,7 +489,7 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         <div className="cfg-section-title">
                             <i className="fa-solid fa-mobile-screen-button" />
                             App Nimvo (mobile)
-                            <p>Compartilhe o QR code com o gerente/dono da loja para instalar o app gerencial no celular.</p>
+                            <p>Compartilhe o QR code ou o link com o gerente/dono da loja para instalar o app gerencial no celular.</p>
                         </div>
 
                         <div className="cfg-app-download">
