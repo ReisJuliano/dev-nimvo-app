@@ -346,10 +346,26 @@ func writeReceiptPreviewPDF(config PrinterConfig, kind string, lines []string) (
 
 func buildReceiptPreviewPDF(lines []string) ([]byte, error) {
 	const (
-		pageWidth  = 226
-		margin     = 18
-		lineHeight = 12
+		margin       = 18
+		lineHeight   = 12
+		fontSize     = 10
+		minPageWidth = 226
 	)
+
+	// Courier has a fixed advance of 0.6em per character; size the page to
+	// the longest line so monospaced receipt columns are not clipped.
+	charWidth := fontSize * 0.6
+	maxChars := 0
+	for _, line := range lines {
+		if length := len([]rune(normalizePreviewText(line))); length > maxChars {
+			maxChars = length
+		}
+	}
+
+	pageWidth := int(float64(maxChars)*charWidth) + margin*2
+	if pageWidth < minPageWidth {
+		pageWidth = minPageWidth
+	}
 
 	pageHeight := margin*2 + maxInt(1, len(lines))*lineHeight + 12
 	if pageHeight < 140 {
@@ -358,7 +374,7 @@ func buildReceiptPreviewPDF(lines []string) ([]byte, error) {
 
 	stream := &bytes.Buffer{}
 	stream.WriteString("BT\n")
-	stream.WriteString("/F1 10 Tf\n")
+	stream.WriteString(fmt.Sprintf("/F1 %d Tf\n", fontSize))
 	stream.WriteString(fmt.Sprintf("%d TL\n", lineHeight))
 	stream.WriteString(fmt.Sprintf("1 0 0 1 %d %d Tm\n", margin, pageHeight-margin))
 	for index, line := range lines {
