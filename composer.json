@@ -7,7 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
-        "endroid/qr-code": "^6.1",
+        "endroid/qr-code": "^6.0.9",
         "inertiajs/inertia-laravel": "^3.0",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.3",
@@ -86,6 +86,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.6"
         }
     },
     "minimum-stability": "stable",
