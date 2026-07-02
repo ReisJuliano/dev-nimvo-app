@@ -23,6 +23,7 @@ class AppDownloadController extends Controller
                 'versionLabel' => $packageService->versionLabel(),
                 'store' => $store,
                 'cacheKey' => $cacheKey,
+                'autoDownload' => $request->boolean('download'),
                 'downloadUrl' => $cacheKey
                     ? route('app.download.apk', ['v' => $cacheKey])
                     : route('app.download.apk'),
@@ -43,9 +44,15 @@ class AppDownloadController extends Controller
     public function qr(AppDownloadPackageService $packageService): Response
     {
         $cacheKey = $packageService->cacheKey();
-        $url = $cacheKey
-            ? route('app.download.apk', ['v' => $cacheKey])
-            : route('app.download.apk');
+
+        // Point the QR at the landing page (with an auto-download flag) instead
+        // of straight at the raw .apk. Hitting the apk directly leaves the phone
+        // browser on a blank screen while ~70 MB downloads with zero feedback,
+        // which feels frozen. The page shows a progress bar right away.
+        $url = route('app.download.page', array_filter([
+            'v' => $cacheKey,
+            'download' => 1,
+        ]));
 
         $qrCode = new QrCode(data: $url, size: 320, margin: 10);
         $result = (new SvgWriter())->write($qrCode);

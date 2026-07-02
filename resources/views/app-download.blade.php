@@ -148,6 +148,19 @@
             transition: width 0.15s ease;
         }
 
+        /* Indeterminate sweep shown while the download is being prepared, before
+           the first bytes arrive, so the bar never sits blank at 0%. */
+        .progress-fill.is-indeterminate {
+            width: 40%;
+            transition: none;
+            animation: progress-sweep 1.1s ease-in-out infinite;
+        }
+
+        @keyframes progress-sweep {
+            0% { margin-left: -40%; }
+            100% { margin-left: 100%; }
+        }
+
         .progress-label {
             font-size: 0.78rem;
             color: var(--guest-muted);
@@ -184,14 +197,16 @@
                 Nao foi possivel iniciar o download automatico. Toque em "Baixar o APK" novamente ou use o link direto.
             </div>
 
-            <div id="progressWrap" class="progress-wrap">
+            <div id="progressWrap" class="progress-wrap {{ ($autoDownload ?? false) ? 'is-active' : '' }}">
                 <div class="progress-track">
-                    <div id="progressFill" class="progress-fill"></div>
+                    <div id="progressFill" class="progress-fill {{ ($autoDownload ?? false) ? 'is-indeterminate' : '' }}"></div>
                 </div>
-                <div id="progressLabel" class="progress-label">Preparando o download...</div>
+                <div id="progressLabel" class="progress-label">
+                    {{ ($autoDownload ?? false) ? 'O download vai iniciar em instantes...' : 'Preparando o download...' }}
+                </div>
             </div>
 
-            <button type="button" id="downloadButton" class="download-button" data-url="{{ $downloadUrl }}">
+            <button type="button" id="downloadButton" class="download-button" data-url="{{ $downloadUrl }}" @if ($autoDownload ?? false) data-autostart="1" @endif>
                 Baixar o APK
             </button>
 
@@ -225,6 +240,11 @@
                     return (bytes / (1024 * 1024)).toFixed(1);
                 }
 
+                function clearIndeterminate() {
+                    fill.classList.remove('is-indeterminate');
+                    fill.style.marginLeft = '0';
+                }
+
                 async function downloadWithProgress(url) {
                     const response = await fetch(url, { cache: 'no-store' });
                     if (!response.ok || !response.body) {
@@ -240,6 +260,9 @@
                         const { done, value } = await reader.read();
                         if (done) break;
 
+                        // First bytes are in: switch from the "preparing" sweep to a
+                        // real, growing progress bar.
+                        clearIndeterminate();
                         chunks.push(value);
                         received += value.length;
 
@@ -252,18 +275,22 @@
                         }
                     }
 
+                    clearIndeterminate();
                     fill.style.width = '100%';
                     label.textContent = 'Finalizando...';
 
                     return new Blob(chunks, { type: 'application/vnd.android.package-archive' });
                 }
 
-                button.addEventListener('click', async function () {
+                let inFlight = false;
+
+                async function startDownload() {
+                    if (inFlight) return;
+                    inFlight = true;
+
                     errorBox.classList.remove('is-active');
                     button.setAttribute('disabled', 'disabled');
                     wrap.classList.add('is-active');
-                    fill.style.width = '0%';
-                    label.textContent = 'Preparando o download...';
 
                     try {
                         const blob = await downloadWithProgress(button.dataset.url);
@@ -277,12 +304,26 @@
                         setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
                         label.textContent = 'Download concluido! Abra o arquivo pra instalar.';
                     } catch (error) {
+                        clearIndeterminate();
+                        fill.style.width = '0%';
                         errorBox.classList.add('is-active');
                         wrap.classList.remove('is-active');
                     } finally {
                         button.removeAttribute('disabled');
+                        inFlight = false;
                     }
-                });
+                }
+
+                button.addEventListener('click', startDownload);
+
+                // Arriving from the QR code (?download=1): kick the download off
+                // automatically so the phone lands on a screen with an active
+                // progress bar instead of a blank waiting page.
+                if (button.dataset.autostart === '1') {
+                    window.addEventListener('load', function () {
+                        setTimeout(startDownload, 400);
+                    });
+                }
             })();
         </script>
     @endif
