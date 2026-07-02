@@ -30,20 +30,21 @@ const ADDRESS_FIELDS = [
 const TRANSMISSION_FIELDS = [
     { name: 'csc_id', label: 'CSC ID', icon: 'fa-hashtag', placeholder: '000001' },
     { name: 'csc_token', label: 'CSC Token', icon: 'fa-key', placeholder: 'Cole o token da SEFAZ', note: 'Deixe em branco para manter o token atual.' },
-    { name: 'technical_contact_name', label: 'Responsóvel técnico', icon: 'fa-user-tie', placeholder: 'Equipe fiscal ou software house', full: true },
+    { name: 'technical_contact_name', label: 'Responsável técnico', icon: 'fa-user-tie', placeholder: 'Equipe fiscal ou software house', full: true },
     { name: 'technical_contact_email', label: 'Email resptec', icon: 'fa-envelope', placeholder: 'fiscal@empresa.com' },
     { name: 'technical_contact_phone', label: 'Telefone resptec', icon: 'fa-phone-volume', placeholder: '11999999999' },
     { name: 'technical_contact_cnpj', label: 'CNPJ resptec', icon: 'fa-id-card-clip', placeholder: '12345678000123' },
 ]
 
-function AdminSwitch({ checked, onChange, ariaLabel }) {
+function AdminSwitch({ checked, onChange, ariaLabel, disabled = false, saving = false }) {
     return (
         <button
             type="button"
             role="switch"
             aria-checked={checked}
             aria-label={ariaLabel}
-            className={`central-admin-toggle ${checked ? 'is-checked' : ''}`}
+            className={`central-admin-toggle ${checked ? 'is-checked' : ''} ${saving ? 'is-saving' : ''}`}
+            disabled={disabled}
             onClick={onChange}
         />
     )
@@ -110,23 +111,21 @@ function renderField(field, form, canPersist, onChange, fiscal) {
     )
 }
 
+/**
+ * Fiscal tab content for the unified tenant management panel (no modal
+ * chrome of its own - the parent panel provides the backdrop/header/footer).
+ */
 export default function TenantFiscalModal({
-    open,
     tenant,
     form,
-    busy,
     autofillBusy = false,
     autofillMeta = null,
-    onClose,
     onChange,
-    onSubmit,
     onAutofillByCnpj,
     onAutofillByCertificate,
+    toggleBusy = false,
+    onToggleActive,
 }) {
-    if (!open) {
-        return null
-    }
-
     const fiscal = tenant?.fiscal
     const certificate = tenant?.local_agent?.device
         ? {
@@ -146,235 +145,211 @@ export default function TenantFiscalModal({
     const autofillMissingCount = Array.isArray(autofillMeta?.missing_fields) ? autofillMeta.missing_fields.length : 0
 
     return (
-        <div className="central-admin-modal-backdrop" onClick={onClose}>
-            <div className="central-admin-modal" onClick={(event) => event.stopPropagation()}>
-                <div className="central-admin-modal-header">
-                    <div className="central-admin-modal-titlebox">
-                        <div className="central-admin-modal-icon">
-                            <i className="fa-solid fa-key" />
-                        </div>
-                        <div>
-                            <h3>{tenant ? `Fiscal de ${tenant.name}` : 'Fiscal'}</h3>
-                        </div>
+        <>
+            <div className="central-admin-field is-full central-admin-fiscal-status-top">
+                <span className="central-admin-field-label">Emissão de NFC-e</span>
+                <div className="central-admin-list-row">
+                    <div className="central-admin-list-copy">
+                        <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
+                        <small>
+                            {form.active
+                                ? 'Esse cliente emite NFC-e de verdade (se o perfil estiver completo).'
+                                : 'Nenhuma NFC-e é transmitida à SEFAZ enquanto estiver inativo.'}
+                        </small>
                     </div>
-
-                    <button type="button" className="central-admin-modal-close" onClick={onClose}>
-                        <i className="fa-solid fa-xmark" />
-                    </button>
+                    <AdminSwitch
+                        checked={Boolean(form.active)}
+                        ariaLabel="Alternar status do perfil fiscal"
+                        disabled={toggleBusy}
+                        saving={toggleBusy}
+                        onChange={onToggleActive || (() => onChange('active', !form.active))}
+                    />
                 </div>
-
-                <form onSubmit={onSubmit}>
-                    <div className="central-admin-modal-body">
-                        <div className="central-admin-agent-grid">
-                            <article className="central-admin-license-card central-admin-agent-card">
-                                <div className="central-admin-license-card-top">
-                                    <h3>Emitente NFC-e</h3>
-                                    <span className={`central-admin-status-pill ${fiscal?.tone || 'is-muted'}`}>
-                                        {fiscal?.label || 'Sem fiscal'}
-                                    </span>
-                                </div>
-
-                                <div className="central-admin-agent-list">
-                                    <div className="central-admin-agent-item">
-                                        <strong>Empresa</strong>
-                                        <span>{fiscal?.company_name || 'Não informado'}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Ambiente</strong>
-                                        <span>{environmentLabel}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Proximo</strong>
-                                        <span>{fiscal?.next_number || 'Não informado'}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Pendencias</strong>
-                                        <span>{pendingCount}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Atualizado</strong>
-                                        <span>{fiscal?.updated_label || 'Não informado'}</span>
-                                    </div>
-                                </div>
-
-                                <p className="central-admin-field-note">
-                                    {fiscal?.status === 'missing_table'
-                                        ? 'Esse tenant ainda não recebeu as migrations fiscais. Sem a tabela fiscal não ha como salvar o emitente.'
-                                        : hasProfile
-                                            ? 'Os dados s?o gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
-                                            : 'Ao salvar este formulario, o painel cria o perfil fiscal NFC-e 65 diretamente no banco do tenant.'}
-                                </p>
-                            </article>
-
-                            <article className="central-admin-license-card central-admin-agent-card">
-                                <div className="central-admin-license-card-top">
-                                    <h3>Transmissao</h3>
-                                    <span className={`central-admin-status-pill ${fiscal?.transmission_ready ? 'is-active' : 'is-info'}`}>
-                                        {fiscal?.transmission_ready ? 'Pronta' : 'Pendente'}
-                                    </span>
-                                </div>
-
-                                <div className="central-admin-agent-list">
-                                    <div className="central-admin-agent-item">
-                                        <strong>CSC ID</strong>
-                                        <span>{fiscal?.csc_id || 'Não informado'}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Token</strong>
-                                        <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Não configurado'}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>RespTec</strong>
-                                        <span>{fiscal?.technical_contact_name || 'Não informado'}</span>
-                                    </div>
-                                    <div className="central-admin-agent-item">
-                                        <strong>Perfil</strong>
-                                        <span>{fiscal?.profile_ready ? 'Completo' : 'Pendente'}</span>
-                                    </div>
-                                </div>
-
-                                <p className="central-admin-field-note">
-                                    Deixe o token em branco para manter o valor atual. Se apagar o CSC ID e deixar o token vazio, a configuração do CSC será limpa.
-                                </p>
-                            </article>
-                        </div>
-
-                        <div className="central-admin-fiscal-actions">
-                            <button
-                                type="button"
-                                className="central-admin-secondary-button"
-                                disabled={autofillBusy || !canPersist}
-                                onClick={onAutofillByCnpj}
-                            >
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <span>{autofillBusy ? 'Consultando...' : 'Consultar CNPJ'}</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="central-admin-secondary-button"
-                                disabled={autofillBusy || !canPersist}
-                                onClick={onAutofillByCertificate}
-                            >
-                                <i className="fa-solid fa-certificate" />
-                                <span>{autofillBusy ? 'Lendo...' : 'Usar certificado'}</span>
-                            </button>
-                        </div>
-
-                        <span className="central-admin-field-note">
-                            Consultar CNPJ usa o valor digitado no campo CNPJ. Usar certificado depende do agente local sincronizar o resumo do A1.
-                        </span>
-
-                        {(hasCertificateSummary || autofillMeta) ? (
-                            <div className="central-admin-agent-grid">
-                                {hasCertificateSummary ? (
-                                    <article className="central-admin-license-card central-admin-agent-card">
-                                        <div className="central-admin-license-card-top">
-                                            <h3>Certificado</h3>
-                                            <span className="central-admin-status-pill is-active">
-                                                A1
-                                            </span>
-                                        </div>
-
-                                        <div className="central-admin-agent-list">
-                                            <div className="central-admin-agent-item">
-                                                <strong>Empresa</strong>
-                                                <span>{certificate?.company_name || 'Não informado'}</span>
-                                            </div>
-                                            <div className="central-admin-agent-item">
-                                                <strong>CNPJ</strong>
-                                                <span>{certificate?.cnpj || 'Não informado'}</span>
-                                            </div>
-                                            <div className="central-admin-agent-item">
-                                                <strong>Valido ate</strong>
-                                                <span>{formatCertificateDate(certificate?.valid_to)}</span>
-                                            </div>
-                                        </div>
-                                    </article>
-                                ) : null}
-
-                                {autofillMeta ? (
-                                    <article className="central-admin-license-card central-admin-agent-card">
-                                        <div className="central-admin-license-card-top">
-                                            <h3>Autofill</h3>
-                                            <span className={`central-admin-status-pill ${autofillMissingCount === 0 ? 'is-active' : 'is-info'}`}>
-                                                {autofillMeta?.source_label || 'Sugestao'}
-                                            </span>
-                                        </div>
-
-                                        <div className="central-admin-agent-list">
-                                            <div className="central-admin-agent-item">
-                                                <strong>CNPJ</strong>
-                                                <span>{autofillMeta?.cnpj || 'Não informado'}</span>
-                                            </div>
-                                            <div className="central-admin-agent-item">
-                                                <strong>Campos</strong>
-                                                <span>{autofillCount}</span>
-                                            </div>
-                                            <div className="central-admin-agent-item">
-                                                <strong>Pendencias</strong>
-                                                <span>{autofillMissingCount}</span>
-                                            </div>
-                                        </div>
-
-                                        {autofillMissingCount > 0 ? (
-                                            <span className="central-admin-field-note">
-                                                {autofillMeta.missing_fields.join(', ')}
-                                            </span>
-                                        ) : null}
-
-                                        {Array.isArray(autofillMeta?.warnings) && autofillMeta.warnings.length > 0 ? (
-                                            <span className="central-admin-field-note">
-                                                {autofillMeta.warnings.join(' ')}
-                                            </span>
-                                        ) : null}
-                                    </article>
-                                ) : null}
-                            </div>
-                        ) : null}
-
-                        <div className="central-admin-form-grid">
-                            <div className="central-admin-field is-full">
-                                <span className="central-admin-field-label">Status</span>
-                                <div className="central-admin-list-row">
-                                    <div className="central-admin-list-copy">
-                                        <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
-                                    </div>
-                                    <AdminSwitch
-                                        checked={Boolean(form.active)}
-                                        ariaLabel="Alternar status do perfil fiscal"
-                                        onChange={() => onChange('active', !form.active)}
-                                    />
-                                </div>
-                            </div>
-
-                            {PROFILE_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
-                        </div>
-
-                        <div className="central-admin-form-grid">
-                            {ISSUER_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
-                        </div>
-
-                        <div className="central-admin-form-grid">
-                            {ADDRESS_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
-                        </div>
-
-                        <div className="central-admin-form-grid">
-                            {TRANSMISSION_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
-                        </div>
-                    </div>
-
-                    <div className="central-admin-modal-footer">
-                        <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                            Fechar
-                        </button>
-                        <button type="submit" className="central-admin-primary-button" disabled={busy || !canPersist}>
-                            <i className="fa-solid fa-floppy-disk" />
-                            <span>{busy ? 'Salvando...' : hasProfile ? 'Salvar fiscal' : 'Criar perfil'}</span>
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
+
+            <div className="central-admin-agent-grid">
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Emitente NFC-e</h3>
+                        <span className={`central-admin-status-pill ${fiscal?.tone || 'is-muted'}`}>
+                            {fiscal?.label || 'Sem fiscal'}
+                        </span>
+                    </div>
+
+                    <div className="central-admin-agent-list">
+                        <div className="central-admin-agent-item">
+                            <strong>Empresa</strong>
+                            <span>{fiscal?.company_name || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Ambiente</strong>
+                            <span>{environmentLabel}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Proximo</strong>
+                            <span>{fiscal?.next_number || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Pendencias</strong>
+                            <span>{pendingCount}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Atualizado</strong>
+                            <span>{fiscal?.updated_label || 'Não informado'}</span>
+                        </div>
+                    </div>
+
+                    <p className="central-admin-field-note">
+                        {fiscal?.status === 'missing_table'
+                            ? 'Esse tenant ainda não recebeu as migrations fiscais. Sem a tabela fiscal não ha como salvar o emitente.'
+                            : hasProfile
+                                ? 'Os dados são gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
+                                : 'Ao salvar este formulario, o painel cria o perfil fiscal NFC-e 65 diretamente no banco do tenant.'}
+                    </p>
+                </article>
+
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Transmissao</h3>
+                        <span className={`central-admin-status-pill ${fiscal?.transmission_ready ? 'is-active' : 'is-info'}`}>
+                            {fiscal?.transmission_ready ? 'Pronta' : 'Pendente'}
+                        </span>
+                    </div>
+
+                    <div className="central-admin-agent-list">
+                        <div className="central-admin-agent-item">
+                            <strong>CSC ID</strong>
+                            <span>{fiscal?.csc_id || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Token</strong>
+                            <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Não configurado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>RespTec</strong>
+                            <span>{fiscal?.technical_contact_name || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Perfil</strong>
+                            <span>{fiscal?.profile_ready ? 'Completo' : 'Pendente'}</span>
+                        </div>
+                    </div>
+
+                    <p className="central-admin-field-note">
+                        Deixe o token em branco para manter o valor atual. Se apagar o CSC ID e deixar o token vazio, a configuração do CSC será limpa.
+                    </p>
+                </article>
+            </div>
+
+            <div className="central-admin-fiscal-actions">
+                <button
+                    type="button"
+                    className="central-admin-primary-button"
+                    disabled={autofillBusy || !canPersist}
+                    onClick={onAutofillByCnpj}
+                >
+                    <i className="fa-solid fa-magnifying-glass" />
+                    <span>{autofillBusy ? 'Consultando...' : 'Consultar CNPJ'}</span>
+                </button>
+
+                <button
+                    type="button"
+                    className="central-admin-secondary-button"
+                    disabled={autofillBusy || !canPersist}
+                    onClick={onAutofillByCertificate}
+                >
+                    <i className="fa-solid fa-certificate" />
+                    <span>{autofillBusy ? 'Lendo...' : 'Usar certificado'}</span>
+                </button>
+            </div>
+
+            <span className="central-admin-field-note">
+                Consultar CNPJ usa o valor digitado no campo CNPJ. Usar certificado depende do agente local sincronizar o resumo do A1.
+            </span>
+
+            {(hasCertificateSummary || autofillMeta) ? (
+                <div className="central-admin-agent-grid">
+                    {hasCertificateSummary ? (
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Certificado</h3>
+                                <span className="central-admin-status-pill is-active">
+                                    A1
+                                </span>
+                            </div>
+
+                            <div className="central-admin-agent-list">
+                                <div className="central-admin-agent-item">
+                                    <strong>Empresa</strong>
+                                    <span>{certificate?.company_name || 'Não informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>CNPJ</strong>
+                                    <span>{certificate?.cnpj || 'Não informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Valido ate</strong>
+                                    <span>{formatCertificateDate(certificate?.valid_to)}</span>
+                                </div>
+                            </div>
+                        </article>
+                    ) : null}
+
+                    {autofillMeta ? (
+                        <article className="central-admin-license-card central-admin-agent-card">
+                            <div className="central-admin-license-card-top">
+                                <h3>Autofill</h3>
+                                <span className={`central-admin-status-pill ${autofillMissingCount === 0 ? 'is-active' : 'is-info'}`}>
+                                    {autofillMeta?.source_label || 'Sugestao'}
+                                </span>
+                            </div>
+
+                            <div className="central-admin-agent-list">
+                                <div className="central-admin-agent-item">
+                                    <strong>CNPJ</strong>
+                                    <span>{autofillMeta?.cnpj || 'Não informado'}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Campos</strong>
+                                    <span>{autofillCount}</span>
+                                </div>
+                                <div className="central-admin-agent-item">
+                                    <strong>Pendencias</strong>
+                                    <span>{autofillMissingCount}</span>
+                                </div>
+                            </div>
+
+                            {autofillMissingCount > 0 ? (
+                                <span className="central-admin-field-note">
+                                    {autofillMeta.missing_fields.join(', ')}
+                                </span>
+                            ) : null}
+
+                            {Array.isArray(autofillMeta?.warnings) && autofillMeta.warnings.length > 0 ? (
+                                <span className="central-admin-field-note">
+                                    {autofillMeta.warnings.join(' ')}
+                                </span>
+                            ) : null}
+                        </article>
+                    ) : null}
+                </div>
+            ) : null}
+
+            <div className="central-admin-form-grid">
+                {PROFILE_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
+            </div>
+
+            <div className="central-admin-form-grid">
+                {ISSUER_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
+            </div>
+
+            <div className="central-admin-form-grid">
+                {ADDRESS_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
+            </div>
+
+            <div className="central-admin-form-grid">
+                {TRANSMISSION_FIELDS.map((field) => renderField(field, form, canPersist, onChange, fiscal))}
+            </div>
+        </>
     )
 }

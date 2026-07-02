@@ -17,8 +17,8 @@
     justify-content: space-between;
     gap: 1.25rem;
     background:
-        radial-gradient(circle at top right, rgba(77, 162, 255, 0.16), transparent 18rem),
-        linear-gradient(180deg, #121f33 0%, #0e1828 100%);
+        radial-gradient(circle at top right, rgba(79, 70, 229, 0.08), transparent 18rem),
+        linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
 }
 
 .central-admin-hero-copy {
@@ -97,7 +97,7 @@
 .central-admin-primary-button {
     color: #ffffff;
     background: linear-gradient(135deg, var(--central-admin-primary) 0%, var(--central-admin-primary-strong) 100%);
-    box-shadow: 0 18px 30px rgba(47, 128, 237, 0.2);
+    box-shadow: 0 18px 30px rgba(79, 70, 229, 0.2);
 }
 
 .central-admin-secondary-button {
@@ -117,12 +117,12 @@
 }
 
 .central-admin-primary-button:hover {
-    box-shadow: 0 22px 34px rgba(47, 128, 237, 0.25);
+    box-shadow: 0 22px 34px rgba(79, 70, 229, 0.25);
 }
 
 .central-admin-secondary-button:hover {
-    border-color: rgba(47, 128, 237, 0.28);
-    box-shadow: 0 16px 30px rgba(2, 6, 23, 0.34);
+    border-color: rgba(79, 70, 229, 0.28);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
 }
 
 .central-admin-primary-button:disabled,
@@ -150,21 +150,21 @@
 }
 
 .central-admin-feedback.is-success {
-    color: #7df3b5;
-    background: rgba(18, 163, 109, 0.12);
-    border-color: rgba(18, 163, 109, 0.24);
+    color: #0f9d67;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.22);
 }
 
 .central-admin-feedback.is-error {
-    color: #ff9dae;
-    background: rgba(220, 76, 100, 0.12);
-    border-color: rgba(220, 76, 100, 0.2);
+    color: #dc2626;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
 }
 
 .central-admin-feedback.is-info {
-    color: #93c5fd;
-    background: rgba(37, 99, 235, 0.12);
-    border-color: rgba(37, 99, 235, 0.24);
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+    border-color: rgba(37, 99, 235, 0.22);
 }
 
 .central-admin-stats-grid {
@@ -187,7 +187,7 @@
     place-items: center;
     flex: 0 0 auto;
     color: var(--central-admin-primary-strong);
-    background: rgba(77, 162, 255, 0.12);
+    background: rgba(79, 70, 229, 0.1);
 }
 
 .central-admin-stat-copy {
@@ -243,44 +243,44 @@
 }
 
 .central-admin-badge {
-    background: #162336;
-    color: #c5d2e2;
+    background: #eef2f7;
+    color: #475569;
 }
 
 .central-admin-badge.is-success,
 .central-admin-status-pill.is-active {
-    background: rgba(18, 163, 109, 0.12);
-    color: #7df3b5;
+    background: rgba(16, 185, 129, 0.1);
+    color: #0f9d67;
 }
 
 .central-admin-badge.is-danger,
 .central-admin-status-pill.is-inactive {
-    background: rgba(220, 76, 100, 0.12);
-    color: #ff9dae;
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
 }
 
 .central-admin-status-pill.is-danger {
-    background: rgba(220, 76, 100, 0.12);
-    color: #ff9dae;
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
 }
 
 .central-admin-status-pill.is-info {
-    background: rgba(77, 162, 255, 0.12);
-    color: #8fccff;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
 }
 
 .central-admin-status-pill.is-muted {
-    background: #142032;
+    background: #eef2f7;
     color: var(--central-admin-muted);
 }
 
 .central-admin-badge.is-info {
-    background: rgba(77, 162, 255, 0.12);
-    color: #8fccff;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
 }
 
 .central-admin-badge.is-muted {
-    background: #142032;
+    background: #eef2f7;
     color: var(--central-admin-muted);
 }
 
@@ -297,7 +297,7 @@
     padding: 1rem 1.05rem;
     border-radius: 18px;
     background: var(--central-admin-surface-soft);
-    border: 1px solid rgba(34, 50, 73, 0.92);
+    border: 1px solid var(--central-admin-border);
 }
 
 .central-admin-list-copy {
@@ -325,7 +325,7 @@
     width: 6.5rem;
     height: 0.45rem;
     border-radius: 999px;
-    background: #24364d;
+    background: #e2e8f0;
     overflow: hidden;
 }
 
@@ -349,7 +349,7 @@
     padding: 1rem 1.05rem;
     border-radius: 18px;
     background: var(--central-admin-surface-soft);
-    border: 1px solid rgba(34, 50, 73, 0.92);
+    border: 1px solid var(--central-admin-border);
 }
 
 .central-admin-agent-grid,
@@ -374,12 +374,12 @@
     gap: 0.3rem;
     padding: 0.85rem 0.9rem;
     border-radius: 16px;
-    background: rgba(12, 21, 35, 0.76);
-    border: 1px solid rgba(34, 50, 73, 0.72);
+    background: var(--central-admin-surface-soft);
+    border: 1px solid var(--central-admin-border);
 }
 
 .central-admin-agent-item strong {
-    color: #b4c5d9;
+    color: #475569;
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.1em;
@@ -387,7 +387,7 @@
 }
 
 .central-admin-agent-item span {
-    color: #deebf8;
+    color: #1e293b;
 }
 
 .central-admin-path-copy {
@@ -416,7 +416,7 @@
 .central-admin-table td {
     padding: 1rem 0.9rem;
     text-align: left;
-    border-bottom: 1px solid #1d2c40;
+    border-bottom: 1px solid #e2e8f0;
     vertical-align: middle;
 }
 
@@ -444,7 +444,7 @@
     padding: 2.4rem 1rem;
     text-align: center;
     background: var(--central-admin-surface-soft);
-    border: 1px dashed #29405d;
+    border: 1px dashed #cbd5e1;
     border-radius: 20px;
 }
 
@@ -467,10 +467,10 @@
     width: min(100%, 880px);
     max-height: calc(100vh - 2.5rem);
     overflow: auto;
-    background: #101a2b;
+    background: #ffffff;
     border-radius: 28px;
-    border: 1px solid rgba(34, 50, 73, 0.96);
-    box-shadow: 0 30px 70px rgba(2, 6, 23, 0.52);
+    border: 1px solid var(--central-admin-border);
+    box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
 }
 
 .central-admin-modal-header,
@@ -483,11 +483,11 @@
 }
 
 .central-admin-modal-header {
-    border-bottom: 1px solid #1d2c40;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .central-admin-modal-footer {
-    border-top: 1px solid #1d2c40;
+    border-top: 1px solid #e2e8f0;
     justify-content: flex-end;
 }
 
@@ -509,17 +509,56 @@
 
 .central-admin-modal-icon {
     color: var(--central-admin-primary-strong);
-    background: rgba(47, 128, 237, 0.12);
+    background: rgba(79, 70, 229, 0.1);
 }
 
 .central-admin-modal-close {
     cursor: pointer;
     border: 1px solid var(--central-admin-border);
-    background: #0d1624;
+    background: #f1f5f9;
 }
 
 .central-admin-modal-body {
     padding: 1.35rem;
+}
+
+.central-admin-fiscal-status-top {
+    margin-bottom: 1.1rem;
+}
+
+.central-admin-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding: 0 1.35rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.central-admin-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 0.4rem;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    color: var(--central-admin-muted);
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+}
+
+.central-admin-tab:hover {
+    color: var(--central-admin-text);
+}
+
+.central-admin-tab.is-active {
+    color: var(--central-admin-primary-strong);
+    border-bottom-color: var(--central-admin-primary);
+}
+
+.central-admin-tab:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .central-admin-fiscal-actions {
@@ -548,7 +587,7 @@
 .central-admin-field-label {
     font-size: 0.84rem;
     font-weight: 800;
-    color: #b4c5d9;
+    color: #475569;
 }
 
 .central-admin-field-shell {
@@ -559,8 +598,7 @@
     padding: 0.25rem 0.35rem 0.25rem 0.3rem;
     border-radius: 18px;
     border: 1px solid var(--central-admin-border);
-    background: #0c1523;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    background: #f8fafc;
 }
 
 .central-admin-field-icon {
@@ -569,8 +607,8 @@
     border-radius: 14px;
     display: grid;
     place-items: center;
-    color: #8fccff;
-    background: rgba(77, 162, 255, 0.08);
+    color: #4f46e5;
+    background: rgba(79, 70, 229, 0.08);
 }
 
 .central-admin-field-input {
@@ -586,12 +624,12 @@
     padding-right: 0.5rem;
     font-size: 0.9rem;
     font-weight: 800;
-    color: #7f95af;
+    color: #64748b;
     white-space: nowrap;
 }
 
 .central-admin-field.is-readonly .central-admin-field-shell {
-    background: #0f1827;
+    background: #eef2f7;
 }
 
 .central-admin-field-note {
@@ -604,7 +642,7 @@
     height: 1.95rem;
     padding: 0.16rem;
     border-radius: 999px;
-    background: #32465f;
+    background: #cbd5e1;
     cursor: pointer;
     transition: background 0.22s ease, box-shadow 0.22s ease;
 }
@@ -615,14 +653,14 @@
     width: 1.62rem;
     height: 1.62rem;
     border-radius: 50%;
-    background: #f8fbff;
+    background: #ffffff;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
     transition: transform 0.22s ease;
 }
 
 .central-admin-toggle.is-checked {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    box-shadow: 0 10px 22px rgba(79, 70, 229, 0.24);
 }
 
 .central-admin-toggle.is-checked::after {
@@ -630,7 +668,7 @@
 }
 
 .central-admin-toggle.is-saving {
-    box-shadow: 0 0 0 4px rgba(47, 128, 237, 0.12);
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
 }
 
 .central-admin-feature-wrapper {
@@ -650,10 +688,10 @@
 }
 
 .central-admin-feature-row.is-highlighted {
-    border-color: rgba(47, 128, 237, 0.35);
+    border-color: rgba(79, 70, 229, 0.35);
     box-shadow:
         0 20px 34px rgba(15, 23, 42, 0.08),
-        0 0 0 4px rgba(47, 128, 237, 0.08);
+        0 0 0 4px rgba(79, 70, 229, 0.08);
 }
 
 .central-admin-feature-tenant {
@@ -691,17 +729,17 @@
     padding: 0.85rem 0.9rem;
     border-radius: 18px;
     background: var(--central-admin-surface-soft);
-    border: 1px solid rgba(34, 50, 73, 0.92);
+    border: 1px solid var(--central-admin-border);
 }
 
 .central-admin-feature-chip.is-active {
-    background: rgba(77, 162, 255, 0.12);
-    border-color: rgba(77, 162, 255, 0.18);
+    background: rgba(79, 70, 229, 0.08);
+    border-color: rgba(79, 70, 229, 0.18);
 }
 
 .central-admin-feature-chip span {
     font-weight: 700;
-    color: #deebf8;
+    color: #0f172a;
 }
 
 .central-admin-inline-feedback {
@@ -713,15 +751,15 @@
 }
 
 .central-admin-inline-feedback.is-success {
-    color: #7df3b5;
+    color: #0f9d67;
 }
 
 .central-admin-inline-feedback.is-error {
-    color: #ff9dae;
+    color: #dc2626;
 }
 
 .central-admin-inline-feedback.is-info {
-    color: #8fccff;
+    color: #2563eb;
 }
 
 .admin-agent-code {
@@ -729,19 +767,19 @@
     gap: 0.2rem;
     padding: 0.85rem 1rem;
     border-radius: 16px;
-    border: 1px solid rgba(77, 162, 255, 0.22);
-    background: rgba(77, 162, 255, 0.1);
+    border: 1px solid rgba(79, 70, 229, 0.2);
+    background: rgba(79, 70, 229, 0.08);
 }
 
 .admin-agent-code small {
-    color: #93a8bd;
+    color: #64748b;
     font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
 .admin-agent-code strong {
-    color: #e7f3ff;
+    color: #1e293b;
     font-size: 1.25rem;
     letter-spacing: 0.08em;
 }

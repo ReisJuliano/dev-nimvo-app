@@ -89,6 +89,35 @@ class TenantFiscalProfileService
         });
     }
 
+    /**
+     * Flips only the active flag, without touching the rest of the profile -
+     * used by the quick toggle in the tenant table/panel header. Unlike
+     * saveNfceProfile(), which rebuilds every field from the submitted form
+     * and would blank out the profile if called with just {active: ...}.
+     */
+    public function toggleActive(string $tenantId, bool $active): array
+    {
+        return $this->tenantContext->run($tenantId, function () use ($active) {
+            if (! $this->fiscalProfilesTableExists()) {
+                throw ValidationException::withMessages([
+                    'fiscal' => 'A tabela fiscal ainda não existe neste tenant. Rode as migrations do tenant antes de configurar o emitente.',
+                ]);
+            }
+
+            $profile = $this->resolveNfceProfile();
+
+            if (! $profile) {
+                throw ValidationException::withMessages([
+                    'fiscal' => 'Cadastre o perfil fiscal antes de ativar a emissão de NFC-e.',
+                ]);
+            }
+
+            $profile->forceFill(['active' => $active])->save();
+
+            return $this->snapshotForProfile($profile->fresh());
+        });
+    }
+
     protected function resolveNfceProfile(): ?FiscalProfile
     {
         return FiscalProfile::query()

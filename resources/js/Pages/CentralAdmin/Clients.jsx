@@ -18,6 +18,7 @@ const INITIAL_TENANT_FORM = {
     client_email: '',
     client_document: '',
     active: true,
+    cnpj_lookup: '',
 }
 
 const INITIAL_FISCAL_FORM = {
@@ -49,6 +50,14 @@ const INITIAL_FISCAL_FORM = {
     technical_contact_phone: '',
     technical_contact_cnpj: '',
 }
+
+const MANAGE_TABS = [
+    { key: 'geral', label: 'Geral', icon: 'fa-buildings' },
+    { key: 'fiscal', label: 'Fiscal', icon: 'fa-key' },
+    { key: 'licenca', label: 'Licença', icon: 'fa-file-invoice-dollar' },
+    { key: 'agente', label: 'Agente & Impressora', icon: 'fa-desktop' },
+    { key: 'modulos', label: 'Módulos', icon: 'fa-toggle-on' },
+]
 
 function feedbackIcon(type) {
     if (type === 'success') {
@@ -127,6 +136,7 @@ function buildTenantForm(tenant = null) {
         client_email: tenant.email || '',
         client_document: tenant.document || '',
         active: Boolean(tenant.active),
+        cnpj_lookup: '',
     }
 }
 
@@ -261,7 +271,7 @@ function AdminSwitch({ checked, disabled = false, saving = false, onChange, aria
     )
 }
 
-function ModalFrame({ open, icon, title, description, onClose, children }) {
+function ConfirmModal({ open, tenant, busy, onClose, onConfirm }) {
     if (!open) {
         return null
     }
@@ -272,372 +282,345 @@ function ModalFrame({ open, icon, title, description, onClose, children }) {
                 <div className="central-admin-modal-header">
                     <div className="central-admin-modal-titlebox">
                         <div className="central-admin-modal-icon">
-                            <i className={`fa-solid ${icon}`} />
+                            <i className="fa-solid fa-triangle-exclamation" />
                         </div>
                         <div>
-                            <h3>{title}</h3>
-                            {description ? <p>{description}</p> : null}
+                            <h3>Excluir tenant</h3>
                         </div>
                     </div>
-
                     <button type="button" className="central-admin-modal-close" onClick={onClose}>
                         <i className="fa-solid fa-xmark" />
                     </button>
                 </div>
 
-                {children}
+                <div className="central-admin-modal-body">
+                    <div className="central-admin-note-card">
+                        <h3>{tenant?.name || 'Tenant selecionado'}</h3>
+                    </div>
+                </div>
+
+                <div className="central-admin-modal-footer">
+                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
+                        Voltar
+                    </button>
+                    <button type="button" className="central-admin-secondary-button is-danger" onClick={onConfirm} disabled={busy}>
+                        <i className="fa-solid fa-trash" />
+                        <span>{busy ? 'Excluindo...' : 'Excluir'}</span>
+                    </button>
+                </div>
             </div>
         </div>
     )
 }
 
-function TenantFormModal({ open, mode, form, busy, tenantBaseDomain, onClose, onChange, onSubmit }) {
-    const isEdit = mode === 'edit'
+function TenantGeneralTab({ form, isCreating, tenantBaseDomain, cnpjLookupBusy, onChange, onLookupCnpj }) {
     const tenantPreview = form.subdomain
         ? `${form.subdomain}.${tenantBaseDomain}`
         : `tenant.${tenantBaseDomain}`
 
     return (
-        <ModalFrame
-            open={open}
-            icon={isEdit ? 'fa-pen-to-square' : 'fa-plus'}
-            title={isEdit ? 'Editar tenant' : 'Novo tenant'}
-            onClose={onClose}
-        >
-            <form onSubmit={onSubmit}>
-                <div className="central-admin-modal-body">
-                    <div className="central-admin-form-grid">
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Nome</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-buildings" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.client_name}
-                                    onChange={(event) => onChange('client_name', event.target.value)}
-                                    placeholder="Loja Centro"
-                                    required
-                                />
+        <>
+            {isCreating ? (
+                <>
+                    <label className="central-admin-field is-full">
+                        <span className="central-admin-field-label">CNPJ do cliente</span>
+                        <span className="central-admin-field-shell">
+                            <span className="central-admin-field-icon">
+                                <i className="fa-solid fa-magnifying-glass" />
                             </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Nome interno</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-tag" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.tenant_name}
-                                    onChange={(event) => onChange('tenant_name', event.target.value)}
-                                    placeholder="loja-centro"
-                                />
-                            </span>
-                        </label>
-
-                        <label className={`central-admin-field ${isEdit ? 'is-readonly' : ''}`}>
-                            <span className="central-admin-field-label">ID</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-fingerprint" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.tenant_id}
-                                    onChange={(event) => onChange('tenant_id', event.target.value)}
-                                    placeholder="loja-centro"
-                                    readOnly={isEdit}
-                                    required
-                                />
-                            </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Subdomínio</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-globe" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.subdomain}
-                                    onChange={(event) => onChange('subdomain', event.target.value)}
-                                    placeholder="tenantnome"
-                                    required
-                                />
-                                <span className="central-admin-field-suffix">.{tenantBaseDomain}</span>
-                            </span>
-                            <span className="central-admin-field-note">
-                                URL final: {tenantPreview}
-                            </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Email</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-envelope" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.client_email}
-                                    onChange={(event) => onChange('client_email', event.target.value)}
-                                    placeholder="contato@tenant.com"
-                                    type="email"
-                                />
-                            </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Documento</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-id-card" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.client_document}
-                                    onChange={(event) => onChange('client_document', event.target.value)}
-                                    placeholder="CPF ou CNPJ"
-                                />
-                            </span>
-                        </label>
-
-                        <div className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Status</span>
-                            <div className="central-admin-list-row">
-                                <div className="central-admin-list-copy">
-                                    <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
-                                </div>
-                                <AdminSwitch
-                                    checked={form.active}
-                                    ariaLabel="Alternar status do tenant"
-                                    onChange={() => onChange('active', !form.active)}
-                                />
-                            </div>
-                        </div>
+                            <input
+                                className="central-admin-field-input"
+                                value={form.cnpj_lookup}
+                                onChange={(event) => onChange('cnpj_lookup', event.target.value)}
+                                placeholder="Digite o CNPJ para buscar os dados automaticamente"
+                            />
+                        </span>
+                        <span className="central-admin-field-note">
+                            Preenche nome e endereço automaticamente (BrasilAPI) - já deixa a aba Fiscal adiantada.
+                        </span>
+                    </label>
+                    <div className="central-admin-field is-full">
+                        <button
+                            type="button"
+                            className="central-admin-primary-button"
+                            disabled={cnpjLookupBusy || !form.cnpj_lookup}
+                            onClick={onLookupCnpj}
+                        >
+                            <i className="fa-solid fa-magnifying-glass" />
+                            <span>{cnpjLookupBusy ? 'Buscando...' : 'Buscar dados do CNPJ'}</span>
+                        </button>
                     </div>
-                </div>
+                </>
+            ) : null}
 
-                <div className="central-admin-modal-footer">
-                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                        Cancelar
-                    </button>
-                    <button type="submit" className="central-admin-primary-button" disabled={busy}>
-                        <i className={`fa-solid ${isEdit ? 'fa-floppy-disk' : 'fa-plus'}`} />
-                        <span>{busy ? (isEdit ? 'Salvando...' : 'Criando...') : isEdit ? 'Salvar' : 'Criar'}</span>
-                    </button>
+            <label className="central-admin-field">
+                <span className="central-admin-field-label">Nome</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-buildings" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.client_name}
+                        onChange={(event) => onChange('client_name', event.target.value)}
+                        placeholder="Loja Centro"
+                        required
+                    />
+                </span>
+            </label>
+
+            <label className="central-admin-field">
+                <span className="central-admin-field-label">Nome interno</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-tag" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.tenant_name}
+                        onChange={(event) => onChange('tenant_name', event.target.value)}
+                        placeholder="loja-centro"
+                    />
+                </span>
+            </label>
+
+            <label className={`central-admin-field ${!isCreating ? 'is-readonly' : ''}`}>
+                <span className="central-admin-field-label">ID</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-fingerprint" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.tenant_id}
+                        onChange={(event) => onChange('tenant_id', event.target.value)}
+                        placeholder="loja-centro"
+                        readOnly={!isCreating}
+                        required
+                    />
+                </span>
+            </label>
+
+            <label className="central-admin-field">
+                <span className="central-admin-field-label">Subdomínio</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-globe" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.subdomain}
+                        onChange={(event) => onChange('subdomain', event.target.value)}
+                        placeholder="tenantnome"
+                        required
+                    />
+                    <span className="central-admin-field-suffix">.{tenantBaseDomain}</span>
+                </span>
+                <span className="central-admin-field-note">
+                    URL final: {tenantPreview}
+                </span>
+            </label>
+
+            <label className="central-admin-field">
+                <span className="central-admin-field-label">Email</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-envelope" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.client_email}
+                        onChange={(event) => onChange('client_email', event.target.value)}
+                        placeholder="contato@tenant.com"
+                        type="email"
+                    />
+                </span>
+            </label>
+
+            <label className="central-admin-field">
+                <span className="central-admin-field-label">Documento</span>
+                <span className="central-admin-field-shell">
+                    <span className="central-admin-field-icon">
+                        <i className="fa-solid fa-id-card" />
+                    </span>
+                    <input
+                        className="central-admin-field-input"
+                        value={form.client_document}
+                        onChange={(event) => onChange('client_document', event.target.value)}
+                        placeholder="CPF ou CNPJ"
+                    />
+                </span>
+            </label>
+
+            <div className="central-admin-field is-full">
+                <span className="central-admin-field-label">Status</span>
+                <div className="central-admin-list-row">
+                    <div className="central-admin-list-copy">
+                        <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
+                    </div>
+                    <AdminSwitch
+                        checked={form.active}
+                        ariaLabel="Alternar status do tenant"
+                        onChange={() => onChange('active', !form.active)}
+                    />
                 </div>
-            </form>
-        </ModalFrame>
+            </div>
+        </>
     )
 }
 
-function ConfirmModal({ open, tenant, busy, onClose, onConfirm }) {
-    return (
-        <ModalFrame
-            open={open}
-            icon="fa-triangle-exclamation"
-            title="Excluir tenant"
-            onClose={onClose}
-        >
-            <div className="central-admin-modal-body">
-                <div className="central-admin-note-card">
-                    <h3>{tenant?.name || 'Tenant selecionado'}</h3>
-                </div>
-            </div>
-
-            <div className="central-admin-modal-footer">
-                <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                    Voltar
-                </button>
-                <button type="button" className="central-admin-secondary-button is-danger" onClick={onConfirm} disabled={busy}>
-                    <i className="fa-solid fa-trash" />
-                    <span>{busy ? 'Excluindo...' : 'Excluir'}</span>
-                </button>
-            </div>
-        </ModalFrame>
-    )
-}
-
-function LicenseModal({ open, tenant, form, busy, invoiceBusyId, onClose, onChange, onSubmit, onInvoiceStatusChange }) {
+function TenantLicenseTab({ tenant, form, invoiceBusyId, onChange, onInvoiceStatusChange }) {
     const invoice = tenant?.license?.invoice
 
     return (
-        <ModalFrame
-            open={open}
-            icon="fa-file-invoice-dollar"
-            title={tenant ? `Licença de ${tenant.name}` : 'Licença'}
-            onClose={onClose}
-        >
-            <form onSubmit={onSubmit}>
-                <div className="central-admin-modal-body">
-                    <div className="central-admin-form-grid">
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Início da licença</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-calendar-day" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    type="date"
-                                    value={form.starts_at}
-                                    onChange={(event) => onChange('starts_at', event.target.value)}
-                                    required
-                                />
-                            </span>
-                        </label>
+        <>
+            <div className="central-admin-form-grid">
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Início da licença</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-calendar-day" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            type="date"
+                            value={form.starts_at}
+                            onChange={(event) => onChange('starts_at', event.target.value)}
+                            required
+                        />
+                    </span>
+                </label>
 
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Ciclo em dias</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-repeat" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    type="number"
-                                    min="1"
-                                    max="365"
-                                    value={form.cycle_days}
-                                    onChange={(event) => onChange('cycle_days', event.target.value)}
-                                />
-                            </span>
-                        </label>
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Ciclo em dias</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-repeat" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={form.cycle_days}
+                            onChange={(event) => onChange('cycle_days', event.target.value)}
+                        />
+                    </span>
+                </label>
 
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Tolerância</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-hourglass-half" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    type="number"
-                                    min="0"
-                                    max="90"
-                                    value={form.grace_days}
-                                    onChange={(event) => onChange('grace_days', event.target.value)}
-                                />
-                            </span>
-                        </label>
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Tolerância</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-hourglass-half" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            type="number"
+                            min="0"
+                            max="90"
+                            value={form.grace_days}
+                            onChange={(event) => onChange('grace_days', event.target.value)}
+                        />
+                    </span>
+                </label>
 
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Valor da fatura</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-money-bill-wave" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={form.amount}
-                                    onChange={(event) => onChange('amount', event.target.value)}
-                                    placeholder="0,00"
-                                />
-                            </span>
-                        </label>
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Valor da fatura</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-money-bill-wave" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.amount}
+                            onChange={(event) => onChange('amount', event.target.value)}
+                            placeholder="0,00"
+                        />
+                    </span>
+                </label>
 
-                        <label className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Status base</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-shield-halved" />
-                                </span>
-                                <select
-                                    className="central-admin-field-input"
-                                    value={form.status}
-                                    onChange={(event) => onChange('status', event.target.value)}
-                                >
-                                    <option value="active">Ativa</option>
-                                    <option value="paused">Pausada</option>
-                                    <option value="blocked">Bloqueada</option>
-                                </select>
-                            </span>
-                        </label>
+                <label className="central-admin-field is-full">
+                    <span className="central-admin-field-label">Status base</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-shield-halved" />
+                        </span>
+                        <select
+                            className="central-admin-field-input"
+                            value={form.status}
+                            onChange={(event) => onChange('status', event.target.value)}
+                        >
+                            <option value="active">Ativa</option>
+                            <option value="paused">Pausada</option>
+                            <option value="blocked">Bloqueada</option>
+                        </select>
+                    </span>
+                </label>
+            </div>
+
+            {tenant?.license ? (
+                <div className="central-admin-note-card central-admin-license-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Estado atual</h3>
+                        <span className={`central-admin-status-pill ${getLicenseTone(tenant.license.status)}`}>
+                            {getLicenseLabel(tenant.license.status)}
+                        </span>
                     </div>
-
-                    {tenant?.license ? (
-                        <div className="central-admin-note-card central-admin-license-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Estado atual</h3>
-                                <span className={`central-admin-status-pill ${getLicenseTone(tenant.license.status)}`}>
-                                    {getLicenseLabel(tenant.license.status)}
-                                </span>
-                            </div>
-                            <p>{tenant.license.message}</p>
-                            <div className="central-admin-pill-row">
-                                {tenant.license.due_date ? <span className="central-admin-badge">Vence em {tenant.license.due_date}</span> : null}
-                                {tenant.license.days_remaining != null ? <span className="central-admin-badge is-info">{tenant.license.days_remaining} dia(s)</span> : null}
-                                {tenant.license.amount != null ? <span className="central-admin-badge">{formatMoney(tenant.license.amount)}</span> : null}
-                            </div>
-                        </div>
-                    ) : null}
-
-                    {invoice ? (
-                        <div className="central-admin-note-card central-admin-license-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Fatura atual</h3>
-                                <span className={`central-admin-status-pill ${invoice.status === 'paid' ? 'is-active' : 'is-inactive'}`}>
-                                    {invoice.status === 'paid' ? 'Paga' : 'Pendente'}
-                                </span>
-                            </div>
-                            <div className="central-admin-pill-row">
-                                <span className="central-admin-badge">{invoice.reference}</span>
-                                <span className="central-admin-badge is-info">Vencimento {invoice.due_date}</span>
-                                <span className="central-admin-badge">{formatMoney(invoice.amount || 0)}</span>
-                            </div>
-                            <div className="central-admin-table-actions">
-                                <button
-                                    type="button"
-                                    className="central-admin-secondary-button"
-                                    onClick={() => onInvoiceStatusChange(invoice, invoice.status === 'paid' ? 'pending' : 'paid')}
-                                    disabled={invoiceBusyId === invoice.id}
-                                >
-                                    <i className={`fa-solid ${invoice.status === 'paid' ? 'fa-rotate-left' : 'fa-circle-check'}`} />
-                                    <span>{invoiceBusyId === invoice.id ? 'Salvando...' : invoice.status === 'paid' ? 'Marcar pendente' : 'Marcar paga'}</span>
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="central-admin-note-card central-admin-license-card">
-                            <h3>Fatura atual</h3>
-                            <p>A fatura será gerada automaticamente assim que a licença for salva.</p>
-                        </div>
-                    )}
+                    <p>{tenant.license.message}</p>
+                    <div className="central-admin-pill-row">
+                        {tenant.license.due_date ? <span className="central-admin-badge">Vence em {tenant.license.due_date}</span> : null}
+                        {tenant.license.days_remaining != null ? <span className="central-admin-badge is-info">{tenant.license.days_remaining} dia(s)</span> : null}
+                        {tenant.license.amount != null ? <span className="central-admin-badge">{formatMoney(tenant.license.amount)}</span> : null}
+                    </div>
                 </div>
+            ) : null}
 
-                <div className="central-admin-modal-footer">
-                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                        Cancelar
-                    </button>
-                    <button type="submit" className="central-admin-primary-button" disabled={busy}>
-                        <i className="fa-solid fa-floppy-disk" />
-                        <span>{busy ? 'Salvando...' : 'Salvar licença'}</span>
-                    </button>
+            {invoice ? (
+                <div className="central-admin-note-card central-admin-license-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Fatura atual</h3>
+                        <span className={`central-admin-status-pill ${invoice.status === 'paid' ? 'is-active' : 'is-inactive'}`}>
+                            {invoice.status === 'paid' ? 'Paga' : 'Pendente'}
+                        </span>
+                    </div>
+                    <div className="central-admin-pill-row">
+                        <span className="central-admin-badge">{invoice.reference}</span>
+                        <span className="central-admin-badge is-info">Vencimento {invoice.due_date}</span>
+                        <span className="central-admin-badge">{formatMoney(invoice.amount || 0)}</span>
+                    </div>
+                    <div className="central-admin-table-actions">
+                        <button
+                            type="button"
+                            className="central-admin-secondary-button"
+                            onClick={() => onInvoiceStatusChange(invoice, invoice.status === 'paid' ? 'pending' : 'paid')}
+                            disabled={invoiceBusyId === invoice.id}
+                        >
+                            <i className={`fa-solid ${invoice.status === 'paid' ? 'fa-rotate-left' : 'fa-circle-check'}`} />
+                            <span>{invoiceBusyId === invoice.id ? 'Salvando...' : invoice.status === 'paid' ? 'Marcar pendente' : 'Marcar paga'}</span>
+                        </button>
+                    </div>
                 </div>
-            </form>
-        </ModalFrame>
+            ) : (
+                <div className="central-admin-note-card central-admin-license-card">
+                    <h3>Fatura atual</h3>
+                    <p>A fatura será gerada automaticamente assim que a licença for salva.</p>
+                </div>
+            )}
+        </>
     )
 }
 
-function LocalAgentModal({
-    open,
+function TenantAgentTab({
     tenant,
     form,
-    busy,
     printBusy,
     activationBusy,
     activationPreview,
-    onClose,
     onChange,
-    onSubmit,
     onGenerateActivationCode,
     onCopyActivationCode,
     onTestPrint,
@@ -652,360 +635,450 @@ function LocalAgentModal({
     )
 
     return (
-        <ModalFrame
-            open={open}
-            icon="fa-desktop"
-            title={tenant ? `Agente fiscal de ${tenant.name}` : 'Agente fiscal'}
-            onClose={onClose}
-        >
-            <form onSubmit={onSubmit}>
-                <div className="central-admin-modal-body">
-                    <div className="central-admin-agent-grid">
-                        <article className="central-admin-license-card central-admin-agent-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Status do agente</h3>
-                                <span className={`central-admin-status-pill ${getLocalAgentTone(agent?.status)}`}>
-                                    {getLocalAgentLabel(agent?.status)}
-                                </span>
-                            </div>
-                            <div className="central-admin-pill-row">
-                                <span className="central-admin-badge">
-                                    <i className="fa-solid fa-fingerprint" />
-                                    <span>{tenant?.id || 'Tenant'}</span>
-                                </span>
-                                {agent?.last_seen_label ? (
-                                    <span className="central-admin-badge is-info">
-                                        <i className="fa-solid fa-clock-rotate-left" />
-                                        <span>{agent.last_seen_label}</span>
-                                    </span>
-                                ) : null}
-                                {agent?.last_ip ? (
-                                    <span className="central-admin-badge">
-                                        <i className="fa-solid fa-network-wired" />
-                                        <span>{agent.last_ip}</span>
-                                    </span>
-                                ) : null}
-                            </div>
-                            <p>
-                                {hasAgent
-                                    ? 'Esse registro central controla a ativação e a configuração sincronizada do agente instalado no cliente.'
-                                    : 'Salve este cadastro para gerar o primeiro código de ativação do agente fiscal deste tenant.'}
-                            </p>
-                        </article>
-
-                        <article className="central-admin-license-card central-admin-agent-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Código de ativação</h3>
-                                <span className={`central-admin-status-pill ${agent?.activation?.pending ? 'is-active' : agent?.activation?.activated_at ? 'is-info' : 'is-muted'}`}>
-                                    {agent?.activation?.pending ? 'Pendente' : agent?.activation?.activated_at ? 'Usado' : 'Não gerado'}
-                                </span>
-                            </div>
-                            <p>
-                                Gere um código temporário e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse código por
-                                credenciais internas e segue com a configuração da impressora na própria máquina do cliente.
-                            </p>
-                            {hasActivationPreview ? (
-                                <div className="central-admin-note-card" style={{ marginBottom: 16 }}>
-                                    <h3>
-                                        <i className="fa-solid fa-key" /> Código atual
-                                    </h3>
-                                    <p className="central-admin-path-copy">{activationPreview.code}</p>
-                                    <p>
-                                        Backend: {activationPreview.backend_url || 'Não informado'}
-                                        <br />
-                                        Expira em: {formatDateTime(activationPreview.expires_at)}
-                                    </p>
-                                </div>
-                            ) : null}
-                            <div className="central-admin-table-actions">
-                                <button
-                                    type="button"
-                                    className="central-admin-secondary-button"
-                                    disabled={!hasAgent || activationBusy}
-                                    onClick={onGenerateActivationCode}
-                                >
-                                    <i className="fa-solid fa-key" />
-                                    <span>{activationBusy ? 'Gerando...' : agent?.activation?.pending ? 'Gerar novo código' : 'Gerar código'}</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className="central-admin-secondary-button"
-                                    disabled={!hasActivationPreview}
-                                    onClick={onCopyActivationCode}
-                                >
-                                    <i className="fa-solid fa-copy" />
-                                    <span>Copiar código</span>
-                                </button>
-                            </div>
-                            {hasAgent && agent?.activation?.pending ? (
-                                <p className="central-admin-field-note">
-                                    O código fica válido até {formatDateTime(agent?.activation?.expires_at)}. Se expirar, gere um novo código e rode o setup novamente no cliente.
-                                </p>
-                            ) : null}
-                        </article>
+        <>
+            <div className="central-admin-agent-grid">
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Status do agente</h3>
+                        <span className={`central-admin-status-pill ${getLocalAgentTone(agent?.status)}`}>
+                            {getLocalAgentLabel(agent?.status)}
+                        </span>
                     </div>
-
-                    <div className="central-admin-agent-device-grid">
-                        <article className="central-admin-license-card central-admin-agent-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Última máquina conectada</h3>
-                                <span className="central-admin-badge is-info">
-                                    <i className="fa-solid fa-display" />
-                                    <span>{agent?.device?.machine_name || 'Sem heartbeat'}</span>
-                                </span>
-                            </div>
-                            <div className="central-admin-agent-list">
-                                <div className="central-admin-agent-item">
-                                    <strong>Usuário</strong>
-                                    <span>{agent?.device?.machine_user || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Última sincronização</strong>
-                                    <span>{formatDateTime(agent?.device?.last_sync_at)}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Bridge fiscal</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.bridge_root || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>PHP</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.php_path || 'Não informado'}</span>
-                                </div>
-                            </div>
-                        </article>
-
-                        <article className="central-admin-license-card central-admin-agent-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Dispositivos locais</h3>
-                                <span className="central-admin-badge">
-                                    <i className="fa-solid fa-print" />
-                                    <span>{agent?.device?.printer_name || agent?.device?.printer_host || 'Sem impressora detectada'}</span>
-                                </span>
-                            </div>
-                            <div className="central-admin-agent-list">
-                                <div className="central-admin-agent-item">
-                                    <strong>Certificado</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.certificate_path || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Conector</strong>
-                                    <span>{agent?.device?.printer_connector || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Impressão local</strong>
-                                    <span>{agent?.device?.printer_enabled ? 'Ativa' : 'Desativada'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Config local</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.config_path || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>API local</strong>
-                                    <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Não informado'}</span>
-                                </div>
-                            </div>
-                            <p className="central-admin-field-note">
-                                Esses dados são sincronizados pelo agente instalado. O setup do terminal já solicita o caminho do certificado A1 e a
-                                senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na máquina do cliente.
-                            </p>
-                            <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
-                                <button
-                                    type="button"
-                                    className="central-admin-secondary-button"
-                                    disabled={!hasAgent || printBusy}
-                                    onClick={onTestPrint}
-                                >
-                                    <i className="fa-solid fa-print" />
-                                    <span>{printBusy ? 'Testando...' : 'Testar impressão'}</span>
-                                </button>
-                            </div>
-                        </article>
+                    <div className="central-admin-pill-row">
+                        <span className="central-admin-badge">
+                            <i className="fa-solid fa-fingerprint" />
+                            <span>{tenant?.id || 'Tenant'}</span>
+                        </span>
+                        {agent?.last_seen_label ? (
+                            <span className="central-admin-badge is-info">
+                                <i className="fa-solid fa-clock-rotate-left" />
+                                <span>{agent.last_seen_label}</span>
+                            </span>
+                        ) : null}
+                        {agent?.last_ip ? (
+                            <span className="central-admin-badge">
+                                <i className="fa-solid fa-network-wired" />
+                                <span>{agent.last_ip}</span>
+                            </span>
+                        ) : null}
                     </div>
+                    <p>
+                        {hasAgent
+                            ? 'Esse registro central controla a ativação e a configuração sincronizada do agente instalado no cliente.'
+                            : 'Salve este cadastro para gerar o primeiro código de ativação do agente fiscal deste tenant.'}
+                    </p>
+                </article>
 
-                    <div className="central-admin-form-grid">
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Nome do agente</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-desktop" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.name}
-                                    onChange={(event) => onChange('name', event.target.value)}
-                                    placeholder="PDV Loja Centro"
-                                    required
-                                />
-                            </span>
-                        </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">Polling em segundos</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-stopwatch" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    type="number"
-                                    min="1"
-                                    max="300"
-                                    value={form.poll_interval_seconds}
-                                    onChange={(event) => onChange('poll_interval_seconds', event.target.value)}
-                                    required
-                                />
-                            </span>
-                        </label>
-
-                        <div className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Agente ativo</span>
-                            <div className="central-admin-list-row">
-                                <div className="central-admin-list-copy">
-                                    <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
-                                    <small>Quando inativo, o backend deixa de aceitar heartbeat e comandos desse agente.</small>
-                                </div>
-                                <AdminSwitch
-                                    checked={form.active}
-                                    ariaLabel="Alternar status do agente fiscal"
-                                    onChange={() => onChange('active', !form.active)}
-                                />
-                            </div>
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Código de ativação</h3>
+                        <span className={`central-admin-status-pill ${agent?.activation?.pending ? 'is-active' : agent?.activation?.activated_at ? 'is-info' : 'is-muted'}`}>
+                            {agent?.activation?.pending ? 'Pendente' : agent?.activation?.activated_at ? 'Usado' : 'Não gerado'}
+                        </span>
+                    </div>
+                    <p>
+                        Gere um código temporário e informe junto com a URL do Nimvo no instalador do agente. O setup troca esse código por
+                        credenciais internas e segue com a configuração da impressora na própria máquina do cliente.
+                    </p>
+                    {hasActivationPreview ? (
+                        <div className="central-admin-note-card" style={{ marginBottom: 16 }}>
+                            <h3>
+                                <i className="fa-solid fa-key" /> Código atual
+                            </h3>
+                            <p className="central-admin-path-copy">{activationPreview.code}</p>
+                            <p>
+                                Backend: {activationPreview.backend_url || 'Não informado'}
+                                <br />
+                                Expira em: {formatDateTime(activationPreview.expires_at)}
+                            </p>
                         </div>
+                    ) : null}
+                    <div className="central-admin-table-actions">
+                        <button
+                            type="button"
+                            className="central-admin-secondary-button"
+                            disabled={!hasAgent || activationBusy}
+                            onClick={onGenerateActivationCode}
+                        >
+                            <i className="fa-solid fa-key" />
+                            <span>{activationBusy ? 'Gerando...' : agent?.activation?.pending ? 'Gerar novo código' : 'Gerar código'}</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="central-admin-secondary-button"
+                            disabled={!hasActivationPreview}
+                            onClick={onCopyActivationCode}
+                        >
+                            <i className="fa-solid fa-copy" />
+                            <span>Copiar código</span>
+                        </button>
+                    </div>
+                    {hasAgent && agent?.activation?.pending ? (
+                        <p className="central-admin-field-note">
+                            O código fica válido até {formatDateTime(agent?.activation?.expires_at)}. Se expirar, gere um novo código e rode o setup novamente no cliente.
+                        </p>
+                    ) : null}
+                </article>
+            </div>
 
-                        <div className="central-admin-field is-full">
-                            <span className="central-admin-field-label">Escopo da configuração</span>
-                            <div className="central-admin-list-row">
-                                <div className="central-admin-list-copy">
-                                    <strong>Central: nome, status e polling</strong>
-                                    <small>Impressora, certificado, logo do cupom e API local ficam na máquina e são definidos pelo instalador do agente.</small>
-                                </div>
-                            </div>
+            <div className="central-admin-agent-device-grid">
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Última máquina conectada</h3>
+                        <span className="central-admin-badge is-info">
+                            <i className="fa-solid fa-display" />
+                            <span>{agent?.device?.machine_name || 'Sem heartbeat'}</span>
+                        </span>
+                    </div>
+                    <div className="central-admin-agent-list">
+                        <div className="central-admin-agent-item">
+                            <strong>Usuário</strong>
+                            <span>{agent?.device?.machine_user || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Última sincronização</strong>
+                            <span>{formatDateTime(agent?.device?.last_sync_at)}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Bridge fiscal</strong>
+                            <span className="central-admin-path-copy">{agent?.device?.bridge_root || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>PHP</strong>
+                            <span className="central-admin-path-copy">{agent?.device?.php_path || 'Não informado'}</span>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                <div className="central-admin-modal-footer">
-                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                        Fechar
-                    </button>
-                    <button type="submit" className="central-admin-primary-button" disabled={busy}>
-                        <i className="fa-solid fa-floppy-disk" />
-                        <span>{busy ? 'Salvando...' : hasAgent ? 'Salvar agente' : 'Criar agente'}</span>
-                    </button>
+                <article className="central-admin-license-card central-admin-agent-card">
+                    <div className="central-admin-license-card-top">
+                        <h3>Impressora</h3>
+                        <span className="central-admin-badge">
+                            <i className="fa-solid fa-print" />
+                            <span>{agent?.device?.printer_name || agent?.device?.printer_host || 'Sem impressora detectada'}</span>
+                        </span>
+                    </div>
+                    <div className="central-admin-agent-list">
+                        <div className="central-admin-agent-item">
+                            <strong>Certificado</strong>
+                            <span className="central-admin-path-copy">{agent?.device?.certificate_path || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Conector</strong>
+                            <span>{agent?.device?.printer_connector || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Impressão local</strong>
+                            <span>{agent?.device?.printer_enabled ? 'Ativa' : 'Desativada'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>Config local</strong>
+                            <span className="central-admin-path-copy">{agent?.device?.config_path || 'Não informado'}</span>
+                        </div>
+                        <div className="central-admin-agent-item">
+                            <strong>API local</strong>
+                            <span className="central-admin-path-copy">{agent?.device?.local_api_url || 'Não informado'}</span>
+                        </div>
+                    </div>
+                    <p className="central-admin-field-note">
+                        Esses dados são sincronizados pelo agente instalado. O setup do terminal já solicita o caminho do certificado A1 e a
+                        senha local. Para trocar impressora, certificado, bridge fiscal ou logo do cupom, rode o setup novamente na máquina do cliente.
+                    </p>
+                    <div className="central-admin-table-actions" style={{ marginTop: 16 }}>
+                        <button
+                            type="button"
+                            className="central-admin-secondary-button"
+                            disabled={!hasAgent || printBusy}
+                            onClick={onTestPrint}
+                        >
+                            <i className="fa-solid fa-print" />
+                            <span>{printBusy ? 'Testando...' : 'Testar impressão'}</span>
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <div className="central-admin-form-grid">
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Nome do agente</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-desktop" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            value={form.name}
+                            onChange={(event) => onChange('name', event.target.value)}
+                            placeholder="PDV Loja Centro"
+                            required
+                        />
+                    </span>
+                </label>
+
+                <label className="central-admin-field">
+                    <span className="central-admin-field-label">Polling em segundos</span>
+                    <span className="central-admin-field-shell">
+                        <span className="central-admin-field-icon">
+                            <i className="fa-solid fa-stopwatch" />
+                        </span>
+                        <input
+                            className="central-admin-field-input"
+                            type="number"
+                            min="1"
+                            max="300"
+                            value={form.poll_interval_seconds}
+                            onChange={(event) => onChange('poll_interval_seconds', event.target.value)}
+                            required
+                        />
+                    </span>
+                </label>
+
+                <div className="central-admin-field is-full">
+                    <span className="central-admin-field-label">Agente ativo</span>
+                    <div className="central-admin-list-row">
+                        <div className="central-admin-list-copy">
+                            <strong>{form.active ? 'Ativo' : 'Inativo'}</strong>
+                            <small>Quando inativo, o backend deixa de aceitar heartbeat e comandos desse agente.</small>
+                        </div>
+                        <AdminSwitch
+                            checked={form.active}
+                            ariaLabel="Alternar status do agente fiscal"
+                            onChange={() => onChange('active', !form.active)}
+                        />
+                    </div>
                 </div>
-            </form>
-        </ModalFrame>
+            </div>
+        </>
     )
 }
 
-function FiscalModal({ open, tenant, form, busy, onClose, onChange, onSubmit }) {
-    const fiscal = tenant?.fiscal
-    const hasProfile = Boolean(fiscal?.has_nfce_profile)
-    const environmentLabel = fiscal?.environment === 1 ? 'Produção' : fiscal?.environment === 2 ? 'Homologação' : 'Não informado'
+function TenantModulesTab({ tenant, moduleSections, saving, onToggle }) {
+    const modules = moduleSections.flatMap((section) =>
+        section.items.map((item) => ({
+            key: item.key,
+            label: normalizeModuleLabel(item.label),
+        })),
+    )
 
     return (
-        <ModalFrame
-            open={open}
-            icon="fa-key"
-            title={tenant ? `Fiscal de ${tenant.name}` : 'Fiscal'}
-            onClose={onClose}
-        >
-            <form onSubmit={onSubmit}>
-                <div className="central-admin-modal-body">
-                    <div className="central-admin-agent-grid">
-                        <article className="central-admin-license-card central-admin-agent-card">
-                            <div className="central-admin-license-card-top">
-                                <h3>Perfil NFC-e</h3>
-                                <span className={`central-admin-status-pill ${fiscal?.tone || 'is-muted'}`}>
-                                    {fiscal?.label || 'Sem fiscal'}
-                                </span>
-                            </div>
+        <>
+            <div className="central-admin-feature-tenant-meta" style={{ marginBottom: '1rem' }}>
+                <span className="central-admin-badge">{tenant.activeModules} módulos ativos</span>
+                <span className="central-admin-badge is-info">{tenant.presetLabel}</span>
+            </div>
+            <div className="central-admin-feature-modules">
+                {modules.map((module) => {
+                    const enabled = Boolean(tenant.form.modules?.[module.key])
 
-                            <div className="central-admin-agent-list">
-                                <div className="central-admin-agent-item">
-                                    <strong>Empresa</strong>
-                                    <span>{fiscal?.company_name || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Ambiente</strong>
-                                    <span>{environmentLabel}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>CSC atual</strong>
-                                    <span>{fiscal?.csc_id || 'Não informado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Token</strong>
-                                    <span>{fiscal?.csc_token_configured ? 'Configurado' : 'Não configurado'}</span>
-                                </div>
-                                <div className="central-admin-agent-item">
-                                    <strong>Atualizado</strong>
-                                    <span>{fiscal?.updated_label || 'Não informado'}</span>
-                                </div>
-                            </div>
-
-                            <p className="central-admin-field-note">
-                                {hasProfile
-                                    ? 'Esses dados são gravados no banco do próprio tenant, dentro do perfil fiscal NFC-e modelo 65.'
-                                    : 'Esse tenant ainda não possui um perfil fiscal NFC-e 65 para receber CSC. Cadastre o perfil fiscal primeiro.'}
-                            </p>
-                        </article>
-                    </div>
-
-                    <div className="central-admin-form-grid">
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">CSC ID</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-hashtag" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.csc_id}
-                                    onChange={(event) => onChange('csc_id', event.target.value)}
-                                    placeholder="000001"
-                                    disabled={!hasProfile}
-                                    required
-                                />
-                            </span>
+                    return (
+                        <label
+                            key={module.key}
+                            className={`central-admin-feature-chip ${enabled ? 'is-active' : ''}`}
+                        >
+                            <span>{module.label}</span>
+                            <AdminSwitch
+                                checked={enabled}
+                                disabled={saving}
+                                saving={saving}
+                                ariaLabel={`${module.label} para ${tenant.name}`}
+                                onChange={() => onToggle(tenant, module.key)}
+                            />
                         </label>
-
-                        <label className="central-admin-field">
-                            <span className="central-admin-field-label">CSC Token</span>
-                            <span className="central-admin-field-shell">
-                                <span className="central-admin-field-icon">
-                                    <i className="fa-solid fa-key" />
-                                </span>
-                                <input
-                                    className="central-admin-field-input"
-                                    value={form.csc_token}
-                                    onChange={(event) => onChange('csc_token', event.target.value)}
-                                    placeholder={fiscal?.csc_token_configured ? 'Manter token atual' : 'Cole o token da SEFAZ'}
-                                    disabled={!hasProfile}
-                                />
-                            </span>
-                            <span className="central-admin-field-note">
-                                Deixe em branco para manter o token atual.
-                            </span>
-                        </label>
-                    </div>
-                </div>
-
-                <div className="central-admin-modal-footer">
-                    <button type="button" className="central-admin-secondary-button" onClick={onClose}>
-                        Fechar
-                    </button>
-                    <button type="submit" className="central-admin-primary-button" disabled={busy || !hasProfile}>
-                        <i className="fa-solid fa-floppy-disk" />
-                        <span>{busy ? 'Salvando...' : 'Salvar CSC'}</span>
-                    </button>
-                </div>
-            </form>
-        </ModalFrame>
+                    )
+                })}
+            </div>
+        </>
     )
 }
 
-function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicense, onManageAgent, onDelete }) {
+function TenantManagePanel({
+    open,
+    isCreating,
+    tenant,
+    activeTab,
+    tenantBaseDomain,
+    moduleSections,
+    tenantForm,
+    licenseForm,
+    fiscalForm,
+    localAgentForm,
+    formBusy,
+    cnpjLookupBusy,
+    licenseBusy,
+    invoiceBusyId,
+    fiscalBusy,
+    fiscalAutofillBusy,
+    fiscalAutofillMeta,
+    fiscalToggleBusy,
+    localAgentBusy,
+    localAgentPrintBusy,
+    activationBusy,
+    activationPreview,
+    moduleSaving,
+    onClose,
+    onTabChange,
+    onTenantFieldChange,
+    onLookupCnpj,
+    onLicenseFieldChange,
+    onFiscalFieldChange,
+    onLocalAgentFieldChange,
+    onModuleToggle,
+    onSubmitGeneral,
+    onSubmitLicense,
+    onSubmitFiscal,
+    onSubmitLocalAgent,
+    onAutofillByCnpj,
+    onAutofillByCertificate,
+    onToggleFiscalActive,
+    onGenerateActivationCode,
+    onCopyActivationCode,
+    onTestPrint,
+    onInvoiceStatusChange,
+}) {
+    if (!open) {
+        return null
+    }
+
+    const availableTabs = isCreating ? MANAGE_TABS.filter((tab) => tab.key === 'geral') : MANAGE_TABS
+    const title = isCreating ? 'Novo tenant' : tenant?.name || 'Tenant'
+
+    const submitHandlers = {
+        geral: onSubmitGeneral,
+        licenca: onSubmitLicense,
+        fiscal: onSubmitFiscal,
+        agente: onSubmitLocalAgent,
+    }
+
+    const busyByTab = {
+        geral: formBusy,
+        licenca: licenseBusy,
+        fiscal: fiscalBusy,
+        agente: localAgentBusy,
+    }
+
+    const saveLabelByTab = {
+        geral: isCreating ? 'Criar tenant' : 'Salvar geral',
+        licenca: 'Salvar licença',
+        fiscal: tenant?.fiscal?.has_nfce_profile ? 'Salvar fiscal' : 'Criar perfil',
+        agente: tenant?.local_agent ? 'Salvar agente' : 'Criar agente',
+    }
+
+    const activeSubmit = submitHandlers[activeTab]
+    const showFooterSave = Boolean(activeSubmit)
+
+    return (
+        <div className="central-admin-modal-backdrop" onClick={onClose}>
+            <div className="central-admin-modal" onClick={(event) => event.stopPropagation()}>
+                <div className="central-admin-modal-header">
+                    <div className="central-admin-modal-titlebox">
+                        <div className="central-admin-modal-icon">
+                            <i className={`fa-solid ${isCreating ? 'fa-plus' : 'fa-buildings'}`} />
+                        </div>
+                        <div>
+                            <h3>{title}</h3>
+                            {!isCreating ? <p>{tenant?.domain || tenant?.id}</p> : null}
+                        </div>
+                    </div>
+                    <button type="button" className="central-admin-modal-close" onClick={onClose}>
+                        <i className="fa-solid fa-xmark" />
+                    </button>
+                </div>
+
+                <div className="central-admin-tabs">
+                    {availableTabs.map((tab) => (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            className={`central-admin-tab ${activeTab === tab.key ? 'is-active' : ''}`}
+                            onClick={() => onTabChange(tab.key)}
+                        >
+                            <i className={`fa-solid ${tab.icon}`} />
+                            <span>{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
+
+                <form onSubmit={activeSubmit || ((event) => event.preventDefault())}>
+                    <div className="central-admin-modal-body">
+                        {activeTab === 'geral' ? (
+                            <div className="central-admin-form-grid">
+                                <TenantGeneralTab
+                                    form={tenantForm}
+                                    isCreating={isCreating}
+                                    tenantBaseDomain={tenantBaseDomain}
+                                    cnpjLookupBusy={cnpjLookupBusy}
+                                    onChange={onTenantFieldChange}
+                                    onLookupCnpj={onLookupCnpj}
+                                />
+                            </div>
+                        ) : null}
+
+                        {activeTab === 'fiscal' && !isCreating ? (
+                            <TenantFiscalModal
+                                tenant={tenant}
+                                form={fiscalForm}
+                                autofillBusy={fiscalAutofillBusy}
+                                autofillMeta={fiscalAutofillMeta}
+                                onChange={onFiscalFieldChange}
+                                onAutofillByCnpj={onAutofillByCnpj}
+                                onAutofillByCertificate={onAutofillByCertificate}
+                                toggleBusy={fiscalToggleBusy}
+                                onToggleActive={onToggleFiscalActive}
+                            />
+                        ) : null}
+
+                        {activeTab === 'licenca' && !isCreating ? (
+                            <TenantLicenseTab
+                                tenant={tenant}
+                                form={licenseForm}
+                                invoiceBusyId={invoiceBusyId}
+                                onChange={onLicenseFieldChange}
+                                onInvoiceStatusChange={onInvoiceStatusChange}
+                            />
+                        ) : null}
+
+                        {activeTab === 'agente' && !isCreating ? (
+                            <TenantAgentTab
+                                tenant={tenant}
+                                form={localAgentForm}
+                                printBusy={localAgentPrintBusy}
+                                activationBusy={activationBusy}
+                                activationPreview={activationPreview}
+                                onChange={onLocalAgentFieldChange}
+                                onGenerateActivationCode={onGenerateActivationCode}
+                                onCopyActivationCode={onCopyActivationCode}
+                                onTestPrint={onTestPrint}
+                            />
+                        ) : null}
+
+                        {activeTab === 'modulos' && !isCreating ? (
+                            <TenantModulesTab
+                                tenant={tenant}
+                                moduleSections={moduleSections}
+                                saving={moduleSaving}
+                                onToggle={onModuleToggle}
+                            />
+                        ) : null}
+                    </div>
+
+                    <div className="central-admin-modal-footer">
+                        <button type="button" className="central-admin-secondary-button" onClick={onClose}>
+                            Fechar
+                        </button>
+                        {showFooterSave ? (
+                            <button type="submit" className="central-admin-primary-button" disabled={busyByTab[activeTab]}>
+                                <i className="fa-solid fa-floppy-disk" />
+                                <span>{busyByTab[activeTab] ? 'Salvando...' : saveLabelByTab[activeTab]}</span>
+                            </button>
+                        ) : null}
+                    </div>
+                </form>
+            </div>
+        </div>
+    )
+}
+
+function TenantsTable({ tenants, onCreate, onManage, onDelete, fiscalToggleBusyId, onQuickToggleFiscal }) {
     return (
         <section className="central-admin-card">
             <div className="central-admin-section-head">
@@ -1040,70 +1113,73 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicen
                             </tr>
                         </thead>
                         <tbody>
-                            {tenants.map((tenant) => (
-                                <tr key={tenant.id}>
-                                    <td>
-                                        <div className="central-admin-name-cell">
-                                            <strong>{tenant.name}</strong>
-                                            <span className="central-admin-name-meta">{tenant.domain || tenant.id}</span>
-                                        </div>
-                                    </td>
-                                    <td>{tenant.id}</td>
-                                    <td>
-                                        <span className={`central-admin-status-pill ${tenant.active ? 'is-active' : 'is-inactive'}`}>
-                                            {tenant.active ? 'Ativo' : 'Inativo'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`central-admin-status-pill ${tenant.fiscal?.tone || 'is-muted'}`}>
-                                            {tenant.fiscal?.label || 'Sem fiscal'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`central-admin-status-pill ${getLicenseTone(tenant.license?.status)}`}>
-                                            {getLicenseLabel(tenant.license?.status)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`central-admin-status-pill ${getLocalAgentTone(tenant.local_agent?.status)}`}>
-                                            {getLocalAgentLabel(tenant.local_agent?.status)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="central-admin-table-actions">
-                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageFiscal(tenant)}>
-                                                <i className="fa-solid fa-key" />
-                                                <span>Fiscal</span>
-                                            </button>
-                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageAgent(tenant)}>
-                                                <i className="fa-solid fa-desktop" />
-                                                <span>Agente</span>
-                                            </button>
-                                            <a
-                                                className="central-admin-secondary-button"
-                                                href={`/app/baixar?store=${encodeURIComponent(tenant.domain || tenant.id)}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                <i className="fa-solid fa-qrcode" />
-                                                <span>App</span>
-                                            </a>
-                                            <button type="button" className="central-admin-secondary-button" onClick={() => onManageLicense(tenant)}>
-                                                <i className="fa-solid fa-file-invoice-dollar" />
-                                                <span>Licença</span>
-                                            </button>
-                                            <button type="button" className="central-admin-secondary-button" onClick={() => onEdit(tenant)}>
-                                                <i className="fa-solid fa-pen" />
-                                                <span>Editar</span>
-                                            </button>
-                                            <button type="button" className="central-admin-secondary-button is-danger" onClick={() => onDelete(tenant)}>
-                                                <i className="fa-solid fa-trash" />
-                                                <span>Excluir</span>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                            {tenants.map((tenant) => {
+                                const hasFiscalProfile = Boolean(tenant.fiscal?.has_nfce_profile)
+
+                                return (
+                                    <tr key={tenant.id}>
+                                        <td>
+                                            <div className="central-admin-name-cell">
+                                                <strong>{tenant.name}</strong>
+                                                <span className="central-admin-name-meta">{tenant.domain || tenant.id}</span>
+                                            </div>
+                                        </td>
+                                        <td>{tenant.id}</td>
+                                        <td>
+                                            <span className={`central-admin-status-pill ${tenant.active ? 'is-active' : 'is-inactive'}`}>
+                                                {tenant.active ? 'Ativo' : 'Inativo'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="central-admin-list-row" style={{ padding: 0, background: 'none', border: 0, gap: '0.5rem' }}>
+                                                <span className={`central-admin-status-pill ${tenant.fiscal?.tone || 'is-muted'}`}>
+                                                    {tenant.fiscal?.label || 'Sem fiscal'}
+                                                </span>
+                                                {hasFiscalProfile ? (
+                                                    <AdminSwitch
+                                                        checked={Boolean(tenant.fiscal?.active)}
+                                                        disabled={fiscalToggleBusyId === tenant.id}
+                                                        saving={fiscalToggleBusyId === tenant.id}
+                                                        ariaLabel={`Alternar NFC-e de ${tenant.name}`}
+                                                        onChange={() => onQuickToggleFiscal(tenant)}
+                                                    />
+                                                ) : null}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={`central-admin-status-pill ${getLicenseTone(tenant.license?.status)}`}>
+                                                {getLicenseLabel(tenant.license?.status)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className={`central-admin-status-pill ${getLocalAgentTone(tenant.local_agent?.status)}`}>
+                                                {getLocalAgentLabel(tenant.local_agent?.status)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="central-admin-table-actions">
+                                                <button type="button" className="central-admin-primary-button" onClick={() => onManage(tenant)}>
+                                                    <i className="fa-solid fa-sliders" />
+                                                    <span>Gerenciar</span>
+                                                </button>
+                                                <a
+                                                    className="central-admin-secondary-button"
+                                                    href={`/app/baixar?store=${encodeURIComponent(tenant.domain || tenant.id)}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                >
+                                                    <i className="fa-solid fa-qrcode" />
+                                                    <span>App</span>
+                                                </a>
+                                                <button type="button" className="central-admin-secondary-button is-danger" onClick={() => onDelete(tenant)}>
+                                                    <i className="fa-solid fa-trash" />
+                                                    <span>Excluir</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -1214,22 +1290,21 @@ export default function CentralAdminClients({
     const isFeatureFlagsPage = pageMode === 'feature-flags'
 
     const [feedback, setFeedback] = useState(null)
-    const [formMode, setFormMode] = useState('create')
-    const [formOpen, setFormOpen] = useState(false)
+    const [managingTenant, setManagingTenant] = useState(null) // null | 'new' | tenant object
+    const [activeManageTab, setActiveManageTab] = useState('geral')
     const [formBusy, setFormBusy] = useState(false)
+    const [cnpjLookupBusy, setCnpjLookupBusy] = useState(false)
     const [tenantForm, setTenantForm] = useState({ ...INITIAL_TENANT_FORM })
     const [tenantToDelete, setTenantToDelete] = useState(null)
     const [deleteBusy, setDeleteBusy] = useState(false)
-    const [licenseTenant, setLicenseTenant] = useState(null)
     const [licenseForm, setLicenseForm] = useState(buildLicenseForm())
     const [licenseBusy, setLicenseBusy] = useState(false)
     const [invoiceBusyId, setInvoiceBusyId] = useState(null)
-    const [fiscalTenant, setFiscalTenant] = useState(null)
     const [fiscalForm, setFiscalForm] = useState(buildFiscalForm())
     const [fiscalBusy, setFiscalBusy] = useState(false)
     const [fiscalAutofillBusy, setFiscalAutofillBusy] = useState(false)
     const [fiscalAutofillMeta, setFiscalAutofillMeta] = useState(null)
-    const [localAgentTenant, setLocalAgentTenant] = useState(null)
+    const [fiscalToggleBusyId, setFiscalToggleBusyId] = useState(null)
     const [localAgentForm, setLocalAgentForm] = useState(buildLocalAgentForm())
     const [localAgentBusy, setLocalAgentBusy] = useState(false)
     const [localAgentPrintBusy, setLocalAgentPrintBusy] = useState(false)
@@ -1239,59 +1314,36 @@ export default function CentralAdminClients({
     const [rowState, setRowState] = useState({})
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
+    const isCreating = managingTenant === 'new'
+    const currentTenant = isCreating ? null : managingTenant
+    const isPanelOpen = managingTenant !== null
+
     useEffect(() => {
         setTenantSettingsState(buildTenantSettingsState(safeTenants))
     }, [safeTenants])
 
     useEffect(() => {
-        if (!fiscalTenant) {
+        if (!currentTenant) {
             return
         }
 
-        const updatedTenant = safeTenants.find((tenant) => tenant.id === fiscalTenant.id)
+        const updatedTenant = safeTenants.find((tenant) => tenant.id === currentTenant.id)
         if (!updatedTenant) {
-            setFiscalTenant(null)
-            setFiscalForm(buildFiscalForm())
+            setManagingTenant(null)
             return
         }
 
-        setFiscalTenant(updatedTenant)
-        setFiscalForm(buildFiscalForm(updatedTenant))
-    }, [safeTenants, fiscalTenant])
-
-    useEffect(() => {
-        if (!licenseTenant) {
-            return
-        }
-
-        const updatedTenant = safeTenants.find((tenant) => tenant.id === licenseTenant.id)
-        if (!updatedTenant) {
-            setLicenseTenant(null)
-            setLicenseForm(buildLicenseForm())
-            return
-        }
-
-        setLicenseTenant(updatedTenant)
+        setManagingTenant(updatedTenant)
         setLicenseForm(buildLicenseForm(updatedTenant))
-    }, [safeTenants, licenseTenant])
-
-    useEffect(() => {
-        if (!localAgentTenant) {
-            return
-        }
-
-        const updatedTenant = safeTenants.find((tenant) => tenant.id === localAgentTenant.id)
-        if (!updatedTenant) {
-            setLocalAgentTenant(null)
-            setLocalAgentForm(buildLocalAgentForm())
-            return
-        }
-
-        setLocalAgentTenant(updatedTenant)
+        setFiscalForm(buildFiscalForm(updatedTenant))
         setLocalAgentForm(buildLocalAgentForm(updatedTenant))
-    }, [safeTenants, localAgentTenant])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [safeTenants])
 
     const tenantSummaries = buildTenantSummaries(safeTenants, tenantSettingsState)
+    const managingTenantSummary = currentTenant
+        ? tenantSummaries.find((tenant) => tenant.id === currentTenant.id) || currentTenant
+        : null
     const trackedModules = safeModuleSections.flatMap((section) => section.items || [])
     const averageModules = tenantSummaries.length
         ? (tenantSummaries.reduce((total, tenant) => total + tenant.activeModules, 0) / tenantSummaries.length).toFixed(1)
@@ -1304,40 +1356,72 @@ export default function CentralAdminClients({
         })
     }
 
-    function handleFieldChange(field, value) {
+    function handleTenantFieldChange(field, value) {
         setTenantForm((current) => ({
             ...current,
             [field]: field === 'subdomain' ? normalizeSubdomainInput(value, tenantBaseDomain) : value,
         }))
     }
 
-    function openCreateModal() {
-        setFormMode('create')
+    function openCreatePanel() {
+        setManagingTenant('new')
+        setActiveManageTab('geral')
         setTenantForm(buildTenantForm())
-        setFormOpen(true)
-    }
-
-    function openEditModal(tenant) {
-        setFormMode('edit')
-        setTenantForm(buildTenantForm(tenant))
-        setFormOpen(true)
-    }
-
-    function openLicenseModal(tenant) {
-        setLicenseTenant(tenant)
-        setLicenseForm(buildLicenseForm(tenant))
-    }
-
-    function openFiscalModal(tenant) {
-        setFiscalTenant(tenant)
-        setFiscalForm(buildFiscalForm(tenant))
+        setLicenseForm(buildLicenseForm())
+        setFiscalForm(buildFiscalForm())
+        setLocalAgentForm(buildLocalAgentForm())
         setFiscalAutofillMeta(null)
+        setActivationPreview(null)
     }
 
-    function openLocalAgentModal(tenant) {
-        setLocalAgentTenant(tenant)
+    function openManagePanel(tenant, tab = 'geral') {
+        setManagingTenant(tenant)
+        setActiveManageTab(tab)
+        setTenantForm(buildTenantForm(tenant))
+        setLicenseForm(buildLicenseForm(tenant))
+        setFiscalForm(buildFiscalForm(tenant))
         setLocalAgentForm(buildLocalAgentForm(tenant))
+        setFiscalAutofillMeta(null)
         setActivationPreview(null)
+    }
+
+    function closeManagePanel() {
+        setManagingTenant(null)
+    }
+
+    async function handleLookupCnpjForNewTenant() {
+        if (!tenantForm.cnpj_lookup) {
+            return
+        }
+
+        setCnpjLookupBusy(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest('/admin/cnpj-lookup', {
+                method: 'post',
+                data: { cnpj: tenantForm.cnpj_lookup },
+            })
+
+            const company = response.company || {}
+
+            if (Object.keys(company).length === 0) {
+                setFeedback({ type: 'error', text: 'Não foi possível encontrar dados para esse CNPJ.' })
+                return
+            }
+
+            setTenantForm((current) => ({
+                ...current,
+                client_name: company.trade_name || company.company_name || current.client_name,
+                client_document: company.cnpj || current.client_document,
+            }))
+            setFiscalForm((current) => mergeFiscalForm(current, company))
+            setFeedback({ type: 'success', text: 'Dados do CNPJ encontrados. Revise a aba Fiscal depois de criar o tenant.' })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setCnpjLookupBusy(false)
+        }
     }
 
     async function handleSubmitTenant(event) {
@@ -1345,7 +1429,7 @@ export default function CentralAdminClients({
         setFormBusy(true)
         setFeedback(null)
 
-        const isEdit = formMode === 'edit'
+        const isEdit = !isCreating
         const url = isEdit ? `/admin/tenants/${tenantForm.tenant_id}` : '/admin/tenants'
         const method = isEdit ? 'put' : 'post'
 
@@ -1355,9 +1439,15 @@ export default function CentralAdminClients({
                 data: tenantForm,
             })
 
-            setFormOpen(false)
-            setTenantForm(buildTenantForm())
             setFeedback({ type: 'success', text: response.message })
+
+            if (!isEdit && response.tenant) {
+                // Just created - keep the panel open and move to Fiscal so the
+                // CNPJ data already looked up can be reviewed and saved.
+                setManagingTenant(response.tenant)
+                setActiveManageTab('fiscal')
+            }
+
             refresh()
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -1468,7 +1558,7 @@ export default function CentralAdminClients({
     async function handleSubmitLicense(event) {
         event.preventDefault()
 
-        if (!licenseTenant) {
+        if (!currentTenant) {
             return
         }
 
@@ -1476,7 +1566,7 @@ export default function CentralAdminClients({
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${licenseTenant.id}/license`, {
+            const response = await apiRequest(`/admin/tenants/${currentTenant.id}/license`, {
                 method: 'put',
                 data: {
                     ...licenseForm,
@@ -1487,7 +1577,6 @@ export default function CentralAdminClients({
             })
 
             setFeedback({ type: 'success', text: response.message })
-            setLicenseTenant(null)
             refresh()
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -1522,7 +1611,7 @@ export default function CentralAdminClients({
     async function handleSubmitFiscal(event) {
         event.preventDefault()
 
-        if (!fiscalTenant) {
+        if (!currentTenant) {
             return
         }
 
@@ -1530,7 +1619,7 @@ export default function CentralAdminClients({
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${fiscalTenant.id}/fiscal`, {
+            const response = await apiRequest(`/admin/tenants/${currentTenant.id}/fiscal`, {
                 method: 'put',
                 data: {
                     active: Boolean(fiscalForm.active),
@@ -1564,17 +1653,12 @@ export default function CentralAdminClients({
             })
 
             setFeedback({ type: 'success', text: response.message })
-            setFiscalTenant((current) => (
-                current
-                    ? {
-                        ...current,
-                        fiscal: response.fiscal,
-                    }
+            setManagingTenant((current) => (
+                current && current !== 'new'
+                    ? { ...current, fiscal: response.fiscal }
                     : current
             ))
-            setFiscalForm(buildFiscalForm({
-                fiscal: response.fiscal,
-            }))
+            setFiscalForm(buildFiscalForm({ fiscal: response.fiscal }))
             refresh(['tenants'])
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
@@ -1584,7 +1668,7 @@ export default function CentralAdminClients({
     }
 
     async function handleAutofillFiscal(source) {
-        if (!fiscalTenant) {
+        if (!currentTenant) {
             return
         }
 
@@ -1592,7 +1676,7 @@ export default function CentralAdminClients({
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${fiscalTenant.id}/fiscal/autofill`, {
+            const response = await apiRequest(`/admin/tenants/${currentTenant.id}/fiscal/autofill`, {
                 method: 'post',
                 data: {
                     source,
@@ -1610,10 +1694,51 @@ export default function CentralAdminClients({
         }
     }
 
+    async function toggleFiscalActiveForTenant(tenant, nextActive) {
+        setFiscalToggleBusyId(tenant.id)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${tenant.id}/fiscal/active`, {
+                method: 'patch',
+                data: { active: nextActive },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            setManagingTenant((current) => (
+                current && current !== 'new' && current.id === tenant.id
+                    ? { ...current, fiscal: response.fiscal }
+                    : current
+            ))
+            setFiscalForm((current) => (
+                currentTenant?.id === tenant.id
+                    ? mergeFiscalForm(current, response.fiscal)
+                    : current
+            ))
+            refresh(['tenants'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setFiscalToggleBusyId(null)
+        }
+    }
+
+    function handleQuickToggleFiscal(tenant) {
+        toggleFiscalActiveForTenant(tenant, !tenant.fiscal?.active)
+    }
+
+    function handleToggleFiscalActiveInPanel() {
+        if (!currentTenant) {
+            return
+        }
+
+        toggleFiscalActiveForTenant(currentTenant, !fiscalForm.active)
+    }
+
     async function handleSubmitLocalAgent(event) {
         event.preventDefault()
 
-        if (!localAgentTenant) {
+        if (!currentTenant) {
             return
         }
 
@@ -1621,7 +1746,7 @@ export default function CentralAdminClients({
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent`, {
+            const response = await apiRequest(`/admin/tenants/${currentTenant.id}/local-agent`, {
                 method: 'put',
                 data: {
                     name: localAgentForm.name,
@@ -1631,12 +1756,9 @@ export default function CentralAdminClients({
             })
 
             setFeedback({ type: 'success', text: response.message })
-            setLocalAgentTenant((current) => (
-                current
-                    ? {
-                        ...current,
-                        local_agent: response.agent,
-                    }
+            setManagingTenant((current) => (
+                current && current !== 'new'
+                    ? { ...current, local_agent: response.agent }
                     : current
             ))
             refresh(['tenants', 'agentStats'])
@@ -1648,7 +1770,7 @@ export default function CentralAdminClients({
     }
 
     async function handleGenerateActivationCode() {
-        if (!localAgentTenant) {
+        if (!currentTenant) {
             return
         }
 
@@ -1656,21 +1778,18 @@ export default function CentralAdminClients({
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/activation-code`, {
+            const response = await apiRequest(`/admin/tenants/${currentTenant.id}/local-agent/activation-code`, {
                 method: 'post',
             })
 
             setActivationPreview({
-                tenantId: localAgentTenant.id,
+                tenantId: currentTenant.id,
                 ...response.activation,
             })
             setFeedback({ type: 'success', text: response.message })
-            setLocalAgentTenant((current) => (
-                current
-                    ? {
-                        ...current,
-                        local_agent: response.agent,
-                    }
+            setManagingTenant((current) => (
+                current && current !== 'new'
+                    ? { ...current, local_agent: response.agent }
                     : current
             ))
             refresh(['tenants', 'agentStats'])
@@ -1695,11 +1814,11 @@ export default function CentralAdminClients({
     }
 
     async function handleTestLocalAgentPrint() {
-        if (!localAgentTenant?.local_agent) {
+        if (!currentTenant?.local_agent) {
             return
         }
 
-        const tenantId = localAgentTenant.id
+        const tenantId = currentTenant.id
         setLocalAgentPrintBusy(true)
         setFeedback(null)
 
@@ -1779,7 +1898,7 @@ export default function CentralAdminClients({
                                         <span>Tenants</span>
                                     </Link>
                                 ) : (
-                                    <button type="button" className="action-button tone-primary" onClick={openCreateModal}>
+                                    <button type="button" className="action-button tone-primary" onClick={openCreatePanel}>
                                         <i className="fa-solid fa-plus" />
                                         <span>Novo tenant</span>
                                     </button>
@@ -1814,26 +1933,59 @@ export default function CentralAdminClients({
                     ) : (
                         <TenantsTable
                             tenants={tenantSummaries}
-                            onCreate={openCreateModal}
-                            onEdit={openEditModal}
-                            onManageFiscal={openFiscalModal}
-                            onManageLicense={openLicenseModal}
-                            onManageAgent={openLocalAgentModal}
+                            onCreate={openCreatePanel}
+                            onManage={openManagePanel}
                             onDelete={setTenantToDelete}
+                            fiscalToggleBusyId={fiscalToggleBusyId}
+                            onQuickToggleFiscal={handleQuickToggleFiscal}
                         />
                     )}
                 </PageContainer>
             </div>
 
-            <TenantFormModal
-                open={formOpen}
-                mode={formMode}
-                form={tenantForm}
-                busy={formBusy}
+            <TenantManagePanel
+                open={isPanelOpen}
+                isCreating={isCreating}
+                tenant={managingTenantSummary}
+                activeTab={activeManageTab}
                 tenantBaseDomain={tenantBaseDomain}
-                onClose={() => setFormOpen(false)}
-                onChange={handleFieldChange}
-                onSubmit={handleSubmitTenant}
+                moduleSections={safeModuleSections}
+                tenantForm={tenantForm}
+                licenseForm={licenseForm}
+                fiscalForm={fiscalForm}
+                localAgentForm={localAgentForm}
+                formBusy={formBusy}
+                cnpjLookupBusy={cnpjLookupBusy}
+                licenseBusy={licenseBusy}
+                invoiceBusyId={invoiceBusyId}
+                fiscalBusy={fiscalBusy}
+                fiscalAutofillBusy={fiscalAutofillBusy}
+                fiscalAutofillMeta={fiscalAutofillMeta}
+                fiscalToggleBusy={currentTenant ? fiscalToggleBusyId === currentTenant.id : false}
+                localAgentBusy={localAgentBusy}
+                localAgentPrintBusy={localAgentPrintBusy}
+                activationBusy={activationBusy}
+                activationPreview={activationPreview}
+                moduleSaving={currentTenant ? Boolean(rowState[currentTenant.id]?.saving) : false}
+                onClose={closeManagePanel}
+                onTabChange={setActiveManageTab}
+                onTenantFieldChange={handleTenantFieldChange}
+                onLookupCnpj={handleLookupCnpjForNewTenant}
+                onLicenseFieldChange={handleLicenseFieldChange}
+                onFiscalFieldChange={handleFiscalFieldChange}
+                onLocalAgentFieldChange={handleLocalAgentFieldChange}
+                onModuleToggle={handleToggleModule}
+                onSubmitGeneral={handleSubmitTenant}
+                onSubmitLicense={handleSubmitLicense}
+                onSubmitFiscal={handleSubmitFiscal}
+                onSubmitLocalAgent={handleSubmitLocalAgent}
+                onAutofillByCnpj={() => handleAutofillFiscal('cnpj')}
+                onAutofillByCertificate={() => handleAutofillFiscal('certificate')}
+                onToggleFiscalActive={handleToggleFiscalActiveInPanel}
+                onGenerateActivationCode={handleGenerateActivationCode}
+                onCopyActivationCode={handleCopyActivationCode}
+                onTestPrint={handleTestLocalAgentPrint}
+                onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
             />
 
             <ConfirmModal
@@ -1842,55 +1994,6 @@ export default function CentralAdminClients({
                 busy={deleteBusy}
                 onClose={() => setTenantToDelete(null)}
                 onConfirm={handleConfirmDelete}
-            />
-
-            <LicenseModal
-                open={Boolean(licenseTenant)}
-                tenant={licenseTenant}
-                form={licenseForm}
-                busy={licenseBusy}
-                invoiceBusyId={invoiceBusyId}
-                onClose={() => setLicenseTenant(null)}
-                onChange={handleLicenseFieldChange}
-                onSubmit={handleSubmitLicense}
-                onInvoiceStatusChange={handleLicenseInvoiceStatusChange}
-            />
-
-            <TenantFiscalModal
-                open={Boolean(fiscalTenant)}
-                tenant={fiscalTenant}
-                form={fiscalForm}
-                busy={fiscalBusy}
-                autofillBusy={fiscalAutofillBusy}
-                autofillMeta={fiscalAutofillMeta}
-                onClose={() => {
-                    setFiscalTenant(null)
-                    setFiscalForm(buildFiscalForm())
-                    setFiscalAutofillMeta(null)
-                }}
-                onChange={handleFiscalFieldChange}
-                onSubmit={handleSubmitFiscal}
-                onAutofillByCnpj={() => handleAutofillFiscal('cnpj')}
-                onAutofillByCertificate={() => handleAutofillFiscal('certificate')}
-            />
-
-            <LocalAgentModal
-                open={Boolean(localAgentTenant)}
-                tenant={localAgentTenant}
-                form={localAgentForm}
-                busy={localAgentBusy}
-                printBusy={localAgentPrintBusy}
-                activationBusy={activationBusy}
-                activationPreview={activationPreview}
-                onClose={() => {
-                    setLocalAgentTenant(null)
-                    setActivationPreview(null)
-                }}
-                onChange={handleLocalAgentFieldChange}
-                onSubmit={handleSubmitLocalAgent}
-                onGenerateActivationCode={handleGenerateActivationCode}
-                onCopyActivationCode={handleCopyActivationCode}
-                onTestPrint={handleTestLocalAgentPrint}
             />
         </AdminLayout>
     )

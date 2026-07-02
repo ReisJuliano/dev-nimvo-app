@@ -49,12 +49,15 @@ Route::prefix('admin')->name('central.admin.')->group(function () {
         Route::get('/configuracoes', [AdminPageController::class, 'placeholder'])->defaults('section', 'configuracoes')->name('settings');
         Route::get('/integracoes', [AdminPageController::class, 'placeholder'])->defaults('section', 'integracoes')->name('integrations');
 
+        Route::post('/cnpj-lookup', [TenantManagementController::class, 'lookupCnpj'])->name('cnpj-lookup');
+
         Route::post('/tenants', [TenantManagementController::class, 'store'])->name('tenants.store');
         Route::put('/tenants/{tenant}', [TenantManagementController::class, 'update'])->name('tenants.update');
         Route::delete('/tenants/{tenant}', [TenantManagementController::class, 'destroy'])->name('tenants.destroy');
         Route::patch('/tenants/{tenant}/status', [TenantManagementController::class, 'updateStatus'])->name('tenants.status');
         Route::put('/tenants/{tenant}/settings', [TenantManagementController::class, 'updateSettings'])->name('tenants.settings');
         Route::put('/tenants/{tenant}/fiscal', [TenantManagementController::class, 'updateFiscalSettings'])->name('tenants.fiscal.update');
+        Route::patch('/tenants/{tenant}/fiscal/active', [TenantManagementController::class, 'toggleFiscalActive'])->name('tenants.fiscal.toggle-active');
         Route::post('/tenants/{tenant}/fiscal/autofill', [TenantManagementController::class, 'autofillFiscalSettings'])->name('tenants.fiscal.autofill');
         Route::put('/tenants/{tenant}/local-agent', [TenantManagementController::class, 'upsertLocalAgent'])->name('tenants.local-agent.upsert');
         Route::post('/tenants/{tenant}/local-agent/activation-code', [TenantManagementController::class, 'issueLocalAgentActivationCode'])->name('tenants.local-agent.activation-code');

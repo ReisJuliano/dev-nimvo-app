@@ -14,6 +14,7 @@ use App\Models\Central\LocalAgentCommand;
 use App\Models\Central\TenantLicenseInvoice;
 use App\Models\Central\TenantSetting;
 use App\Models\Tenant;
+use App\Services\Central\CnpjLookupService;
 use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
@@ -212,6 +213,30 @@ class TenantManagementController extends Controller
         return response()->json([
             'message' => 'Perfil fiscal do tenant salvo com sucesso.',
             'fiscal' => $fiscal,
+        ]);
+    }
+
+    public function toggleFiscalActive(
+        Request $request,
+        Tenant $tenant,
+        TenantFiscalProfileService $fiscalProfileService,
+    ): JsonResponse {
+        $data = $request->validate(['active' => ['required', 'boolean']]);
+
+        $fiscal = $fiscalProfileService->toggleActive((string) $tenant->id, (bool) $data['active']);
+
+        return response()->json([
+            'message' => $data['active'] ? 'Emissao de NFC-e ativada.' : 'Emissao de NFC-e desativada.',
+            'fiscal' => $fiscal,
+        ]);
+    }
+
+    public function lookupCnpj(Request $request, CnpjLookupService $lookupService): JsonResponse
+    {
+        $data = $request->validate(['cnpj' => ['required', 'string']]);
+
+        return response()->json([
+            'company' => $lookupService->lookup($data['cnpj']),
         ]);
     }
 
