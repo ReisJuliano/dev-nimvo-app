@@ -10,10 +10,19 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 const localAgentVersion = "nimvo-go-agent"
+
+var localAgentStartedAt = time.Now()
+var localAgentPrintState = struct {
+	sync.Mutex
+	LastStatus string
+	LastError  string
+	LastAt     time.Time
+}{LastStatus: "idle"}
 
 type localAgentHTTPServer struct {
 	configPath string
@@ -125,6 +134,16 @@ func (server *localAgentHTTPServer) ServeHTTP(writer http.ResponseWriter, reques
 			return
 		}
 		server.handlePaymentReceipt(writer, request)
+	case request.URL.Path == "/v1/prints/fiscal-receipt" && request.Method == http.MethodPost:
+		if !server.authorize(writer, request) {
+			return
+		}
+		server.handleFiscalReceipt(writer, request)
+	case request.URL.Path == "/v1/prints/operation-receipt" && request.Method == http.MethodPost:
+		if !server.authorize(writer, request) {
+			return
+		}
+		server.handleOperationReceipt(writer, request)
 	case strings.HasPrefix(request.URL.Path, "/v1/workspaces/") && request.Method == http.MethodGet:
 		if !server.authorize(writer, request) {
 			return
@@ -154,8 +173,10 @@ func (server *localAgentHTTPServer) handleHealth(writer http.ResponseWriter) {
 	}
 
 	server.writeJSON(writer, http.StatusOK, map[string]any{
-		"status":  "ok",
-		"service": localAgentVersion,
+		"status":         "ok",
+		"service":        localAgentVersion,
+		"uptime_seconds": int(time.Since(localAgentStartedAt).Seconds()),
+		"last_print":     localPrintSnapshot(),
 		"local_api": map[string]any{
 			"enabled": config.LocalAPI.Enabled,
 			"url":     localAPIBaseURL(config),
@@ -163,9 +184,11 @@ func (server *localAgentHTTPServer) handleHealth(writer http.ResponseWriter) {
 			"port":    config.LocalAPI.Port,
 		},
 		"printer": map[string]any{
-			"enabled":   config.Printer.Enabled,
-			"connector": config.Printer.Connector,
-			"target":    printerTarget(config.Printer),
+			"enabled":     config.Printer.Enabled,
+			"connector":   config.Printer.Connector,
+			"mode":        config.Printer.Mode,
+			"target":      printerTarget(config.Printer),
+			"paper_width": config.Printer.PaperWidth,
 		},
 	})
 }
@@ -173,7 +196,7 @@ func (server *localAgentHTTPServer) handleHealth(writer http.ResponseWriter) {
 func (server *localAgentHTTPServer) handlePrinters(writer http.ResponseWriter) {
 	server.writeJSON(writer, http.StatusOK, map[string]any{
 		"status":   "ok",
-		"printers": listInstalledPrinters(),
+		"printers": listInstalledPrinterInfos(),
 	})
 }
 
@@ -196,7 +219,9 @@ func (server *localAgentHTTPServer) handlePrintTest(writer http.ResponseWriter, 
 		return
 	}
 
-	outputPath, err := printTestReceipt(config.Printer, payload)
+	outputPath, err := executeLocalPrint(config, "/v1/prints/test", payload, func() (string, error) {
+		return printTestReceipt(config.Printer, payload)
+	})
 	if err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
@@ -232,7 +257,9 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 		return
 	}
 
-	outputPath, err := printPaymentReceipt(config.Printer, payload)
+	outputPath, err := executeLocalPrint(config, "/v1/prints/payment-receipt", payload, func() (string, error) {
+		return printPaymentReceipt(config.Printer, payload)
+	})
 	if err != nil {
 		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{
 			Status: "print_failed",
@@ -244,6 +271,64 @@ func (server *localAgentHTTPServer) handlePaymentReceipt(writer http.ResponseWri
 	server.writeJSON(writer, http.StatusOK, map[string]any{
 		"status":      "printed",
 		"type":        "payment_receipt",
+		"printed_at":  time.Now().Format(time.RFC3339),
+		"output_file": outputPath,
+	})
+}
+
+func (server *localAgentHTTPServer) handleFiscalReceipt(writer http.ResponseWriter, request *http.Request) {
+	payload := fiscalReceiptRequest{}
+	if err := server.decodeJSONBody(request, &payload); err != nil {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{Status: "invalid_request", Error: err.Error()})
+		return
+	}
+
+	config, err := loadNormalizedAgentConfig(server.configPath)
+	if err != nil {
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{Status: "error", Error: err.Error()})
+		return
+	}
+
+	outputPath, err := executeLocalPrint(config, "/v1/prints/fiscal-receipt", payload, func() (string, error) {
+		return printFiscalReceipt(config.Printer, payload)
+	})
+	if err != nil {
+		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{Status: "print_failed", Error: err.Error()})
+		return
+	}
+
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":      "printed",
+		"type":        "fiscal_receipt",
+		"printed_at":  time.Now().Format(time.RFC3339),
+		"output_file": outputPath,
+	})
+}
+
+func (server *localAgentHTTPServer) handleOperationReceipt(writer http.ResponseWriter, request *http.Request) {
+	payload := operationReceiptRequest{}
+	if err := server.decodeJSONBody(request, &payload); err != nil {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{Status: "invalid_request", Error: err.Error()})
+		return
+	}
+
+	config, err := loadNormalizedAgentConfig(server.configPath)
+	if err != nil {
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{Status: "error", Error: err.Error()})
+		return
+	}
+
+	outputPath, err := executeLocalPrint(config, "/v1/prints/operation-receipt", payload, func() (string, error) {
+		return printOperationReceipt(config.Printer, payload)
+	})
+	if err != nil {
+		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{Status: "print_failed", Error: err.Error()})
+		return
+	}
+
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":      "printed",
+		"type":        payload.Type,
 		"printed_at":  time.Now().Format(time.RFC3339),
 		"output_file": outputPath,
 	})
@@ -401,6 +486,10 @@ func localAPIBaseURL(config AgentConfig) string {
 }
 
 func printerTarget(config PrinterConfig) string {
+	if strings.EqualFold(strings.TrimSpace(config.Mode), "relay") {
+		return strings.TrimSpace(config.RelayTarget)
+	}
+
 	connector := normalizePrinterConnector(config.Connector)
 	if connector == "tcp" || connector == "network" {
 		return fmt.Sprintf("%s:%d", config.Host, config.Port)

@@ -129,7 +129,7 @@ export default function AppLayout({
         ? `As alterações ficam salvas nesta máquina e serão sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
         : offlineStatus.pendingCount > 0
             ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronização com o servidor.`
-            : offlineStatus.lastSyncError || 'Existe uma sincronização que precisa de atenç?.'
+            : offlineStatus.lastSyncError || 'Existe uma sincronização que precisa de atenção.'
     const offlineBannerMeta = offlineStatus.lastSyncAt
         ? `Última sincronização concluída em ${formatDateTime(offlineStatus.lastSyncAt)}.`
         : 'Ainda não houve uma sincronização concluída nesta máquina.'

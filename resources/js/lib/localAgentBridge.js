@@ -35,7 +35,7 @@ export async function requestLocalAgent(bridge, path, options = {}) {
         const payload = raw ? JSON.parse(raw) : {}
 
         if (!response.ok) {
-            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitaç?.')
+            const localAgentError = new Error(payload?.error || payload?.message || 'A API local do agente recusou a solicitação.')
             localAgentError.status = response.status
             throw localAgentError
         }
@@ -67,6 +67,13 @@ export async function printTestViaLocalAgent(bridge, payload = {}) {
     return requestLocalAgent(bridge, '/v1/prints/test', {
         method: 'post',
         body: payload,
+    })
+}
+
+export async function listPrintersViaLocalAgent(bridge) {
+    return requestLocalAgent(bridge, '/v1/printers', {
+        method: 'get',
+        timeoutMs: 3500,
     })
 }
 

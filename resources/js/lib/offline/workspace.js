@@ -1358,7 +1358,7 @@ export function registerOfflineCashMovement(tenantId, cashRegisterId, payload = 
 
     updateState(tenantId, (state) => {
         if (!state.cashRegister || String(state.cashRegister.id) !== String(cashRegisterId)) {
-            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentaç?.')
+            throw new Error('Nenhum caixa aberto foi encontrado para registrar a movimentação.')
         }
 
         const queuedAction = {

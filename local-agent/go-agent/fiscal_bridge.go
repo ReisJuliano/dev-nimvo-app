@@ -16,6 +16,8 @@ const bundledFiscalBridgeEntryPoint = "bridge.php"
 var printerCommandTypes = []string{
 	"print_payment_receipt",
 	"print_test",
+	"print_fiscal_receipt",
+	"print_operation_receipt",
 }
 
 var fiscalBridgeCommandTypes = []string{
@@ -26,7 +28,7 @@ var fiscalBridgeCommandTypes = []string{
 
 func supportedCommandTypesForConfig(config AgentConfig) []string {
 	supported := append([]string{}, printerCommandTypes...)
-	if fiscalBridgeAvailable(config) {
+	if false && fiscalBridgeAvailable(config) {
 		supported = append(fiscalBridgeCommandTypes, supported...)
 	}
 

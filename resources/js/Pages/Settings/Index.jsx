@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { router } from '@inertiajs/react'
+import { useEffect, useMemo, useState } from 'react'
+import { router, usePage } from '@inertiajs/react'
 import ActionButton from '@/Components/UI/ActionButton'
 import PageContainer from '@/Components/UI/PageContainer'
 import RightSidebarPanel, { RightSidebarSection } from '@/Components/UI/RightSidebarPanel'
@@ -8,6 +8,7 @@ import { useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useModules from '@/hooks/useModules'
 import { DIRECT_SALES_PRESET } from '@/lib/modules'
 import { apiRequest } from '@/lib/http'
+import { canUseLocalAgentBridge, listPrintersViaLocalAgent, printTestViaLocalAgent } from '@/lib/localAgentBridge'
 import './settings.css'
 
 const SIMPLE_MODULE_KEYS = new Set([
@@ -44,9 +45,15 @@ function setValueByPath(object, path, value) {
 }
 
 export default function SettingsIndex({ settings, businessPresets, generalOptions, moduleSections }) {
+    const { localAgentBridge } = usePage().props
     const [form, setForm] = useState(settings)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [localAgents, setLocalAgents] = useState([])
+    const [localAgentsLoading, setLocalAgentsLoading] = useState(false)
+    const [newAgentLabel, setNewAgentLabel] = useState('Caixa 1')
+    const [printers, setPrinters] = useState([])
+    const [printersLoading, setPrintersLoading] = useState(false)
     const moduleState = useModules(form)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
     const visibleBusinessPresets = useMemo(
@@ -80,6 +87,15 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                 .map((item) => item.label),
         [visibleModuleSections, moduleState.modules],
     )
+
+    useEffect(() => {
+        void refreshLocalAgents()
+        const timer = window.setInterval(() => {
+            void refreshLocalAgents({ quiet: true })
+        }, 5000)
+
+        return () => window.clearInterval(timer)
+    }, [])
 
     function handleToggle(path) {
         setForm((current) => {
@@ -130,6 +146,107 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
             setFeedback({ type: 'error', text: error.message })
         } finally {
             setSaving(false)
+        }
+    }
+
+    async function refreshLocalAgents({ quiet = false } = {}) {
+        if (!quiet) {
+            setLocalAgentsLoading(true)
+        }
+
+        try {
+            const response = await apiRequest('/api/settings/local-agent')
+            setLocalAgents(response.agents || [])
+        } catch (error) {
+            if (!quiet) {
+                setFeedback({ type: 'error', text: error.message })
+            }
+        } finally {
+            setLocalAgentsLoading(false)
+        }
+    }
+
+    async function createLocalAgent() {
+        const label = newAgentLabel.trim()
+        if (!label) {
+            setFeedback({ type: 'warning', text: 'Informe um nome para o computador ou caixa.' })
+            return
+        }
+
+        setLocalAgentsLoading(true)
+        try {
+            const response = await apiRequest('/api/settings/local-agent', {
+                method: 'post',
+                data: { label },
+            })
+            setLocalAgents((current) => [response.agent, ...current])
+            setNewAgentLabel('')
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLocalAgentsLoading(false)
+        }
+    }
+
+    async function generateActivationCode(agentId) {
+        try {
+            const response = await apiRequest(`/api/settings/local-agent/${agentId}/activation-code`, { method: 'post' })
+            setLocalAgents((current) => current.map((agent) => agent.id === agentId ? response.agent : agent))
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    async function updateLocalAgent(agentId, data) {
+        try {
+            const response = await apiRequest(`/api/settings/local-agent/${agentId}`, {
+                method: 'put',
+                data,
+            })
+            setLocalAgents((current) => current.map((agent) => agent.id === agentId ? response.agent : agent))
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    function downloadAgent(agentId) {
+        window.location.href = `/api/settings/local-agent/${agentId}/download`
+    }
+
+    async function refreshPrinters() {
+        if (!canUseLocalAgentBridge(localAgentBridge)) {
+            setFeedback({ type: 'warning', text: 'Este navegador ainda não está conectado ao agente local.' })
+            return
+        }
+
+        setPrintersLoading(true)
+        try {
+            const response = await listPrintersViaLocalAgent(localAgentBridge)
+            setPrinters(response.printers || [])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setPrintersLoading(false)
+        }
+    }
+
+    async function testLocalPrinter() {
+        if (!canUseLocalAgentBridge(localAgentBridge)) {
+            setFeedback({ type: 'warning', text: 'Este navegador ainda não está conectado ao agente local.' })
+            return
+        }
+
+        try {
+            await printTestViaLocalAgent(localAgentBridge, {
+                store_name: 'Nimvo',
+                message: 'Teste disparado pela tela de Configurações.',
+            })
+            setFeedback({ type: 'success', text: 'Teste enviado para o agente local.' })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
         }
     }
 
@@ -271,6 +388,102 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                     </div>
 
                     {/* ─── Footer com salvar ─── */}
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-print" />
+                            Impressora / Agente local
+                            <p>Instale o agente nos computadores que imprimem comprovantes.</p>
+                        </div>
+
+                        <div className="cfg-agent-panel">
+                            <div className="cfg-agent-create">
+                                <input
+                                    type="text"
+                                    className="cfg-agent-input"
+                                    value={newAgentLabel}
+                                    onChange={(event) => setNewAgentLabel(event.target.value)}
+                                    placeholder="Nome do computador, ex. Caixa 1"
+                                />
+                                <button type="button" className="cfg-agent-button" onClick={createLocalAgent} disabled={localAgentsLoading}>
+                                    <i className="fa-solid fa-plus" />
+                                    Adicionar
+                                </button>
+                                <button type="button" className="cfg-agent-button ghost" onClick={refreshPrinters} disabled={printersLoading}>
+                                    <i className={`fa-solid ${printersLoading ? 'fa-spinner fa-spin' : 'fa-rotate'}`} />
+                                    Impressoras
+                                </button>
+                                <button type="button" className="cfg-agent-button ghost" onClick={testLocalPrinter}>
+                                    <i className="fa-solid fa-receipt" />
+                                    Teste
+                                </button>
+                            </div>
+
+                            {printers.length ? (
+                                <div className="cfg-printer-list">
+                                    {printers.map((printer) => (
+                                        <span key={printer.name || printer} className="cfg-printer-chip">
+                                            {printer.name || printer}
+                                            {printer.status ? <small>{printer.status}</small> : null}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : null}
+
+                            <div className="cfg-agent-list">
+                                {localAgents.length ? localAgents.map((agent) => (
+                                    <div key={agent.id} className="cfg-agent-card">
+                                        <div className="cfg-agent-main">
+                                            <strong>{agent.label}</strong>
+                                            <span className={`cfg-agent-status ${agent.online ? 'online' : 'offline'}`}>
+                                                {agent.online ? 'Online' : agent.activation?.pending ? 'Aguardando ativação' : 'Offline'}
+                                            </span>
+                                            <small>{agent.printer?.mode === 'relay' ? `Relay ${agent.printer.relay_target || ''}` : agent.printer?.name || 'Impressora local'}</small>
+                                            <div className="cfg-agent-config">
+                                                <select
+                                                    value={agent.printer?.mode || 'local'}
+                                                    onChange={(event) => updateLocalAgent(agent.id, { printer: { mode: event.target.value } })}
+                                                >
+                                                    <option value="local">Local</option>
+                                                    <option value="relay">Relay</option>
+                                                </select>
+                                                <select
+                                                    value={agent.printer?.name || ''}
+                                                    onChange={(event) => updateLocalAgent(agent.id, { printer: { name: event.target.value, mode: 'local' } })}
+                                                >
+                                                    <option value="">Selecionar impressora</option>
+                                                    {printers.map((printer) => (
+                                                        <option key={printer.name || printer} value={printer.name || printer}>{printer.name || printer}</option>
+                                                    ))}
+                                                </select>
+                                                <input
+                                                    type="text"
+                                                    defaultValue={agent.printer?.relay_target || ''}
+                                                    placeholder="IP relay, ex. 192.168.0.12:18123"
+                                                    onBlur={(event) => updateLocalAgent(agent.id, { printer: { relay_target: event.target.value } })}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="cfg-agent-actions">
+                                            {agent.activation?.code ? (
+                                                <code className="cfg-agent-code">{agent.activation.code}</code>
+                                            ) : null}
+                                            <button type="button" className="cfg-agent-button ghost" onClick={() => generateActivationCode(agent.id)}>
+                                                Código
+                                            </button>
+                                            <button type="button" className="cfg-agent-button" onClick={() => downloadAgent(agent.id)}>
+                                                Baixar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="cfg-agent-empty">
+                                        {localAgentsLoading ? 'Carregando agentes...' : 'Nenhum agente local cadastrado para esta loja.'}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="cfg-footer">
                         <p>As configurações afetam todos os usuários da loja imediatamente após salvar.</p>
                         <button type="submit" className="cfg-save-btn" disabled={saving}>

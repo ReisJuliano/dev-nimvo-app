@@ -144,3 +144,20 @@ Visual Studio, que so afetam builds Web/Windows desktop.
 - 2026-07-01: Compras/entrada de estoque e contas a pagar usam
   `confirm_amount_mismatch` para exigir uma segunda confirmacao quando o valor
   informado fica muito acima da referencia historica ou do custo dos itens.
+- 2026-07-02: A impressao local do PDV usa comandos centrais
+  `local_agent_commands`; o backend so cria comando de comprovante quando
+  `LocalAgentBridgeService::isOnline()` confirma heartbeat recente. Comandos
+  travados em `processing` expiram por
+  `nimvo:fail-stale-local-agent-commands`, e o PDV acompanha/reenvia falhas via
+  `/api/pdv/local-agent/commands/{command}`.
+- 2026-07-02: O agente Go continua em `local-agent/go-agent` e o fluxo
+  self-service em Configuracoes serve um ZIP gerado pelo Laravel a partir de
+  `local-agent/bin/nimvo-fiscal-agent.exe` (fallback:
+  `local-agent/go-agent/nimvo-fiscal-agent.exe`), incluindo `nimvo-agent.json`
+  e `instalar.bat`. Nesta maquina o Go foi instalado em
+  `B:\Tools\Go\go\bin`; use esse caminho ou adicione-o ao PATH da sessao para
+  rodar `gofmt`, `go test ./...` e builds do agente.
+- 2026-07-02: Tenants criados por `ProvisionTenantService` passam a receber um
+  agente local central padrao automaticamente quando a tabela `local_agents`
+  existe. A migration `2026_07_02_000200_ensure_default_local_agents_for_tenants`
+  faz backfill para tenants antigos sem duplicar agentes ja existentes.

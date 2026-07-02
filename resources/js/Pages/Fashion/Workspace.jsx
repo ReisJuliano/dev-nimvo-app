@@ -165,7 +165,7 @@ function PromotionsWorkspace({ payload }) {
                         {filteredPromotions.length ? filteredPromotions.map((promotion) => (
                             <button key={promotion.id} type="button" className={`fashion-list-card ${form.id === promotion.id ? 'active' : ''}`} onClick={() => setForm({ ...emptyForm, ...promotion })}>
                                 <div className="fashion-list-card-top"><strong>{promotion.name}</strong><PromotionStatusBadge promotion={promotion} /></div>
-                                <p>{promotion.description || 'Sem descriç?.'}</p>
+                                <p>{promotion.description || 'Sem descrição.'}</p>
                                 <div className="fashion-list-card-meta"><span>{getPromotionDiscountLabel(promotion)}</span><span>{getPromotionScopeLabel(promotion)}</span></div>
                             </button>
                         )) : <EmptyState title="Sem promoções" text="Nenhum registro neste filtro." />}

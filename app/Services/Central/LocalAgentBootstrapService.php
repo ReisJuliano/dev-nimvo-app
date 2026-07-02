@@ -16,9 +16,31 @@ class LocalAgentBootstrapService
     ) {
     }
 
+    public function ensureDefaultForTenant(string $tenantId, array $overrides = []): LocalAgent
+    {
+        $agent = LocalAgent::query()
+            ->where('tenant_id', $tenantId)
+            ->oldest('id')
+            ->first();
+
+        if ($agent) {
+            return $agent;
+        }
+
+        return $this->upsertForTenant($tenantId, array_replace_recursive([
+            'name' => 'Agente local padrao',
+            'label' => 'Caixa 1',
+            'active' => true,
+            'create_new' => true,
+            'runtime_config' => [],
+        ], $overrides));
+    }
+
     public function upsertForTenant(string $tenantId, array $data): LocalAgent
     {
-        $agent = LocalAgent::query()->firstWhere('tenant_id', $tenantId);
+        $agent = isset($data['agent_id'])
+            ? LocalAgent::query()->where('tenant_id', $tenantId)->find($data['agent_id'])
+            : ((bool) ($data['create_new'] ?? false) ? null : LocalAgent::query()->firstWhere('tenant_id', $tenantId));
         $metadata = is_array($agent?->metadata) ? $agent->metadata : [];
         $credentials = $this->generateCredentialsIfMissing($metadata);
 
@@ -38,6 +60,7 @@ class LocalAgentBootstrapService
 
         $agent->forceFill([
             'name' => (string) ($data['name'] ?? $agent->name ?? sprintf('Agente fiscal %s', $tenantId)),
+            'label' => (string) ($data['label'] ?? $data['name'] ?? $agent->label ?? $agent->name ?? 'Caixa 1'),
             'active' => (bool) ($data['active'] ?? true),
             'secret_hash' => $credentials['secret_hash'] ?? $agent->secret_hash,
             'metadata' => $metadata,
@@ -191,9 +214,13 @@ class LocalAgentBootstrapService
             'printer' => [
                 'enabled' => (bool) ($devicePrinter['enabled'] ?? true),
                 'connector' => (string) ($devicePrinter['connector'] ?? 'windows'),
+                'mode' => (string) ($devicePrinter['mode'] ?? 'local'),
                 'name' => (string) ($devicePrinter['name'] ?? ''),
                 'host' => (string) ($devicePrinter['host'] ?? '127.0.0.1'),
                 'port' => (int) ($devicePrinter['port'] ?? 9100),
+                'relay_target' => (string) ($devicePrinter['relay_target'] ?? ''),
+                'relay_agent_key' => (string) ($devicePrinter['relay_agent_key'] ?? ''),
+                'paper_width' => (string) ($devicePrinter['paper_width'] ?? '80mm'),
                 'logo_path' => (string) ($devicePrinter['logo_path'] ?? ''),
             ],
             'local_api' => [

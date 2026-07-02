@@ -9,6 +9,7 @@ use App\Http\Requests\Tenant\CashRegister\OpenCashRegisterRequest;
 use App\Http\Requests\Tenant\CashRegister\RegisterCashMovementRequest;
 use App\Models\Tenant\CashRegister;
 use App\Services\Tenant\CashRegisterReportService;
+use App\Services\Tenant\LocalAgentPrintQueueService;
 use App\Services\Tenant\SupervisorAuthorizationService;
 use Illuminate\Http\JsonResponse;
 
@@ -41,7 +42,11 @@ class CashRegisterApiController extends Controller
         ], 201);
     }
 
-    public function movement(RegisterCashMovementRequest $request, CashRegister $cashRegister): JsonResponse
+    public function movement(
+        RegisterCashMovementRequest $request,
+        CashRegister $cashRegister,
+        LocalAgentPrintQueueService $printQueueService,
+    ): JsonResponse
     {
         $userId = auth()->user()?->getKey();
 
@@ -53,11 +58,22 @@ class CashRegisterApiController extends Controller
             'amount' => $request->validated('amount'),
             'reason' => $request->validated('reason'),
         ]);
+        $printResult = null;
+
+        try {
+            $printResult = $printQueueService->queueCashMovementReceipt($movement);
+        } catch (\Throwable) {
+            $printResult = [
+                'status' => 'failed',
+                'message' => 'Movimentação registrada, mas não foi possível enviar o comprovante para impressão.',
+            ];
+        }
 
         return response()->json([
             'message' => $movement->type === 'withdrawal'
                 ? 'Sangria registrada com sucesso.'
                 : 'Suprimento registrado com sucesso.',
+            'local_agent_print' => $printResult,
         ]);
     }
 

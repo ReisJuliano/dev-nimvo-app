@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -245,10 +246,26 @@ func resolveDialogInitialDirectory(initialPath string) string {
 }
 
 func listInstalledPrinters() []string {
+	infos := listInstalledPrinterInfos()
+	if len(infos) == 0 {
+		return nil
+	}
+
+	names := make([]string, 0, len(infos))
+	for _, info := range infos {
+		if name, ok := info["name"].(string); ok && strings.TrimSpace(name) != "" {
+			names = append(names, strings.TrimSpace(name))
+		}
+	}
+
+	return names
+}
+
+func listInstalledPrinterInfos() []map[string]any {
 	command := strings.Join([]string{
 		`$ErrorActionPreference = 'Stop'`,
-		`$printers = Get-Printer | Select-Object -ExpandProperty Name`,
-		`if ($printers) { [Console]::Out.Write(($printers -join [Environment]::NewLine)) }`,
+		`$printers = Get-Printer | Select-Object Name, PrinterStatus, Type, Shared`,
+		`if ($printers) { [Console]::Out.Write(($printers | ConvertTo-Json -Compress)) }`,
 	}, "; ")
 
 	output, err := exec.Command("powershell", "-NoProfile", "-Command", command).CombinedOutput()
@@ -256,13 +273,37 @@ func listInstalledPrinters() []string {
 		return nil
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	printers := make([]string, 0, len(lines))
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			printers = append(printers, line)
+	trimmed := strings.TrimSpace(string(output))
+	if trimmed == "" {
+		return nil
+	}
+
+	var list []map[string]any
+	if strings.HasPrefix(trimmed, "[") {
+		_ = json.Unmarshal([]byte(trimmed), &list)
+	} else {
+		single := map[string]any{}
+		if err := json.Unmarshal([]byte(trimmed), &single); err == nil {
+			list = append(list, single)
 		}
+	}
+
+	printers := make([]map[string]any, 0, len(list))
+	for _, entry := range list {
+		name := strings.TrimSpace(fmt.Sprint(entry["Name"]))
+		if name == "" || name == "<nil>" {
+			continue
+		}
+		status := strings.TrimSpace(fmt.Sprint(entry["PrinterStatus"]))
+		if status == "" || status == "<nil>" {
+			status = "unknown"
+		}
+		printers = append(printers, map[string]any{
+			"name":   name,
+			"status": strings.ToLower(status),
+			"type":   strings.TrimSpace(fmt.Sprint(entry["Type"])),
+			"shared": entry["Shared"],
+		})
 	}
 
 	return printers

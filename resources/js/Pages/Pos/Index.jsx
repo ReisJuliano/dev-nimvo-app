@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
+import PrintStatusBadge from '@/Components/Pos/PrintStatusBadge'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
 import CompactModal from '@/Components/UI/CompactModal'
@@ -113,6 +114,22 @@ const initialCustomerLinkForm = { name: '', document: '', email: '' }
 const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
 const cashPanelCollapseStoragePrefix = 'nimvo:pos:cash-panel:collapsed'
 const conditionalPaymentMethod = 'conditional'
+
+function resolveLocalAgentStatus(bridge) {
+    if (!bridge?.enabled) {
+        return { tone: 'disabled', label: 'Agente local inativo' }
+    }
+
+    if (!bridge?.printer_enabled) {
+        return { tone: 'disabled', label: 'Impressora local inativa' }
+    }
+
+    if (bridge?.online) {
+        return { tone: 'online', label: 'Agente online' }
+    }
+
+    return { tone: 'offline', label: 'Agente offline' }
+}
 
 function formatDateInputValue(date) {
     const year = date.getFullYear()
@@ -428,6 +445,7 @@ export default function PosIndex({
     ) !== false
     const [feedback, setFeedback] = useState(null)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
+    const [printCommand, setPrintCommand] = useState(null)
 
     const [customers, setCustomers] = useState(initialCustomers || [])
     const [companies, setCompanies] = useState(initialCompanies || [])
@@ -634,7 +652,7 @@ export default function PosIndex({
 
     function openCashMovementModal(type) {
         if (!cashRegisterState) {
-            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentaç?.')
+            showFeedback('warning', 'Abra o caixa antes de registrar uma movimentação.')
             return
         }
 
@@ -1217,6 +1235,11 @@ export default function PosIndex({
             { value: 'email', label: 'Email', icon: 'mail' },
         ],
         [],
+    )
+    const shouldWarnPrintAgentOffline = Boolean(
+        localAgentBridge?.enabled
+        && localAgentBridge?.printer_enabled
+        && !localAgentBridge?.online,
     )
 
     const simpleDiscountValue = useMemo(() => {
@@ -1857,7 +1880,7 @@ export default function PosIndex({
             }
 
             if (!discountAuthorizationForm.authorizer_user_id || !discountAuthorizationForm.authorizer_password) {
-                showFeedback('warning', 'Selecione um gerente e informe a senha de autorizaç?.')
+                showFeedback('warning', 'Selecione um gerente e informe a senha de autorização.')
                 return
             }
 
@@ -1965,7 +1988,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                     return
                 }
 
@@ -1981,7 +2004,7 @@ export default function PosIndex({
             const match = resolveProductMatch(response.products || [], term)
 
             if (!match) {
-                showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
+                showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                 return
             }
 
@@ -1999,7 +2022,7 @@ export default function PosIndex({
                 )
 
                 if (!fallbackMatch) {
-                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descriç?.')
+                    showFeedback('info', 'Nenhum produto encontrado para esse código ou descrição.')
                 } else {
                     handleAddProduct(fallbackMatch)
                     setSelectedCartItemId(fallbackMatch.id)
@@ -2735,7 +2758,7 @@ export default function PosIndex({
 
     function openInvoiceStep() {
         if (!cart.length) {
-            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emiss?.')
+            showFeedback('warning', 'Adicione ao menos um produto antes de definir a emissão.')
             return
         }
 
@@ -2788,6 +2811,10 @@ export default function PosIndex({
         if (!paymentReady) {
             openPaymentStep()
             return
+        }
+
+        if (shouldWarnPrintAgentOffline && paymentMethod !== conditionalPaymentMethod) {
+            showFeedback('warning', 'Agente local offline. A venda pode ser finalizada, mas o comprovante nao sera impresso agora.')
         }
 
         if (paymentMethod === conditionalPaymentMethod) {
@@ -3022,6 +3049,7 @@ export default function PosIndex({
 
     async function handleCloseSaleWithoutFiscal() {
         setSubmitting(true)
+        setPrintCommand(null)
 
         try {
             const finalizedOrderDraftId = activeOrderDraftId
@@ -3036,6 +3064,15 @@ export default function PosIndex({
             if (response.sale?.type === 'conditional') {
                 showFeedback('success', `Condicional ${response.sale.conditional_code} registrada e enviada para a tela de Condicionais.`)
                 return
+            }
+
+            const printInfo = response.local_agent_print || null
+            if (printInfo?.command_id) {
+                setPrintCommand({
+                    id: printInfo.command_id,
+                    message: printInfo.message || '',
+                    status: printInfo.status || 'queued',
+                })
             }
 
             const printMessage = response.local_agent_print?.message
@@ -3173,7 +3210,7 @@ export default function PosIndex({
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizaç?.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
                 return
             }
 
@@ -3185,13 +3222,13 @@ export default function PosIndex({
             ])
             setSelectedCompany(String(response.company.id))
             setQuickCompanyForm(initialQuickCompanyForm)
-            showFeedback('success', 'Empresa cadastrada e pronta para reutilizaç?.')
+            showFeedback('success', 'Empresa cadastrada e pronta para reutilização.')
         } catch (error) {
             if (tenantId && isNetworkApiError(error)) {
                 const offlineCompany = createOfflineCompany(tenantId, quickCompanyForm)
                 setSelectedCompany(String(offlineCompany.id))
                 setQuickCompanyForm(initialQuickCompanyForm)
-                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilizaç?.')
+                showFeedback('warning', 'Empresa salva no modo offline e pronta para reutilização.')
             } else {
                 showFeedback('error', error.message)
             }
@@ -3561,6 +3598,8 @@ export default function PosIndex({
         cashPanelCollapsed,
         isMobileCashPanel,
         mobileCashPanelOpen,
+        localAgentBridge,
+        printCommand,
         linkedCustomerSummary,
         productSearchInputRef,
         searchTerm,
@@ -4383,7 +4422,7 @@ function QuickProductModal({ open, form, saving, onChange, onSubmit, onClose }) 
                 <div className="pos-quick-customer-header">
                     <div>
                         <h2>Cadastrar e vender</h2>
-                        <p>Informe apenas o essencial. Depois voc? pode completar o cadastro em Produtos.</p>
+                        <p>Informe apenas o essencial. Depois voce pode completar o cadastro em Produtos.</p>
                     </div>
                     <button className="pos-button ghost small pos-customer-picker-close" type="button" onClick={onClose}>
                         <i className="fa-solid fa-xmark" />
@@ -4420,6 +4459,8 @@ function PosWorkspace({
     cashPanelCollapsed,
     isMobileCashPanel,
     mobileCashPanelOpen,
+    localAgentBridge,
+    printCommand,
     linkedCustomerSummary,
     productSearchInputRef,
     searchTerm,
@@ -4570,6 +4611,7 @@ function PosWorkspace({
         !isMobileCashPanel && cashPanelCollapsed ? 'panel-collapsed' : 'panel-expanded',
     ].filter(Boolean).join(' ')
     const checkoutBlocked = !cashRegisterState
+    const localAgentStatus = resolveLocalAgentStatus(localAgentBridge)
 
     return (
         <div className="pos-screen">
@@ -4580,12 +4622,19 @@ function PosWorkspace({
                             <strong>{tenantName || 'Loja principal'} | {cashRegisterState ? 'Caixa principal' : 'Caixa fechado'}</strong>
                         </div>
 
-                        <div
-                            className={`pos-customer-chip summary ${linkedCustomerSummary.source !== 'none' ? 'identified' : ''}`}
-                            role="status"
-                        >
-                            <PosIcon name="user" />
-                            <span>{linkedCustomerSummary.name}</span>
+                        <div className="pos-topbar-actions">
+                            <span className={`pos-agent-chip ${localAgentStatus.tone}`} role="status">
+                                <i className="fa-solid fa-print" aria-hidden="true" />
+                                <span>{localAgentStatus.label}</span>
+                            </span>
+
+                            <div
+                                className={`pos-customer-chip summary ${linkedCustomerSummary.source !== 'none' ? 'identified' : ''}`}
+                                role="status"
+                            >
+                                <PosIcon name="user" />
+                                <span>{linkedCustomerSummary.name}</span>
+                            </div>
                         </div>
                     </header>
 
@@ -4629,7 +4678,7 @@ function PosWorkspace({
                                     </button>
                                 ))
                             ) : (
-                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descriç?.</div>
+                                <div className="pos-suggestion-empty">Nenhum produto encontrado para essa descrição.</div>
                             )}
                         </div>
                     ) : null}
@@ -4648,6 +4697,7 @@ function PosWorkspace({
                     <div className="pos-toolbar-status">
                         <span>{barcodeHelperText}</span>
                         <span>{paymentReady ? 'Pagamento confirmado. Escolha a emissão para concluir.' : cashRegisterState ? 'Pagamento pendente.' : 'Abra o caixa com Shift + X.'}</span>
+                        <PrintStatusBadge commandId={printCommand?.id} initialMessage={printCommand?.message} />
                     </div>
 
                     <div className="pos-item-list" role="list">
@@ -5185,7 +5235,7 @@ function PendingNfceModal({
         <CompactModal
             open={open}
             title="NFC-e pendentes"
-            description="Documentos fiscais que ainda precisam de ação ou regularizaç?."
+            description="Documentos fiscais que ainda precisam de ação ou regularização."
             icon="fa-file-circle-exclamation"
             size="lg"
             onClose={onClose}

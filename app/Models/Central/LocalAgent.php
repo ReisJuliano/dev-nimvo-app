@@ -12,6 +12,7 @@ class LocalAgent extends Model
     protected $fillable = [
         'tenant_id',
         'name',
+        'label',
         'agent_key',
         'secret_hash',
         'active',

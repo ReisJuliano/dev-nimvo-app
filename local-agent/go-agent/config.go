@@ -41,13 +41,17 @@ type Certificate struct {
 }
 
 type PrinterConfig struct {
-	Enabled    bool   `json:"enabled"`
-	Connector  string `json:"connector"`
-	Name       string `json:"name"`
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
-	LogoPath   string `json:"logo_path"`
-	OutputPath string `json:"output_path"`
+	Enabled       bool   `json:"enabled"`
+	Connector     string `json:"connector"`
+	Mode          string `json:"mode"`
+	Name          string `json:"name"`
+	Host          string `json:"host"`
+	Port          int    `json:"port"`
+	RelayTarget   string `json:"relay_target"`
+	RelayAgentKey string `json:"relay_agent_key"`
+	PaperWidth    string `json:"paper_width"`
+	LogoPath      string `json:"logo_path"`
+	OutputPath    string `json:"output_path"`
 }
 
 type LocalAPIConfig struct {
@@ -83,9 +87,11 @@ func defaultAgentConfig() AgentConfig {
 		Printer: PrinterConfig{
 			Enabled:    true,
 			Connector:  "windows",
+			Mode:       "local",
 			Name:       "",
 			Host:       "127.0.0.1",
 			Port:       9100,
+			PaperWidth: "80mm",
 			LogoPath:   "",
 			OutputPath: defaultPreviewOutputDir(),
 		},
@@ -154,6 +160,14 @@ func normalizeAgentConfig(config AgentConfig) AgentConfig {
 		config.Printer.Connector = "windows"
 	}
 
+	if strings.TrimSpace(config.Printer.Mode) == "" {
+		config.Printer.Mode = "local"
+	}
+
+	if strings.TrimSpace(config.Printer.PaperWidth) == "" {
+		config.Printer.PaperWidth = "80mm"
+	}
+
 	if strings.TrimSpace(config.Printer.OutputPath) == "" {
 		config.Printer.OutputPath = defaultPreviewOutputDir()
 	}
@@ -198,9 +212,13 @@ func loadInstalledAgentConfig() (AgentConfig, error) {
 	config.Certificate.Password = values.stringValue("CertificatePassword")
 	config.Printer.Enabled = values.boolValue("PrinterEnabled", config.Printer.Enabled)
 	config.Printer.Connector = strings.TrimSpace(values.stringValue("PrinterConnector"))
+	config.Printer.Mode = values.stringValue("PrinterMode")
 	config.Printer.Name = values.stringValue("PrinterName")
 	config.Printer.Host = values.stringValue("PrinterHost")
 	config.Printer.Port = values.intValue("PrinterPort", config.Printer.Port)
+	config.Printer.RelayTarget = values.stringValue("PrinterRelayTarget")
+	config.Printer.RelayAgentKey = values.stringValue("PrinterRelayAgentKey")
+	config.Printer.PaperWidth = values.stringValue("PrinterPaperWidth")
 	config.Printer.LogoPath = values.stringValue("PrinterLogoPath")
 	config.Printer.OutputPath = values.stringValue("PrinterOutputPath")
 	config.LocalAPI.Enabled = values.boolValue("LocalAPIEnabled", config.LocalAPI.Enabled)
@@ -235,9 +253,13 @@ func saveInstalledAgentConfig(config AgentConfig) error {
 		{name: "CertificatePassword", kind: "REG_SZ", value: config.Certificate.Password},
 		{name: "PrinterEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.Printer.Enabled)},
 		{name: "PrinterConnector", kind: "REG_SZ", value: config.Printer.Connector},
+		{name: "PrinterMode", kind: "REG_SZ", value: config.Printer.Mode},
 		{name: "PrinterName", kind: "REG_SZ", value: config.Printer.Name},
 		{name: "PrinterHost", kind: "REG_SZ", value: config.Printer.Host},
 		{name: "PrinterPort", kind: "REG_DWORD", value: formatRegistryDWORD(config.Printer.Port)},
+		{name: "PrinterRelayTarget", kind: "REG_SZ", value: config.Printer.RelayTarget},
+		{name: "PrinterRelayAgentKey", kind: "REG_SZ", value: config.Printer.RelayAgentKey},
+		{name: "PrinterPaperWidth", kind: "REG_SZ", value: config.Printer.PaperWidth},
 		{name: "PrinterLogoPath", kind: "REG_SZ", value: config.Printer.LogoPath},
 		{name: "PrinterOutputPath", kind: "REG_SZ", value: config.Printer.OutputPath},
 		{name: "LocalAPIEnabled", kind: "REG_DWORD", value: formatRegistryBool(config.LocalAPI.Enabled)},

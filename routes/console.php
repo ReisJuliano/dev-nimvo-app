@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('nimvo:prune-pending-sales --days=3')->daily();
+Schedule::command('nimvo:fail-stale-local-agent-commands')->everyMinute();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

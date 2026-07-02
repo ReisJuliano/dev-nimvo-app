@@ -105,7 +105,7 @@ export default function StockEntryIndex({ payload }) {
                         </div>
                         <div>
                             <h1 className="se-header-title">Estoque de produtos</h1>
-                            <p className="se-header-sub">Pesquise um produto para ver o estoque e a movimentaç?.</p>
+                            <p className="se-header-sub">Pesquise um produto para ver o estoque e a movimentação.</p>
                         </div>
                     </div>
                 </div>

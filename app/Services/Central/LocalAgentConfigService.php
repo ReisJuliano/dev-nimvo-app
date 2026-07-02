@@ -42,9 +42,12 @@ class LocalAgentConfigService
                     ? (bool) $payload['printer']['enabled']
                     : null,
                 'connector' => $payload['printer']['connector'] ?? null,
+                'mode' => $payload['printer']['mode'] ?? null,
                 'name' => $payload['printer']['name'] ?? null,
                 'host' => $payload['printer']['host'] ?? null,
                 'port' => isset($payload['printer']['port']) ? (int) $payload['printer']['port'] : null,
+                'relay_target' => $payload['printer']['relay_target'] ?? null,
+                'paper_width' => $payload['printer']['paper_width'] ?? null,
                 'logo_path' => $payload['printer']['logo_path'] ?? null,
             ], fn ($value) => $value !== null && $value !== ''),
             'local_api' => array_filter([

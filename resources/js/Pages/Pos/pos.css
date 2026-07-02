@@ -73,6 +73,41 @@
     text-overflow: ellipsis;
 }
 
+.pos-topbar-actions {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.pos-agent-chip {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pos-agent-chip.online {
+    background: var(--pos-green-soft);
+    color: var(--pos-green);
+}
+
+.pos-agent-chip.offline {
+    background: var(--pos-danger-soft);
+    color: var(--pos-danger);
+}
+
+.pos-agent-chip.disabled {
+    background: var(--pos-surface-soft);
+    color: var(--pos-text-muted);
+}
+
 .pos-customer-chip {
     min-width: 0;
     max-width: 44%;
@@ -541,11 +576,64 @@
 
 .pos-toolbar-status {
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
     padding: 0 16px 8px;
     color: var(--pos-text-muted);
     font-size: 11px;
+}
+
+.pos-print-status-badge {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    min-width: 0;
+    max-width: min(100%, 420px);
+    border-radius: 999px;
+    padding: 0.28rem 0.55rem;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.pos-print-status-badge span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pos-print-status-badge.pending {
+    background: rgba(24, 95, 165, 0.1);
+    color: var(--pos-blue);
+}
+
+.pos-print-status-badge.success {
+    background: var(--pos-green-soft);
+    color: var(--pos-green);
+}
+
+.pos-print-status-badge.warning {
+    background: var(--pos-amber-soft);
+    color: var(--pos-amber);
+}
+
+.pos-print-status-badge.danger {
+    background: var(--pos-danger-soft);
+    color: var(--pos-danger);
+}
+
+.pos-print-status-badge button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    background: rgba(255, 255, 255, 0.7);
+    color: inherit;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
 }
 
 .pos-item-list {
@@ -2455,6 +2543,16 @@
         max-width: none;
     }
 
+    .pos-topbar-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .pos-agent-chip,
+    .pos-customer-chip {
+        flex: 1 1 0;
+    }
+
     .pos-toolbar-status,
     .pos-inline-grid,
     .pos-credit-strip,
@@ -2467,6 +2565,11 @@
 
     .pos-toolbar-status {
         gap: 0.35rem;
+    }
+
+    .pos-print-status-badge {
+        margin-left: 0;
+        justify-content: flex-start;
     }
 
     .pos-item-row {

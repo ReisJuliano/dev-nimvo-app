@@ -139,22 +139,24 @@ class LocalAgentCommandService
         ]);
     }
 
+    public function queueOperationReceipt(LocalAgent $agent, string $tenantId, array $payload): LocalAgentCommand
+    {
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'type' => 'print_operation_receipt',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
     public function claimNext(LocalAgent $agent, array $supportedTypes = []): ?LocalAgentCommand
     {
-        $timeout = config('fiscal.agents.command_timeout_seconds', 120);
-
-        return DB::connection('central')->transaction(function () use ($agent, $timeout, $supportedTypes) {
+        return DB::connection('central')->transaction(function () use ($agent, $supportedTypes) {
             $query = LocalAgentCommand::query()
                 ->where('local_agent_id', $agent->id)
-                ->where(function ($query) use ($timeout) {
-                    $query
-                        ->where('status', 'pending')
-                        ->orWhere(function ($stalled) use ($timeout) {
-                            $stalled
-                                ->where('status', 'processing')
-                                ->where('claimed_at', '<=', now()->subSeconds($timeout));
-                        });
-                })
+                ->where('status', 'pending')
                 ->where(function ($query) {
                     $query
                         ->whereNull('available_at')
@@ -192,5 +194,35 @@ class LocalAgentCommandService
         ])->save();
 
         return $command->fresh();
+    }
+
+    public function retry(LocalAgentCommand $command): LocalAgentCommand
+    {
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $command->local_agent_id,
+            'tenant_id' => $command->tenant_id,
+            'fiscal_document_id' => $command->fiscal_document_id,
+            'fiscal_number_inutilization_id' => $command->fiscal_number_inutilization_id,
+            'type' => $command->type,
+            'status' => 'pending',
+            'payload' => $command->payload ?? [],
+            'available_at' => now(),
+        ]);
+    }
+
+    public function failStaleProcessingCommands(?int $timeoutSeconds = null): int
+    {
+        $timeoutSeconds ??= (int) config('fiscal.agents.command_timeout_seconds', 120);
+
+        return LocalAgentCommand::query()
+            ->where('status', 'processing')
+            ->whereNotNull('claimed_at')
+            ->where('claimed_at', '<=', now()->subSeconds($timeoutSeconds))
+            ->update([
+                'status' => 'failed',
+                'last_error' => 'Tempo limite excedido no agente local.',
+                'completed_at' => now(),
+                'updated_at' => now(),
+            ]);
     }
 }

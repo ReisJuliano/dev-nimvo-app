@@ -175,6 +175,7 @@ func runPickCertificate(args []string) error {
 
 func runHeartbeatLoop(options runtimeOptions) error {
 	lastInterval := 3 * time.Second
+	backoff := time.Second
 
 	for {
 		config, err := loadNormalizedAgentConfig(options.ConfigPath)
@@ -205,8 +206,28 @@ func runHeartbeatLoop(options runtimeOptions) error {
 			return nil
 		}
 
+		if heartbeatErr != nil || commandErr != nil {
+			time.Sleep(backoff)
+			backoff = nextBackoff(backoff)
+			continue
+		}
+
+		backoff = time.Second
 		time.Sleep(lastInterval)
 	}
+}
+
+func nextBackoff(current time.Duration) time.Duration {
+	if current <= 0 {
+		return time.Second
+	}
+
+	next := current * 2
+	if next > 30*time.Second {
+		return 30 * time.Second
+	}
+
+	return next
 }
 
 func sendHeartbeat(config AgentConfig) error {
@@ -314,13 +335,16 @@ func heartbeatPayload(config AgentConfig) map[string]any {
 		},
 		"certificate": certificate,
 		"printer": map[string]any{
-			"enabled":     config.Printer.Enabled,
-			"connector":   config.Printer.Connector,
-			"name":        config.Printer.Name,
-			"host":        config.Printer.Host,
-			"port":        config.Printer.Port,
-			"logo_path":   config.Printer.LogoPath,
-			"output_path": config.Printer.OutputPath,
+			"enabled":      config.Printer.Enabled,
+			"connector":    config.Printer.Connector,
+			"mode":         config.Printer.Mode,
+			"name":         config.Printer.Name,
+			"host":         config.Printer.Host,
+			"port":         config.Printer.Port,
+			"relay_target": config.Printer.RelayTarget,
+			"paper_width":  config.Printer.PaperWidth,
+			"logo_path":    config.Printer.LogoPath,
+			"output_path":  config.Printer.OutputPath,
 		},
 		"local_api": map[string]any{
 			"enabled": config.LocalAPI.Enabled,

@@ -24,7 +24,7 @@ function buildApiError(error) {
     const message =
         error?.response?.data?.message ||
         Object.values(errors || {})?.[0]?.[0] ||
-        (error?.response ? 'Não foi possível concluir a solicitaç?.' : 'A conexão com o servidor foi interrompida.')
+        (error?.response ? 'Não foi possível concluir a solicitação.' : 'A conexão com o servidor foi interrompida.')
 
     const normalizedError = new Error(message)
     normalizedError.status = error?.response?.status ?? null

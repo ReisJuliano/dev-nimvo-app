@@ -358,6 +358,173 @@
     min-width: 200px;
 }
 
+.cfg-agent-panel {
+    display: grid;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+}
+
+.cfg-agent-create {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.cfg-agent-input {
+    min-width: 220px;
+    flex: 1;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    padding: 0.58rem 0.7rem;
+    font: inherit;
+    font-size: 0.84rem;
+}
+
+.cfg-agent-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 0;
+    border-radius: 10px;
+    padding: 0.55rem 0.8rem;
+    background: var(--app-primary);
+    color: #fff;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.cfg-agent-button.ghost {
+    background: var(--app-surface-muted);
+    color: var(--app-text-primary);
+    border: 1px solid var(--app-border);
+}
+
+.cfg-agent-button:disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+}
+
+.cfg-printer-list {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.cfg-printer-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.3rem 0.55rem;
+    background: var(--app-surface-muted);
+    border: 1px solid var(--app-border);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.cfg-printer-chip small {
+    color: var(--app-text-muted);
+    font-weight: 600;
+}
+
+.cfg-agent-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.cfg-agent-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    padding: 0.8rem;
+    background: var(--app-surface);
+}
+
+.cfg-agent-main {
+    min-width: 0;
+    display: grid;
+    gap: 0.2rem;
+}
+
+.cfg-agent-main strong {
+    color: var(--app-text-primary);
+    font-size: 0.9rem;
+}
+
+.cfg-agent-main small {
+    color: var(--app-text-muted);
+    font-size: 0.76rem;
+}
+
+.cfg-agent-config {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.cfg-agent-config select,
+.cfg-agent-config input {
+    min-height: 32px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-surface);
+    padding: 0.32rem 0.45rem;
+    font: inherit;
+    font-size: 0.75rem;
+}
+
+.cfg-agent-config input {
+    min-width: 210px;
+}
+
+.cfg-agent-status {
+    width: fit-content;
+    border-radius: 999px;
+    padding: 0.16rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: rgba(239,68,68,0.1);
+    color: #dc2626;
+}
+
+.cfg-agent-status.online {
+    background: rgba(16,185,129,0.1);
+    color: #059669;
+}
+
+.cfg-agent-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.cfg-agent-code {
+    border-radius: 8px;
+    padding: 0.35rem 0.5rem;
+    background: #111827;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.cfg-agent-empty {
+    border: 1px dashed var(--app-border-strong);
+    border-radius: 12px;
+    padding: 1rem;
+    color: var(--app-text-muted);
+    font-size: 0.84rem;
+    text-align: center;
+}
+
 /* ─── Responsivo ─── */
 
 @media (max-width: 768px) {
@@ -365,5 +532,7 @@
     .cfg-header { flex-direction: column; align-items: flex-start; }
     .cfg-active-chips { justify-content: flex-start; }
     .cfg-preset-grid { grid-template-columns: 1fr; }
+    .cfg-agent-card { align-items: flex-start; flex-direction: column; }
+    .cfg-agent-actions { justify-content: flex-start; }
     .cfg-footer { flex-direction: column; align-items: flex-start; }
 }

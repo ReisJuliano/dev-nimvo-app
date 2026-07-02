@@ -40,6 +40,7 @@ use App\Http\Controllers\Tenant\Purchases\PurchasesPageController;
 use App\Http\Controllers\Tenant\Purchases\PurchaseReportController;
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
+use App\Http\Controllers\Tenant\Settings\LocalAgentSettingsController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
 use App\Http\Controllers\Tenant\Shop\ShopApiController;
 use App\Http\Controllers\Tenant\Shop\ShopPageController;
@@ -182,6 +183,8 @@ Route::middleware('auth')->group(function () {
             Route::delete('/pdv/pending-sale', [PosApiController::class, 'discardPendingSale'])->name('api.pos.pending-sale.destroy');
             Route::post('/pdv/sales', [PosApiController::class, 'finalize'])->name('api.pos.sales.store');
             Route::post('/pdv/sales/{sale}/issue-fiscal', [PosApiController::class, 'issueFiscalDocument'])->name('api.pos.sales.issue-fiscal');
+            Route::get('/pdv/local-agent/commands/{command}', [PosApiController::class, 'localAgentCommand'])->name('api.pos.local-agent.commands.show');
+            Route::post('/pdv/local-agent/commands/{command}/retry', [PosApiController::class, 'retryLocalAgentCommand'])->name('api.pos.local-agent.commands.retry');
             Route::post('/fiscal/documents', [FiscalDocumentsApiController::class, 'store'])->name('api.fiscal.documents.store');
             Route::get('/fiscal/documents/{fiscalDocument}', [FiscalDocumentsApiController::class, 'show'])->name('api.fiscal.documents.show');
             Route::post('/fiscal/documents/{fiscalDocument}/retry', [FiscalDocumentsApiController::class, 'retry'])->name('api.fiscal.documents.retry');
@@ -219,6 +222,11 @@ Route::middleware('auth')->group(function () {
             Route::post('/orders/{orderDraft}/send-to-cashier', [OrdersApiController::class, 'sendToCashier'])->name('api.orders.send-to-cashier');
             Route::post('/orders/{orderDraft}/partial-checkout', [OrdersApiController::class, 'partialCheckout'])->name('api.orders.partial-checkout');
             Route::put('/settings', [SettingsApiController::class, 'update'])->name('api.settings.update');
+            Route::get('/settings/local-agent', [LocalAgentSettingsController::class, 'index'])->name('api.settings.local-agent.index');
+            Route::post('/settings/local-agent', [LocalAgentSettingsController::class, 'store'])->name('api.settings.local-agent.store');
+            Route::put('/settings/local-agent/{agent}', [LocalAgentSettingsController::class, 'update'])->name('api.settings.local-agent.update');
+            Route::get('/settings/local-agent/{agent}/download', [LocalAgentSettingsController::class, 'download'])->name('api.settings.local-agent.download');
+            Route::post('/settings/local-agent/{agent}/activation-code', [LocalAgentSettingsController::class, 'activationCode'])->name('api.settings.local-agent.activation-code');
             Route::post('/fiado/receber', [OperationsApiController::class, 'receiveCreditPayment'])->name('api.credit.receive');
 
             Route::prefix('fashion')->group(function () {

@@ -7,10 +7,12 @@ use App\Http\Requests\Tenant\Pos\AuthorizeDiscountRequest;
 use App\Http\Requests\Tenant\Pos\FinalizeSaleRequest;
 use App\Http\Requests\Tenant\Pos\IssueSaleFiscalDocumentRequest;
 use App\Http\Requests\Tenant\Pos\SavePendingSaleRequest;
+use App\Models\Central\LocalAgentCommand;
 use App\Models\Tenant\Company;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Services\Central\LocalAgentCommandService;
 use App\Services\Tenant\DiscountAuthorizationService;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\LocalAgentPrintQueueService;
@@ -350,7 +352,12 @@ class PosApiController extends Controller
 
             if ($saleModel) {
                 try {
-                    $printResult = $printQueueService->queuePaymentReceiptForSale($saleModel);
+                    $saleModel->loadMissing('payments');
+                    $singlePayment = $saleModel->payments->count() === 1 ? $saleModel->payments->first() : null;
+                    $operationMethods = ['pix', 'debit_card', 'credit_card', 'credit'];
+                    $printResult = $singlePayment && in_array($singlePayment->payment_method, $operationMethods, true)
+                        ? $printQueueService->queueOperationReceiptForSalePayment($saleModel, $singlePayment)
+                        : $printQueueService->queuePaymentReceiptForSale($saleModel);
                 } catch (\Throwable) {
                     $printResult = [
                         'status' => 'failed',
@@ -409,6 +416,34 @@ class PosApiController extends Controller
             'message' => 'Cupom fiscal enviado para emissão.',
             'document' => $this->serializeFiscalDocument($document),
         ]);
+    }
+
+    public function localAgentCommand(LocalAgentCommand $command): JsonResponse
+    {
+        $this->authorizeLocalAgentCommandTenant($command);
+
+        return response()->json($this->serializeLocalAgentCommand($command));
+    }
+
+    public function retryLocalAgentCommand(
+        LocalAgentCommand $command,
+        LocalAgentCommandService $commandService,
+    ): JsonResponse {
+        $this->authorizeLocalAgentCommandTenant($command);
+
+        abort_unless($command->status === 'failed', 422, 'Apenas comandos com falha podem ser reenviados.');
+        abort_unless(
+            in_array($command->type, ['print_payment_receipt', 'print_test'], true),
+            422,
+            'Este tipo de comando nao pode ser reenviado pelo PDV.',
+        );
+
+        $nextCommand = $commandService->retry($command);
+
+        return response()->json([
+            'message' => 'Comando de impressao reenviado para o agente local.',
+            'command' => $this->serializeLocalAgentCommand($nextCommand),
+        ], 201);
     }
 
     protected function validateDiscountAuthorizations(Request $request): void
@@ -483,6 +518,36 @@ class PosApiController extends Controller
             'agent_command_id' => $document->agent_command_id,
             'access_key' => $document->access_key,
         ];
+    }
+
+    protected function authorizeLocalAgentCommandTenant(LocalAgentCommand $command): void
+    {
+        abort_unless((string) $command->tenant_id === (string) tenant()?->getTenantKey(), 404);
+    }
+
+    protected function serializeLocalAgentCommand(LocalAgentCommand $command): array
+    {
+        return [
+            'id' => $command->id,
+            'type' => $command->type,
+            'status' => $command->status,
+            'message' => $this->localAgentCommandMessage($command),
+            'last_error' => $command->last_error,
+            'completed_at' => optional($command->completed_at)?->toIso8601String(),
+        ];
+    }
+
+    protected function localAgentCommandMessage(LocalAgentCommand $command): string
+    {
+        $resultMessage = data_get($command->result_payload, 'message')
+            ?: data_get($command->result_payload, 'error');
+
+        return match ($command->status) {
+            'completed' => $resultMessage ?: 'Impresso com sucesso.',
+            'failed' => $command->last_error ?: $resultMessage ?: 'Falha no agente local.',
+            'processing' => 'Imprimindo no agente local.',
+            default => 'Aguardando agente local.',
+        };
     }
 
     protected function documentTypeFor(?string $document): ?string

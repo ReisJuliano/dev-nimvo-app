@@ -3,6 +3,7 @@
 namespace App\Services\Central;
 
 use App\Models\Central\Client;
+use App\Models\Central\LocalAgent;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
@@ -10,6 +11,11 @@ use Illuminate\Support\Str;
 
 class ProvisionTenantService
 {
+    public function __construct(
+        protected LocalAgentBootstrapService $localAgentBootstrap,
+    ) {
+    }
+
     public function handle(array $data): Tenant
     {
         $tenantData = [
@@ -36,6 +42,8 @@ class ProvisionTenantService
             ]);
         }
 
+        $this->provisionDefaultLocalAgent($tenant);
+
         if (!config('tenancy.dev_single_database')) {
             tenancy()->initialize($tenant);
 
@@ -53,6 +61,22 @@ class ProvisionTenantService
     protected function clientsTableExists(): bool
     {
         return Schema::connection((new Client())->getConnectionName())->hasTable('clients');
+    }
+
+    protected function localAgentsTableExists(): bool
+    {
+        return Schema::connection((new LocalAgent())->getConnectionName())->hasTable('local_agents');
+    }
+
+    protected function provisionDefaultLocalAgent(Tenant $tenant): void
+    {
+        if (! $this->localAgentsTableExists()) {
+            return;
+        }
+
+        $this->localAgentBootstrap->ensureDefaultForTenant((string) $tenant->id, [
+            'name' => sprintf('Agente local %s', $tenant->name ?: $tenant->id),
+        ]);
     }
 
     protected function resolveTenantId(array $data): string

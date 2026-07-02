@@ -9,13 +9,16 @@ import (
 func TestSupportedCommandTypesForConfigWithoutBridge(t *testing.T) {
 	config := defaultAgentConfig()
 	supported := supportedCommandTypesForConfig(config)
+	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt"}
 
-	if len(supported) != 2 {
-		t.Fatalf("expected print-only support without bridge, got %v", supported)
+	if len(supported) != len(expected) {
+		t.Fatalf("expected %v, got %v", expected, supported)
 	}
 
-	if supported[0] != "print_payment_receipt" || supported[1] != "print_test" {
-		t.Fatalf("unexpected supported types without bridge: %v", supported)
+	for index, item := range expected {
+		if supported[index] != item {
+			t.Fatalf("expected supported[%d] to be %q, got %q", index, item, supported[index])
+		}
 	}
 }
 
@@ -49,7 +52,7 @@ func TestSupportedCommandTypesForConfigWithBridge(t *testing.T) {
 	config.Software.PHPPath = phpBinary
 
 	supported := supportedCommandTypesForConfig(config)
-	expected := []string{"emit_nfce", "cancel_fiscal_document", "invalidate_fiscal_range", "print_payment_receipt", "print_test"}
+	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt"}
 
 	if len(supported) != len(expected) {
 		t.Fatalf("expected %v, got %v", expected, supported)

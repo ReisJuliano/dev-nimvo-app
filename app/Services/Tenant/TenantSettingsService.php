@@ -113,7 +113,7 @@ class TenantSettingsService
                     ['key' => 'prazo', 'label' => 'Fiado', 'description' => 'Permite vender para receber depois.'],
                     ['key' => 'clientes', 'label' => 'Clientes', 'description' => 'Cadastro de quem compra na loja.'],
                     ['key' => 'categorias', 'label' => 'Categorias', 'description' => 'Organiza produtos por categoria.'],
-                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'De quem voc? compra.'],
+                    ['key' => 'fornecedores', 'label' => 'Fornecedores', 'description' => 'De quem voce compra.'],
                     ['key' => 'controle_validade', 'label' => 'Validade', 'description' => 'Avisa produtos perto de vencer.'],
                 ],
             ],

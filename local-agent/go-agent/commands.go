@@ -67,7 +67,15 @@ func pollNextCommand(config AgentConfig) (*polledAgentCommand, error) {
 	}, nil
 }
 
-func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[string]any, error) {
+func executePolledCommand(config AgentConfig, command polledAgentCommand) (result map[string]any, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("falha inesperada no agente local ao executar %s: %v", command.Type, recovered)
+			result = nil
+			fmt.Fprintf(os.Stderr, "panic ao executar comando %s (%s): %v\n", command.ID, command.Type, recovered)
+		}
+	}()
+
 	switch command.Type {
 	case "emit_nfce", "cancel_fiscal_document":
 		return executeFiscalBridgeCommand(config, command)
@@ -77,7 +85,9 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[s
 			return nil, err
 		}
 
-		outputPath, err := printTestReceipt(config.Printer, payload)
+		outputPath, err := executeLocalPrint(config, "/v1/prints/test", payload, func() (string, error) {
+			return printTestReceipt(config.Printer, payload)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +108,9 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[s
 			return nil, err
 		}
 
-		outputPath, err := printPaymentReceipt(config.Printer, payload)
+		outputPath, err := executeLocalPrint(config, "/v1/prints/payment-receipt", payload, func() (string, error) {
+			return printPaymentReceipt(config.Printer, payload)
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -110,6 +122,51 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (map[s
 		}
 		if strings.TrimSpace(outputPath) != "" {
 			result["message"] = "Preview PDF do comprovante gerado com sucesso."
+			result["output_file"] = outputPath
+		}
+
+		return result, nil
+	case "print_fiscal_receipt":
+		payload := fiscalReceiptRequest{}
+		if err := decodeCommandPayload(command.Payload, &payload); err != nil {
+			return nil, err
+		}
+
+		outputPath, err := executeLocalPrint(config, "/v1/prints/fiscal-receipt", payload, func() (string, error) {
+			return printFiscalReceipt(config.Printer, payload)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		result := map[string]any{
+			"message":    "Cupom fiscal enviado para a impressora local.",
+			"printed_at": time.Now().Format(time.RFC3339),
+		}
+		if strings.TrimSpace(outputPath) != "" {
+			result["output_file"] = outputPath
+		}
+
+		return result, nil
+	case "print_operation_receipt":
+		payload := operationReceiptRequest{}
+		if err := decodeCommandPayload(command.Payload, &payload); err != nil {
+			return nil, err
+		}
+
+		outputPath, err := executeLocalPrint(config, "/v1/prints/operation-receipt", payload, func() (string, error) {
+			return printOperationReceipt(config.Printer, payload)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		result := map[string]any{
+			"message":    "Comprovante operacional enviado para a impressora local.",
+			"printed_at": time.Now().Format(time.RFC3339),
+			"type":       payload.Type,
+		}
+		if strings.TrimSpace(outputPath) != "" {
 			result["output_file"] = outputPath
 		}
 

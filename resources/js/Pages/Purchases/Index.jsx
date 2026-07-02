@@ -1596,7 +1596,7 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
                     <section className="proc-ui-modal-block purchases-name-stage">
                         <div className="purchases-name-copy">
                             <h3>Comece pelo nome</h3>
-                            <p>Depois de salvar, o pedido vai para Em andamento para voc? editar, renomear e incluir produtos.</p>
+                            <p>Depois de salvar, o pedido vai para Em andamento para voce editar, renomear e incluir produtos.</p>
                         </div>
 
                         <div className="proc-ui-field full">
