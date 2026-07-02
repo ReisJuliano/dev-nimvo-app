@@ -161,6 +161,12 @@
     border-color: rgba(220, 76, 100, 0.2);
 }
 
+.central-admin-feedback.is-info {
+    color: #93c5fd;
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.24);
+}
+
 .central-admin-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));

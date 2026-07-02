@@ -50,6 +50,18 @@ const INITIAL_FISCAL_FORM = {
     technical_contact_cnpj: '',
 }
 
+function feedbackIcon(type) {
+    if (type === 'success') {
+        return 'fa-circle-check'
+    }
+
+    if (type === 'info') {
+        return 'fa-spinner fa-spin'
+    }
+
+    return 'fa-circle-xmark'
+}
+
 function coerceFiscalFormValue(field, value) {
     if (field === 'active') {
         return Boolean(value)
@@ -1678,19 +1690,49 @@ export default function CentralAdminClients({
             return
         }
 
+        const tenantId = localAgentTenant.id
         setLocalAgentPrintBusy(true)
         setFeedback(null)
 
         try {
-            const response = await apiRequest(`/admin/tenants/${localAgentTenant.id}/local-agent/test-print`, {
+            const response = await apiRequest(`/admin/tenants/${tenantId}/local-agent/test-print`, {
                 method: 'post',
             })
 
-            setFeedback({ type: 'success', text: response.message })
+            const commandId = response.command?.id
+            if (!commandId) {
+                setFeedback({ type: 'success', text: response.message })
+                return
+            }
+
+            setFeedback({ type: 'info', text: 'Teste enviado. Aguardando o agente local confirmar a impressão...' })
+
+            const outcome = await pollLocalAgentCommand(tenantId, commandId)
+            setFeedback({
+                type: outcome.status === 'completed' ? 'success' : 'error',
+                text: outcome.message,
+            })
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
             setLocalAgentPrintBusy(false)
+        }
+    }
+
+    async function pollLocalAgentCommand(tenantId, commandId, attempts = 15, delayMs = 1000) {
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+            const command = await apiRequest(`/admin/tenants/${tenantId}/local-agent/commands/${commandId}`)
+
+            if (command.status === 'completed' || command.status === 'failed') {
+                return command
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, delayMs))
+        }
+
+        return {
+            status: 'failed',
+            message: 'O agente local nao confirmou a impressao a tempo. Verifique se ele esta online e tente novamente.',
         }
     }
 
@@ -1744,7 +1786,7 @@ export default function CentralAdminClients({
 
                                 {feedback ? (
                                     <div className={`central-admin-feedback is-${feedback.type}`}>
-                                        <i className={`fa-solid ${feedback.type === 'success' ? 'fa-circle-check' : 'fa-circle-xmark'}`} />
+                                        <i className={`fa-solid ${feedbackIcon(feedback.type)}`} />
                                         <span>{feedback.text}</span>
                                     </div>
                                 ) : null}

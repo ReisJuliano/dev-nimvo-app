@@ -155,23 +155,115 @@ func printFiscalReceipt(config PrinterConfig, payload fiscalReceiptRequest) (str
 		return "", errors.New("a impressao local esta desativada neste agente")
 	}
 
-	lines := buildFiscalReceiptLines(config, payload)
-	if normalizePrinterConnector(config.Connector) == "pdf" {
+	if usePDF, notice := resolvePrintDestination(config); usePDF {
+		lines := withFallbackNotice(buildFiscalReceiptLines(config, payload), notice)
 		return writeReceiptPreviewPDF(config, "fiscal", lines)
 	}
+
+	columns := receiptColumns(config)
+	separator := strings.Repeat("-", columns)
+	storeName := firstNonEmpty(payload.StoreName, stringFromMap(payload.Profile, "trade_name"), stringFromMap(payload.Profile, "company_name"), "Nimvo")
+	accessKey := firstNonEmpty(payload.AccessKey, stringFromMap(payload.Sale, "access_key"))
+	protocol := firstNonEmpty(payload.Protocol, stringFromMap(payload.Sale, "protocol"), stringFromMap(payload.Sale, "sefaz_protocol"))
+	authorizedAt := firstNonEmpty(payload.AuthorizedAt, stringFromMap(payload.Sale, "authorized_at"))
+	isFiscal := accessKey != "" && protocol != ""
 
 	builder := newEscposBuilder()
 	builder.init()
 	builder.logo(config.LogoPath)
-	for _, line := range lines {
-		builder.line(line)
+	builder.alignCenter()
+	builder.bold(true)
+	builder.line(storeName)
+	builder.bold(false)
+	builder.line("DANFE NFC-e")
+	builder.line("Documento auxiliar da Nota Fiscal de Consumidor Eletronica")
+	if !isFiscal {
+		builder.bold(true)
+		builder.line("SEM VALOR FISCAL")
+		builder.bold(false)
 	}
+	builder.line(separator)
+	builder.alignLeft()
+
+	builder.bold(true)
+	builder.line("ITENS")
+	builder.bold(false)
+	for _, item := range payload.Items {
+		name := firstNonEmpty(stringFromMap(item, "name"), stringFromMap(item, "description"), "Item")
+		qty := numberFromMap(item, "quantity")
+		unitPrice := numberFromMap(item, "unit_price")
+		total := firstPositive(numberFromMap(item, "total"), qty*unitPrice)
+		for _, wrapped := range wrapReceiptText(name, columns) {
+			builder.line(wrapped)
+		}
+		builder.line(formatFiscalItemLine(qty, unitPrice, total, columns))
+	}
+
+	builder.line(separator)
+	builder.bold(true)
+	builder.line(formatReceiptAmountLine("TOTAL", numberFromMap(payload.Sale, "total"), columns))
+	builder.bold(false)
+	for _, payment := range payload.Payments {
+		label := firstNonEmpty(stringFromMap(payment, "label"), stringFromMap(payment, "method"), "Pagamento")
+		builder.line(formatReceiptAmountLine(label, numberFromMap(payment, "amount"), columns))
+	}
+
+	taxes := firstPositive(payload.ApproxTaxes, numberFromMap(payload.Sale, "approx_taxes"))
+	taxesPercent := firstPositive(payload.ApproxTaxesPercent, numberFromMap(payload.Sale, "approx_taxes_percent"))
+	if taxes > 0 {
+		source := firstNonEmpty(payload.ApproxTaxesSource, stringFromMap(payload.Sale, "approx_taxes_source"), "IBPT")
+		builder.line(separator)
+		builder.line(fmt.Sprintf("Trib aprox: R$ %s (%.2f%%) Fonte: %s", formatCurrency(taxes), taxesPercent, source))
+	}
+
+	builder.line(separator)
+	if accessKey != "" {
+		builder.line("Chave de acesso:")
+		for _, wrapped := range wrapReceiptText(formatAccessKey(accessKey), columns) {
+			builder.line(wrapped)
+		}
+	}
+
+	consumerName := strings.TrimSpace(stringFromMap(payload.Consumer, "name"))
+	consumerDocument := strings.TrimSpace(stringFromMap(payload.Consumer, "document"))
+	if consumerName == "" && consumerDocument == "" {
+		builder.line("Consumidor: CONSUMIDOR NAO IDENTIFICADO")
+	} else {
+		for _, wrapped := range wrapReceiptText("Consumidor: "+strings.TrimSpace(consumerName+" "+consumerDocument), columns) {
+			builder.line(wrapped)
+		}
+	}
+
+	if protocol != "" {
+		builder.line("Protocolo: " + protocol)
+	}
+	if authorizedAt != "" {
+		builder.line("Autorizacao: " + formatReceiptDateTime(authorizedAt))
+	}
+
 	if qr := strings.TrimSpace(resolveFiscalQRCode(payload)); qr != "" {
 		builder.feed(1)
 		builder.alignCenter()
 		builder.qrCode(qr)
 		builder.alignLeft()
 	}
+
+	if info := strings.TrimSpace(payload.AdditionalInfo); info != "" {
+		builder.line(separator)
+		for _, wrapped := range wrapReceiptText(info, columns) {
+			builder.line(wrapped)
+		}
+	}
+
+	if !isFiscal {
+		builder.line(separator)
+		builder.alignCenter()
+		builder.bold(true)
+		builder.line("SEM VALOR FISCAL")
+		builder.bold(false)
+		builder.alignLeft()
+	}
+
 	builder.feed(2)
 	builder.cut()
 
@@ -251,17 +343,73 @@ func printOperationReceipt(config PrinterConfig, payload operationReceiptRequest
 		return "", errors.New("a impressao local esta desativada neste agente")
 	}
 
-	lines := buildOperationReceiptLines(config, payload)
-	if normalizePrinterConnector(config.Connector) == "pdf" {
+	if usePDF, notice := resolvePrintDestination(config); usePDF {
+		lines := withFallbackNotice(buildOperationReceiptLines(config, payload), notice)
 		return writeReceiptPreviewPDF(config, "operacao", lines)
 	}
+
+	columns := receiptColumns(config)
+	separator := strings.Repeat("-", columns)
+	title := operationTitle(payload)
 
 	builder := newEscposBuilder()
 	builder.init()
 	builder.logo(config.LogoPath)
-	for _, line := range lines {
-		builder.line(line)
+	builder.alignCenter()
+	builder.bold(true)
+	builder.line(firstNonEmpty(payload.StoreName, "Nimvo"))
+	builder.line(title)
+	builder.bold(false)
+	builder.line(separator)
+	builder.alignLeft()
+
+	builder.line("Data: " + formatReceiptDateTime(payload.IssuedAt))
+
+	if payload.Amount > 0 {
+		builder.bold(true)
+		builder.line(formatReceiptAmountLine("Valor", payload.Amount, columns))
+		builder.bold(false)
 	}
+	if payload.Reason != "" {
+		for _, wrapped := range wrapReceiptText("Motivo: "+payload.Reason, columns) {
+			builder.line(wrapped)
+		}
+	}
+	if payload.Operator != "" {
+		builder.line("Operador: " + payload.Operator)
+	}
+	if payload.CustomerName != "" {
+		builder.line("Cliente: " + payload.CustomerName)
+	}
+	if payload.DueAt != "" {
+		builder.line("Vencimento: " + formatReceiptDateTime(payload.DueAt))
+	}
+	if payload.TxID != "" {
+		builder.line("TXID: " + payload.TxID)
+	}
+	if payload.EndToEndID != "" {
+		builder.line("E2E: " + payload.EndToEndID)
+	}
+	if payload.Brand != "" {
+		builder.line("Bandeira: " + payload.Brand)
+	}
+	if payload.Installments > 0 {
+		builder.line(fmt.Sprintf("Parcelas: %dx", payload.Installments))
+	}
+	if payload.BalanceBefore != nil {
+		builder.line(formatReceiptAmountLine("Saldo antes", *payload.BalanceBefore, columns))
+	}
+	if payload.BalanceAfter != nil {
+		builder.line(formatReceiptAmountLine("Saldo depois", *payload.BalanceAfter, columns))
+	}
+
+	builder.line(separator)
+	builder.alignCenter()
+	builder.bold(true)
+	builder.line("SEM VALOR FISCAL")
+	builder.bold(false)
+	builder.alignLeft()
+
 	builder.feed(2)
 	builder.cut()
 

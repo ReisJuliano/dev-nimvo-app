@@ -51,8 +51,9 @@ func printTestReceipt(config PrinterConfig, payload printTestRequest) (string, e
 		return "", errors.New("a impressao local esta desativada neste agente")
 	}
 
-	if normalizePrinterConnector(config.Connector) == "pdf" {
-		return writeReceiptPreviewPDF(config, "teste", buildTestReceiptPreviewLines(config, payload))
+	if usePDF, notice := resolvePrintDestination(config); usePDF {
+		lines := withFallbackNotice(buildTestReceiptPreviewLines(config, payload), notice)
+		return writeReceiptPreviewPDF(config, "teste", lines)
 	}
 
 	builder := newEscposBuilder()
@@ -86,8 +87,9 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 		return "", errors.New("a impressao local esta desativada neste agente")
 	}
 
-	if normalizePrinterConnector(config.Connector) == "pdf" {
-		return writeReceiptPreviewPDF(config, "pagamento", buildPaymentReceiptPreviewLines(config, payload))
+	if usePDF, notice := resolvePrintDestination(config); usePDF {
+		lines := withFallbackNotice(buildPaymentReceiptPreviewLines(config, payload), notice)
+		return writeReceiptPreviewPDF(config, "pagamento", lines)
 	}
 
 	builder := newEscposBuilder()
@@ -128,7 +130,9 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 	}
 
 	builder.line(strings.Repeat("-", 48))
+	builder.bold(true)
 	builder.line(formatReceiptSummary("Total", payload.Total))
+	builder.bold(false)
 	if payload.ChangeAmount > 0 {
 		builder.line(formatReceiptSummary("Troco", payload.ChangeAmount))
 	}
@@ -144,6 +148,11 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 		builder.line(strings.Repeat("-", 48))
 		builder.line(notes)
 	}
+
+	builder.line(strings.Repeat("-", 48))
+	builder.alignCenter()
+	builder.line("SEM VALOR FISCAL")
+	builder.alignLeft()
 
 	builder.feed(2)
 	builder.cut()
@@ -186,6 +195,43 @@ func normalizePrinterConnector(value string) string {
 	}
 
 	return normalized
+}
+
+// resolvePrintDestination decides whether a receipt should be rendered as a
+// PDF preview instead of sent as raw ESC/POS bytes. Besides the explicit
+// "pdf" connector, it automatically falls back to PDF when the configured
+// Windows printer is missing or is a virtual/document driver that cannot
+// receive raw ESC/POS commands (e.g. "Microsoft Print to PDF"), so the
+// agent keeps working out of the box even before a real thermal printer is
+// installed on the machine.
+func resolvePrintDestination(config PrinterConfig) (usePDF bool, notice string) {
+	connector := normalizePrinterConnector(config.Connector)
+	if connector == "pdf" {
+		return true, ""
+	}
+
+	if connector != "windows" {
+		return false, ""
+	}
+
+	name := strings.TrimSpace(config.Name)
+	if name == "" {
+		return true, "Nenhuma impressora Windows configurada no agente: gerando previa em PDF automaticamente."
+	}
+
+	if reason := unsupportedWindowsPrinterReason(name); reason != "" {
+		return true, fmt.Sprintf("A impressora \"%s\" %s: gerando previa em PDF automaticamente.", name, reason)
+	}
+
+	return false, ""
+}
+
+func withFallbackNotice(lines []string, notice string) []string {
+	if notice == "" {
+		return lines
+	}
+
+	return append([]string{notice, strings.Repeat("-", 48), ""}, lines...)
 }
 
 func buildTestReceiptPreviewLines(config PrinterConfig, payload printTestRequest) []string {

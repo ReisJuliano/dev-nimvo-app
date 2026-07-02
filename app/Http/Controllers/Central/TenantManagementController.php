@@ -10,6 +10,7 @@ use App\Http\Requests\Central\UpdateTenantSettingsRequest;
 use App\Http\Requests\Central\UpdateTenantStatusRequest;
 use App\Models\Central\Client;
 use App\Models\Central\LocalAgent;
+use App\Models\Central\LocalAgentCommand;
 use App\Models\Central\TenantLicenseInvoice;
 use App\Models\Central\TenantSetting;
 use App\Models\Tenant;
@@ -390,13 +391,38 @@ class TenantManagementController extends Controller
 
         return response()->json([
             'message' => 'Teste enviado para a fila central de impressão do agente.',
-            'command' => [
-                'id' => $command->id,
-                'status' => $command->status,
-                'type' => $command->type,
-            ],
+            'command' => $this->serializeLocalAgentCommand($command),
             'agent' => $this->serializeLocalAgent($agent->fresh(), $configService, $bootstrapService),
         ]);
+    }
+
+    public function showLocalAgentCommand(Tenant $tenant, LocalAgentCommand $command): JsonResponse
+    {
+        abort_unless((string) $command->tenant_id === (string) $tenant->id, 404);
+
+        return response()->json($this->serializeLocalAgentCommand($command));
+    }
+
+    protected function serializeLocalAgentCommand(LocalAgentCommand $command): array
+    {
+        $resultMessage = data_get($command->result_payload, 'message')
+            ?: data_get($command->result_payload, 'error');
+
+        $message = match ($command->status) {
+            'completed' => $resultMessage ?: 'Impresso com sucesso.',
+            'failed' => $command->last_error ?: $resultMessage ?: 'Falha no agente local.',
+            'processing' => 'Imprimindo no agente local.',
+            default => 'Aguardando o agente local buscar o comando na fila.',
+        };
+
+        return [
+            'id' => $command->id,
+            'type' => $command->type,
+            'status' => $command->status,
+            'message' => $message,
+            'last_error' => $command->last_error,
+            'completed_at' => optional($command->completed_at)?->toIso8601String(),
+        ];
     }
 
     public function downloadLocalAgentInstaller(
