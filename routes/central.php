@@ -17,6 +17,7 @@ Route::get('/', function () {
 Route::get('/app/baixar', [AppDownloadController::class, 'show'])->name('app.download.page');
 Route::get('/app/baixar.apk', [AppDownloadController::class, 'download'])->name('app.download.apk');
 Route::get('/app/baixar/qr.svg', [AppDownloadController::class, 'qr'])->name('app.download.qr');
+Route::get('/app/version.json', [AppDownloadController::class, 'version'])->name('app.download.version');
 
 Route::prefix('admin')->name('central.admin.')->group(function () {
     Route::get('/', function () {

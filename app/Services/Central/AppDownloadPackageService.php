@@ -51,4 +51,27 @@ class AppDownloadPackageService
 
         return date('d/m/Y', File::lastModified($this->latestApkPath()));
     }
+
+    protected function versionMetadataPath(): string
+    {
+        return storage_path('app/public/releases/version.json');
+    }
+
+    /**
+     * Metadata the app itself checks against to know a newer build was
+     * published. Maintained by hand alongside nimvo-app.apk (see
+     * nimvo_app/README.md) since there is no CI building/signing releases
+     * yet.
+     */
+    public function versionMetadata(): ?array
+    {
+        $path = $this->versionMetadataPath();
+        if (! File::exists($path)) {
+            return null;
+        }
+
+        $decoded = json_decode(File::get($path), true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
 }

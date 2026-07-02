@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Central\AppDownloadPackageService;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -44,6 +45,28 @@ class AppDownloadController extends Controller
 
         return response($result->getString(), 200, [
             'Content-Type' => $result->getMimeType(),
+        ]);
+    }
+
+    /**
+     * Polled by the installed app itself (unauthenticated, tenant-agnostic)
+     * to know whether a newer APK was published, since a direct-APK
+     * distribution has no store-level auto-update.
+     */
+    public function version(AppDownloadPackageService $packageService): JsonResponse
+    {
+        $metadata = $packageService->versionMetadata();
+
+        if (! $metadata) {
+            return response()->json(['available' => false]);
+        }
+
+        return response()->json([
+            'available' => true,
+            'version' => $metadata['version'] ?? null,
+            'build_number' => (int) ($metadata['build_number'] ?? 0),
+            'notes' => $metadata['notes'] ?? null,
+            'download_url' => route('app.download.page'),
         ]);
     }
 }
