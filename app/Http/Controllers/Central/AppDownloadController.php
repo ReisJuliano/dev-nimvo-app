@@ -15,12 +15,18 @@ class AppDownloadController extends Controller
     public function show(Request $request, AppDownloadPackageService $packageService)
     {
         $store = trim((string) $request->query('store', ''));
+        $cacheKey = $packageService->cacheKey();
 
-        return view('app-download', [
-            'available' => $packageService->isAvailable(),
-            'versionLabel' => $packageService->versionLabel(),
-            'store' => $store,
-        ]);
+        return response()
+            ->view('app-download', [
+                'available' => $packageService->isAvailable(),
+                'versionLabel' => $packageService->versionLabel(),
+                'store' => $store,
+                'downloadUrl' => $cacheKey
+                    ? route('app.download.apk', ['v' => $cacheKey])
+                    : route('app.download.apk'),
+            ])
+            ->withHeaders($this->noStoreHeaders());
     }
 
     public function download(AppDownloadPackageService $packageService)
@@ -29,6 +35,7 @@ class AppDownloadController extends Controller
 
         return response()->download($packageService->latestApkPath(), 'nimvo-app.apk', [
             'Content-Type' => 'application/vnd.android.package-archive',
+            ...$this->noStoreHeaders(),
         ]);
     }
 
@@ -58,15 +65,28 @@ class AppDownloadController extends Controller
         $metadata = $packageService->versionMetadata();
 
         if (! $metadata) {
-            return response()->json(['available' => false]);
+            return response()
+                ->json(['available' => false])
+                ->withHeaders($this->noStoreHeaders());
         }
+
+        $buildNumber = (int) ($metadata['build_number'] ?? 0);
 
         return response()->json([
             'available' => true,
             'version' => $metadata['version'] ?? null,
-            'build_number' => (int) ($metadata['build_number'] ?? 0),
+            'build_number' => $buildNumber,
             'notes' => $metadata['notes'] ?? null,
-            'download_url' => route('app.download.page'),
-        ]);
+            'download_url' => route('app.download.page', ['v' => $buildNumber]),
+        ])->withHeaders($this->noStoreHeaders());
+    }
+
+    protected function noStoreHeaders(): array
+    {
+        return [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
     }
 }

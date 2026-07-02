@@ -191,7 +191,7 @@
                 <div id="progressLabel" class="progress-label">Preparando o download...</div>
             </div>
 
-            <button type="button" id="downloadButton" class="download-button" data-url="{{ route('app.download.apk') }}">
+            <button type="button" id="downloadButton" class="download-button" data-url="{{ $downloadUrl }}">
                 Baixar o APK
             </button>
 
@@ -226,7 +226,7 @@
                 }
 
                 async function downloadWithProgress(url) {
-                    const response = await fetch(url);
+                    const response = await fetch(url, { cache: 'no-store' });
                     if (!response.ok || !response.body) {
                         throw new Error('resposta invalida');
                     }

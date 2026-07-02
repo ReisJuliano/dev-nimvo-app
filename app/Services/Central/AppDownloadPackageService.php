@@ -52,6 +52,15 @@ class AppDownloadPackageService
         return date('d/m/Y', File::lastModified($this->latestApkPath()));
     }
 
+    public function cacheKey(): ?string
+    {
+        if (! $this->isAvailable()) {
+            return null;
+        }
+
+        return (string) File::lastModified($this->latestApkPath());
+    }
+
     protected function versionMetadataPath(): string
     {
         return storage_path('app/public/releases/version.json');
