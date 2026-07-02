@@ -718,6 +718,40 @@
     color: #8fccff;
 }
 
+.admin-agent-code {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(77, 162, 255, 0.22);
+    background: rgba(77, 162, 255, 0.1);
+}
+
+.admin-agent-code small {
+    color: #93a8bd;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.admin-agent-code strong {
+    color: #e7f3ff;
+    font-size: 1.25rem;
+    letter-spacing: 0.08em;
+}
+
+.admin-agent-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.admin-agent-actions > * {
+    flex: 1 1 10rem;
+    justify-content: center;
+}
+
 @media (max-width: 1080px) {
     .central-admin-stats-grid,
     .central-admin-page-grid {

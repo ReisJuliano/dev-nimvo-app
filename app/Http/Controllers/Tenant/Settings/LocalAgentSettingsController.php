@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Tenant\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Central\LocalAgent;
 use App\Services\Central\LocalAgentBootstrapService;
+use App\Services\Central\LocalAgentInstallerPackageService;
 use App\Services\Tenant\LocalAgentBridgeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
-use RuntimeException;
-use ZipArchive;
 
 class LocalAgentSettingsController extends Controller
 {
@@ -50,7 +48,7 @@ class LocalAgentSettingsController extends Controller
         $activation = $bootstrapService->issueActivationCode($agent);
 
         return response()->json([
-            'message' => 'Agente local criado. Baixe o instalador e use o código de ativação.',
+            'message' => 'Agente local criado. Baixe o instalador e use o codigo de ativacao.',
             'agent' => $this->serializeAgent($activation['agent'], $bridgeService, $bootstrapService, $activation['code']),
         ], 201);
     }
@@ -66,7 +64,7 @@ class LocalAgentSettingsController extends Controller
         $activation = $bootstrapService->issueActivationCode($agent);
 
         return response()->json([
-            'message' => 'Novo código de ativação gerado.',
+            'message' => 'Novo codigo de ativacao gerado.',
             'agent' => $this->serializeAgent($activation['agent'], $bridgeService, $bootstrapService, $activation['code']),
         ]);
     }
@@ -105,44 +103,19 @@ class LocalAgentSettingsController extends Controller
         $agent->forceFill(['metadata' => $metadata])->save();
 
         return response()->json([
-            'message' => 'Configuração do agente atualizada.',
+            'message' => 'Configuracao do agente atualizada.',
             'agent' => $this->serializeAgent($agent->refresh(), $bridgeService, $bootstrapService),
         ]);
     }
 
-    public function download(LocalAgent $agent, LocalAgentBootstrapService $bootstrapService)
+    public function download(LocalAgent $agent, LocalAgentInstallerPackageService $packageService)
     {
         $this->authorizeTenantAdmin();
         $this->authorizeTenantAgent($agent);
-
-        $binaryPath = $this->agentBinaryPath();
-        if (! $binaryPath) {
-            abort(404, 'Binário do agente Go não encontrado no servidor.');
-        }
-
-        $bootstrap = $bootstrapService->bootstrapFile($agent);
-        $zipPath = tempnam(sys_get_temp_dir(), 'nimvo-agent-').'.zip';
-        $zip = new ZipArchive();
-
-        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            throw new RuntimeException('Não foi possível gerar o instalador do agente.');
-        }
-
-        $zip->addFile($binaryPath, 'nimvo-agent.exe');
-        $zip->addFromString('nimvo-agent.json', $bootstrap['content']);
-        $zip->addFromString('instalar.bat', $this->installerBatch());
-
-        foreach (['nimvo.ico', 'nimvo-logo.png'] as $asset) {
-            $assetPath = base_path("local-agent/go-agent/{$asset}");
-            if (File::exists($assetPath)) {
-                $zip->addFile($assetPath, $asset);
-            }
-        }
-
-        $zip->close();
+        $package = $packageService->build($agent);
 
         return response()
-            ->download($zipPath, sprintf('nimvo-agent-%s.zip', $agent->id))
+            ->download($package['path'], $package['filename'])
             ->deleteFileAfterSend(true);
     }
 
@@ -183,33 +156,5 @@ class LocalAgentSettingsController extends Controller
     protected function authorizeTenantAdmin(): void
     {
         abort_unless(auth()->user()?->role === 'admin', 403);
-    }
-
-    protected function agentBinaryPath(): ?string
-    {
-        foreach ([
-            base_path('local-agent/bin/nimvo-fiscal-agent.exe'),
-            base_path('local-agent/go-agent/nimvo-fiscal-agent.exe'),
-        ] as $path) {
-            if (File::exists($path)) {
-                return $path;
-            }
-        }
-
-        return null;
-    }
-
-    protected function installerBatch(): string
-    {
-        return <<<'BAT'
-@echo off
-setlocal
-cd /d "%~dp0"
-echo Instalando agente local do Nimvo...
-"%~dp0nimvo-agent.exe" install --seed-config "%~dp0nimvo-agent.json" --non-interactive
-echo.
-echo Instalacao concluida. Se o agente nao iniciar, execute nimvo-agent.exe tray.
-pause
-BAT;
     }
 }

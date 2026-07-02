@@ -70,6 +70,7 @@ const initialCreateForm = {
 
 export default function AdminDashboard({
     tenantStats,
+    agentStats,
     tenants,
     businessPresets,
     generalOptions,
@@ -83,6 +84,8 @@ export default function AdminDashboard({
     const [creating, setCreating] = useState(false)
     const [savingTenantId, setSavingTenantId] = useState(null)
     const [statusTenantId, setStatusTenantId] = useState(null)
+    const [agentBusyAction, setAgentBusyAction] = useState(null)
+    const [activationCode, setActivationCode] = useState(null)
     useErrorFeedbackPopup(feedback, { onConsumed: () => setFeedback(null) })
 
     useEffect(() => {
@@ -161,6 +164,7 @@ export default function AdminDashboard({
 
     function handleOpenTenantConfig(tenantId) {
         setSelectedTenantId(tenantId)
+        setActivationCode(null)
         setActiveSection('configs')
     }
 
@@ -283,6 +287,82 @@ export default function AdminDashboard({
         } finally {
             setSavingTenantId(null)
         }
+    }
+
+    async function handlePrepareLocalAgent() {
+        if (!selectedTenant) {
+            return
+        }
+
+        setAgentBusyAction('prepare')
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${selectedTenant.id}/local-agent`, {
+                method: 'put',
+                data: {
+                    name: selectedTenant.local_agent?.name || `Agente local ${selectedTenant.name}`,
+                    active: true,
+                    poll_interval_seconds: selectedTenant.local_agent?.runtime_config?.poll_interval_seconds || 3,
+                },
+            })
+
+            setFeedback({ type: 'success', text: response.message })
+            refreshDashboard(['tenants', 'agentStats'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setAgentBusyAction(null)
+        }
+    }
+
+    async function handleIssueActivationCode() {
+        if (!selectedTenant) {
+            return
+        }
+
+        setAgentBusyAction('activation')
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${selectedTenant.id}/local-agent/activation-code`, { method: 'post' })
+
+            setActivationCode(response.activation?.code || null)
+            setFeedback({ type: 'success', text: response.message })
+            refreshDashboard(['tenants', 'agentStats'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setAgentBusyAction(null)
+        }
+    }
+
+    async function handleQueueTestPrint() {
+        if (!selectedTenant) {
+            return
+        }
+
+        setAgentBusyAction('test')
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/admin/tenants/${selectedTenant.id}/local-agent/test-print`, { method: 'post' })
+
+            setFeedback({ type: 'success', text: response.message })
+            refreshDashboard(['tenants', 'agentStats'])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setAgentBusyAction(null)
+        }
+    }
+
+    function handleDownloadLocalAgent() {
+        if (!selectedTenant) {
+            return
+        }
+
+        window.location.href = `/admin/tenants/${selectedTenant.id}/local-agent/download`
     }
 
     const sidebarItems = [
@@ -555,6 +635,74 @@ export default function AdminDashboard({
                                             })}
                                         </div>
                                     </section>
+
+                                    <section className="admin-card">
+                                        <div className="admin-card-head">
+                                            <div>
+                                                <div className="admin-card-kicker">Instalacao</div>
+                                                <h2>Agente local</h2>
+                                            </div>
+                                            <span className="admin-count-pill">{selectedTenant.local_agent?.status || 'sem agente'}</span>
+                                        </div>
+
+                                        <div className="admin-compact-list">
+                                            <div className="admin-compact-row">
+                                                <div>
+                                                    <strong>{selectedTenant.local_agent?.name || 'Agente nao preparado'}</strong>
+                                                    <small>
+                                                        {selectedTenant.local_agent?.last_seen_label
+                                                            ? `Ultimo sinal em ${selectedTenant.local_agent.last_seen_label}`
+                                                            : 'Aguardando instalacao no computador da loja'}
+                                                    </small>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="admin-ghost-button compact"
+                                                    onClick={handlePrepareLocalAgent}
+                                                    disabled={agentBusyAction === 'prepare'}
+                                                >
+                                                    <i className="fa-solid fa-wand-magic-sparkles" />
+                                                    <span>{selectedTenant.local_agent ? 'Atualizar' : 'Preparar'}</span>
+                                                </button>
+                                            </div>
+
+                                            {activationCode ? (
+                                                <div className="admin-agent-code">
+                                                    <small>Codigo de ativacao</small>
+                                                    <strong>{activationCode}</strong>
+                                                </div>
+                                            ) : null}
+
+                                            <div className="admin-agent-actions">
+                                                <button
+                                                    type="button"
+                                                    className="admin-primary-button"
+                                                    onClick={handleDownloadLocalAgent}
+                                                >
+                                                    <i className="fa-solid fa-download" />
+                                                    <span>Baixar instalador</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="admin-ghost-button"
+                                                    onClick={handleIssueActivationCode}
+                                                    disabled={agentBusyAction === 'activation' || !selectedTenant.local_agent}
+                                                >
+                                                    <i className="fa-solid fa-key" />
+                                                    <span>Gerar codigo</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="admin-ghost-button"
+                                                    onClick={handleQueueTestPrint}
+                                                    disabled={agentBusyAction === 'test' || selectedTenant.local_agent?.status !== 'online'}
+                                                >
+                                                    <i className="fa-solid fa-print" />
+                                                    <span>Teste</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </section>
                                 </div>
 
                                 <div className="admin-module-cards">
@@ -692,6 +840,10 @@ export default function AdminDashboard({
                                 <article className="admin-card admin-report-card">
                                     <small>Preset personalizado</small>
                                     <strong>{tenantSummaries.filter((tenant) => tenant.form.business?.preset === CUSTOM_PRESET).length}</strong>
+                                </article>
+                                <article className="admin-card admin-report-card">
+                                    <small>Agentes online</small>
+                                    <strong>{agentStats?.online || 0}</strong>
                                 </article>
                             </div>
 

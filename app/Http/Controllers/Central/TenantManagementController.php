@@ -16,6 +16,7 @@ use App\Models\Tenant;
 use App\Services\Central\LocalAgentBootstrapService;
 use App\Services\Central\LocalAgentCommandService;
 use App\Services\Central\LocalAgentConfigService;
+use App\Services\Central\LocalAgentInstallerPackageService;
 use App\Services\Central\ProvisionTenantService;
 use App\Services\Central\TenantFiscalAutofillService;
 use App\Services\Central\TenantFiscalProfileService;
@@ -396,6 +397,27 @@ class TenantManagementController extends Controller
             ],
             'agent' => $this->serializeLocalAgent($agent->fresh(), $configService, $bootstrapService),
         ]);
+    }
+
+    public function downloadLocalAgentInstaller(
+        Tenant $tenant,
+        LocalAgentBootstrapService $bootstrapService,
+        LocalAgentInstallerPackageService $packageService,
+    ) {
+        abort_unless($this->localAgentsTableExists(), 422, 'A tabela de agentes locais ainda nao foi criada neste ambiente.');
+
+        $agent = LocalAgent::query()->firstWhere('tenant_id', $tenant->id);
+        if (! $agent) {
+            $agent = $bootstrapService->ensureDefaultForTenant((string) $tenant->id, [
+                'name' => sprintf('Agente local %s', $tenant->name ?: $tenant->id),
+            ]);
+        }
+
+        $package = $packageService->build($agent);
+
+        return response()
+            ->download($package['path'], $package['filename'])
+            ->deleteFileAfterSend(true);
     }
 
     protected function serializeLocalAgent(

@@ -173,6 +173,13 @@ class TenantNavigationService
                         'required_role' => 'admin',
                         'request_patterns' => ['usuarios'],
                     ],
+                    [
+                        'href' => '/configuracoes',
+                        'label' => 'Configuracoes',
+                        'icon' => 'fa-sliders',
+                        'required_role' => 'admin',
+                        'request_patterns' => ['configuracoes', 'api/settings*'],
+                    ],
                 ],
             ],
         ];
