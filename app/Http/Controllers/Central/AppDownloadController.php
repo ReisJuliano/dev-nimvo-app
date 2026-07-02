@@ -22,6 +22,7 @@ class AppDownloadController extends Controller
                 'available' => $packageService->isAvailable(),
                 'versionLabel' => $packageService->versionLabel(),
                 'store' => $store,
+                'cacheKey' => $cacheKey,
                 'downloadUrl' => $cacheKey
                     ? route('app.download.apk', ['v' => $cacheKey])
                     : route('app.download.apk'),
@@ -39,19 +40,19 @@ class AppDownloadController extends Controller
         ]);
     }
 
-    public function qr(Request $request): Response
+    public function qr(AppDownloadPackageService $packageService): Response
     {
-        $store = trim((string) $request->query('store', ''));
-        $url = route('app.download.page');
-        if ($store !== '') {
-            $url .= '?store='.urlencode($store);
-        }
+        $cacheKey = $packageService->cacheKey();
+        $url = $cacheKey
+            ? route('app.download.apk', ['v' => $cacheKey])
+            : route('app.download.apk');
 
         $qrCode = new QrCode(data: $url, size: 320, margin: 10);
         $result = (new SvgWriter())->write($qrCode);
 
         return response($result->getString(), 200, [
             'Content-Type' => $result->getMimeType(),
+            ...$this->noStoreHeaders(),
         ]);
     }
 

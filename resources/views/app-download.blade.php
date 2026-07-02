@@ -177,7 +177,7 @@
 
         @if ($available)
             <div class="qr-frame">
-                <img src="{{ route('app.download.qr', $store !== '' ? ['store' => $store] : []) }}" alt="QR code para baixar o app">
+                <img src="{{ route('app.download.qr', array_filter(['v' => $cacheKey])) }}" alt="QR code para baixar o APK">
             </div>
 
             <div id="progressError" class="progress-error">
@@ -197,7 +197,7 @@
 
             <div class="instructions">
                 <strong>Como instalar no Android:</strong><br>
-                1. Toque em "Baixar o APK" ou escaneie o QR code acima.<br>
+                1. Toque em "Baixar o APK" ou escaneie o QR code acima para baixar o instalador.<br>
                 2. Se aparecer um aviso, permita a instalacao de apps de fontes desconhecidas para o navegador.<br>
                 3. Abra o app instalado e entre com o mesmo usuario e senha que voce ja usa no site Nimvo{{ $store !== '' ? " (loja: {$store})" : '' }}.
             </div>
