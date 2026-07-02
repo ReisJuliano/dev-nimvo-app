@@ -4,13 +4,29 @@ use App\Http\Controllers\Central\AdminPageController;
 use App\Http\Controllers\Central\Api\LocalAgentApiController;
 use App\Http\Controllers\Central\AppDownloadController;
 use App\Http\Controllers\Central\Auth\LoginController;
+use App\Http\Controllers\Central\ContactController;
+use App\Http\Controllers\Central\MarketingSiteController;
 use App\Http\Middleware\Central\AuthenticateLocalAgent;
 use App\Http\Controllers\Central\TenantManagementController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+// nimvo.com.br / www.nimvo.com.br is the public marketing site; every other
+// central host (admin.nimvo.com.br, local dev hosts) keeps sending "/" to
+// the admin panel.
+Route::get('/', function (Request $request) {
+    $marketingHosts = ['nimvo.com.br', 'www.nimvo.com.br'];
+
+    if (in_array(strtolower($request->getHost()), $marketingHosts, true)) {
+        return app(MarketingSiteController::class)->show();
+    }
+
     return redirect()->route('central.admin.home');
 })->name('central.home');
+
+Route::post('/contato', [ContactController::class, 'store'])
+    ->middleware('throttle:8,1')
+    ->name('central.contact.store');
 
 // Public app download landing page - reachable without login so a QR code
 // scanned from any device can open it directly.
