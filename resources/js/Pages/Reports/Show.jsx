@@ -848,9 +848,9 @@ export default function Show({
                     </div>
                 </header>
 
-                <div className="report-layout">
-                    <aside className="report-sidebar">
-                        <form className="report-filter-form" onSubmit={handleSubmit}>
+                <section className="report-filter-bar">
+                    <form className="report-filter-form" onSubmit={handleSubmit}>
+                        <div className="report-filter-bar-row">
                             <div className="report-sidebar-block">
                                 <p className="report-sidebar-title">Filtros</p>
                                 <button type="button" className="report-sidebar-reset" onClick={handleReset}>
@@ -910,50 +910,49 @@ export default function Show({
                             ) : null}
 
                             {hasAdvancedFilters ? (
-                                <>
-                                    <button
-                                        type="button"
-                                        className={`report-advanced-toggle ${advancedOpen ? 'active' : ''}`}
-                                        onClick={() => setAdvancedOpen((current) => !current)}
-                                    >
-                                        <i className="fa-solid fa-sliders" />
-                                        <span>Mais filtros</span>
-                                        {activeAdvancedCount ? (
-                                            <span className="report-advanced-count">{activeAdvancedCount} ativo{activeAdvancedCount === 1 ? '' : 's'}</span>
-                                        ) : null}
-                                        <i className={`fa-solid fa-chevron-${advancedOpen ? 'up' : 'down'} report-advanced-caret`} />
-                                    </button>
-
-                                    {advancedOpen ? (
-                                        <div className="report-filter-grid">
-                                            {[
-                                                'operator_id',
-                                                'customer_id',
-                                                'category_id',
-                                                'supplier_id',
-                                                'payment_method',
-                                                'stock_status',
-                                                'balance_status',
-                                                'sort_by',
-                                                'sort_direction',
-                                                'per_page',
-                                            ].map((field) => renderAdvancedField(field))}
-                                        </div>
+                                <button
+                                    type="button"
+                                    className={`report-advanced-toggle ${advancedOpen ? 'active' : ''}`}
+                                    onClick={() => setAdvancedOpen((current) => !current)}
+                                >
+                                    <i className="fa-solid fa-sliders" />
+                                    <span>Mais filtros</span>
+                                    {activeAdvancedCount ? (
+                                        <span className="report-advanced-count">{activeAdvancedCount} ativo{activeAdvancedCount === 1 ? '' : 's'}</span>
                                     ) : null}
-                                </>
+                                    <i className={`fa-solid fa-chevron-${advancedOpen ? 'up' : 'down'} report-advanced-caret`} />
+                                </button>
                             ) : null}
 
                             <div className="report-filter-actions">
-                                <button className="report-button report-button-primary report-button-block" type="submit">
+                                <button className="report-button report-button-primary" type="submit">
                                     <i className="fa-solid fa-filter" />
                                     <span>Aplicar filtros</span>
                                 </button>
                             </div>
-                        </form>
-                    </aside>
+                        </div>
 
-                    <main className="report-main">
-                        {!filtersApplied ? (
+                        {hasAdvancedFilters && advancedOpen ? (
+                            <div className="report-filter-grid">
+                                {[
+                                    'operator_id',
+                                    'customer_id',
+                                    'category_id',
+                                    'supplier_id',
+                                    'payment_method',
+                                    'stock_status',
+                                    'balance_status',
+                                    'sort_by',
+                                    'sort_direction',
+                                    'per_page',
+                                ].map((field) => renderAdvancedField(field))}
+                            </div>
+                        ) : null}
+                    </form>
+                </section>
+
+                <main className="report-main">
+                    {!filtersApplied ? (
                             <section className="report-empty-panel">
                                 <EmptyState icon="fa-sliders" label="Aplique filtros" />
                             </section>
@@ -1020,8 +1019,7 @@ export default function Show({
                                 </section>
                             </>
                         )}
-                    </main>
-                </div>
+                </main>
             </div>
         </AppLayout>
     )
