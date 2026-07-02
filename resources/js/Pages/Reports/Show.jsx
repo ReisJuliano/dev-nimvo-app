@@ -899,27 +899,36 @@ export default function Show({
                     ) : (
                         <>
                             {summary.length ? (
-                                <section className="report-summary-grid">
-                                    {summary.map((item) => (
-                                        <SummaryCard key={item.label} item={item} />
-                                    ))}
-                                </section>
+                                <>
+                                    <p className="report-section-label"><i className="fa-solid fa-chart-simple" />Resumo geral</p>
+                                    <section className="report-summary-grid">
+                                        {summary.map((item) => (
+                                            <SummaryCard key={item.label} item={item} />
+                                        ))}
+                                    </section>
+                                </>
                             ) : null}
 
                             {visibleHighlights.length ? (
-                                <section className="report-highlight-grid">
-                                    {visibleHighlights.map((item) => (
-                                        <HighlightCard key={`${item.label}-${item.meta || 'meta'}`} item={item} />
-                                    ))}
-                                </section>
+                                <>
+                                    <p className="report-section-label"><i className="fa-solid fa-star" />Destaques</p>
+                                    <section className="report-highlight-grid">
+                                        {visibleHighlights.map((item) => (
+                                            <HighlightCard key={`${item.label}-${item.meta || 'meta'}`} item={item} />
+                                        ))}
+                                    </section>
+                                </>
                             ) : null}
 
                             {visibleCharts.length ? (
-                                <section className="report-chart-grid">
-                                    {visibleCharts.map((chart) => (
-                                        <ReportChartCard key={chart.key} chart={chart} />
-                                    ))}
-                                </section>
+                                <>
+                                    <p className="report-section-label"><i className="fa-solid fa-chart-column" />Análise gráfica</p>
+                                    <section className="report-chart-grid">
+                                        {visibleCharts.map((chart) => (
+                                            <ReportChartCard key={chart.key} chart={chart} />
+                                        ))}
+                                    </section>
+                                </>
                             ) : null}
 
                             <section className="report-table-card">

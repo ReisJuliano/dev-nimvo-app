@@ -11,6 +11,19 @@
         window.addEventListener('scroll', onScroll, { passive: true });
     }
 
+    /* ─── Back to top ─── */
+    var backToTop = document.querySelector('[data-back-to-top]');
+    if (backToTop) {
+        var toggleBackToTop = function () {
+            backToTop.classList.toggle('is-visible', window.scrollY > 500);
+        };
+        toggleBackToTop();
+        window.addEventListener('scroll', toggleBackToTop, { passive: true });
+        backToTop.addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
     /* ─── Mobile nav toggle ─── */
     var navToggle = document.querySelector('[data-nav-toggle]');
     var nav = document.querySelector('[data-site-nav]');

@@ -108,6 +108,15 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
             icon: 'fa-vault',
             color: hasOpenCashRegister ? 'teal' : 'gray',
         },
+        {
+            title: 'Ticket médio',
+            value: formatMoney(summary.average_ticket || 0),
+            note: 'Média por venda no mês',
+            badge: 'Mensal',
+            badgeTone: 'neutral',
+            icon: 'fa-receipt',
+            color: 'violet',
+        },
     ]
 
     const quickAccess = [
