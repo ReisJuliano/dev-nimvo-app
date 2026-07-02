@@ -4,18 +4,25 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 
-class SalesLineChart extends StatelessWidget {
+class SalesLineChart extends StatefulWidget {
   const SalesLineChart({super.key, required this.items});
 
   final List<dynamic> items;
+
+  @override
+  State<SalesLineChart> createState() => _SalesLineChartState();
+}
+
+class _SalesLineChartState extends State<SalesLineChart> {
+  int? _selectedIndex;
 
   @override
   Widget build(BuildContext context) {
     final spots = <FlSpot>[];
     final labels = <String>[];
     final quantities = <int>[];
-    for (var i = 0; i < items.length; i++) {
-      final item = items[i] as Map<String, dynamic>;
+    for (var i = 0; i < widget.items.length; i++) {
+      final item = widget.items[i] as Map<String, dynamic>;
       spots
           .add(FlSpot(i.toDouble(), ((item['total'] as num?) ?? 0).toDouble()));
       labels.add(item['label'] as String? ?? '');
@@ -33,6 +40,32 @@ class SalesLineChart extends StatelessWidget {
     final bestIndex = values.isEmpty
         ? 0
         : values.indexOf(values.reduce((a, b) => a > b ? a : b));
+    final selectedIndex = spots.isEmpty
+        ? null
+        : (_selectedIndex ?? spots.length - 1).clamp(0, spots.length - 1);
+    final selectedSpot =
+        selectedIndex == null ? null : spots[selectedIndex.toInt()];
+    final lineBarData = LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      preventCurveOverShooting: true,
+      color: AppColors.primary,
+      barWidth: 2.6,
+      showingIndicators: selectedIndex == null ? [] : [selectedIndex.toInt()],
+      belowBarData: BarAreaData(
+        show: true,
+        color: AppColors.primary.withValues(alpha: 0.1),
+      ),
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+          radius: index == selectedIndex ? 4.5 : 2.4,
+          color: AppColors.primary,
+          strokeWidth: 2,
+          strokeColor: Colors.white,
+        ),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,10 +77,16 @@ class SalesLineChart extends StatelessWidget {
             _MetricPill(label: 'Hoje', value: formatCurrency(last)),
             _MetricPill(label: '7 dias', value: formatCurrency(total)),
             _MetricPill(
+              label: selectedIndex == null ? 'Pico' : labels[selectedIndex],
+              value: selectedSpot == null
+                  ? formatCurrency(0)
+                  : '${formatCurrency(selectedSpot.y)} - ${quantities[selectedIndex!]} vendas',
+            ),
+            _MetricPill(
               label: 'Pico',
               value: labels.isEmpty
                   ? formatCurrency(0)
-                  : '${labels[bestIndex]} - ${formatCompactCurrency(values[bestIndex])}',
+                  : '${labels[bestIndex]} ${formatCompactCurrency(values[bestIndex])}',
             ),
           ],
         ),
@@ -77,19 +116,36 @@ class SalesLineChart extends StatelessWidget {
               maxX: (spots.length - 1).clamp(0, 100).toDouble(),
               minY: (minValue - padding).clamp(0, double.infinity),
               maxY: maxValue + padding,
+              showingTooltipIndicators:
+                  selectedSpot == null || selectedIndex == null
+                      ? const []
+                      : [
+                          ShowingTooltipIndicators([
+                            LineBarSpot(lineBarData, 0, selectedSpot),
+                          ]),
+                        ],
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 46,
+                    reservedSize: 52,
                     interval: _interval(maxValue),
-                    getTitlesWidget: (value, meta) => Text(
-                      formatCompactCurrency(value).replaceFirst('R\$ ', ''),
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
+                    getTitlesWidget: (value, meta) {
+                      if (value != meta.min &&
+                          value != meta.max &&
+                          value != 0 &&
+                          (value / _interval(maxValue)).round().isOdd) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Text(
+                        formatCompactCurrency(value).replaceFirst('R\$ ', ''),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 rightTitles:
@@ -104,6 +160,13 @@ class SalesLineChart extends StatelessWidget {
                     getTitlesWidget: (value, meta) {
                       final index = value.toInt();
                       if (index < 0 || index >= labels.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final compact = MediaQuery.sizeOf(context).width < 380;
+                      if (compact &&
+                          index != 0 &&
+                          index != labels.length - 1 &&
+                          index.isOdd) {
                         return const SizedBox.shrink();
                       }
 
@@ -122,6 +185,15 @@ class SalesLineChart extends StatelessWidget {
                 ),
               ),
               lineTouchData: LineTouchData(
+                handleBuiltInTouches: false,
+                touchCallback: (event, response) {
+                  final touched = response?.lineBarSpots?.firstOrNull;
+                  if (touched == null) {
+                    return;
+                  }
+
+                  setState(() => _selectedIndex = touched.spotIndex);
+                },
                 touchTooltipData: LineTouchTooltipData(
                   tooltipRoundedRadius: 8,
                   getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
@@ -137,29 +209,7 @@ class SalesLineChart extends StatelessWidget {
                   }).toList(),
                 ),
               ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: spots,
-                  isCurved: true,
-                  preventCurveOverShooting: true,
-                  color: AppColors.primary,
-                  barWidth: 2.6,
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                  ),
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (spot, percent, barData, index) =>
-                        FlDotCirclePainter(
-                      radius: index == spots.length - 1 ? 4 : 2.4,
-                      color: AppColors.primary,
-                      strokeWidth: 2,
-                      strokeColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+              lineBarsData: [lineBarData],
             ),
           ),
         ),

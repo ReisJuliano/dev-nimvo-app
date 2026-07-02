@@ -173,3 +173,8 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   `GIT_DIR`/`GIT_WORK_TREE` antes do pull porque hooks do bare repo herdam esse
   ambiente. Logs: `/var/log/nimvo-post-receive.log` e
   `/var/log/nimvo-post-pull.log`.
+- 2026-07-02: A busca mobile de produtos em `/mobile-api/v1/products/search`
+  tambem atende a consulta rapida de estoque do app. O retorno inclui codigo,
+  codigo de barras, categoria, custo, preco, estoque, minimo, media diaria dos
+  ultimos 30 dias e ultima venda. O app usa `mobile_scanner`, portanto Android
+  precisa de permissao `CAMERA` e iOS de `NSCameraUsageDescription`.

@@ -10,3 +10,13 @@ final stockRepositoryProvider = Provider<StockRepository>((ref) {
 final stockAlertsProvider = FutureProvider<List<dynamic>>((ref) async {
   return ref.watch(stockRepositoryProvider).alerts();
 });
+
+final stockProductSearchProvider =
+    FutureProvider.family<List<dynamic>, String>((ref, query) async {
+  final term = query.trim();
+  if (term.length < 2) {
+    return [];
+  }
+
+  return ref.watch(stockRepositoryProvider).searchProducts(term);
+});

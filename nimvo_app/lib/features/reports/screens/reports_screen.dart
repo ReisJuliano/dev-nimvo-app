@@ -312,14 +312,22 @@ class _CmvTrendChart extends StatelessWidget {
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
 }
 
-class _DailyRevenueChart extends StatelessWidget {
+class _DailyRevenueChart extends StatefulWidget {
   const _DailyRevenueChart({required this.items});
 
   final List<dynamic> items;
 
   @override
+  State<_DailyRevenueChart> createState() => _DailyRevenueChartState();
+}
+
+class _DailyRevenueChartState extends State<_DailyRevenueChart> {
+  int? _selectedIndex;
+
+  @override
   Widget build(BuildContext context) {
-    final rows = items.map((item) => item as Map<String, dynamic>).toList();
+    final rows =
+        widget.items.map((item) => item as Map<String, dynamic>).toList();
     if (rows.isEmpty) {
       return const Text(
         'Sem vendas no periodo.',
@@ -335,92 +343,187 @@ class _DailyRevenueChart extends StatelessWidget {
       0,
       (max, spot) => spot.y > max ? spot.y : max,
     );
+    final selectedIndex =
+        (_selectedIndex ?? rows.length - 1).clamp(0, rows.length - 1).toInt();
+    final lineBarData = LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      preventCurveOverShooting: true,
+      color: AppColors.info,
+      barWidth: 2.4,
+      showingIndicators: [selectedIndex],
+      belowBarData: BarAreaData(
+        show: true,
+        color: AppColors.info.withValues(alpha: 0.1),
+      ),
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+          radius: index == selectedIndex ? 4.5 : 2.3,
+          color: AppColors.info,
+          strokeWidth: 2,
+          strokeColor: Colors.white,
+        ),
+      ),
+    );
 
-    return SizedBox(
-      height: 190,
-      child: LineChart(
-        LineChartData(
-          minY: 0,
-          maxY: maxValue <= 0 ? 100 : maxValue * 1.18,
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => const FlLine(
-              color: AppColors.border,
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(
-            show: true,
-            border: const Border(
-              left: BorderSide(color: AppColors.borderStrong),
-              bottom: BorderSide(color: AppColors.borderStrong),
-            ),
-          ),
-          titlesData: FlTitlesData(
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 42,
-                getTitlesWidget: (value, meta) => Text(
-                  formatCompactCurrency(value).replaceFirst('R\$ ', ''),
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ChartSelectionPill(
+          label: rows[selectedIndex]['label'] as String? ?? '',
+          value:
+              '${formatCurrency(spots[selectedIndex].y)} - ${rows[selectedIndex]['qty'] ?? 0} vendas',
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 190,
+          child: LineChart(
+            LineChartData(
+              minY: 0,
+              maxY: maxValue <= 0 ? 100 : maxValue * 1.18,
+              showingTooltipIndicators: [
+                ShowingTooltipIndicators([
+                  LineBarSpot(lineBarData, 0, spots[selectedIndex]),
+                ]),
+              ],
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => const FlLine(
+                  color: AppColors.border,
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: const Border(
+                  left: BorderSide(color: AppColors.borderStrong),
+                  bottom: BorderSide(color: AppColors.borderStrong),
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 48,
+                    getTitlesWidget: (value, meta) {
+                      if (value != 0 &&
+                          value != meta.max &&
+                          value != meta.min &&
+                          value.round().isOdd) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Text(
+                        formatCompactCurrency(value).replaceFirst('R\$ ', ''),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    interval: rows.length > 14 ? 3 : 1,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= rows.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final compact = MediaQuery.sizeOf(context).width < 390;
+                      if (compact &&
+                          rows.length > 8 &&
+                          index != 0 &&
+                          index != rows.length - 1 &&
+                          index.isOdd) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          rows[index]['label'] as String? ?? '',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 9,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
-            ),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 28,
-                interval: rows.length > 14 ? 3 : 1,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= rows.length) {
-                    return const SizedBox.shrink();
+              lineTouchData: LineTouchData(
+                handleBuiltInTouches: false,
+                touchCallback: (event, response) {
+                  final touched = response?.lineBarSpots?.firstOrNull;
+                  if (touched == null) {
+                    return;
                   }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      rows[index]['label'] as String? ?? '',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 9,
-                      ),
-                    ),
-                  );
+                  setState(() => _selectedIndex = touched.spotIndex);
                 },
+                touchTooltipData: LineTouchTooltipData(
+                  tooltipRoundedRadius: 8,
+                  getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
+                    final index = spot.x.toInt();
+                    return LineTooltipItem(
+                      '${rows[index]['label']}\n${formatCurrency(spot.y)}',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
+              lineBarsData: [lineBarData],
             ),
           ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              preventCurveOverShooting: true,
-              color: AppColors.info,
-              barWidth: 2.4,
-              belowBarData: BarAreaData(
-                show: true,
-                color: AppColors.info.withValues(alpha: 0.1),
-              ),
-              dotData: const FlDotData(show: false),
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
 
   double _num(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+}
+
+class _ChartSelectionPill extends StatelessWidget {
+  const _ChartSelectionPill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.cardAlt,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Text(
+        '$label  $value',
+        style: const TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
 }
 
 class _LegendDot extends StatelessWidget {
