@@ -561,9 +561,7 @@ export default function Show({
     useResetPageHistoryOnLeave(resetHistoryEntry)
     const visibleFields = filterSchema?.fields || []
     const form = useForm(buildFormState(filters, filterSchema))
-    const [advancedOpen, setAdvancedOpen] = useState(
-        countActiveAdvancedFilters(form.data, visibleFields) > 0 || !filtersApplied,
-    )
+    const [advancedOpen, setAdvancedOpen] = useState(false)
     const visibleHighlights = useMemo(() => highlights.filter(Boolean), [highlights])
     const visibleCharts = useMemo(() => charts.filter(Boolean), [charts])
     const pdfExportParams = useMemo(() => buildExportPayload(filters, filterSchema, 'pdf'), [filters, filterSchema])
@@ -863,25 +861,25 @@ export default function Show({
 
                             {showPeriodFilters ? (
                                 <>
-                                    <div className="report-filter-presets">
+                                    <div className="report-filter-chip-row">
                                         {QUICK_PRESETS.map((preset) => (
                                             <button
-                                                key={preset.key}
+                                                key={`preset-${preset.key}`}
                                                 type="button"
-                                                className="report-filter-pill"
+                                                className="report-filter-chip"
                                                 onClick={() => handlePreset(preset.key)}
                                             >
                                                 {preset.label}
                                             </button>
                                         ))}
-                                    </div>
 
-                                    <div className="report-scope-list">
+                                        <span className="report-filter-chip-divider" aria-hidden="true" />
+
                                         {SCOPE_OPTIONS.map((option) => (
                                             <button
-                                                key={option.key}
+                                                key={`scope-${option.key}`}
                                                 type="button"
-                                                className={`report-scope-button ${form.data.scope === option.key ? 'active' : ''}`}
+                                                className={`report-filter-chip ${form.data.scope === option.key ? 'active' : ''}`}
                                                 onClick={() => form.setData('scope', option.key)}
                                             >
                                                 <i className={`fa-solid ${option.icon}`} />
@@ -920,7 +918,9 @@ export default function Show({
                                     >
                                         <i className="fa-solid fa-sliders" />
                                         <span>Mais filtros</span>
-                                        {activeAdvancedCount ? <span className="report-advanced-count">{activeAdvancedCount}</span> : null}
+                                        {activeAdvancedCount ? (
+                                            <span className="report-advanced-count">{activeAdvancedCount} ativo{activeAdvancedCount === 1 ? '' : 's'}</span>
+                                        ) : null}
                                         <i className={`fa-solid fa-chevron-${advancedOpen ? 'up' : 'down'} report-advanced-caret`} />
                                     </button>
 
