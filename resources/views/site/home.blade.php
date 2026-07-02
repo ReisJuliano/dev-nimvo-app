@@ -52,7 +52,7 @@
             <div class="hero-blob hero-blob--3"></div>
             <div class="hero-particles" data-particles></div>
 
-            <div class="container hero-grid">
+            <div class="hero-grid">
                 <div class="hero-copy">
                     <span class="eyebrow">Gestão completa para o seu negócio</span>
                     <h1>Sua empresa mais organizada, <span>do caixa ao estoque</span>.</h1>
