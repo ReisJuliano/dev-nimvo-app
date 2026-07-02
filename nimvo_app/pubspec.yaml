@@ -1,7 +1,7 @@
 name: nimvo_app
 description: Nimvo mobile dashboard for owners and managers.
 publish_to: "none"
-version: 0.2.5+7
+version: 0.2.6+8
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -37,7 +37,11 @@ flutter:
 flutter_launcher_icons:
   android: "nimvo_launcher"
   ios: true
-  image_path: "assets/branding/nimvo-logo-512.png"
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/branding/nimvo-logo-512.png"
+  # Legacy (Android < 8) and iOS: full logo on the brand gradient.
+  image_path: "assets/branding/nimvo-icon-legacy.png"
+  # Adaptive (Android 8+): full-bleed gradient background + the white mark
+  # isolated and padded into the safe zone, so the launcher mask never crops
+  # the logo and the result stays crisp instead of the old zoomed full-bleed.
+  adaptive_icon_background: "assets/branding/nimvo-icon-bg.png"
+  adaptive_icon_foreground: "assets/branding/nimvo-icon-fg.png"
   remove_alpha_ios: true
