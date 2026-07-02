@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/css/site.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('assets/css/site.css') }}?v={{ @filemtime(public_path('assets/css/site.css')) ?: 3 }}">
 </head>
 <body>
 
@@ -80,6 +80,156 @@
             <a href="#recursos" class="hero-scroll-cue" aria-label="Rolar para conhecer os recursos">
                 <span></span>
             </a>
+        </section>
+
+        <section class="showcase">
+            <div class="showcase-glow showcase-glow--1"></div>
+            <div class="showcase-glow showcase-glow--2"></div>
+
+            <div class="container">
+                <div class="section-head reveal">
+                    <span class="eyebrow" style="background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2); color:#cbd5f5;">Veja o sistema em ação</span>
+                    <h2 style="color:#fff;">Uma tela para cada momento do seu negócio</h2>
+                    <p style="color:rgba(226,232,240,0.72);">Do resumo do dia ao financeiro, cada módulo do Nimvo reúne exatamente as informações que importam, sem telas vazias.</p>
+                </div>
+
+                <div class="glass-card reveal" data-tilt data-glass-carousel>
+                    <div class="glass-card-glare"></div>
+
+                    <div class="glass-device">
+                        <div class="glass-dots"><i></i><i></i><i></i></div>
+                        <div class="device-screen showcase-screen">
+                            <div class="mock-sidebar">
+                                <i class="is-active"></i><i></i><i></i><i></i><i></i><i></i>
+                            </div>
+                            <div class="mock-content">
+                                <div class="mock-slide is-active" data-gslide>
+                                    <div class="mock-topbar"><strong>Resumo da loja</strong><span>qua., 1 de jul.</span></div>
+                                    <div class="mock-body">
+                                        <div class="mock-alert">⚠ 1 conta vencida · total em atraso R$ 232,00</div>
+                                        <div class="mock-kpis cols-4">
+                                            <div class="mock-kpi accent"><span>Vendido hoje</span><strong>R$ 1.240</strong></div>
+                                            <div class="mock-kpi success"><span>Lucro</span><strong>R$ 386</strong></div>
+                                            <div class="mock-kpi"><span>Caixa aberto</span><strong>R$ 640</strong></div>
+                                            <div class="mock-kpi warning"><span>Ticket médio</span><strong>R$ 47</strong></div>
+                                        </div>
+                                        <div class="mock-chart">
+                                            <i style="height:35%"></i><i style="height:55%"></i><i style="height:40%"></i>
+                                            <i style="height:70%"></i><i style="height:50%"></i><i style="height:85%"></i>
+                                            <i style="height:60%"></i><i style="height:75%"></i>
+                                        </div>
+                                        <div class="mock-rows">
+                                            <div class="mock-row"><b>Maria da Silva</b><span>16:32 · Dinheiro</span><em>R$ 36,72</em></div>
+                                            <div class="mock-row"><b>Cliente balcão</b><span>15:07 · Pix</span><em>R$ 89,40</em></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mock-slide" data-gslide>
+                                    <div class="mock-topbar"><strong>Vendas de hoje</strong><span>12 vendas</span></div>
+                                    <div class="mock-body">
+                                        <div class="mock-kpis">
+                                            <div class="mock-kpi accent"><span>Total vendido</span><strong>R$ 1.240</strong></div>
+                                            <div class="mock-kpi"><span>Ticket médio</span><strong>R$ 47</strong></div>
+                                            <div class="mock-kpi success"><span>Itens vendidos</span><strong>31</strong></div>
+                                        </div>
+                                        <div class="mock-chips">
+                                            <span class="mock-chip is-active">Hoje</span>
+                                            <span class="mock-chip">Semana</span>
+                                            <span class="mock-chip">Mês</span>
+                                        </div>
+                                        <div class="mock-rows">
+                                            <div class="mock-row"><b>Maria da Silva</b><span>Dinheiro</span><em>R$ 36,72</em></div>
+                                            <div class="mock-row"><b>Cliente balcão</b><span>Pix</span><em>R$ 89,40</em></div>
+                                            <div class="mock-row"><b>João Pereira</b><span>Cartão</span><em>R$ 124,90</em></div>
+                                        </div>
+                                        <div class="mock-legend">
+                                            <span><i style="background:#4f46e5"></i> Pix 42%</span>
+                                            <span><i style="background:#10b981"></i> Dinheiro 33%</span>
+                                            <span><i style="background:#06b6d4"></i> Cartão 25%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mock-slide" data-gslide>
+                                    <div class="mock-topbar"><strong>Estoque</strong><span>48 produtos</span></div>
+                                    <div class="mock-body">
+                                        <div class="mock-kpis">
+                                            <div class="mock-kpi"><span>Produtos</span><strong>48</strong></div>
+                                            <div class="mock-kpi warning"><span>Estoque baixo</span><strong>5</strong></div>
+                                            <div class="mock-kpi"><span>Sem estoque</span><strong>1</strong></div>
+                                        </div>
+                                        <div class="mock-chips">
+                                            <span class="mock-chip is-active">Todos</span>
+                                            <span class="mock-chip">Mercearia</span>
+                                            <span class="mock-chip">Bebidas</span>
+                                        </div>
+                                        <div class="mock-list">
+                                            <div class="mock-row"><b>Arroz Tipo 1 5kg</b><span>32 un.</span></div>
+                                            <div class="mock-bar"><i style="width:78%"></i></div>
+                                            <div class="mock-row"><b>Feijão Carioca 1kg</b><span>9 un.</span></div>
+                                            <div class="mock-bar"><i style="width:22%"></i></div>
+                                            <div class="mock-row"><b>Óleo de Soja 900ml</b><span>54 un.</span></div>
+                                            <div class="mock-bar"><i style="width:92%"></i></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mock-slide" data-gslide>
+                                    <div class="mock-topbar"><strong>Painel financeiro</strong><span>Julho/2026</span></div>
+                                    <div class="mock-body">
+                                        <div class="mock-kpis">
+                                            <div class="mock-kpi success"><span>A receber</span><strong>R$ 2,1k</strong></div>
+                                            <div class="mock-kpi warning"><span>A pagar</span><strong>R$ 1,3k</strong></div>
+                                        </div>
+                                        <div class="mock-chart">
+                                            <i style="height:30%"></i><i style="height:50%"></i><i style="height:38%"></i>
+                                            <i style="height:66%"></i><i style="height:44%"></i><i style="height:78%"></i>
+                                        </div>
+                                        <div class="mock-rows">
+                                            <div class="mock-row"><b>Distribuidora Sul</b><span>Venc. 05/07</span><span class="mock-status late">Atrasada</span></div>
+                                            <div class="mock-row"><b>Energia elétrica</b><span>Venc. 10/07</span><span class="mock-status ok">Em dia</span></div>
+                                            <div class="mock-row"><b>Fornecedor Bebidas</b><span>Venc. 18/07</span><span class="mock-status ok">Em dia</span></div>
+                                        </div>
+                                        <div class="mock-total"><span>Total em aberto</span><strong>R$ 1.860,00</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="showcase-tabs">
+                        <button type="button" class="showcase-tab is-active" data-gtab data-duration="5200">
+                            <span class="showcase-tab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                            </span>
+                            <span class="showcase-tab-label">Resumo</span>
+                            <span class="showcase-tab-progress"><i></i></span>
+                        </button>
+                        <button type="button" class="showcase-tab" data-gtab data-duration="5200">
+                            <span class="showcase-tab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                            </span>
+                            <span class="showcase-tab-label">Vendas</span>
+                            <span class="showcase-tab-progress"><i></i></span>
+                        </button>
+                        <button type="button" class="showcase-tab" data-gtab data-duration="5200">
+                            <span class="showcase-tab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V21H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                            </span>
+                            <span class="showcase-tab-label">Estoque</span>
+                            <span class="showcase-tab-progress"><i></i></span>
+                        </button>
+                        <button type="button" class="showcase-tab" data-gtab data-duration="5200">
+                            <span class="showcase-tab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+                            </span>
+                            <span class="showcase-tab-label">Financeiro</span>
+                            <span class="showcase-tab-progress"><i></i></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section class="site-section" id="recursos">
@@ -571,6 +721,6 @@
         </div>
     </footer>
 
-    <script src="{{ asset('assets/js/site.js') }}?v=2"></script>
+    <script src="{{ asset('assets/js/site.js') }}?v={{ @filemtime(public_path('assets/js/site.js')) ?: 3 }}"></script>
 </body>
 </html>

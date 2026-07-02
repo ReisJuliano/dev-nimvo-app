@@ -45,6 +45,7 @@ body {
 }
 
 img { max-width: 100%; display: block; }
+svg { display: block; flex-shrink: 0; }
 
 a { color: inherit; }
 
@@ -415,13 +416,14 @@ a { color: inherit; }
     position: absolute;
     inset: 0;
     opacity: 0;
-    transform: scale(1.02);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: scale(1.03) translateY(10px);
+    filter: blur(3px);
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), filter 0.55s ease;
     display: flex;
     flex-direction: column;
     font-size: 10px;
 }
-.mock-slide.is-active { opacity: 1; transform: scale(1); position: relative; }
+.mock-slide.is-active { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); position: relative; }
 
 .mock-topbar {
     display: flex;
@@ -570,6 +572,138 @@ a { color: inherit; }
 @media (max-width: 560px) {
     .hero { padding: 140px 0 90px; }
     .hero-scroll-cue { display: none; }
+}
+
+/* ============================================================
+   Showcase em vidro (glassmorphism) — carrossel 3D
+   ============================================================ */
+
+.showcase {
+    position: relative;
+    padding: 90px 0 110px;
+    background: linear-gradient(180deg, var(--navy) 0%, #0d1a30 55%, #101d34 100%);
+    overflow: hidden;
+}
+
+.showcase-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.4;
+    pointer-events: none;
+}
+.showcase-glow--1 { width: 460px; height: 460px; background: #4f46e5; top: -80px; left: 8%; }
+.showcase-glow--2 { width: 380px; height: 380px; background: #06b6d4; bottom: -100px; right: 6%; opacity: 0.3; }
+
+.showcase .section-head p { color: rgba(226, 232, 240, 0.72); }
+
+.glass-card {
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 26px 26px 20px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 28px;
+    box-shadow: 0 40px 90px -20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    transform-style: preserve-3d;
+    transform: perspective(1200px) rotateX(0) rotateY(0);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+
+.glass-card-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.35), transparent 38%);
+    mix-blend-mode: overlay;
+    pointer-events: none;
+}
+
+.glass-device { position: relative; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow-lg); }
+
+.glass-dots {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    background: #1e293b;
+}
+.glass-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
+.glass-dots i:first-child { background: #f43f5e; }
+.glass-dots i:nth-child(2) { background: #f59e0b; }
+.glass-dots i:nth-child(3) { background: #10b981; }
+
+.showcase-screen { aspect-ratio: 16 / 9; border-radius: 0; }
+.showcase-screen .mock-sidebar { width: 42px; gap: 12px; }
+.showcase-screen .mock-sidebar i { width: 16px; height: 16px; }
+.showcase-screen .mock-body { font-size: 11px; gap: 11px; }
+.showcase-screen .mock-topbar { padding: 13px 18px; }
+.showcase-screen .mock-topbar strong { font-size: 14px; }
+
+.showcase-tabs {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.showcase-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: rgba(226, 232, 240, 0.6);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.showcase-tab:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.showcase-tab.is-active { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.22); color: #fff; }
+
+.showcase-tab-icon svg { width: 18px; height: 18px; }
+.showcase-tab-label { font-size: 0.76rem; font-weight: 700; }
+
+.showcase-tab-progress {
+    width: 100%;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    margin-top: 2px;
+}
+.showcase-tab-progress i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary-light), var(--pink));
+}
+.showcase-tab.is-active .showcase-tab-progress i { animation: showcaseFill linear forwards; animation-duration: var(--tab-duration, 5200ms); }
+.showcase-tab.is-paused .showcase-tab-progress i { animation-play-state: paused; }
+
+@keyframes showcaseFill {
+    from { width: 0%; }
+    to { width: 100%; }
+}
+
+@media (max-width: 760px) {
+    .glass-card { padding: 16px 16px 14px; border-radius: 22px; }
+    .showcase-tabs { grid-template-columns: repeat(2, 1fr); }
+    .showcase-tab-label { font-size: 0.72rem; }
+}
+
+@media (max-width: 480px) {
+    .showcase-screen .mock-sidebar { display: none; }
 }
 
 /* ============================================================
@@ -766,6 +900,8 @@ a { color: inherit; }
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    line-height: 0;
+    padding: 0;
 }
 .contact-line-icon svg { width: 19px; height: 19px; }
 .contact-line-icon--whatsapp { --contact-color: #34d399; }

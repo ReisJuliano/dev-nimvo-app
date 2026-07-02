@@ -56,6 +56,72 @@
         }
     }
 
+    /* ─── Glass showcase: 3D tilt ─── */
+    var glassCard = document.querySelector('[data-tilt]');
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (glassCard && window.matchMedia('(hover: hover)').matches && !reduceMotion) {
+        glassCard.addEventListener('mousemove', function (event) {
+            var rect = glassCard.getBoundingClientRect();
+            var px = (event.clientX - rect.left) / rect.width - 0.5;
+            var py = (event.clientY - rect.top) / rect.height - 0.5;
+            var rotateY = px * 10;
+            var rotateX = py * -10;
+            glassCard.style.transform = 'perspective(1200px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg)';
+        });
+        glassCard.addEventListener('mouseleave', function () {
+            glassCard.style.transform = 'perspective(1200px) rotateX(0) rotateY(0)';
+        });
+    }
+
+    /* ─── Glass showcase: tab carousel with progress autoplay ─── */
+    var glassCarousel = document.querySelector('[data-glass-carousel]');
+    if (glassCarousel) {
+        var gSlides = glassCarousel.querySelectorAll('[data-gslide]');
+        var gTabs = glassCarousel.querySelectorAll('[data-gtab]');
+        var gCurrent = 0;
+        var gPaused = false;
+
+        var gActivate = function (index) {
+            gCurrent = (index + gSlides.length) % gSlides.length;
+            gSlides.forEach(function (s, i) { s.classList.toggle('is-active', i === gCurrent); });
+            gTabs.forEach(function (tab, i) {
+                var isActive = i === gCurrent;
+                tab.classList.toggle('is-active', isActive);
+                var bar = tab.querySelector('.showcase-tab-progress i');
+                if (bar) {
+                    bar.style.animation = 'none';
+                    // Force reflow so the animation restarts cleanly on the newly active tab.
+                    void bar.offsetWidth;
+                    bar.style.animation = '';
+                    if (isActive) {
+                        tab.style.setProperty('--tab-duration', (tab.dataset.duration || 5200) + 'ms');
+                    }
+                }
+            });
+        };
+
+        gTabs.forEach(function (tab, i) {
+            tab.addEventListener('click', function () { gActivate(i); });
+            var bar = tab.querySelector('.showcase-tab-progress i');
+            if (bar) {
+                bar.addEventListener('animationend', function () {
+                    if (i === gCurrent && !gPaused) gActivate(gCurrent + 1);
+                });
+            }
+        });
+
+        glassCarousel.addEventListener('mouseenter', function () {
+            gPaused = true;
+            gTabs.forEach(function (t) { t.classList.add('is-paused'); });
+        });
+        glassCarousel.addEventListener('mouseleave', function () {
+            gPaused = false;
+            gTabs.forEach(function (t) { t.classList.remove('is-paused'); });
+        });
+
+        gActivate(0);
+    }
+
     /* ─── Hero cursor-reactive spotlight ─── */
     var hero = document.querySelector('[data-hero]');
     var spotlight = document.querySelector('[data-spotlight]');
