@@ -41,9 +41,8 @@
     </header>
 
     <main id="top">
-        <section class="hero" data-hero>
+        <section class="hero">
             <div class="hero-photo"></div>
-            <div class="hero-spotlight" data-spotlight></div>
             <div class="hero-blob hero-blob--1"></div>
             <div class="hero-blob hero-blob--2"></div>
             <div class="hero-blob hero-blob--3"></div>
@@ -104,29 +103,55 @@
                             </div>
                             <div class="mock-content">
                                 <div class="mock-slide is-active" data-gslide>
-                                    <div class="mock-topbar"><strong>Resumo da loja</strong><span>qua., 1 de jul.</span></div>
+                                    <div class="mock-hero">
+                                        <div class="mock-hero-left">
+                                            <div class="mock-hero-icon"></div>
+                                            <div class="mock-hero-text">
+                                                <strong>Boa noite, Diogo!</strong>
+                                                <span>Nimvo · quarta-feira, 1 de julho</span>
+                                            </div>
+                                        </div>
+                                        <div class="mock-status-row">
+                                            <span class="mock-status-chip">● Caixa aberto</span>
+                                            <span class="mock-status-chip neutral">12 venda(s) hoje</span>
+                                        </div>
+                                    </div>
                                     <div class="mock-body">
-                                        <div class="mock-alert">⚠ 1 conta vencida · total em atraso R$ 232,00</div>
+                                        <div class="mock-shortcuts">
+                                            <span class="mock-shortcut accent">Vender agora</span>
+                                            <span class="mock-shortcut">Novo produto</span>
+                                            <span class="mock-shortcut">Contas</span>
+                                        </div>
+                                        <div class="mock-alert">⚠ 1 conta vencida · total em atraso R$ 232,00 — clique para ver e pagar</div>
                                         <div class="mock-kpis cols-4">
                                             <div class="mock-kpi accent"><span>Vendido hoje</span><strong>R$ 1.240</strong></div>
-                                            <div class="mock-kpi success"><span>Lucro</span><strong>R$ 386</strong></div>
-                                            <div class="mock-kpi"><span>Caixa aberto</span><strong>R$ 640</strong></div>
-                                            <div class="mock-kpi warning"><span>Ticket médio</span><strong>R$ 47</strong></div>
+                                            <div class="mock-kpi success"><span>Lucro estimado</span><strong>R$ 386</strong></div>
+                                            <div class="mock-kpi warning"><span>Contas a receber</span><strong>R$ 212,55</strong></div>
+                                            <div class="mock-kpi"><span>Saldo do caixa</span><strong>R$ 150,00</strong></div>
                                         </div>
-                                        <div class="mock-chart">
-                                            <i style="height:35%"></i><i style="height:55%"></i><i style="height:40%"></i>
-                                            <i style="height:70%"></i><i style="height:50%"></i><i style="height:85%"></i>
-                                            <i style="height:60%"></i><i style="height:75%"></i>
-                                        </div>
-                                        <div class="mock-rows">
-                                            <div class="mock-row"><b>Maria da Silva</b><span>16:32 · Dinheiro</span><em>R$ 36,72</em></div>
-                                            <div class="mock-row"><b>Cliente balcão</b><span>15:07 · Pix</span><em>R$ 89,40</em></div>
+                                        <div class="mock-split">
+                                            <div>
+                                                <p class="mock-panel-title">Últimas vendas</p>
+                                                <div class="mock-rows">
+                                                    <div class="mock-row"><b>Maria da Silva</b><span>Dinheiro · 16:32</span><em>R$ 36,72</em></div>
+                                                    <div class="mock-row"><b>Cliente balcão</b><span>Pix · 15:07</span><em>R$ 89,40</em></div>
+                                                    <div class="mock-row"><b>João Pereira</b><span>Cartão · 14:20</span><em>R$ 124,90</em></div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p class="mock-panel-title">Acesso rápido</p>
+                                                <div class="mock-quick-grid">
+                                                    <div class="mock-quick-item" style="--quick-color:#4f46e5"><i></i><span>Produtos</span></div>
+                                                    <div class="mock-quick-item" style="--quick-color:#06b6d4"><i></i><span>Clientes</span></div>
+                                                    <div class="mock-quick-item" style="--quick-color:#8b5cf6"><i></i><span>Relatórios</span></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="mock-slide" data-gslide>
-                                    <div class="mock-topbar"><strong>Vendas de hoje</strong><span>12 vendas</span></div>
+                                    <div class="mock-topbar"><strong>Últimas vendas</strong><span>12 vendas hoje</span></div>
                                     <div class="mock-body">
                                         <div class="mock-kpis">
                                             <div class="mock-kpi accent"><span>Total vendido</span><strong>R$ 1.240</strong></div>
@@ -139,9 +164,9 @@
                                             <span class="mock-chip">Mês</span>
                                         </div>
                                         <div class="mock-rows">
-                                            <div class="mock-row"><b>Maria da Silva</b><span>Dinheiro</span><em>R$ 36,72</em></div>
-                                            <div class="mock-row"><b>Cliente balcão</b><span>Pix</span><em>R$ 89,40</em></div>
-                                            <div class="mock-row"><b>João Pereira</b><span>Cartão</span><em>R$ 124,90</em></div>
+                                            <div class="mock-row"><b>Maria da Silva</b><span>Dinheiro · 16:32</span><em>R$ 36,72</em></div>
+                                            <div class="mock-row"><b>Cliente balcão</b><span>Pix · 15:07</span><em>R$ 89,40</em></div>
+                                            <div class="mock-row"><b>João Pereira</b><span>Cartão · 14:20</span><em>R$ 124,90</em></div>
                                         </div>
                                         <div class="mock-legend">
                                             <span><i style="background:#4f46e5"></i> Pix 42%</span>
@@ -152,17 +177,16 @@
                                 </div>
 
                                 <div class="mock-slide" data-gslide>
-                                    <div class="mock-topbar"><strong>Estoque</strong><span>48 produtos</span></div>
+                                    <div class="mock-topbar"><strong>Produtos</strong><span>Catálogo da loja</span></div>
                                     <div class="mock-body">
-                                        <div class="mock-kpis">
-                                            <div class="mock-kpi"><span>Produtos</span><strong>48</strong></div>
-                                            <div class="mock-kpi warning"><span>Estoque baixo</span><strong>5</strong></div>
-                                            <div class="mock-kpi"><span>Sem estoque</span><strong>1</strong></div>
+                                        <div class="mock-stat-pills">
+                                            <div class="mock-stat-pill"><strong>48</strong><span>Total</span></div>
+                                            <div class="mock-stat-pill"><strong>R$ 9.480</strong><span>Valor em catálogo</span></div>
                                         </div>
                                         <div class="mock-chips">
-                                            <span class="mock-chip is-active">Todos</span>
-                                            <span class="mock-chip">Mercearia</span>
-                                            <span class="mock-chip">Bebidas</span>
+                                            <span class="mock-chip is-active">Todos 48</span>
+                                            <span class="mock-chip">Ativos 44</span>
+                                            <span class="mock-chip">Inativos 4</span>
                                         </div>
                                         <div class="mock-list">
                                             <div class="mock-row"><b>Arroz Tipo 1 5kg</b><span>32 un.</span></div>
@@ -176,20 +200,22 @@
                                 </div>
 
                                 <div class="mock-slide" data-gslide>
-                                    <div class="mock-topbar"><strong>Painel financeiro</strong><span>Julho/2026</span></div>
+                                    <div class="mock-topbar"><strong>Contas a pagar</strong><span>Julho/2026</span></div>
                                     <div class="mock-body">
-                                        <div class="mock-kpis">
-                                            <div class="mock-kpi success"><span>A receber</span><strong>R$ 2,1k</strong></div>
-                                            <div class="mock-kpi warning"><span>A pagar</span><strong>R$ 1,3k</strong></div>
+                                        <div class="mock-stat-pills">
+                                            <div class="mock-stat-pill"><strong>R$ 1.860</strong><span>Em aberto</span></div>
+                                            <div class="mock-stat-pill warning"><strong>R$ 620</strong><span>Vencidas</span></div>
+                                            <div class="mock-stat-pill"><strong>12</strong><span>Total carregado</span></div>
                                         </div>
-                                        <div class="mock-chart">
-                                            <i style="height:30%"></i><i style="height:50%"></i><i style="height:38%"></i>
-                                            <i style="height:66%"></i><i style="height:44%"></i><i style="height:78%"></i>
+                                        <div class="mock-chips">
+                                            <span class="mock-chip is-active">Em aberto</span>
+                                            <span class="mock-chip">Vencidos</span>
+                                            <span class="mock-chip">Pagos</span>
                                         </div>
                                         <div class="mock-rows">
-                                            <div class="mock-row"><b>Distribuidora Sul</b><span>Venc. 05/07</span><span class="mock-status late">Atrasada</span></div>
-                                            <div class="mock-row"><b>Energia elétrica</b><span>Venc. 10/07</span><span class="mock-status ok">Em dia</span></div>
-                                            <div class="mock-row"><b>Fornecedor Bebidas</b><span>Venc. 18/07</span><span class="mock-status ok">Em dia</span></div>
+                                            <div class="mock-row"><b>Distribuidora Sul</b><span>Fornecedor · Venc. 05/07</span><span class="mock-status late">Atrasada</span></div>
+                                            <div class="mock-row"><b>Energia elétrica</b><span>Concessionária · Venc. 10/07</span><span class="mock-status ok">Em dia</span></div>
+                                            <div class="mock-row"><b>Fornecedor Bebidas</b><span>Fornecedor · Venc. 18/07</span><span class="mock-status ok">Em dia</span></div>
                                         </div>
                                         <div class="mock-total"><span>Total em aberto</span><strong>R$ 1.860,00</strong></div>
                                     </div>

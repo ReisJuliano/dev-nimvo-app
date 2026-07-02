@@ -122,19 +122,6 @@
         gActivate(0);
     }
 
-    /* ─── Hero cursor-reactive spotlight ─── */
-    var hero = document.querySelector('[data-hero]');
-    var spotlight = document.querySelector('[data-spotlight]');
-    if (hero && spotlight && window.matchMedia('(hover: hover)').matches) {
-        hero.addEventListener('mousemove', function (event) {
-            var rect = hero.getBoundingClientRect();
-            var mx = ((event.clientX - rect.left) / rect.width) * 100;
-            var my = ((event.clientY - rect.top) / rect.height) * 100;
-            spotlight.style.setProperty('--mx', mx + '%');
-            spotlight.style.setProperty('--my', my + '%');
-        });
-    }
-
     /* ─── Contact form ─── */
     var form = document.querySelector('[data-contact-form]');
     if (form) {
