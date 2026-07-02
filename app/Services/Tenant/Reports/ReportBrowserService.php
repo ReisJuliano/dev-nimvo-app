@@ -41,20 +41,20 @@ class ReportBrowserService
 
         return [
             'view' => 'reports_catalog',
-            'title' => 'Relatorios',
-            'description' => 'Abra os relatorios por categoria, em uma guia separada, com filtros e dados reais.',
+            'title' => 'Relatórios',
+            'description' => 'Abra os relatórios por categoria, em uma guia separada, com filtros e dados reais.',
             'metrics' => [
                 [
                     'label' => 'Categorias',
                     'value' => $categories->count(),
                     'format' => 'number',
-                    'caption' => 'Blocos disponiveis para navegacao.',
+                    'caption' => 'Blocos disponíveis para navegação.',
                 ],
                 [
-                    'label' => 'Relatorios',
+                    'label' => 'Relatórios',
                     'value' => $totalReports,
                     'format' => 'number',
-                    'caption' => 'Opcoes prontas para abrir em nova guia.',
+                    'caption' => 'Opções prontas para abrir em nova guia.',
                 ],
                 [
                     'label' => 'Base inicial',
@@ -66,7 +66,7 @@ class ReportBrowserService
                     'label' => 'Filtro padrao',
                     'value' => 'Mes atual',
                     'format' => 'text',
-                    'caption' => 'Todos os relatorios nascem no mesmo recorte.',
+                    'caption' => 'Todos os relatórios nascem no mesmo recorte.',
                 ],
             ],
             'filters' => [
@@ -140,19 +140,19 @@ class ReportBrowserService
                 'key' => 'sales',
                 'label' => 'Receitas/Vendas',
                 'icon' => 'fa-chart-line',
-                'description' => 'Faturamento, pagamento, operadores e clientes em relatorios de receita.',
+                'description' => 'Faturamento, pagamento, operadores e clientes em relatórios de receita.',
             ],
             [
                 'key' => 'products',
                 'label' => 'Produtos',
                 'icon' => 'fa-boxes-stacked',
-                'description' => 'Giro, participacao na receita e ranking por item vendido.',
+                'description' => 'Giro, participação na receita e ranking por item vendido.',
             ],
             [
                 'key' => 'stock',
                 'label' => 'Estoque',
                 'icon' => 'fa-warehouse',
-                'description' => 'Posicao atual, cobertura basica e valor do saldo estocado.',
+                'description' => 'Posição atual, cobertura básica e valor do saldo estocado.',
             ],
             [
                 'key' => 'cashflow',
@@ -164,13 +164,13 @@ class ReportBrowserService
                 'key' => 'receivables',
                 'label' => 'Receber',
                 'icon' => 'fa-credit-card',
-                'description' => 'Fiados em aberto com limite, saldo lancado e disponibilidade.',
+                'description' => 'Fiados em aberto com limite, saldo lançado e disponibilidade.',
             ],
             [
                 'key' => 'customers',
                 'label' => 'Clientes',
                 'icon' => 'fa-users',
-                'description' => 'Ranking por faturamento e frequencia de compra.',
+                'description' => 'Ranking por faturamento e frequência de compra.',
             ],
         ];
     }
@@ -190,9 +190,9 @@ class ReportBrowserService
                 'key' => 'sales-payments',
                 'category' => 'sales',
                 'title' => 'Receita por pagamento',
-                'description' => 'Mostra quanto cada forma de pagamento representou no periodo.',
+                'description' => 'Mostra quanto cada forma de pagamento representou no período.',
                 'icon' => 'fa-wallet',
-                'tags' => ['Pagamento', 'Participacao', 'Receita'],
+                'tags' => ['Pagamento', 'Participação', 'Receita'],
             ],
             [
                 'key' => 'sales-products',
@@ -214,15 +214,15 @@ class ReportBrowserService
                 'key' => 'sales-customers',
                 'category' => 'sales',
                 'title' => 'Clientes por faturamento',
-                'description' => 'Ranking de clientes com frequencia de compra e ultima venda.',
+                'description' => 'Ranking de clientes com frequência de compra e última venda.',
                 'icon' => 'fa-user-group',
-                'tags' => ['Cliente', 'Recorrencia', 'Faturamento'],
+                'tags' => ['Cliente', 'Recorrência', 'Faturamento'],
             ],
             [
                 'key' => 'product-demand',
                 'category' => 'products',
                 'title' => 'Demanda por produto',
-                'description' => 'Curva de demanda dos itens vendidos no periodo.',
+                'description' => 'Curva de demanda dos itens vendidos no período.',
                 'icon' => 'fa-arrow-trend-up',
                 'tags' => ['Giro', 'Receita', 'Produto'],
             ],
@@ -232,15 +232,15 @@ class ReportBrowserService
                 'title' => 'Faltas e giro',
                 'description' => 'Itens abaixo do mínimo com saldo atual, falta e saída no período.',
                 'icon' => 'fa-triangle-exclamation',
-                'tags' => ['Falta', 'Giro', 'Reposicao'],
+                'tags' => ['Falta', 'Giro', 'Reposição'],
             ],
             [
                 'key' => 'stock-position',
                 'category' => 'stock',
-                'title' => 'Posicao atual do estoque',
+                'title' => 'Posição atual do estoque',
                 'description' => 'Saldo atual com mínimo, valor estocado e giro do período.',
                 'icon' => 'fa-layer-group',
-                'tags' => ['Saldo', 'Minimo', 'Valor'],
+                'tags' => ['Saldo', 'Mínimo', 'Valor'],
             ],
             [
                 'key' => 'stock-inbounds',
@@ -253,7 +253,7 @@ class ReportBrowserService
             [
                 'key' => 'cashflow-daily',
                 'category' => 'cashflow',
-                'title' => 'Fluxo diario de caixa',
+                'title' => 'Fluxo diário de caixa',
                 'description' => 'Entradas de vendas, suprimentos e sangrias por dia.',
                 'icon' => 'fa-money-bill-transfer',
                 'tags' => ['Entradas', 'Saidas', 'Saldo'],
@@ -270,9 +270,9 @@ class ReportBrowserService
                 'key' => 'customer-ranking',
                 'category' => 'customers',
                 'title' => 'Ranking de clientes',
-                'description' => 'Clientes ordenados por faturamento e frequencia de compra.',
+                'description' => 'Clientes ordenados por faturamento e frequência de compra.',
                 'icon' => 'fa-ranking-star',
-                'tags' => ['Ranking', 'Ticket', 'Recorrencia'],
+                'tags' => ['Ranking', 'Ticket', 'Recorrência'],
             ],
         ];
     }
@@ -492,10 +492,10 @@ class ReportBrowserService
                 'fields' => ['scope', 'operator_id', 'customer_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
                     ['value' => 'total', 'label' => 'Receita'],
-                    ['value' => 'launches', 'label' => 'Lancamentos'],
+                    ['value' => 'launches', 'label' => 'Lançamentos'],
                     ['value' => 'sales_count', 'label' => 'Vendas'],
-                    ['value' => 'avg_amount', 'label' => 'Media'],
-                    ['value' => 'payment_method', 'label' => 'Metodo'],
+                    ['value' => 'avg_amount', 'label' => 'Média'],
+                    ['value' => 'payment_method', 'label' => 'Método'],
                 ],
                 'default_sort' => ['by' => 'total', 'direction' => 'desc'],
             ],
@@ -528,7 +528,7 @@ class ReportBrowserService
                     ['value' => 'total', 'label' => 'Receita'],
                     ['value' => 'sales_count', 'label' => 'Vendas'],
                     ['value' => 'avg_ticket', 'label' => 'Ticket'],
-                    ['value' => 'last_sale_at', 'label' => 'Ultima venda'],
+                    ['value' => 'last_sale_at', 'label' => 'Última venda'],
                     ['value' => 'customer_name', 'label' => 'Cliente'],
                 ],
                 'default_sort' => ['by' => 'total', 'direction' => 'desc'],
@@ -568,7 +568,7 @@ class ReportBrowserService
                     ['value' => 'supplier_name', 'label' => 'Fornecedor'],
                 ],
                 'default_sort' => ['by' => 'received_at', 'direction' => 'desc'],
-                'search_placeholder' => 'Codigo ou fornecedor',
+                'search_placeholder' => 'Código ou fornecedor',
             ],
             'cashflow-daily' => [
                 'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
@@ -584,8 +584,8 @@ class ReportBrowserService
             'receivables-open' => [
                 'fields' => ['query', 'customer_id', 'balance_status', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
-                    ['value' => 'launched_credit', 'label' => 'Lancado'],
-                    ['value' => 'available_credit', 'label' => 'Disponivel'],
+                    ['value' => 'launched_credit', 'label' => 'Lançado'],
+                    ['value' => 'available_credit', 'label' => 'Disponível'],
                     ['value' => 'credit_limit', 'label' => 'Limite'],
                     ['value' => 'name', 'label' => 'Cliente'],
                 ],
@@ -761,7 +761,7 @@ class ReportBrowserService
                 $this->summaryCard('Faturamento', (float) ($summary->total ?? 0), 'money', 'fa-wallet', $this->percentLabel($margin)),
                 $this->summaryCard('Vendas', (int) ($summary->sales_count ?? 0), 'number', 'fa-receipt', $trendRows->count().' dias'),
                 $this->summaryCard(
-                    'Ticket medio',
+                    'Ticket médio',
                     (float) ($summary->sales_count ?? 0) > 0 ? (float) $summary->total / (float) $summary->sales_count : 0,
                     'money',
                     'fa-chart-column',
@@ -776,13 +776,13 @@ class ReportBrowserService
                 $highestTicketDay
                     ? $this->highlight('Maior ticket', $highestTicketDay['avg_ticket'], 'money', $this->shortDate($highestTicketDay['reference_date']), 'primary')
                     : null,
-                $this->highlight('Margem', $margin, 'percent', 'No periodo', 'warning'),
+                $this->highlight('Margem', $margin, 'percent', 'No período', 'warning'),
             ],
             charts: [
                 [
                     'key' => 'sales-daily-volume',
                     'type' => 'area',
-                    'title' => 'Receita diaria',
+                    'title' => 'Receita diária',
                     'meta' => 'Receita e lucro',
                     'data' => $trendRows->map(fn (array $row) => [
                         'label' => Carbon::parse($row['reference_date'])->format('d/m'),
@@ -797,7 +797,7 @@ class ReportBrowserService
                 [
                     'key' => 'sales-daily-count',
                     'type' => 'bar',
-                    'title' => 'Volume diario',
+                    'title' => 'Volume diário',
                     'meta' => 'Vendas por dia',
                     'data' => $trendRows->map(fn (array $row) => [
                         'label' => Carbon::parse($row['reference_date'])->format('d/m'),
@@ -876,10 +876,10 @@ class ReportBrowserService
         return $this->reportPayload(
             summary: [
                 $this->summaryCard('Receita', $grandTotal, 'money', 'fa-coins', $topMethod ? $topMethod['payment_method'] : null),
-                $this->summaryCard('Lancamentos', (int) ($summary->launches ?? 0), 'number', 'fa-list', (int) ($summary->methods_count ?? 0).' metodos'),
-                $this->summaryCard('Metodos', (int) ($summary->methods_count ?? 0), 'number', 'fa-credit-card', $topMethod ? $this->percentLabel((float) $topMethod['share']) : null),
+                $this->summaryCard('Lançamentos', (int) ($summary->launches ?? 0), 'number', 'fa-list', (int) ($summary->methods_count ?? 0).' métodos'),
+                $this->summaryCard('Métodos', (int) ($summary->methods_count ?? 0), 'number', 'fa-credit-card', $topMethod ? $this->percentLabel((float) $topMethod['share']) : null),
                 $this->summaryCard(
-                    'Media',
+                    'Média',
                     (int) ($summary->launches ?? 0) > 0 ? $grandTotal / (int) $summary->launches : 0,
                     'money',
                     'fa-calculator',
@@ -888,13 +888,13 @@ class ReportBrowserService
             ],
             highlights: [
                 $topMethod
-                    ? $this->highlight('Metodo lider', $topMethod['total'], 'money', $topMethod['payment_method'], 'success')
+                    ? $this->highlight('Método líder', $topMethod['total'], 'money', $topMethod['payment_method'], 'success')
                     : null,
                 $topMethod
-                    ? $this->highlight('Participacao', $topMethod['share'], 'percent', $topMethod['payment_method'], 'primary')
+                    ? $this->highlight('Participação', $topMethod['share'], 'percent', $topMethod['payment_method'], 'primary')
                     : null,
                 $highestAverage
-                    ? $this->highlight('Maior medio', $highestAverage['avg_amount'], 'money', $highestAverage['payment_method'], 'warning')
+                    ? $this->highlight('Maior médio', $highestAverage['avg_amount'], 'money', $highestAverage['payment_method'], 'warning')
                     : null,
             ],
             charts: [
@@ -902,7 +902,7 @@ class ReportBrowserService
                     'key' => 'sales-payments-share',
                     'type' => 'donut',
                     'title' => 'Mix de pagamentos',
-                    'meta' => 'Participacao no total',
+                    'meta' => 'Participação no total',
                     'data' => $distributionRows->map(fn (array $row) => [
                         'label' => $row['payment_method'],
                         'total' => $row['total'],
@@ -915,29 +915,29 @@ class ReportBrowserService
                 [
                     'key' => 'sales-payments-volume',
                     'type' => 'bar',
-                    'title' => 'Lancamentos',
-                    'meta' => 'Volume por metodo',
+                    'title' => 'Lançamentos',
+                    'meta' => 'Volume por método',
                     'data' => $distributionRows->map(fn (array $row) => [
                         'label' => $row['payment_method'],
                         'launches' => $row['launches'],
                     ])->all(),
                     'series' => [
-                        ['key' => 'launches', 'label' => 'Lancamentos', 'color' => '#7c3aed', 'format' => 'number', 'variant' => 'bar'],
+                        ['key' => 'launches', 'label' => 'Lançamentos', 'color' => '#7c3aed', 'format' => 'number', 'variant' => 'bar'],
                     ],
                 ],
             ],
             columns: [
                 ['key' => 'payment_method', 'label' => 'Pagamento'],
-                ['key' => 'launches', 'label' => 'Lancamentos', 'format' => 'number'],
+                ['key' => 'launches', 'label' => 'Lançamentos', 'format' => 'number'],
                 ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
                 ['key' => 'total', 'label' => 'Valor', 'format' => 'money'],
-                ['key' => 'share', 'label' => 'Participacao', 'format' => 'percent'],
-                ['key' => 'avg_amount', 'label' => 'Media', 'format' => 'money'],
+                ['key' => 'share', 'label' => 'Participação', 'format' => 'percent'],
+                ['key' => 'avg_amount', 'label' => 'Média', 'format' => 'money'],
             ],
             rows: $rows,
             paginator: $paginator,
             emptyText: 'Nenhum pagamento encontrado no recorte selecionado.',
-            table: ['title' => 'Metodos'],
+            table: ['title' => 'Métodos'],
         );
     }
 
@@ -1020,13 +1020,13 @@ class ReportBrowserService
             ],
             highlights: [
                 $leader
-                    ? $this->highlight('Produto lider', $leader['revenue'], 'money', $leader['name'], 'success')
+                    ? $this->highlight('Produto líder', $leader['revenue'], 'money', $leader['name'], 'success')
                     : null,
                 $bestMargin
                     ? $this->highlight('Maior margem', $bestMargin['margin'], 'percent', $bestMargin['name'], 'warning')
                     : null,
                 $leader
-                    ? $this->highlight('Categoria lider', $categoryRows->first()['revenue'] ?? 0, 'money', $categoryRows->first()['category_name'] ?? '-', 'primary')
+                    ? $this->highlight('Categoria líder', $categoryRows->first()['revenue'] ?? 0, 'money', $categoryRows->first()['category_name'] ?? '-', 'primary')
                     : null,
             ],
             charts: [
@@ -1047,7 +1047,7 @@ class ReportBrowserService
                     'key' => 'sales-products-categories',
                     'type' => 'donut',
                     'title' => 'Receita por categoria',
-                    'meta' => 'Mix do periodo',
+                    'meta' => 'Mix do período',
                     'data' => $categoryRows->map(fn (array $row) => [
                         'label' => $row['category_name'],
                         'total' => $row['revenue'],
@@ -1058,7 +1058,7 @@ class ReportBrowserService
                 ],
             ],
             columns: [
-                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'code', 'label' => 'Código'],
                 ['key' => 'name', 'label' => 'Produto'],
                 ['key' => 'category_name', 'label' => 'Categoria'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
@@ -1123,7 +1123,7 @@ class ReportBrowserService
                 $this->summaryCard('Receita', (float) ($summary->total ?? 0), 'money', 'fa-money-bill-wave', $leader ? $leader['user_name'] : null),
                 $this->summaryCard('Operadores', (int) ($summary->users_count ?? 0), 'number', 'fa-users', $operatorRows->count().' com vendas'),
                 $this->summaryCard(
-                    'Ticket medio',
+                    'Ticket médio',
                     (int) ($summary->sales_count ?? 0) > 0 ? (float) $summary->total / (int) $summary->sales_count : 0,
                     'money',
                     'fa-chart-line',
@@ -1133,13 +1133,13 @@ class ReportBrowserService
             ],
             highlights: [
                 $leader
-                    ? $this->highlight('Operador lider', $leader['total'], 'money', $leader['user_name'], 'success')
+                    ? $this->highlight('Operador líder', $leader['total'], 'money', $leader['user_name'], 'success')
                     : null,
                 $highestTicket
                     ? $this->highlight('Maior ticket', $highestTicket['avg_ticket'], 'money', $highestTicket['user_name'], 'primary')
                     : null,
                 $profitLeader
-                    ? $this->highlight('Lucro lider', $profitLeader['profit'], 'money', $profitLeader['user_name'], 'warning')
+                    ? $this->highlight('Lucro líder', $profitLeader['profit'], 'money', $profitLeader['user_name'], 'warning')
                     : null,
             ],
             charts: [
@@ -1160,7 +1160,7 @@ class ReportBrowserService
                     'key' => 'sales-operators-ticket',
                     'type' => 'bar',
                     'title' => 'Ticket por operador',
-                    'meta' => 'Media por venda',
+                    'meta' => 'Média por venda',
                     'data' => $operatorRows->take(8)->map(fn (array $row) => [
                         'label' => mb_strimwidth($row['user_name'], 0, 16, '...'),
                         'avg_ticket' => $row['avg_ticket'],
@@ -1237,7 +1237,7 @@ class ReportBrowserService
                 $this->summaryCard('Clientes', (int) ($summary['customers_count'] ?? 0), 'number', 'fa-user-group', $customerRows->count().' no ranking'),
                 $this->summaryCard('Vendas', (int) ($summary['sales_count'] ?? 0), 'number', 'fa-receipt'),
                 $this->summaryCard(
-                    'Ticket medio',
+                    'Ticket médio',
                     (int) ($summary['sales_count'] ?? 0) > 0 ? (float) $summary['total'] / (int) $summary['sales_count'] : 0,
                     'money',
                     'fa-chart-column',
@@ -1246,13 +1246,13 @@ class ReportBrowserService
             ],
             highlights: [
                 $leader
-                    ? $this->highlight('Cliente lider', $leader['total'], 'money', $leader['customer_name'], 'success')
+                    ? $this->highlight('Cliente líder', $leader['total'], 'money', $leader['customer_name'], 'success')
                     : null,
                 $mostRecurring
                     ? $this->highlight('Mais recorrente', $mostRecurring['sales_count'], 'number', $mostRecurring['customer_name'], 'primary')
                     : null,
                 $recentCustomer
-                    ? $this->highlight('Ultima compra', $recentCustomer['last_sale_at'], 'datetime', $recentCustomer['customer_name'], 'warning')
+                    ? $this->highlight('Última compra', $recentCustomer['last_sale_at'], 'datetime', $recentCustomer['customer_name'], 'warning')
                     : null,
             ],
             charts: [
@@ -1272,7 +1272,7 @@ class ReportBrowserService
                 [
                     'key' => 'sales-customers-volume',
                     'type' => 'bar',
-                    'title' => 'Recorrencia',
+                    'title' => 'Recorrência',
                     'meta' => 'Volume de compras',
                     'data' => $customerRows->take(8)->map(fn (array $row) => [
                         'label' => mb_strimwidth($row['customer_name'], 0, 18, '...'),
@@ -1288,7 +1288,7 @@ class ReportBrowserService
                 ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
                 ['key' => 'total', 'label' => 'Receita', 'format' => 'money'],
                 ['key' => 'avg_ticket', 'label' => 'Ticket', 'format' => 'money'],
-                ['key' => 'last_sale_at', 'label' => 'Ultima venda', 'format' => 'datetime'],
+                ['key' => 'last_sale_at', 'label' => 'Última venda', 'format' => 'datetime'],
             ],
             rows: $rows,
             paginator: $paginator,
@@ -1391,13 +1391,13 @@ class ReportBrowserService
                 $this->summaryCard('Itens ativos', (int) ($summary->products_count ?? 0), 'number', 'fa-boxes-stacked', $statusRows->sum('total').' status'),
                 $this->summaryCard('Valor em estoque', (float) ($summary->stock_value ?? 0), 'money', 'fa-warehouse', $largestCategory ? $largestCategory['category_name'] : null),
                 $this->summaryCard('Baixo estoque', (int) ($summary->low_stock ?? 0), 'number', 'fa-triangle-exclamation'),
-                $this->summaryCard('Saida no periodo', (float) ($periodSummary->quantity_sold ?? 0), 'number', 'fa-arrow-trend-down'),
+                $this->summaryCard('Saída no período', (float) ($periodSummary->quantity_sold ?? 0), 'number', 'fa-arrow-trend-down'),
             ],
             highlights: [
                 $largestCategory
-                    ? $this->highlight('Categoria lider', $largestCategory['stock_value'], 'money', $largestCategory['category_name'], 'success')
+                    ? $this->highlight('Categoria líder', $largestCategory['stock_value'], 'money', $largestCategory['category_name'], 'success')
                     : null,
-                $this->highlight('Baixo estoque', (int) ($summary->low_stock ?? 0), 'number', 'Itens criticos', 'warning'),
+                $this->highlight('Baixo estoque', (int) ($summary->low_stock ?? 0), 'number', 'Itens críticos', 'warning'),
                 $statusRows->first()
                     ? $this->highlight('Status dominante', $statusRows->first()['total'], 'number', $statusRows->first()['label'], 'primary')
                     : null,
@@ -1419,8 +1419,8 @@ class ReportBrowserService
                 [
                     'key' => 'stock-position-status',
                     'type' => 'donut',
-                    'title' => 'Saude do estoque',
-                    'meta' => 'Distribuicao atual',
+                    'title' => 'Saúde do estoque',
+                    'meta' => 'Distribuição atual',
                     'data' => $statusRows->map(fn (array $row) => [
                         'label' => $row['label'],
                         'total' => $row['total'],
@@ -1431,11 +1431,11 @@ class ReportBrowserService
                 ],
             ],
             columns: [
-                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'code', 'label' => 'Código'],
                 ['key' => 'name', 'label' => 'Produto'],
                 ['key' => 'category_name', 'label' => 'Categoria'],
                 ['key' => 'stock_quantity', 'label' => 'Saldo', 'format' => 'decimal'],
-                ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'decimal'],
+                ['key' => 'min_stock', 'label' => 'Mínimo', 'format' => 'decimal'],
                 ['key' => 'stock_value', 'label' => 'Valor', 'format' => 'money'],
                 ['key' => 'status', 'label' => 'Status'],
             ],
@@ -1544,15 +1544,15 @@ class ReportBrowserService
             summary: [
                 $this->summaryCard('Itens em falta', (int) ($summary->out_of_stock ?? 0), 'number', 'fa-ban', $leader ? $leader['name'] : null),
                 $this->summaryCard('Baixo estoque', (int) ($summary->low_stock ?? 0), 'number', 'fa-triangle-exclamation'),
-                $this->summaryCard('Falta minima', (float) ($summary->missing_total ?? 0), 'number', 'fa-box-open', $supplierLeader ? $supplierLeader['supplier_name'] : null),
-                $this->summaryCard('Saida no periodo', (float) ($summary->quantity_sold ?? 0), 'number', 'fa-arrow-trend-down'),
+                $this->summaryCard('Falta mínima', (float) ($summary->missing_total ?? 0), 'number', 'fa-box-open', $supplierLeader ? $supplierLeader['supplier_name'] : null),
+                $this->summaryCard('Saída no período', (float) ($summary->quantity_sold ?? 0), 'number', 'fa-arrow-trend-down'),
             ],
             highlights: [
                 $leader
                     ? $this->highlight('Maior falta', $leader['missing'], 'number', $leader['name'], 'warning')
                     : null,
                 $supplierLeader
-                    ? $this->highlight('Fornecedor critico', $supplierLeader['missing_total'], 'number', $supplierLeader['supplier_name'], 'primary')
+                    ? $this->highlight('Fornecedor crítico', $supplierLeader['missing_total'], 'number', $supplierLeader['supplier_name'], 'primary')
                     : null,
                 $this->highlight('Sem saldo', (int) ($summary->out_of_stock ?? 0), 'number', 'Itens zerados', 'danger'),
             ],
@@ -1561,7 +1561,7 @@ class ReportBrowserService
                     'key' => 'stock-shortages-products',
                     'type' => 'bar',
                     'title' => 'Itens com maior falta',
-                    'meta' => 'Reposicao sugerida',
+                    'meta' => 'Reposição sugerida',
                     'data' => $topShortages->map(fn (array $row) => [
                         'label' => mb_strimwidth($row['name'], 0, 18, '...'),
                         'missing' => $row['missing'],
@@ -1574,7 +1574,7 @@ class ReportBrowserService
                     'key' => 'stock-shortages-suppliers',
                     'type' => 'donut',
                     'title' => 'Falta por fornecedor',
-                    'meta' => 'Pressao de reposicao',
+                    'meta' => 'Pressão de reposição',
                     'data' => $supplierRows->map(fn (array $row) => [
                         'label' => $row['supplier_name'],
                         'total' => $row['missing_total'],
@@ -1585,12 +1585,12 @@ class ReportBrowserService
                 ],
             ],
             columns: [
-                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'code', 'label' => 'Código'],
                 ['key' => 'name', 'label' => 'Produto'],
                 ['key' => 'category_name', 'label' => 'Categoria'],
                 ['key' => 'supplier_name', 'label' => 'Fornecedor'],
                 ['key' => 'stock_quantity', 'label' => 'Saldo', 'format' => 'decimal'],
-                ['key' => 'min_stock', 'label' => 'Minimo', 'format' => 'decimal'],
+                ['key' => 'min_stock', 'label' => 'Mínimo', 'format' => 'decimal'],
                 ['key' => 'missing', 'label' => 'Falta', 'format' => 'decimal'],
                 ['key' => 'quantity_sold', 'label' => 'Giro', 'format' => 'decimal'],
             ],
@@ -1709,7 +1709,7 @@ class ReportBrowserService
             ],
             highlights: [
                 $supplierLeader
-                    ? $this->highlight('Fornecedor lider', $supplierLeader['total'], 'money', $supplierLeader['supplier_name'], 'success')
+                    ? $this->highlight('Fornecedor líder', $supplierLeader['total'], 'money', $supplierLeader['supplier_name'], 'success')
                     : null,
                 $dailyRows->sortByDesc('total')->first()
                     ? $this->highlight(
@@ -1740,7 +1740,7 @@ class ReportBrowserService
                     'key' => 'stock-inbounds-suppliers',
                     'type' => 'bar',
                     'title' => 'Entradas por fornecedor',
-                    'meta' => 'Acumulado no periodo',
+                    'meta' => 'Acumulado no período',
                     'data' => $supplierRows->map(fn (array $row) => [
                         'label' => mb_strimwidth($row['supplier_name'], 0, 18, '...'),
                         'total' => $row['total'],
@@ -1751,7 +1751,7 @@ class ReportBrowserService
                 ],
             ],
             columns: [
-                ['key' => 'code', 'label' => 'Codigo'],
+                ['key' => 'code', 'label' => 'Código'],
                 ['key' => 'supplier_name', 'label' => 'Fornecedor'],
                 ['key' => 'invoice_number', 'label' => 'Nota'],
                 ['key' => 'items_count', 'label' => 'Itens', 'format' => 'number'],
@@ -1837,7 +1837,7 @@ class ReportBrowserService
                 $this->summaryCard('Entradas em vendas', $rows->sum('incoming_sales'), 'money', 'fa-money-bill-trend-up', $bestDay ? $this->shortDate($bestDay['reference_date']) : null),
                 $this->summaryCard('Suprimentos', $rows->sum('supplies'), 'money', 'fa-arrow-up'),
                 $this->summaryCard('Sangrias', $rows->sum('withdrawals'), 'money', 'fa-arrow-down', $highestWithdrawal ? $this->shortDate($highestWithdrawal['reference_date']) : null),
-                $this->summaryCard('Saldo liquido', $rows->sum('balance'), 'money', 'fa-scale-balanced', $positiveDays.' dias positivos'),
+                $this->summaryCard('Saldo líquido', $rows->sum('balance'), 'money', 'fa-scale-balanced', $positiveDays.' dias positivos'),
             ],
             highlights: [
                 $bestDay
@@ -1846,13 +1846,13 @@ class ReportBrowserService
                 $highestWithdrawal
                     ? $this->highlight('Maior sangria', $highestWithdrawal['withdrawals'], 'money', $this->shortDate($highestWithdrawal['reference_date']), 'warning')
                     : null,
-                $this->highlight('Dias positivos', $positiveDays, 'number', 'No periodo', 'primary'),
+                $this->highlight('Dias positivos', $positiveDays, 'number', 'No período', 'primary'),
             ],
             charts: [
                 [
                     'key' => 'cashflow-daily-main',
                     'type' => 'area',
-                    'title' => 'Fluxo diario',
+                    'title' => 'Fluxo diário',
                     'meta' => 'Entradas e saldo',
                     'data' => $rows->map(fn (array $row) => [
                         'label' => Carbon::parse($row['reference_date'])->format('d/m'),
@@ -1955,34 +1955,34 @@ class ReportBrowserService
                 $this->summaryCard('Clientes', $customers->count(), 'number', 'fa-users', $nearLimit->count().' perto do limite'),
                 $this->summaryCard('Carteira lancada', $customers->sum('launched_credit'), 'money', 'fa-file-invoice-dollar', $leader ? $leader['name'] : null),
                 $this->summaryCard('Limite total', $customers->sum('credit_limit'), 'money', 'fa-sack-dollar'),
-                $this->summaryCard('Disponivel', $customers->sum('available_credit'), 'money', 'fa-wallet'),
+                $this->summaryCard('Disponível', $customers->sum('available_credit'), 'money', 'fa-wallet'),
             ],
             highlights: [
                 $leader
-                    ? $this->highlight('Maior exposicao', $leader['launched_credit'], 'money', $leader['name'], 'warning')
+                    ? $this->highlight('Maior exposição', $leader['launched_credit'], 'money', $leader['name'], 'warning')
                     : null,
                 $this->highlight('Perto do limite', $nearLimit->count(), 'number', 'Clientes', 'primary'),
-                $this->highlight('Disponivel', $customers->sum('available_credit'), 'money', 'Carteira livre', 'success'),
+                $this->highlight('Disponível', $customers->sum('available_credit'), 'money', 'Carteira livre', 'success'),
             ],
             charts: [
                 [
                     'key' => 'receivables-customers',
                     'type' => 'bar',
-                    'title' => 'Exposicao por cliente',
-                    'meta' => 'Saldo lancado',
+                    'title' => 'Exposição por cliente',
+                    'meta' => 'Saldo lançado',
                     'data' => $customers->take(8)->map(fn (array $customer) => [
                         'label' => mb_strimwidth($customer['name'], 0, 18, '...'),
                         'launched_credit' => $customer['launched_credit'],
                     ])->all(),
                     'series' => [
-                        ['key' => 'launched_credit', 'label' => 'Lancado', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
+                        ['key' => 'launched_credit', 'label' => 'Lançado', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
                     ],
                 ],
                 [
                     'key' => 'receivables-status',
                     'type' => 'donut',
-                    'title' => 'Saude da carteira',
-                    'meta' => 'Distribuicao atual',
+                    'title' => 'Saúde da carteira',
+                    'meta' => 'Distribuição atual',
                     'data' => $statusRows->map(fn (array $row) => [
                         'label' => $row['label'],
                         'total' => $row['total'],
@@ -1996,8 +1996,8 @@ class ReportBrowserService
                 ['key' => 'name', 'label' => 'Cliente'],
                 ['key' => 'phone', 'label' => 'Telefone'],
                 ['key' => 'credit_limit', 'label' => 'Limite', 'format' => 'money'],
-                ['key' => 'launched_credit', 'label' => 'Lancado', 'format' => 'money'],
-                ['key' => 'available_credit', 'label' => 'Disponivel', 'format' => 'money'],
+                ['key' => 'launched_credit', 'label' => 'Lançado', 'format' => 'money'],
+                ['key' => 'available_credit', 'label' => 'Disponível', 'format' => 'money'],
             ],
             rows: $paginator->items(),
             paginator: $paginator,

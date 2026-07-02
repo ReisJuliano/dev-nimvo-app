@@ -24,11 +24,41 @@ import './reports.css'
 
 const DONUT_COLORS = ['#2563eb', '#14b8a6', '#7c3aed', '#f59e0b', '#ef4444', '#64748b']
 
+const DONUT_STATUS_COLORS = {
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+}
+
+function matchDonutStatusTone(label = '') {
+    const normalized = String(label).toLowerCase()
+
+    if (normalized.includes('saudável') || normalized.includes('saudavel') || normalized.includes('com saldo')) {
+        return 'success'
+    }
+
+    if (normalized.includes('baixo') || normalized.includes('perto do limite')) {
+        return 'warning'
+    }
+
+    if (normalized.includes('sem saldo') || normalized.includes('sem limite')) {
+        return 'danger'
+    }
+
+    return null
+}
+
+function resolveDonutColor(label, index) {
+    const tone = matchDonutStatusTone(label)
+
+    return tone ? DONUT_STATUS_COLORS[tone] : DONUT_COLORS[index % DONUT_COLORS.length]
+}
+
 const SCOPE_OPTIONS = [
     { key: 'date', label: 'Data', icon: 'fa-calendar-day' },
-    { key: 'month', label: 'Mes', icon: 'fa-calendar' },
+    { key: 'month', label: 'Mês', icon: 'fa-calendar' },
     { key: 'months', label: 'Meses', icon: 'fa-calendar-days' },
-    { key: 'range', label: 'Periodo', icon: 'fa-arrow-right-long' },
+    { key: 'range', label: 'Período', icon: 'fa-arrow-right-long' },
     { key: 'year', label: 'Ano', icon: 'fa-hashtag' },
 ]
 
@@ -36,7 +66,7 @@ const QUICK_PRESETS = [
     { key: 'today', label: 'Hoje' },
     { key: 'last7', label: '7d' },
     { key: 'last30', label: '30d' },
-    { key: 'month', label: 'Mes' },
+    { key: 'month', label: 'Mês' },
     { key: 'year', label: 'Ano' },
 ]
 
@@ -62,7 +92,7 @@ const FIELD_LABELS = {
     stock_status: 'Status',
     balance_status: 'Carteira',
     sort_by: 'Ordenar',
-    sort_direction: 'Direcao',
+    sort_direction: 'Direção',
     per_page: 'Linhas',
 }
 
@@ -320,35 +350,60 @@ function ReportChartCard({ chart }) {
 
         if (chart.type === 'donut') {
             const valueKey = chart.value_key || 'total'
+            const nameKey = chart.name_key || 'label'
+            const total = chart.data.reduce((sum, entry) => sum + (Number(entry[valueKey]) || 0), 0)
 
             return (
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Tooltip
-                            cursor={false}
-                            content={(props) => (
-                                <DashboardChartTooltip
-                                    {...props}
-                                    valueTypes={{ [valueKey]: chart.format || 'money' }}
-                                    resolveLabel={(payload) => payload?.[0]?.name ?? ''}
-                                />
-                            )}
-                        />
-                        <Pie
-                            data={chart.data}
-                            dataKey={valueKey}
-                            nameKey={chart.name_key || 'label'}
-                            innerRadius={68}
-                            outerRadius={92}
-                            paddingAngle={3}
-                            strokeWidth={0}
-                        >
-                            {chart.data.map((entry, index) => (
-                                <Cell key={`${entry.label}-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
+                <div className="report-donut">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Tooltip
+                                cursor={false}
+                                content={(props) => (
+                                    <DashboardChartTooltip
+                                        {...props}
+                                        valueTypes={{ [valueKey]: chart.format || 'money' }}
+                                        resolveLabel={(payload) => payload?.[0]?.name ?? ''}
+                                    />
+                                )}
+                            />
+                            <Pie
+                                data={chart.data}
+                                dataKey={valueKey}
+                                nameKey={nameKey}
+                                startAngle={90}
+                                endAngle={-270}
+                                innerRadius={68}
+                                outerRadius={92}
+                                paddingAngle={3}
+                                strokeWidth={0}
+                                isAnimationActive={false}
+                            >
+                                {chart.data.map((entry, index) => (
+                                    <Cell key={`${entry[nameKey]}-${index}`} fill={resolveDonutColor(entry[nameKey], index)} />
+                                ))}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+
+                    <ul className="report-donut-legend">
+                        {chart.data.map((entry, index) => {
+                            const value = Number(entry[valueKey]) || 0
+                            const percent = total > 0 ? Math.round((value / total) * 100) : 0
+
+                            return (
+                                <li key={`${entry[nameKey]}-${index}`}>
+                                    <span
+                                        className="report-donut-legend-dot"
+                                        style={{ background: resolveDonutColor(entry[nameKey], index) }}
+                                    />
+                                    <span className="report-donut-legend-label">{entry[nameKey]}</span>
+                                    <span className="report-donut-legend-value">{renderValue(value, chart.format)} · {percent}%</span>
+                                </li>
+                            )
+                        })}
+                    </ul>
+                </div>
             )
         }
 
@@ -588,7 +643,7 @@ export default function Show({
         if (form.data.scope === 'month') {
             return (
                 <label className="report-field">
-                    <span>Mes</span>
+                    <span>Mês</span>
                     <input
                         name="month"
                         type="month"
@@ -603,7 +658,7 @@ export default function Show({
             return (
                 <>
                     <label className="report-field">
-                        <span>Mes de</span>
+                        <span>Mês de</span>
                         <input
                             name="month_from"
                             type="month"
@@ -612,7 +667,7 @@ export default function Show({
                         />
                     </label>
                     <label className="report-field">
-                        <span>Mes ate</span>
+                        <span>Mês até</span>
                         <input
                             name="month_to"
                             type="month"
@@ -637,7 +692,7 @@ export default function Show({
                         />
                     </label>
                     <label className="report-field">
-                        <span>Data ate</span>
+                        <span>Data até</span>
                         <input
                             name="to"
                             type="date"

@@ -5,11 +5,37 @@ import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 
 const ALL_CATEGORY_KEY = '__all__'
 
+const CATEGORY_COLOR_KEYS = {
+    sales: 'vendas',
+    products: 'produtos',
+    stock: 'estoque',
+    cashflow: 'fluxo',
+    receivables: 'receber',
+    customers: 'clientes',
+}
+
+function categoryColorKey(key) {
+    return CATEGORY_COLOR_KEYS[key] || 'todos'
+}
+
+function categoryColorVars(key) {
+    const colorKey = categoryColorKey(key)
+    const prefix = `--report-cat-${colorKey}`
+
+    return {
+        '--cat-bg': `var(${prefix}-bg)`,
+        '--cat-bg-strong': `var(${prefix}-bg-strong)`,
+        '--cat-fg': `var(${prefix}-fg)`,
+        '--cat-border': `var(${prefix}-border)`,
+    }
+}
+
 function ReportCategoryButton({ category, active, onClick }) {
     return (
         <button
             type="button"
             className={`operations-report-category ${active ? 'active' : ''}`}
+            style={categoryColorVars(category.key)}
             onClick={onClick}
         >
             <span className="operations-report-category-icon">
@@ -25,9 +51,9 @@ function ReportCategoryButton({ category, active, onClick }) {
 
 function ReportOpenCard({ report, showCategory }) {
     return (
-        <Link href={report.href} className="operations-report-open-card">
+        <Link href={report.href} className="operations-report-open-card" style={categoryColorVars(report.categoryKey)}>
             <div className="operations-report-open-top">
-                <span className="operations-report-category-icon">
+                <span className="operations-report-card-icon">
                     <i className={`fa-solid ${report.icon}`} />
                 </span>
                 <span className="operations-report-open-action">
@@ -44,7 +70,7 @@ function ReportOpenCard({ report, showCategory }) {
 
             <div className="operations-report-open-tags">
                 {report.tags.slice(0, 3).map((tag) => (
-                    <span key={`${report.key}-${tag}`} className="ui-badge">
+                    <span key={`${report.key}-${tag}`} className="operations-report-tag">
                         {tag}
                     </span>
                 ))}
@@ -65,7 +91,7 @@ export default function ReportsShowcase({ module }) {
 
     const allReports = useMemo(() => (
         categories.flatMap((category) => (
-            (category.reports || []).map((report) => ({ ...report, categoryLabel: category.label }))
+            (category.reports || []).map((report) => ({ ...report, categoryLabel: category.label, categoryKey: category.key }))
         ))
     ), [categories])
 
@@ -84,7 +110,7 @@ export default function ReportsShowcase({ module }) {
             return allReports
         }
 
-        return (currentCategory?.reports || []).map((report) => ({ ...report, categoryLabel: currentCategory?.label }))
+        return (currentCategory?.reports || []).map((report) => ({ ...report, categoryLabel: currentCategory?.label, categoryKey: currentCategory?.key }))
     }, [isSearching, isAllSelected, allReports, currentCategory])
 
     const filteredReports = useMemo(() => {
@@ -114,6 +140,9 @@ export default function ReportsShowcase({ module }) {
             ? 'Todos os relatórios'
             : currentCategory.label
 
+    const heroIcon = !isSearching && !isAllSelected ? currentCategory.icon : 'fa-layer-group'
+    const heroColorKey = isSearching || isAllSelected ? null : currentCategory.key
+
     return (
         <div className="operations-reports-showcase">
             <aside className="operations-reports-sidebar">
@@ -123,6 +152,7 @@ export default function ReportsShowcase({ module }) {
                     <button
                         type="button"
                         className={`operations-report-category ${isAllSelected ? 'active' : ''}`}
+                        style={categoryColorVars(null)}
                         onClick={() => setActiveCategoryKey(ALL_CATEGORY_KEY)}
                     >
                         <span className="operations-report-category-icon">
@@ -163,17 +193,22 @@ export default function ReportsShowcase({ module }) {
                     </label>
                 </section>
 
-                <section className="operations-report-preview-hero compact">
-                    <div>
-                        <span className="operations-section-kicker">{isSearching ? 'Busca' : 'Categoria'}</span>
-                        <h2>{heroLabel}</h2>
+                <section className="operations-report-preview-hero compact" style={categoryColorVars(heroColorKey)}>
+                    <div className="operations-report-preview-heading">
+                        <span className="operations-report-preview-icon">
+                            <i className={`fa-solid ${heroIcon}`} />
+                        </span>
+                        <div>
+                            <span className="operations-section-kicker">{isSearching ? 'Busca' : 'Categoria'}</span>
+                            <h2>{heroLabel}</h2>
+                        </div>
                     </div>
                     <div className="operations-report-preview-badges">
-                        <span className="ui-badge success">{filteredReports.length} visões</span>
+                        <span className="operations-report-preview-count">{filteredReports.length} visões</span>
                     </div>
                 </section>
 
-                <section className="operations-report-open-grid">
+                <section className={`operations-report-open-grid ${filteredReports.length > 0 && filteredReports.length <= 4 ? 'is-compact' : ''}`}>
                     {filteredReports.length ? (
                         filteredReports.map((report) => (
                             <ReportOpenCard key={report.key} report={report} showCategory={isSearching || isAllSelected} />
