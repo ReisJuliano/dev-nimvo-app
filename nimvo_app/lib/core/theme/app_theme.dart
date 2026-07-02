@@ -34,18 +34,6 @@ class AppColors {
 }
 
 class AppGradients {
-  static const brand = LinearGradient(
-    begin: Alignment.bottomLeft,
-    end: Alignment.topRight,
-    colors: [AppColors.primary, AppColors.violet, AppColors.rose],
-  );
-
-  static const card = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AppColors.card, AppColors.cardAlt],
-  );
-
   static const loginButton = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,

@@ -23,26 +23,27 @@ class KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final positive = (growth ?? 0) >= 0;
     final featured = growth != null;
-    final mutedText = featured
-        ? Colors.white.withValues(alpha: 0.78)
-        : AppColors.textSecondary;
-    final valueColor = featured ? Colors.white : AppColors.textPrimary;
 
     return Container(
       width: 184,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: growth != null ? AppGradients.brand : AppGradients.card,
-        border: featured ? null : Border.all(color: AppColors.border),
+        color: featured
+            ? AppColors.primary.withValues(alpha: 0.06)
+            : AppColors.card,
+        border: Border.all(
+          color: featured
+              ? AppColors.primary.withValues(alpha: 0.18)
+              : AppColors.border,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon,
-                  color: featured ? Colors.white : AppColors.primary, size: 20),
+              Icon(icon, color: AppColors.primary, size: 20),
               const Spacer(),
               if (growth != null)
                 Container(
@@ -65,7 +66,9 @@ class KpiCard extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Text(title, style: TextStyle(color: mutedText, fontSize: 12)),
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 12)),
           const SizedBox(height: 8),
           Text(
             isMoney ? formatCurrency(value) : value.toStringAsFixed(1),
@@ -74,7 +77,7 @@ class KpiCard extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
-                ?.copyWith(color: valueColor),
+                ?.copyWith(color: AppColors.textPrimary),
           ),
         ],
       ),

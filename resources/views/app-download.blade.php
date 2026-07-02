@@ -118,6 +118,53 @@
             font-size: 0.78rem;
             color: var(--guest-muted);
         }
+
+        .download-button[disabled] {
+            opacity: 0.75;
+            pointer-events: none;
+        }
+
+        .progress-wrap {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .progress-wrap.is-active { display: block; }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(47, 124, 246, 0.12);
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--guest-accent), var(--guest-accent-soft));
+            transition: width 0.15s ease;
+        }
+
+        .progress-label {
+            font-size: 0.78rem;
+            color: var(--guest-muted);
+        }
+
+        .progress-error {
+            display: none;
+            background: #fff1f3;
+            border: 1px solid rgba(216, 78, 97, 0.2);
+            color: #b23a4f;
+            border-radius: 14px;
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            margin-bottom: 18px;
+        }
+
+        .progress-error.is-active { display: block; }
     </style>
 </head>
 <body>
@@ -133,9 +180,20 @@
                 <img src="{{ route('app.download.qr', $store !== '' ? ['store' => $store] : []) }}" alt="QR code para baixar o app">
             </div>
 
-            <a class="download-button" href="{{ route('app.download.apk') }}">
+            <div id="progressError" class="progress-error">
+                Nao foi possivel iniciar o download automatico. Toque em "Baixar o APK" novamente ou use o link direto.
+            </div>
+
+            <div id="progressWrap" class="progress-wrap">
+                <div class="progress-track">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <div id="progressLabel" class="progress-label">Preparando o download...</div>
+            </div>
+
+            <button type="button" id="downloadButton" class="download-button" data-url="{{ route('app.download.apk') }}">
                 Baixar o APK
-            </a>
+            </button>
 
             <div class="instructions">
                 <strong>Como instalar no Android:</strong><br>
@@ -153,5 +211,80 @@
             </div>
         @endif
     </div>
+
+    @if ($available)
+        <script>
+            (function () {
+                const button = document.getElementById('downloadButton');
+                const wrap = document.getElementById('progressWrap');
+                const fill = document.getElementById('progressFill');
+                const label = document.getElementById('progressLabel');
+                const errorBox = document.getElementById('progressError');
+
+                function formatMb(bytes) {
+                    return (bytes / (1024 * 1024)).toFixed(1);
+                }
+
+                async function downloadWithProgress(url) {
+                    const response = await fetch(url);
+                    if (!response.ok || !response.body) {
+                        throw new Error('resposta invalida');
+                    }
+
+                    const total = parseInt(response.headers.get('Content-Length') || '0', 10);
+                    const reader = response.body.getReader();
+                    const chunks = [];
+                    let received = 0;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        chunks.push(value);
+                        received += value.length;
+
+                        if (total) {
+                            const percent = Math.min(100, Math.round((received / total) * 100));
+                            fill.style.width = percent + '%';
+                            label.textContent = `Baixando... ${percent}% (${formatMb(received)} MB de ${formatMb(total)} MB)`;
+                        } else {
+                            label.textContent = `Baixando... ${formatMb(received)} MB`;
+                        }
+                    }
+
+                    fill.style.width = '100%';
+                    label.textContent = 'Finalizando...';
+
+                    return new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+                }
+
+                button.addEventListener('click', async function () {
+                    errorBox.classList.remove('is-active');
+                    button.setAttribute('disabled', 'disabled');
+                    wrap.classList.add('is-active');
+                    fill.style.width = '0%';
+                    label.textContent = 'Preparando o download...';
+
+                    try {
+                        const blob = await downloadWithProgress(button.dataset.url);
+                        const blobUrl = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = 'nimvo-app.apk';
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+                        label.textContent = 'Download concluido! Abra o arquivo pra instalar.';
+                    } catch (error) {
+                        errorBox.classList.add('is-active');
+                        wrap.classList.remove('is-active');
+                    } finally {
+                        button.removeAttribute('disabled');
+                    }
+                });
+            })();
+        </script>
+    @endif
 </body>
 </html>
