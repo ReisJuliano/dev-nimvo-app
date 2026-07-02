@@ -643,6 +643,11 @@ a { color: inherit; }
     .hero-copy p { max-width: none; }
 }
 
+@media (max-width: 768px) {
+    /* As manchas coloridas atrapalham a leitura do texto em telas pequenas. */
+    .hero-blob { display: none; }
+}
+
 @media (max-width: 560px) {
     .hero { padding: 140px 0 90px; }
     .hero-scroll-cue { display: none; }
