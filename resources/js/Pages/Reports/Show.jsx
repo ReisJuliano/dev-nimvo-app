@@ -742,224 +742,231 @@ export default function Show({
     return (
         <AppLayout title={report.title} defaultCollapsed>
             <div className="report-screen">
-                <section className="report-shell">
-                    <header className="report-header">
-                        <div className="report-header-main">
-                            <Link href={backHref} className="report-icon-button" aria-label="Voltar">
-                                <i className="fa-solid fa-arrow-left" />
-                            </Link>
+                <header className="report-header">
+                    <div className="report-header-main">
+                        <Link href={backHref} className="report-icon-button" aria-label="Voltar">
+                            <i className="fa-solid fa-arrow-left" />
+                        </Link>
 
-                            <div className="report-header-copy">
-                                <div className="report-header-tags">
-                                    <span className="report-chip">
-                                        <i className={`fa-solid ${report.category.icon}`} />
-                                        {report.category.label}
-                                    </span>
-                                    {(report.tags || []).slice(0, 3).map((tag) => (
-                                        <span key={`${report.key}-${tag}`} className="report-chip muted">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-
-                                <h1>{report.title}</h1>
-                            </div>
-                        </div>
-
-                        <div className="report-header-meta">
-                            {filtersApplied ? (
-                                <div className="report-header-actions">
-                                    <ExportFormButton
-                                        action={reportPath}
-                                        params={pdfExportParams}
-                                        icon="fa-file-pdf"
-                                        label="Exportar PDF"
-                                    />
-                                    <ExportFormButton
-                                        action={reportPath}
-                                        params={excelExportParams}
-                                        icon="fa-file-excel"
-                                        label="Exportar Excel"
-                                    />
-                                </div>
-                            ) : null}
-                            <span className="report-chip soft">
-                                <i className="fa-solid fa-calendar" />
-                                {buildPeriodLabel(filters, filterSchema)}
-                            </span>
-                            {filtersApplied ? (
-                                <span className="report-chip soft">
-                                    <i className="fa-solid fa-table-list" />
-                                    {pagination.total || 0}
+                        <div className="report-header-copy">
+                            <div className="report-header-tags">
+                                <span className="report-chip">
+                                    <i className={`fa-solid ${report.category.icon}`} />
+                                    {report.category.label}
                                 </span>
-                            ) : null}
+                                {(report.tags || []).slice(0, 3).map((tag) => (
+                                    <span key={`${report.key}-${tag}`} className="report-chip muted">
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <h1>{report.title}</h1>
                         </div>
-                    </header>
+                    </div>
 
-                    <section className="report-filter-card">
-                        <div className="report-filter-toolbar">
+                    <div className="report-header-meta">
+                        {filtersApplied ? (
+                            <div className="report-header-actions">
+                                <ExportFormButton
+                                    action={reportPath}
+                                    params={pdfExportParams}
+                                    icon="fa-file-pdf"
+                                    label="Exportar PDF"
+                                />
+                                <ExportFormButton
+                                    action={reportPath}
+                                    params={excelExportParams}
+                                    icon="fa-file-excel"
+                                    label="Exportar Excel"
+                                />
+                            </div>
+                        ) : null}
+                        <span className="report-chip soft">
+                            <i className="fa-solid fa-calendar" />
+                            {buildPeriodLabel(filters, filterSchema)}
+                        </span>
+                        {filtersApplied ? (
+                            <span className="report-chip soft">
+                                <i className="fa-solid fa-table-list" />
+                                {pagination.total || 0}
+                            </span>
+                        ) : null}
+                    </div>
+                </header>
+
+                <div className="report-layout">
+                    <aside className="report-sidebar">
+                        <form className="report-filter-form" onSubmit={handleSubmit}>
+                            <div className="report-sidebar-block">
+                                <p className="report-sidebar-title">Filtros</p>
+                                <button type="button" className="report-sidebar-reset" onClick={handleReset}>
+                                    <i className="fa-solid fa-rotate-left" />
+                                    Limpar
+                                </button>
+                            </div>
+
                             {showPeriodFilters ? (
-                                <div className="report-filter-presets">
-                                    {QUICK_PRESETS.map((preset) => (
-                                        <button
-                                            key={preset.key}
-                                            type="button"
-                                            className="report-filter-pill"
-                                            onClick={() => handlePreset(preset.key)}
-                                        >
-                                            {preset.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : <div className="report-filter-spacer" />}
+                                <>
+                                    <div className="report-filter-presets">
+                                        {QUICK_PRESETS.map((preset) => (
+                                            <button
+                                                key={preset.key}
+                                                type="button"
+                                                className="report-filter-pill"
+                                                onClick={() => handlePreset(preset.key)}
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        ))}
+                                    </div>
 
-                            <div className="report-filter-compact-actions">
-                                {hasAdvancedFilters ? (
+                                    <div className="report-scope-list">
+                                        {SCOPE_OPTIONS.map((option) => (
+                                            <button
+                                                key={option.key}
+                                                type="button"
+                                                className={`report-scope-button ${form.data.scope === option.key ? 'active' : ''}`}
+                                                onClick={() => form.setData('scope', option.key)}
+                                            >
+                                                <i className={`fa-solid ${option.icon}`} />
+                                                <span>{option.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="report-filter-primary">
+                                        {renderScopeFields()}
+                                    </div>
+                                </>
+                            ) : null}
+
+                            {showSearch ? (
+                                <label className="report-field report-field-search">
+                                    <span>{FIELD_LABELS.query}</span>
+                                    <div className="report-search-shell">
+                                        <i className="fa-solid fa-magnifying-glass" />
+                                        <input
+                                            type="text"
+                                            value={form.data.query}
+                                            placeholder={filterSchema?.search_placeholder || 'Pesquisar'}
+                                            onChange={(event) => form.setData('query', event.target.value)}
+                                        />
+                                    </div>
+                                </label>
+                            ) : null}
+
+                            {hasAdvancedFilters ? (
+                                <>
                                     <button
                                         type="button"
-                                        className={`report-icon-button wide ${advancedOpen ? 'active' : ''}`}
+                                        className={`report-advanced-toggle ${advancedOpen ? 'active' : ''}`}
                                         onClick={() => setAdvancedOpen((current) => !current)}
                                     >
                                         <i className="fa-solid fa-sliders" />
-                                        <span>{activeAdvancedCount || 'Mais'}</span>
+                                        <span>Mais filtros</span>
+                                        {activeAdvancedCount ? <span className="report-advanced-count">{activeAdvancedCount}</span> : null}
+                                        <i className={`fa-solid fa-chevron-${advancedOpen ? 'up' : 'down'} report-advanced-caret`} />
                                     </button>
-                                ) : null}
 
-                                <button type="button" className="report-icon-button" onClick={handleReset} aria-label="Limpar filtros">
-                                    <i className="fa-solid fa-rotate-left" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <form className="report-filter-form" onSubmit={handleSubmit}>
-                            {showPeriodFilters ? (
-                                <div className="report-scope-list">
-                                    {SCOPE_OPTIONS.map((option) => (
-                                        <button
-                                            key={option.key}
-                                            type="button"
-                                            className={`report-scope-button ${form.data.scope === option.key ? 'active' : ''}`}
-                                            onClick={() => form.setData('scope', option.key)}
-                                        >
-                                            <i className={`fa-solid ${option.icon}`} />
-                                            <span>{option.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : null}
-
-                            <div className="report-filter-primary">
-                                {showSearch ? (
-                                    <label className="report-field report-field-search">
-                                        <span>{FIELD_LABELS.query}</span>
-                                        <div className="report-search-shell">
-                                            <i className="fa-solid fa-magnifying-glass" />
-                                            <input
-                                                type="text"
-                                                value={form.data.query}
-                                                placeholder={filterSchema?.search_placeholder || 'Pesquisar'}
-                                                onChange={(event) => form.setData('query', event.target.value)}
-                                            />
+                                    {advancedOpen ? (
+                                        <div className="report-filter-grid">
+                                            {[
+                                                'operator_id',
+                                                'customer_id',
+                                                'category_id',
+                                                'supplier_id',
+                                                'payment_method',
+                                                'stock_status',
+                                                'balance_status',
+                                                'sort_by',
+                                                'sort_direction',
+                                                'per_page',
+                                            ].map((field) => renderAdvancedField(field))}
                                         </div>
-                                    </label>
-                                ) : null}
-
-                                {renderScopeFields()}
-                            </div>
-
-                            {advancedOpen ? (
-                                <div className="report-filter-grid">
-                                    {[
-                                        'operator_id',
-                                        'customer_id',
-                                        'category_id',
-                                        'supplier_id',
-                                        'payment_method',
-                                        'stock_status',
-                                        'balance_status',
-                                        'sort_by',
-                                        'sort_direction',
-                                        'per_page',
-                                    ].map((field) => renderAdvancedField(field))}
-                                </div>
+                                    ) : null}
+                                </>
                             ) : null}
 
                             <div className="report-filter-actions">
-                                <button className="report-button report-button-primary" type="submit">
+                                <button className="report-button report-button-primary report-button-block" type="submit">
                                     <i className="fa-solid fa-filter" />
-                                    <span>Aplicar</span>
+                                    <span>Aplicar filtros</span>
                                 </button>
                             </div>
                         </form>
-                    </section>
-                    {!filtersApplied ? (
-                        <section className="report-empty-panel">
-                            <EmptyState icon="fa-sliders" label="Aplique filtros" />
-                        </section>
-                    ) : (
-                        <>
-                            {summary.length ? (
-                                <>
-                                    <p className="report-section-label"><i className="fa-solid fa-chart-simple" />Resumo geral</p>
-                                    <section className="report-summary-grid">
-                                        {summary.map((item) => (
-                                            <SummaryCard key={item.label} item={item} />
-                                        ))}
-                                    </section>
-                                </>
-                            ) : null}
+                    </aside>
 
-                            {visibleHighlights.length ? (
-                                <>
-                                    <p className="report-section-label"><i className="fa-solid fa-star" />Destaques</p>
-                                    <section className="report-highlight-grid">
-                                        {visibleHighlights.map((item) => (
-                                            <HighlightCard key={`${item.label}-${item.meta || 'meta'}`} item={item} />
-                                        ))}
-                                    </section>
-                                </>
-                            ) : null}
-
-                            {visibleCharts.length ? (
-                                <>
-                                    <p className="report-section-label"><i className="fa-solid fa-chart-column" />Análise gráfica</p>
-                                    <section className="report-chart-grid">
-                                        {visibleCharts.map((chart) => (
-                                            <ReportChartCard key={chart.key} chart={chart} />
-                                        ))}
-                                    </section>
-                                </>
-                            ) : null}
-
-                            <section className="report-table-card">
-                                <header className="report-table-toolbar">
-                                    <div className="report-table-copy">
-                                        <strong>{table?.title || 'Detalhamento'}</strong>
-                                        <span>{pagination.total || 0} registros</span>
-                                    </div>
-
-                                    <div className="report-table-pagination">
-                                        <button type="button" onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1}>
-                                            <i className="fa-solid fa-chevron-left" />
-                                        </button>
-                                        <span>
-                                            {pagination.current_page}/{pagination.last_page || 1}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => goToPage(pagination.current_page + 1)}
-                                            disabled={pagination.current_page >= pagination.last_page}
-                                        >
-                                            <i className="fa-solid fa-chevron-right" />
-                                        </button>
-                                    </div>
-                                </header>
-
-                                <ReportTable columns={columns} rows={rows} />
+                    <main className="report-main">
+                        {!filtersApplied ? (
+                            <section className="report-empty-panel">
+                                <EmptyState icon="fa-sliders" label="Aplique filtros" />
                             </section>
-                        </>
-                    )}
-                </section>
+                        ) : (
+                            <>
+                                {summary.length ? (
+                                    <>
+                                        <p className="report-section-label"><i className="fa-solid fa-chart-simple" />Resumo geral</p>
+                                        <section className="report-summary-grid">
+                                            {summary.map((item) => (
+                                                <SummaryCard key={item.label} item={item} />
+                                            ))}
+                                        </section>
+                                    </>
+                                ) : null}
+
+                                {visibleHighlights.length ? (
+                                    <>
+                                        <p className="report-section-label"><i className="fa-solid fa-star" />Destaques</p>
+                                        <section className="report-highlight-grid">
+                                            {visibleHighlights.map((item) => (
+                                                <HighlightCard key={`${item.label}-${item.meta || 'meta'}`} item={item} />
+                                            ))}
+                                        </section>
+                                    </>
+                                ) : null}
+
+                                {visibleCharts.length ? (
+                                    <>
+                                        <p className="report-section-label"><i className="fa-solid fa-chart-column" />Análise gráfica</p>
+                                        <section className="report-chart-grid">
+                                            {visibleCharts.map((chart) => (
+                                                <ReportChartCard key={chart.key} chart={chart} />
+                                            ))}
+                                        </section>
+                                    </>
+                                ) : null}
+
+                                <section className="report-table-card">
+                                    <header className="report-table-toolbar">
+                                        <div className="report-table-copy">
+                                            <strong>{table?.title || 'Detalhamento'}</strong>
+                                            <span>{pagination.total || 0} registros</span>
+                                        </div>
+
+                                        <div className="report-table-pagination">
+                                            <button type="button" onClick={() => goToPage(pagination.current_page - 1)} disabled={pagination.current_page <= 1}>
+                                                <i className="fa-solid fa-chevron-left" />
+                                            </button>
+                                            <span>
+                                                {pagination.current_page}/{pagination.last_page || 1}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => goToPage(pagination.current_page + 1)}
+                                                disabled={pagination.current_page >= pagination.last_page}
+                                            >
+                                                <i className="fa-solid fa-chevron-right" />
+                                            </button>
+                                        </div>
+                                    </header>
+
+                                    <ReportTable columns={columns} rows={rows} />
+                                </section>
+                            </>
+                        )}
+                    </main>
+                </div>
             </div>
         </AppLayout>
     )

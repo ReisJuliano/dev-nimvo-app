@@ -116,67 +116,73 @@ export default function ReportsShowcase({ module }) {
 
     return (
         <div className="operations-reports-showcase">
-            <section className="operations-report-search-bar">
-                <label className="operations-report-search">
-                    <i className="fa-solid fa-magnifying-glass" />
-                    <input
-                        type="text"
-                        value={searchControl.draftValue}
-                        onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                        placeholder="Buscar relatório em todas as categorias..."
-                    />
-                    {searchControl.draftValue ? (
-                        <button type="button" className="operations-report-search-clear" onClick={() => searchControl.clear()} aria-label="Limpar busca">
-                            <i className="fa-solid fa-xmark" />
-                        </button>
-                    ) : null}
-                </label>
-            </section>
+            <aside className="operations-reports-sidebar">
+                <p className="operations-reports-sidebar-title">Categorias</p>
 
-            <section className="operations-report-category-bar">
-                <button
-                    type="button"
-                    className={`operations-report-category ${isAllSelected ? 'active' : ''}`}
-                    onClick={() => setActiveCategoryKey(ALL_CATEGORY_KEY)}
-                >
-                    <span className="operations-report-category-icon">
-                        <i className="fa-solid fa-layer-group" />
-                    </span>
-                    <span className="operations-report-category-copy">
-                        <strong>Todos</strong>
-                        <small>{totalReportCount} relatórios</small>
-                    </span>
-                </button>
+                <div className="operations-report-category-bar">
+                    <button
+                        type="button"
+                        className={`operations-report-category ${isAllSelected ? 'active' : ''}`}
+                        onClick={() => setActiveCategoryKey(ALL_CATEGORY_KEY)}
+                    >
+                        <span className="operations-report-category-icon">
+                            <i className="fa-solid fa-layer-group" />
+                        </span>
+                        <span className="operations-report-category-copy">
+                            <strong>Todos</strong>
+                            <small>{totalReportCount} relatórios</small>
+                        </span>
+                    </button>
 
-                {categories.map((category) => (
-                    <ReportCategoryButton
-                        key={category.key}
-                        category={category}
-                        active={!isSearching && category.key === activeCategoryKey}
-                        onClick={() => setActiveCategoryKey(category.key)}
-                    />
-                ))}
-            </section>
-
-            <section className="operations-report-preview-hero compact">
-                <div>
-                    <span className="operations-section-kicker">{isSearching ? 'Busca' : 'Categoria'}</span>
-                    <h2>{heroLabel}</h2>
+                    {categories.map((category) => (
+                        <ReportCategoryButton
+                            key={category.key}
+                            category={category}
+                            active={!isSearching && category.key === activeCategoryKey}
+                            onClick={() => setActiveCategoryKey(category.key)}
+                        />
+                    ))}
                 </div>
-                <div className="operations-report-preview-badges">
-                    <span className="ui-badge success">{filteredReports.length} visões</span>
-                </div>
-            </section>
+            </aside>
 
-            <section className="operations-report-open-grid">
-                {filteredReports.length ? (
-                    filteredReports.map((report) => (
-                        <ReportOpenCard key={report.key} report={report} showCategory={isSearching || isAllSelected} />
-                    ))
-                ) : (
-                    <div className="operations-empty-state">Nenhum relatório encontrado para essa busca</div>
-                )}
-            </section>
+            <main className="operations-reports-main">
+                <section className="operations-report-search-bar">
+                    <label className="operations-report-search">
+                        <i className="fa-solid fa-magnifying-glass" />
+                        <input
+                            type="text"
+                            value={searchControl.draftValue}
+                            onChange={(event) => searchControl.setDraftValue(event.target.value)}
+                            placeholder="Buscar relatório em todas as categorias..."
+                        />
+                        {searchControl.draftValue ? (
+                            <button type="button" className="operations-report-search-clear" onClick={() => searchControl.clear()} aria-label="Limpar busca">
+                                <i className="fa-solid fa-xmark" />
+                            </button>
+                        ) : null}
+                    </label>
+                </section>
+
+                <section className="operations-report-preview-hero compact">
+                    <div>
+                        <span className="operations-section-kicker">{isSearching ? 'Busca' : 'Categoria'}</span>
+                        <h2>{heroLabel}</h2>
+                    </div>
+                    <div className="operations-report-preview-badges">
+                        <span className="ui-badge success">{filteredReports.length} visões</span>
+                    </div>
+                </section>
+
+                <section className="operations-report-open-grid">
+                    {filteredReports.length ? (
+                        filteredReports.map((report) => (
+                            <ReportOpenCard key={report.key} report={report} showCategory={isSearching || isAllSelected} />
+                        ))
+                    ) : (
+                        <div className="operations-empty-state">Nenhum relatório encontrado para essa busca</div>
+                    )}
+                </section>
+            </main>
         </div>
     )
 }
