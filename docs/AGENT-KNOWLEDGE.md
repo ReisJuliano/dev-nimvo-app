@@ -169,5 +169,7 @@ Visual Studio, que so afetam builds Web/Windows desktop.
 - 2026-07-02: O remoto bare da VPS em `/srv/git/nimvo.git` tem hook
   `post-receive` para a branch `main`. Ao receber push, ele entra em
   `/var/www/nimvo` e executa `git pull --ff-only vps main`, o que dispara o
-  hook `post-merge` existente e o `scripts/post-pull-deploy.sh`. Logs:
-  `/var/log/nimvo-post-receive.log` e `/var/log/nimvo-post-pull.log`.
+  hook `post-merge` existente e o `scripts/post-pull-deploy.sh`. O hook limpa
+  `GIT_DIR`/`GIT_WORK_TREE` antes do pull porque hooks do bare repo herdam esse
+  ambiente. Logs: `/var/log/nimvo-post-receive.log` e
+  `/var/log/nimvo-post-pull.log`.
