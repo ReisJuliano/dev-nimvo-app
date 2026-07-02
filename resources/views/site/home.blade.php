@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nimvo — Sistema de gestão para o seu negócio</title>
+    <title>Nimvo | Sistema de gestão para o seu negócio</title>
     <meta name="description" content="O Nimvo é o sistema de gestão completo para o seu comércio: vendas, estoque, caixa, fiado, contas e emissão fiscal reunidos em um único ambiente, com aplicativo móvel dedicado.">
-    <meta property="og:title" content="Nimvo — Sistema de gestão para o seu negócio">
+    <meta property="og:title" content="Nimvo | Sistema de gestão para o seu negócio">
     <meta property="og:description" content="Vendas, estoque, caixa, fiado, contas a pagar e emissão de NFC-e em um só sistema. Acompanhe o seu negócio em tempo real, do computador ou do celular.">
     <meta property="og:image" content="{{ asset('assets/img/logo.png') }}">
     <meta property="og:type" content="website">
@@ -41,9 +41,9 @@
     </header>
 
     <main id="top">
-        <section class="hero">
+        <section class="hero" data-hero>
             <div class="hero-photo"></div>
-            <div class="hero-bg-grid"></div>
+            <div class="hero-spotlight" data-spotlight></div>
             <div class="hero-blob hero-blob--1"></div>
             <div class="hero-blob hero-blob--2"></div>
             <div class="hero-blob hero-blob--3"></div>
@@ -53,10 +53,10 @@
                 <div class="hero-copy">
                     <span class="eyebrow">Gestão completa para o seu negócio</span>
                     <h1>Sua empresa mais organizada, <span>do caixa ao estoque</span>.</h1>
-                    <p>O Nimvo reúne vendas, estoque, caixa, fiado, contas e emissão fiscal em um único sistema — simples no dia a dia e completo para quem administra o negócio.</p>
+                    <p>O Nimvo reúne vendas, estoque, caixa, fiado, contas e emissão fiscal em um único sistema, simples no dia a dia e completo para quem administra o negócio.</p>
 
                     <div class="hero-actions">
-                        <a href="#contato" class="btn btn-primary btn-lg">Falar com nossa equipe</a>
+                        <a href="#contato" class="btn btn-primary btn-lg"><span>Falar com nossa equipe</span></a>
                         <a href="#recursos" class="btn btn-ghost btn-lg">Conhecer os recursos</a>
                     </div>
 
@@ -75,117 +75,11 @@
                         </span>
                     </div>
                 </div>
-
-                <div class="hero-showcase">
-                    <div class="device-stack">
-                        <div class="device-monitor">
-                            <div class="device-screen">
-                                <div class="mock-sidebar">
-                                    <i class="is-active"></i><i></i><i></i><i></i><i></i><i></i>
-                                </div>
-                                <div class="mock-content">
-                                <div class="mock-slide is-active" data-slide>
-                                    <div class="mock-topbar"><strong>Resumo da loja</strong><span>qua., 1 de jul.</span></div>
-                                    <div class="mock-body">
-                                        <div class="mock-alert">⚠ 1 conta vencida — total em atraso R$ 232,00</div>
-                                        <div class="mock-kpis cols-4">
-                                            <div class="mock-kpi accent"><span>Vendido hoje</span><strong>R$ 1.240</strong></div>
-                                            <div class="mock-kpi success"><span>Lucro</span><strong>R$ 386</strong></div>
-                                            <div class="mock-kpi"><span>Caixa aberto</span><strong>R$ 640</strong></div>
-                                            <div class="mock-kpi warning"><span>Ticket médio</span><strong>R$ 47</strong></div>
-                                        </div>
-                                        <div class="mock-chart">
-                                            <i style="height:35%"></i><i style="height:55%"></i><i style="height:40%"></i>
-                                            <i style="height:70%"></i><i style="height:50%"></i><i style="height:85%"></i>
-                                            <i style="height:60%"></i>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mock-slide" data-slide>
-                                    <div class="mock-topbar"><strong>Vendas de hoje</strong><span>12 vendas</span></div>
-                                    <div class="mock-body">
-                                        <div class="mock-chips">
-                                            <span class="mock-chip is-active">Hoje</span>
-                                            <span class="mock-chip">Semana</span>
-                                            <span class="mock-chip">Mês</span>
-                                        </div>
-                                        <div class="mock-rows">
-                                            <div class="mock-row"><b>Maria da Silva</b><span>Dinheiro</span><em>R$ 36,72</em></div>
-                                            <div class="mock-row"><b>Cliente balcão</b><span>Pix</span><em>R$ 89,40</em></div>
-                                            <div class="mock-row"><b>João Pereira</b><span>Cartão</span><em>R$ 124,90</em></div>
-                                            <div class="mock-row"><b>Cliente balcão</b><span>Dinheiro</span><em>R$ 14,90</em></div>
-                                        </div>
-                                        <div class="mock-legend">
-                                            <span><i style="background:#4f46e5"></i> Pix 42%</span>
-                                            <span><i style="background:#10b981"></i> Dinheiro 33%</span>
-                                            <span><i style="background:#06b6d4"></i> Cartão 25%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mock-slide" data-slide>
-                                    <div class="mock-topbar"><strong>Estoque</strong><span>48 produtos</span></div>
-                                    <div class="mock-body">
-                                        <div class="mock-kpis">
-                                            <div class="mock-kpi"><span>Produtos</span><strong>48</strong></div>
-                                            <div class="mock-kpi warning"><span>Estoque baixo</span><strong>5</strong></div>
-                                            <div class="mock-kpi"><span>Sem estoque</span><strong>1</strong></div>
-                                        </div>
-                                        <div class="mock-list">
-                                            <div class="mock-row"><b>Arroz Tipo 1 5kg</b><span>32 un.</span></div>
-                                            <div class="mock-bar"><i style="width:78%"></i></div>
-                                            <div class="mock-row"><b>Feijão Carioca 1kg</b><span>9 un.</span></div>
-                                            <div class="mock-bar"><i style="width:22%"></i></div>
-                                            <div class="mock-row"><b>Óleo de Soja 900ml</b><span>54 un.</span></div>
-                                            <div class="mock-bar"><i style="width:92%"></i></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mock-slide" data-slide>
-                                    <div class="mock-topbar"><strong>Contas a pagar</strong><span>3 em aberto</span></div>
-                                    <div class="mock-body">
-                                        <div class="mock-rows">
-                                            <div class="mock-row"><b>Distribuidora Sul</b><span>Venc. 05/07</span><span class="mock-status late">Atrasada</span></div>
-                                            <div class="mock-row"><b>Energia elétrica</b><span>Venc. 10/07</span><span class="mock-status ok">Em dia</span></div>
-                                            <div class="mock-row"><b>Fornecedor Bebidas</b><span>Venc. 18/07</span><span class="mock-status ok">Em dia</span></div>
-                                        </div>
-                                        <div class="mock-total"><span>Total em aberto</span><strong>R$ 1.860,00</strong></div>
-                                    </div>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="device-phone">
-                            <div class="device-screen">
-                                <div class="mock-content">
-                                <div class="mock-slide is-active">
-                                    <div class="mock-topbar"><strong>Nimvo</strong><span>Admin</span></div>
-                                    <div class="mock-body">
-                                        <div class="mock-kpis">
-                                            <div class="mock-kpi accent"><span>Hoje</span><strong>R$ 1.240</strong></div>
-                                            <div class="mock-kpi success"><span>Lucro</span><strong>R$ 386</strong></div>
-                                        </div>
-                                        <div class="mock-chart">
-                                            <i style="height:40%"></i><i style="height:65%"></i><i style="height:50%"></i><i style="height:80%"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="showcase-dots">
-                        <button type="button" class="showcase-dot is-active" data-dot aria-label="Resumo da loja"></button>
-                        <button type="button" class="showcase-dot" data-dot aria-label="Vendas"></button>
-                        <button type="button" class="showcase-dot" data-dot aria-label="Estoque"></button>
-                        <button type="button" class="showcase-dot" data-dot aria-label="Contas a pagar"></button>
-                    </div>
-                </div>
             </div>
+
+            <a href="#recursos" class="hero-scroll-cue" aria-label="Rolar para conhecer os recursos">
+                <span></span>
+            </a>
         </section>
 
         <section class="site-section" id="recursos">
@@ -342,6 +236,54 @@
                         <h3>Entrada de mercadoria</h3>
                         <p>Registre notas de compra e atualize o estoque automaticamente, sem lançamentos manuais duplicados.</p>
                     </div>
+
+                    <div class="screen-card reveal reveal-delay-3">
+                        <div class="screen-frame">
+                            <div class="device-screen">
+                                <div class="mock-sidebar"><i class="is-active"></i><i></i><i></i><i></i></div>
+                                <div class="mock-content">
+                                    <div class="mock-slide is-active">
+                                        <div class="mock-topbar"><strong>Frente de caixa</strong><span>Venda em aberto</span></div>
+                                        <div class="mock-body">
+                                            <div class="mock-rows">
+                                                <div class="mock-row"><b>Arroz Tipo 1 5kg</b><span>1 un.</span><em>R$ 23,31</em></div>
+                                                <div class="mock-row"><b>Feijão Carioca 1kg</b><span>2 un.</span><em>R$ 16,85</em></div>
+                                                <div class="mock-row"><b>Óleo de Soja 900ml</b><span>1 un.</span><em>R$ 9,90</em></div>
+                                            </div>
+                                            <div class="mock-total"><span>Total da venda</span><strong>R$ 66,91</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <h3>Frente de caixa</h3>
+                        <p>Registre vendas com poucos toques e finalize com recibo ou NFC-e imediatamente.</p>
+                    </div>
+
+                    <div class="screen-card reveal">
+                        <div class="screen-frame">
+                            <div class="device-screen">
+                                <div class="mock-sidebar"><i></i><i class="is-active"></i><i></i><i></i></div>
+                                <div class="mock-content">
+                                    <div class="mock-slide is-active">
+                                        <div class="mock-topbar"><strong>Painel financeiro</strong><span>Julho/2026</span></div>
+                                        <div class="mock-body">
+                                            <div class="mock-kpis">
+                                                <div class="mock-kpi success"><span>A receber</span><strong>R$ 2,1k</strong></div>
+                                                <div class="mock-kpi warning"><span>A pagar</span><strong>R$ 1,3k</strong></div>
+                                            </div>
+                                            <div class="mock-rows">
+                                                <div class="mock-row"><b>Distribuidora Sul</b><span>Venc. 05/07</span><span class="mock-status late">Atrasada</span></div>
+                                                <div class="mock-row"><b>Energia elétrica</b><span>Venc. 10/07</span><span class="mock-status ok">Em dia</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <h3>Painel financeiro</h3>
+                        <p>Visualize contas a pagar e a receber lado a lado, com vencimentos sempre em vista.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -417,14 +359,13 @@
                 <div class="app-section reveal">
                     <div class="app-section-copy">
                         <span class="eyebrow" style="background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2); color:#cbd5f5;">Aplicativo Nimvo</span>
-                        <h2>Sua gestão, agora também no smartphone</h2>
-                        <p>Com o aplicativo Nimvo, acompanhe vendas, estoque e caixa em tempo real, de qualquer lugar, sem depender do computador da loja.</p>
+                        <h2>Acompanhe sua loja também pelo smartphone</h2>
+                        <p>O aplicativo Nimvo é voltado ao acompanhamento do negócio: relatórios, indicadores e controle de dados em tempo real, direto do celular, sem depender do computador da loja.</p>
                         <ul class="app-checklist">
                             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Resumo da loja e tendência de vendas em tempo real</li>
-                            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Mesmo acesso utilizado no sistema web</li>
+                            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Relatórios e indicadores ao alcance de um toque</li>
                             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Incluído sem custo adicional para clientes Nimvo</li>
                         </ul>
-                        <a href="/app/baixar" class="btn btn-primary btn-lg">Baixar o aplicativo</a>
                     </div>
                     <div class="app-section-visual">
                         <div class="app-phone-frame">
@@ -480,7 +421,7 @@
                     </details>
                     <details class="faq-item">
                         <summary>O Nimvo funciona em qualquer dispositivo?</summary>
-                        <p>O sistema funciona em navegadores de computador e tablet, além de contar com aplicativo próprio para Android.</p>
+                        <p>O sistema funciona em navegadores de computador e tablet, além de contar com aplicativo próprio para Android voltado ao acompanhamento de relatórios e ao controle de dados da loja.</p>
                     </details>
                     <details class="faq-item">
                         <summary>Como funciona o suporte?</summary>

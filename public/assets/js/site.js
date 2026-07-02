@@ -56,26 +56,16 @@
         }
     }
 
-    /* ─── Hero device showcase carousel ─── */
-    var slides = document.querySelectorAll('[data-slide]');
-    var dots = document.querySelectorAll('[data-dot]');
-    if (slides.length > 1) {
-        var current = 0;
-        var rotate = function (index) {
-            slides.forEach(function (s, i) { s.classList.toggle('is-active', i === index); });
-            dots.forEach(function (d, i) { d.classList.toggle('is-active', i === index); });
-            current = index;
-        };
-        var auto = setInterval(function () {
-            rotate((current + 1) % slides.length);
-        }, 4200);
-
-        dots.forEach(function (dot, i) {
-            dot.addEventListener('click', function () {
-                clearInterval(auto);
-                rotate(i);
-                auto = setInterval(function () { rotate((current + 1) % slides.length); }, 4200);
-            });
+    /* ─── Hero cursor-reactive spotlight ─── */
+    var hero = document.querySelector('[data-hero]');
+    var spotlight = document.querySelector('[data-spotlight]');
+    if (hero && spotlight && window.matchMedia('(hover: hover)').matches) {
+        hero.addEventListener('mousemove', function (event) {
+            var rect = hero.getBoundingClientRect();
+            var mx = ((event.clientX - rect.left) / rect.width) * 100;
+            var my = ((event.clientY - rect.top) / rect.height) * 100;
+            spotlight.style.setProperty('--mx', mx + '%');
+            spotlight.style.setProperty('--my', my + '%');
         });
     }
 
