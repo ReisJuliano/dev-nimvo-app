@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nimvo | Sistema de gestão para o seu negócio</title>
-    <meta name="description" content="O Nimvo é o sistema de gestão completo para o seu comércio: vendas, estoque, caixa, fiado, contas e emissão fiscal reunidos em um único ambiente, com aplicativo móvel dedicado.">
+    <meta name="description" content="O Nimvo é o sistema de gestão completo para o seu comércio: vendas, estoque, caixa, usuários, contas e emissão fiscal reunidos em um único ambiente, com aplicativo móvel dedicado.">
     <meta property="og:title" content="Nimvo | Sistema de gestão para o seu negócio">
-    <meta property="og:description" content="Vendas, estoque, caixa, fiado, contas a pagar e emissão de NFC-e em um só sistema. Acompanhe o seu negócio em tempo real, do computador ou do celular.">
+    <meta property="og:description" content="Vendas, estoque, caixa, usuários, contas a pagar e emissão de NFC-e em um só sistema. Acompanhe o seu negócio em tempo real, do computador ou do celular.">
     <meta property="og:image" content="{{ asset('assets/img/logo.png') }}">
     <meta property="og:type" content="website">
     <link rel="icon" href="{{ asset('assets/img/logo.png') }}">
@@ -53,7 +53,7 @@
                 <div class="hero-copy">
                     <span class="eyebrow">Gestão completa para o seu negócio</span>
                     <h1>Sua empresa mais organizada, <span>do caixa ao estoque</span>.</h1>
-                    <p>O Nimvo reúne vendas, estoque, caixa, fiado, contas e emissão fiscal em um único sistema, simples no dia a dia e completo para quem administra o negócio.</p>
+                    <p>O Nimvo reúne vendas, estoque, caixa, usuários, contas e emissão fiscal em um único sistema, simples no dia a dia e completo para quem administra o negócio.</p>
 
                     <div class="hero-actions">
                         <a href="#contato" class="btn btn-primary btn-lg"><span>Falar com nossa equipe</span></a>
@@ -117,10 +117,10 @@
 
                     <div class="feature-card reveal reveal-delay-3">
                         <div class="feature-icon" style="--feature-color:#f59e0b">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
                         </div>
-                        <h3>Fiado</h3>
-                        <p>Controle o saldo devedor de cada cliente, com histórico de pagamentos e cobrança facilitada.</p>
+                        <h3>Usuários e permissões</h3>
+                        <p>Defina perfis de acesso para cada integrante da equipe, do administrador ao operador de caixa.</p>
                     </div>
 
                     <div class="feature-card reveal">
@@ -173,20 +173,20 @@
                                 <div class="mock-sidebar"><i></i><i class="is-active"></i><i></i><i></i></div>
                                 <div class="mock-content">
                                     <div class="mock-slide is-active">
-                                        <div class="mock-topbar"><strong>Clientes e fiado</strong><span>34 clientes</span></div>
+                                        <div class="mock-topbar"><strong>Usuários</strong><span>5 ativos</span></div>
                                         <div class="mock-body">
                                             <div class="mock-rows">
-                                                <div class="mock-row"><b>Ana Beatriz</b><span>Desde jan/2026</span><em>R$ 84,00</em></div>
-                                                <div class="mock-row"><b>Carlos Eduardo</b><span>Desde mar/2026</span><em>R$ 128,55</em></div>
-                                                <div class="mock-row"><b>Fernanda Lima</b><span>Desde mai/2026</span><em>R$ 41,90</em></div>
+                                                <div class="mock-row"><b>Diogo Reis</b><span>Administrador</span><span class="mock-chip is-active">Total</span></div>
+                                                <div class="mock-row"><b>Ana Souza</b><span>Operador de caixa</span><span class="mock-chip">Vendas</span></div>
+                                                <div class="mock-row"><b>Carlos Lima</b><span>Estoquista</span><span class="mock-chip">Estoque</span></div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <h3>Clientes e fiado</h3>
-                        <p>Consulte rapidamente o saldo devedor e o histórico de cada cliente cadastrado.</p>
+                        <h3>Usuários e permissões</h3>
+                        <p>Cadastre a equipe e defina exatamente o que cada perfil pode acessar no sistema.</p>
                     </div>
 
                     <div class="screen-card reveal reveal-delay-1">
@@ -534,7 +534,7 @@
                         <img src="{{ asset('assets/img/logo.png') }}" alt="Nimvo">
                         <span>Nimvo</span>
                     </div>
-                    <p>Sistema de gestão completo para comércios: vendas, estoque, caixa, fiado, contas e emissão fiscal em um único ambiente.</p>
+                    <p>Sistema de gestão completo para comércios: vendas, estoque, caixa, usuários, contas e emissão fiscal em um único ambiente.</p>
                 </div>
 
                 <div class="footer-col">
