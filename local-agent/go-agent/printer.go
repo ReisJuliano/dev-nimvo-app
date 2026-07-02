@@ -446,9 +446,9 @@ func normalizePreviewText(value string) string {
 
 func escapePDFText(value string) string {
 	replacer := strings.NewReplacer(
-		`\\`, `\\\\`,
-		`(`, `\(`,
-		`)`, `\)`,
+		"\\", "\\\\",
+		"(", "\\(",
+		")", "\\)",
 	)
 
 	return replacer.Replace(value)
