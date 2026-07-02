@@ -27,9 +27,51 @@ type fiscalReceiptRequest struct {
 	AdditionalInfo     string           `json:"additional_info"`
 }
 
+// companyInfo carries the store's fiscal identity (CNPJ/IE/address) so
+// non-fiscal coupons (payment/operation) can show a proper header too,
+// reusing whatever the tenant already filled in its fiscal profile even
+// when NFC-e emission itself is turned off.
+type companyInfo struct {
+	Name    string `json:"name"`
+	CNPJ    string `json:"cnpj"`
+	IE      string `json:"ie"`
+	Address string `json:"address"`
+}
+
+func companyHeaderLines(company *companyInfo, columns int) []string {
+	if company == nil {
+		return nil
+	}
+
+	lines := []string{}
+	idLine := ""
+	if strings.TrimSpace(company.CNPJ) != "" {
+		idLine = "CNPJ: " + strings.TrimSpace(company.CNPJ)
+	}
+	if strings.TrimSpace(company.IE) != "" {
+		idLine = firstNonEmpty(idLine, "")
+		if idLine != "" {
+			idLine += "  "
+		}
+		idLine += "IE: " + strings.TrimSpace(company.IE)
+	}
+	if idLine != "" {
+		lines = append(lines, centerText(idLine, columns))
+	}
+
+	if address := strings.TrimSpace(company.Address); address != "" {
+		for _, wrapped := range wrapReceiptText(address, columns) {
+			lines = append(lines, centerText(wrapped, columns))
+		}
+	}
+
+	return lines
+}
+
 type operationReceiptRequest struct {
 	Type          string         `json:"type"`
 	StoreName     string         `json:"store_name"`
+	Company       *companyInfo   `json:"company"`
 	IssuedAt      string         `json:"issued_at"`
 	Amount        float64        `json:"amount"`
 	Reason        string         `json:"reason"`
@@ -358,6 +400,11 @@ func printOperationReceipt(config PrinterConfig, payload operationReceiptRequest
 	builder.alignCenter()
 	builder.bold(true)
 	builder.line(firstNonEmpty(payload.StoreName, "Nimvo"))
+	builder.bold(false)
+	for _, line := range companyHeaderLines(payload.Company, columns) {
+		builder.line(line)
+	}
+	builder.bold(true)
 	builder.line(title)
 	builder.bold(false)
 	builder.line(separator)
@@ -420,12 +467,13 @@ func buildOperationReceiptLines(config PrinterConfig, payload operationReceiptRe
 	columns := receiptColumns(config)
 	separator := strings.Repeat("-", columns)
 	title := operationTitle(payload)
-	lines := []string{
-		centerText(firstNonEmpty(payload.StoreName, "Nimvo"), columns),
+	lines := []string{centerText(firstNonEmpty(payload.StoreName, "Nimvo"), columns)}
+	lines = append(lines, companyHeaderLines(payload.Company, columns)...)
+	lines = append(lines,
 		centerText(title, columns),
 		separator,
-		"Data: " + formatReceiptDateTime(payload.IssuedAt),
-	}
+		"Data: "+formatReceiptDateTime(payload.IssuedAt),
+	)
 
 	if payload.Amount > 0 {
 		lines = append(lines, formatReceiptAmountLine("Valor", payload.Amount, columns))

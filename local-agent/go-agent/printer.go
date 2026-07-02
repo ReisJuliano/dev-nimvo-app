@@ -19,6 +19,7 @@ import (
 
 type paymentReceiptRequest struct {
 	StoreName    string                  `json:"store_name"`
+	Company      *companyInfo            `json:"company"`
 	SaleNumber   string                  `json:"sale_number"`
 	IssuedAt     string                  `json:"issued_at"`
 	Total        float64                 `json:"total"`
@@ -99,6 +100,9 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 	builder.bold(true)
 	builder.line(orDefault(strings.TrimSpace(payload.StoreName), "Nimvo"))
 	builder.bold(false)
+	for _, line := range companyHeaderLines(payload.Company, 48) {
+		builder.line(line)
+	}
 	builder.line("COMPROVANTE DE PAGAMENTO")
 	builder.line(strings.Repeat("=", 48))
 	builder.alignLeft()
@@ -259,11 +263,12 @@ func buildTestReceiptPreviewLines(config PrinterConfig, payload printTestRequest
 }
 
 func buildPaymentReceiptPreviewLines(config PrinterConfig, payload paymentReceiptRequest) []string {
-	lines := []string{
-		orDefault(strings.TrimSpace(payload.StoreName), "Nimvo"),
+	lines := []string{orDefault(strings.TrimSpace(payload.StoreName), "Nimvo")}
+	lines = append(lines, companyHeaderLines(payload.Company, 48)...)
+	lines = append(lines,
 		"COMPROVANTE DE PAGAMENTO",
 		strings.Repeat("=", 48),
-	}
+	)
 
 	if saleNumber := strings.TrimSpace(payload.SaleNumber); saleNumber != "" {
 		lines = append(lines, fmt.Sprintf("Venda: %s", saleNumber))

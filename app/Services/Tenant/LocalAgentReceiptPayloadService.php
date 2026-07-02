@@ -6,6 +6,7 @@ use App\Models\Tenant\Sale;
 use App\Models\Tenant\SaleItem;
 use App\Models\Tenant\SalePayment;
 use App\Models\Tenant\CashMovement;
+use App\Models\Tenant\FiscalProfile;
 use App\Support\Tenant\PaymentMethod;
 
 class LocalAgentReceiptPayloadService
@@ -27,6 +28,7 @@ class LocalAgentReceiptPayloadService
         return [
             'sale_id' => $sale->id,
             'store_name' => tenant()?->name ?: config('app.name', 'Nimvo'),
+            'company' => $this->companyHeader(),
             'sale_number' => (string) $sale->sale_number,
             'issued_at' => optional($sale->created_at)?->toIso8601String(),
             'total' => (float) $sale->total,
@@ -69,6 +71,7 @@ class LocalAgentReceiptPayloadService
         return [
             'type' => $movement->type === 'withdrawal' ? 'sangria' : 'suprimento',
             'store_name' => tenant()?->name ?: config('app.name', 'Nimvo'),
+            'company' => $this->companyHeader(),
             'issued_at' => optional($movement->created_at)?->toIso8601String() ?: now()->toIso8601String(),
             'amount' => (float) $movement->amount,
             'reason' => (string) $movement->reason,
@@ -88,6 +91,7 @@ class LocalAgentReceiptPayloadService
         return [
             'type' => (string) $payment->payment_method,
             'store_name' => tenant()?->name ?: config('app.name', 'Nimvo'),
+            'company' => $this->companyHeader(),
             'issued_at' => optional($sale->created_at)?->toIso8601String() ?: now()->toIso8601String(),
             'amount' => (float) $payment->amount,
             'payment_method' => (string) $payment->payment_method,
@@ -99,5 +103,72 @@ class LocalAgentReceiptPayloadService
                 'label' => PaymentMethod::label($payment->payment_method),
             ],
         ];
+    }
+
+    /**
+     * Store identity shown on every receipt header (CNPJ + address). Reuses
+     * the fiscal profile when one has been filled in, even if NFC-e emission
+     * itself is disabled ("Status: Inativo") - a store that took the time to
+     * fill in its CNPJ/address wants that on its non-fiscal coupons too.
+     */
+    protected function companyHeader(): ?array
+    {
+        $profile = FiscalProfile::query()->first();
+
+        if (! $profile) {
+            return null;
+        }
+
+        $cnpj = trim((string) $profile->cnpj);
+        $address = $this->formatAddress($profile);
+
+        if ($cnpj === '' && $address === '') {
+            return null;
+        }
+
+        return [
+            'name' => $profile->trade_name ?: $profile->company_name,
+            'cnpj' => $cnpj !== '' ? $this->formatCnpj($cnpj) : null,
+            'ie' => filled($profile->ie) ? (string) $profile->ie : null,
+            'address' => $address !== '' ? $address : null,
+        ];
+    }
+
+    protected function formatAddress(FiscalProfile $profile): string
+    {
+        $line = trim(implode(', ', array_filter([
+            trim((string) $profile->street),
+            trim((string) $profile->number),
+        ])));
+
+        $district = trim((string) $profile->district);
+        if ($district !== '') {
+            $line = trim(implode(', ', array_filter([$line, $district])));
+        }
+
+        $cityState = trim(implode(' - ', array_filter([
+            trim((string) $profile->city_name),
+            trim((string) $profile->state),
+        ])));
+
+        return trim(implode(' - ', array_filter([$line, $cityState])));
+    }
+
+    protected function formatCnpj(string $cnpj): string
+    {
+        $digits = preg_replace('/\D/', '', $cnpj) ?? '';
+
+        if (strlen($digits) !== 14) {
+            return $cnpj;
+        }
+
+        return sprintf(
+            '%s.%s.%s/%s-%s',
+            substr($digits, 0, 2),
+            substr($digits, 2, 3),
+            substr($digits, 5, 3),
+            substr($digits, 8, 4),
+            substr($digits, 12, 2),
+        );
     }
 }
