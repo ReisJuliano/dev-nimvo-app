@@ -76,3 +76,25 @@ key automatically. **Do not lose this keystore or its passwords** - Android
 requires the same signing key for every future update of an already
 installed app; losing it means existing installs can never be updated in
 place.
+
+## Publishing a new version (direct-APK distribution)
+
+There is no store, so there is no automatic build/sign/publish pipeline -
+every release is a manual runbook:
+
+1. Bump `version` in `pubspec.yaml` (e.g. `0.2.0+2` -> `0.2.1+3`). The
+   build number (the part after `+`) is what the in-app update check
+   compares against.
+2. `flutter build apk --release`.
+3. Copy the APK to the Laravel app's public releases folder:
+   `storage/app/public/releases/nimvo-app.apk`.
+4. Update `storage/app/public/releases/version.json` next to it with the
+   new `version`/`build_number` (and optional `notes` shown in the in-app
+   banner):
+   ```json
+   {"version": "0.2.1", "build_number": 3, "notes": "..."}
+   ```
+5. Copy both files to the VPS at the same path (`scp`), owned by
+   `www-data`. This is what `admin.nimvo.com.br/app/version.json` and
+   `/app/baixar.apk` serve, and what makes the "nova versao disponivel"
+   banner show up for users on an older build.
