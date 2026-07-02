@@ -35,6 +35,8 @@ class _SalesLineChartState extends State<SalesLineChart> {
     final minValue =
         values.isEmpty ? 0.0 : values.reduce((a, b) => a < b ? a : b);
     final padding = maxValue > 0 ? maxValue * 0.16 : 100.0;
+    final chartMaxY = maxValue + padding;
+    final yInterval = chartMaxY <= 0 ? 100.0 : chartMaxY / 2;
     final last = values.isEmpty ? 0.0 : values.last;
     final total = values.fold<double>(0, (sum, value) => sum + value);
     final bestIndex = values.isEmpty
@@ -93,144 +95,110 @@ class _SalesLineChartState extends State<SalesLineChart> {
         const SizedBox(height: 12),
         SizedBox(
           height: 210,
-          child: LineChart(
-            LineChartData(
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: _interval(maxValue),
-                getDrawingHorizontalLine: (_) => const FlLine(
-                  color: AppColors.border,
-                  strokeWidth: 1,
-                ),
-              ),
-              borderData: FlBorderData(
-                show: true,
-                border: const Border(
-                  left: BorderSide(color: AppColors.borderStrong),
-                  bottom: BorderSide(color: AppColors.borderStrong),
-                ),
-              ),
-              clipData: const FlClipData.all(),
-              minX: 0,
-              maxX: (spots.length - 1).clamp(0, 100).toDouble(),
-              minY: (minValue - padding).clamp(0, double.infinity),
-              maxY: maxValue + padding,
-              showingTooltipIndicators:
-                  selectedSpot == null || selectedIndex == null
-                      ? const []
-                      : [
-                          ShowingTooltipIndicators([
-                            LineBarSpot(lineBarData, 0, selectedSpot),
-                          ]),
-                        ],
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 52,
-                    interval: _interval(maxValue),
-                    getTitlesWidget: (value, meta) {
-                      if (value != meta.min &&
-                          value != meta.max &&
-                          value != 0 &&
-                          (value / _interval(maxValue)).round().isOdd) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Text(
-                        formatCompactCurrency(value).replaceFirst('R\$ ', ''),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                        ),
-                      );
-                    },
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: yInterval,
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
                   ),
                 ),
-                rightTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    interval: 1,
-                    getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index < 0 || index >= labels.length) {
-                        return const SizedBox.shrink();
-                      }
-                      final compact = MediaQuery.sizeOf(context).width < 380;
-                      if (compact &&
-                          index != 0 &&
-                          index != labels.length - 1 &&
-                          index.isOdd) {
-                        return const SizedBox.shrink();
-                      }
+                borderData: FlBorderData(
+                  show: true,
+                  border: const Border(
+                    left: BorderSide(color: AppColors.borderStrong),
+                    bottom: BorderSide(color: AppColors.borderStrong),
+                  ),
+                ),
+                clipData: const FlClipData.all(),
+                minX: 0,
+                maxX: (spots.length - 1).clamp(0, 100).toDouble(),
+                minY: (minValue - padding).clamp(0, double.infinity),
+                maxY: chartMaxY,
+                showingTooltipIndicators: const [],
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 56,
+                      interval: yInterval,
+                      getTitlesWidget: (value, meta) {
+                        final isMainTick = (value - meta.min).abs() < 0.01 ||
+                            (value - meta.max).abs() < 0.01 ||
+                            (value - (meta.max / 2)).abs() < yInterval * 0.08;
+                        if (!isMainTick) {
+                          return const SizedBox.shrink();
+                        }
 
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          labels[index],
+                        return Text(
+                          formatCompactCurrency(value).replaceFirst('R\$ ', ''),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
-                            fontSize: 10,
+                            fontSize: 9,
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= labels.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final compact = MediaQuery.sizeOf(context).width < 380;
+                        if (compact &&
+                            index != 0 &&
+                            index != labels.length - 1 &&
+                            index.isOdd) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            labels[index],
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              lineTouchData: LineTouchData(
-                handleBuiltInTouches: false,
-                touchCallback: (event, response) {
-                  final touched = response?.lineBarSpots?.firstOrNull;
-                  if (touched == null) {
-                    return;
-                  }
+                lineTouchData: LineTouchData(
+                  handleBuiltInTouches: false,
+                  touchCallback: (event, response) {
+                    final touched = response?.lineBarSpots?.firstOrNull;
+                    if (touched == null) {
+                      return;
+                    }
 
-                  setState(() => _selectedIndex = touched.spotIndex);
-                },
-                touchTooltipData: LineTouchTooltipData(
-                  tooltipRoundedRadius: 8,
-                  getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
-                    final index = spot.x.toInt();
-                    return LineTooltipItem(
-                      '${labels[index]}\n${formatCurrency(spot.y)} - ${quantities[index]} vendas',
-                      const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    );
-                  }).toList(),
+                    setState(() => _selectedIndex = touched.spotIndex);
+                  },
                 ),
+                lineBarsData: [lineBarData],
               ),
-              lineBarsData: [lineBarData],
             ),
           ),
         ),
       ],
     );
-  }
-
-  double _interval(double maxValue) {
-    if (maxValue <= 0) {
-      return 100;
-    }
-    if (maxValue <= 500) {
-      return 100;
-    }
-    if (maxValue <= 2000) {
-      return 500;
-    }
-    if (maxValue <= 10000) {
-      return 2000;
-    }
-    return 10000;
   }
 }
 

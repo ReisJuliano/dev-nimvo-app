@@ -343,6 +343,8 @@ class _DailyRevenueChartState extends State<_DailyRevenueChart> {
       0,
       (max, spot) => spot.y > max ? spot.y : max,
     );
+    final chartMaxY = maxValue <= 0 ? 100.0 : maxValue * 1.18;
+    final yInterval = chartMaxY / 2;
     final selectedIndex =
         (_selectedIndex ?? rows.length - 1).clamp(0, rows.length - 1).toInt();
     final lineBarData = LineChartBarData(
@@ -378,116 +380,103 @@ class _DailyRevenueChartState extends State<_DailyRevenueChart> {
         const SizedBox(height: 10),
         SizedBox(
           height: 190,
-          child: LineChart(
-            LineChartData(
-              minY: 0,
-              maxY: maxValue <= 0 ? 100 : maxValue * 1.18,
-              showingTooltipIndicators: [
-                ShowingTooltipIndicators([
-                  LineBarSpot(lineBarData, 0, spots[selectedIndex]),
-                ]),
-              ],
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (_) => const FlLine(
-                  color: AppColors.border,
-                  strokeWidth: 1,
-                ),
-              ),
-              borderData: FlBorderData(
-                show: true,
-                border: const Border(
-                  left: BorderSide(color: AppColors.borderStrong),
-                  bottom: BorderSide(color: AppColors.borderStrong),
-                ),
-              ),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 48,
-                    getTitlesWidget: (value, meta) {
-                      if (value != 0 &&
-                          value != meta.max &&
-                          value != meta.min &&
-                          value.round().isOdd) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Text(
-                        formatCompactCurrency(value).replaceFirst('R\$ ', ''),
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                        ),
-                      );
-                    },
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: chartMaxY,
+                showingTooltipIndicators: const [],
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: yInterval,
+                  getDrawingHorizontalLine: (_) => const FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
                   ),
                 ),
-                rightTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 28,
-                    interval: rows.length > 14 ? 3 : 1,
-                    getTitlesWidget: (value, meta) {
-                      final index = value.toInt();
-                      if (index < 0 || index >= rows.length) {
-                        return const SizedBox.shrink();
-                      }
-                      final compact = MediaQuery.sizeOf(context).width < 390;
-                      if (compact &&
-                          rows.length > 8 &&
-                          index != 0 &&
-                          index != rows.length - 1 &&
-                          index.isOdd) {
-                        return const SizedBox.shrink();
-                      }
+                borderData: FlBorderData(
+                  show: true,
+                  border: const Border(
+                    left: BorderSide(color: AppColors.borderStrong),
+                    bottom: BorderSide(color: AppColors.borderStrong),
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 56,
+                      interval: yInterval,
+                      getTitlesWidget: (value, meta) {
+                        final isMainTick = (value - meta.min).abs() < 0.01 ||
+                            (value - meta.max).abs() < 0.01 ||
+                            (value - (meta.max / 2)).abs() < yInterval * 0.08;
+                        if (!isMainTick) {
+                          return const SizedBox.shrink();
+                        }
 
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          rows[index]['label'] as String? ?? '',
+                        return Text(
+                          formatCompactCurrency(value).replaceFirst('R\$ ', ''),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 9,
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
+                  ),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: rows.length > 14 ? 3 : 1,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= rows.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final compact = MediaQuery.sizeOf(context).width < 390;
+                        if (compact &&
+                            rows.length > 8 &&
+                            index != 0 &&
+                            index != rows.length - 1 &&
+                            index.isOdd) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            rows[index]['label'] as String? ?? '',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 9,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-              lineTouchData: LineTouchData(
-                handleBuiltInTouches: false,
-                touchCallback: (event, response) {
-                  final touched = response?.lineBarSpots?.firstOrNull;
-                  if (touched == null) {
-                    return;
-                  }
+                lineTouchData: LineTouchData(
+                  handleBuiltInTouches: false,
+                  touchCallback: (event, response) {
+                    final touched = response?.lineBarSpots?.firstOrNull;
+                    if (touched == null) {
+                      return;
+                    }
 
-                  setState(() => _selectedIndex = touched.spotIndex);
-                },
-                touchTooltipData: LineTouchTooltipData(
-                  tooltipRoundedRadius: 8,
-                  getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
-                    final index = spot.x.toInt();
-                    return LineTooltipItem(
-                      '${rows[index]['label']}\n${formatCurrency(spot.y)}',
-                      const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    );
-                  }).toList(),
+                    setState(() => _selectedIndex = touched.spotIndex);
+                  },
                 ),
+                lineBarsData: [lineBarData],
               ),
-              lineBarsData: [lineBarData],
             ),
           ),
         ),

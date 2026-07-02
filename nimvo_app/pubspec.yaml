@@ -1,7 +1,7 @@
 name: nimvo_app
 description: Nimvo mobile dashboard for owners and managers.
 publish_to: "none"
-version: 0.2.3+5
+version: 0.2.4+6
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -20,7 +20,7 @@ dependencies:
   hugeicons: ^0.0.7
   package_info_plus: ^8.0.0
   url_launcher: ^6.3.0
-  mobile_scanner: ^7.2.0
+  mobile_scanner: 6.0.10
 
 dev_dependencies:
   flutter_test:
@@ -35,7 +35,7 @@ flutter:
     - assets/branding/nimvo-logo-512.png
 
 flutter_launcher_icons:
-  android: "ic_launcher"
+  android: "nimvo_launcher"
   ios: true
   image_path: "assets/branding/nimvo-logo-512.png"
   adaptive_icon_background: "#FFFFFF"

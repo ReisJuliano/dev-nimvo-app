@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -90,7 +92,7 @@ class _StockScreenState extends ConsumerState<StockScreen> {
   }
 
   Future<void> _openScanner() async {
-    final code = await Navigator.of(context).push<String>(
+    final code = await Navigator.of(context, rootNavigator: true).push<String>(
       MaterialPageRoute(builder: (_) => const _BarcodeScannerScreen()),
     );
 
@@ -415,15 +417,50 @@ class _BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
+  late final MobileScannerController _scannerController;
   bool _handled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      formats: const [
+        BarcodeFormat.ean13,
+        BarcodeFormat.ean8,
+        BarcodeFormat.upcA,
+        BarcodeFormat.upcE,
+        BarcodeFormat.code128,
+        BarcodeFormat.code39,
+        BarcodeFormat.code93,
+        BarcodeFormat.codabar,
+        BarcodeFormat.itf,
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_scannerController.dispose());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(title: const Text('Ler codigo')),
       body: Stack(
         children: [
           MobileScanner(
+            controller: _scannerController,
+            placeholderBuilder: (context, child) => const ColoredBox(
+              color: Colors.black,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            errorBuilder: (context, error, _) =>
+                _ScannerErrorView(error: error),
             onDetect: (capture) {
               if (_handled) {
                 return;
@@ -437,6 +474,18 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
               _handled = true;
               Navigator.of(context).pop(value);
             },
+          ),
+          IgnorePointer(
+            child: Center(
+              child: Container(
+                width: 240,
+                height: 150,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
           ),
           Align(
             alignment: Alignment.bottomCenter,
@@ -452,6 +501,55 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ScannerErrorView extends StatelessWidget {
+  const _ScannerErrorView({required this.error});
+
+  final MobileScannerException error;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = error.errorDetails?.message ?? error.errorCode.name;
+
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off_outlined,
+                  color: Colors.white, size: 36),
+              const SizedBox(height: 12),
+              const Text(
+                'Nao foi possivel abrir a camera.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                detail,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.keyboard_outlined),
+                label: const Text('Digitar codigo'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

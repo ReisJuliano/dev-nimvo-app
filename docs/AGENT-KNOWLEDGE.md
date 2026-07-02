@@ -178,3 +178,7 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   codigo de barras, categoria, custo, preco, estoque, minimo, media diaria dos
   ultimos 30 dias e ultima venda. O app usa `mobile_scanner`, portanto Android
   precisa de permissao `CAMERA` e iOS de `NSCameraUsageDescription`.
+- 2026-07-02: No app Flutter, o scanner de codigo de barras ficou fixado em
+  `mobile_scanner` 6.0.10 apos erro nativo na linha 7.x em Android. O launcher
+  Android usa o recurso `@mipmap/nimvo_launcher` para evitar cache do antigo
+  `ic_launcher`/Flutter em instalacoes diretas por APK.

@@ -5,8 +5,8 @@
     <application
         android:label="Nimvo"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:icon="@mipmap/nimvo_launcher"
+        android:roundIcon="@mipmap/nimvo_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
