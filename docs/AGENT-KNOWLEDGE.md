@@ -166,3 +166,8 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   dia, variacao de movimento, produtos abaixo do minimo e contas vencidas. Os
   launcher icons sao gerados por `flutter_launcher_icons` a partir de
   `assets/branding/nimvo-logo-512.png`, com iOS habilitado e alpha removido.
+- 2026-07-02: O remoto bare da VPS em `/srv/git/nimvo.git` tem hook
+  `post-receive` para a branch `main`. Ao receber push, ele entra em
+  `/var/www/nimvo` e executa `git pull --ff-only vps main`, o que dispara o
+  hook `post-merge` existente e o `scripts/post-pull-deploy.sh`. Logs:
+  `/var/log/nimvo-post-receive.log` e `/var/log/nimvo-post-pull.log`.

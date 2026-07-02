@@ -15,12 +15,16 @@ git commit -m "sua alteracao"
 git push vps main
 ```
 
-3. No VPS, atualize o sistema:
+3. O hook `post-receive` do repositorio bare em `/srv/git/nimvo.git` atualiza
+   automaticamente o checkout em `/var/www/nimvo` com:
 
 ```bash
-cd /var/www/nimvo
 git pull vps main
 ```
+
+Normalmente nao e mais necessario entrar na VPS para puxar manualmente. Se o
+hook falhar, consulte `/var/log/nimvo-post-receive.log` e
+`/var/log/nimvo-post-pull.log`.
 
 ## O que acontece depois do `git pull`
 
