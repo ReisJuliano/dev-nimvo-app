@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/notifications/screens/notifications_screen.dart';
 import 'features/reports/screens/reports_screen.dart';
 import 'features/sales/screens/sales_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
@@ -64,6 +65,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/stock',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: StockScreen()),
+          ),
+          GoRoute(
+            path: '/notifications',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: NotificationsScreen()),
           ),
           GoRoute(
             path: '/settings',

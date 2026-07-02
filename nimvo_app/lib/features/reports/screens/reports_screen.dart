@@ -77,75 +77,69 @@ class _PeriodTab extends ConsumerWidget {
       builder: (cmvData) {
         final periodData = period.valueOrNull;
         final summary = periodData?['summary'] as Map<String, dynamic>? ?? {};
-        final topProducts =
-            periodData?['top_products'] as List<dynamic>? ?? [];
+        final topProducts = periodData?['top_products'] as List<dynamic>? ?? [];
+        final dailyTrend = periodData?['daily_trend'] as List<dynamic>? ?? [];
 
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Row(
+            GridView.count(
+              crossAxisCount: MediaQuery.sizeOf(context).width >= 720 ? 4 : 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.15,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                Expanded(
-                    child: _metric(context, 'Receita',
-                        formatCurrency(_num(cmvData['revenue'])))),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _metric(context, 'Custo',
-                        formatCurrency(_num(cmvData['cost'])))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                    child: _metric(context, 'Lucro bruto',
-                        formatCurrency(_num(cmvData['gross_profit'])))),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: _metric(context, 'Margem',
-                        formatPercent(_num(cmvData['margin_percentage'])))),
+                _metric(context, 'Receita',
+                    formatCurrency(_num(cmvData['revenue']))),
+                _metric(context, 'CMV', formatCurrency(_num(cmvData['cost']))),
+                _metric(context, 'Lucro bruto',
+                    formatCurrency(_num(cmvData['gross_profit']))),
+                _metric(context, 'Margem',
+                    formatPercent(_num(cmvData['margin_percentage']))),
               ],
             ),
             const SizedBox(height: 16),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CMV', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      height: 180,
-                      child: PieChart(
-                        PieChartData(
-                          centerSpaceRadius: 52,
-                          sectionsSpace: 4,
-                          sections: [
-                            PieChartSectionData(
-                              value: _num(cmvData['cmv_percentage']).toDouble(),
-                              title: 'CMV',
-                              color: AppColors.warning,
-                            ),
-                            PieChartSectionData(
-                              value: (100 - _num(cmvData['cmv_percentage']))
-                                  .clamp(0, 100)
-                                  .toDouble(),
-                              title: 'Margem',
-                              color: AppColors.success,
-                            ),
-                          ],
-                        ),
+                    Text('CMV e margem',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 6),
+                    Text(
+                      'CMV ${formatPercent(_num(cmvData['cmv_percentage']))} do faturamento',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    _CmvTrendChart(
+                        items: cmvData['weekly_trend'] as List<dynamic>? ?? []),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            Text('Resumo do periodo',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Receita diaria',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 12),
+                    _DailyRevenueChart(items: dailyTrend),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             _metric(context, 'Ticket medio',
                 formatCurrency(_num(summary['average_ticket']))),
             const SizedBox(height: 16),
@@ -155,6 +149,7 @@ class _PeriodTab extends ConsumerWidget {
               final product = item as Map<String, dynamic>;
               return Card(
                 child: ListTile(
+                  dense: true,
                   title: Text(product['name'] as String? ?? ''),
                   subtitle: Text(
                       '${_num(product['qty_sold']).toStringAsFixed(0)} un.'),
@@ -171,13 +166,18 @@ class _PeriodTab extends ConsumerWidget {
   Widget _metric(BuildContext context, String label, String value) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            Text(value, style: Theme.of(context).textTheme.titleLarge),
+            Text(label,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
+            const SizedBox(height: 6),
+            Text(value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
       ),
@@ -185,6 +185,268 @@ class _PeriodTab extends ConsumerWidget {
   }
 
   num _num(dynamic value) => value is num ? value : num.tryParse('$value') ?? 0;
+}
+
+class _CmvTrendChart extends StatelessWidget {
+  const _CmvTrendChart({required this.items});
+
+  final List<dynamic> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const Text(
+        'Sem dados de CMV para o periodo.',
+        style: TextStyle(color: AppColors.textSecondary),
+      );
+    }
+
+    final rows = items.map((item) => item as Map<String, dynamic>).toList();
+    final maxValue = rows
+        .map((item) => _num(item['revenue']))
+        .fold<double>(0, (max, value) => value > max ? value : max);
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 210,
+          child: BarChart(
+            BarChartData(
+              maxY: maxValue <= 0 ? 100 : maxValue * 1.2,
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => const FlLine(
+                  color: AppColors.border,
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 44,
+                    getTitlesWidget: (value, meta) => Text(
+                      formatCompactCurrency(value).replaceFirst('R\$ ', ''),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= rows.length) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          rows[index]['label'] as String? ?? '',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 9,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              barGroups: List.generate(rows.length, (index) {
+                final row = rows[index];
+                return BarChartGroupData(
+                  x: index,
+                  barsSpace: 2,
+                  barRods: [
+                    BarChartRodData(
+                      toY: _num(row['revenue']),
+                      width: 8,
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    BarChartRodData(
+                      toY: _num(row['cost']),
+                      width: 8,
+                      color: AppColors.warning,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    BarChartRodData(
+                      toY: _num(row['gross_profit']),
+                      width: 8,
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            _LegendDot(color: AppColors.primary, label: 'Receita'),
+            _LegendDot(color: AppColors.warning, label: 'CMV'),
+            _LegendDot(color: AppColors.success, label: 'Lucro'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  double _num(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+}
+
+class _DailyRevenueChart extends StatelessWidget {
+  const _DailyRevenueChart({required this.items});
+
+  final List<dynamic> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = items.map((item) => item as Map<String, dynamic>).toList();
+    if (rows.isEmpty) {
+      return const Text(
+        'Sem vendas no periodo.',
+        style: TextStyle(color: AppColors.textSecondary),
+      );
+    }
+
+    final spots = List.generate(
+      rows.length,
+      (index) => FlSpot(index.toDouble(), _num(rows[index]['total'])),
+    );
+    final maxValue = spots.fold<double>(
+      0,
+      (max, spot) => spot.y > max ? spot.y : max,
+    );
+
+    return SizedBox(
+      height: 190,
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          maxY: maxValue <= 0 ? 100 : maxValue * 1.18,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (_) => const FlLine(
+              color: AppColors.border,
+              strokeWidth: 1,
+            ),
+          ),
+          borderData: FlBorderData(
+            show: true,
+            border: const Border(
+              left: BorderSide(color: AppColors.borderStrong),
+              bottom: BorderSide(color: AppColors.borderStrong),
+            ),
+          ),
+          titlesData: FlTitlesData(
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 42,
+                getTitlesWidget: (value, meta) => Text(
+                  formatCompactCurrency(value).replaceFirst('R\$ ', ''),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 28,
+                interval: rows.length > 14 ? 3 : 1,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= rows.length) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      rows[index]['label'] as String? ?? '',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 9,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              preventCurveOverShooting: true,
+              color: AppColors.info,
+              barWidth: 2.4,
+              belowBarData: BarAreaData(
+                show: true,
+                color: AppColors.info.withValues(alpha: 0.1),
+              ),
+              dotData: const FlDotData(show: false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _num(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+      ],
+    );
+  }
 }
 
 class _BySellerTab extends ConsumerWidget {

@@ -10,9 +10,11 @@ class AppColors {
   static const violet = Color(0xFF8B5CF6);
   static const rose = Color(0xFFF43F5E);
   static const background = Color(0xFFF1F5F9);
+  static const backgroundWarm = Color(0xFFEEF2F6);
   static const surface = Color(0xFFFFFFFF);
   static const card = Color(0xFFFFFFFF);
   static const cardAlt = Color(0xFFF8FAFC);
+  static const surfaceTint = Color(0xFFEFF4FF);
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
   static const danger = Color(0xFFEF4444);
@@ -22,10 +24,6 @@ class AppColors {
   static const textMuted = Color(0xFF94A3B8);
   static const border = Color(0x140F172A);
   static const borderStrong = Color(0x240F172A);
-
-  /// Dark navy used only for the bottom navigation bar, mirroring the web's
-  /// dark sidebar (`--app-sidebar-bg`) against an otherwise light app body.
-  static const navDark = Color(0xFF0F172A);
 
   /// Login-only accent (`--guest-accent` on the web), distinct from the
   /// indigo used across the rest of the app.
@@ -48,6 +46,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      visualDensity: VisualDensity.compact,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -70,12 +69,17 @@ class AppTheme {
       ),
       textTheme: textTheme.copyWith(
         headlineSmall: GoogleFonts.plusJakartaSans(
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
         titleLarge: GoogleFonts.plusJakartaSans(
-          fontSize: 18,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+        titleMedium: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
         ),
@@ -88,11 +92,11 @@ class AppTheme {
         prefixIconColor: AppColors.textSecondary,
         labelStyle: const TextStyle(color: AppColors.textSecondary),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: AppColors.borderStrong),
         ),
       ),
@@ -100,7 +104,7 @@ class AppTheme {
         color: AppColors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           side: const BorderSide(color: AppColors.border),
         ),
       ),
@@ -108,19 +112,21 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.navDark,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.28),
+        height: 64,
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+        surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             color: states.contains(WidgetState.selected)
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.6),
-            fontSize: 12,
+                ? AppColors.primary
+                : AppColors.textSecondary,
+            fontSize: 11,
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
                 : FontWeight.w500,
@@ -129,8 +135,9 @@ class AppTheme {
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.6),
+                ? AppColors.primary
+                : AppColors.textSecondary,
+            size: 21,
           ),
         ),
       ),

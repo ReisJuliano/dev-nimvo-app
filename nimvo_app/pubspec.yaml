@@ -35,5 +35,6 @@ flutter:
 
 flutter_launcher_icons:
   android: "ic_launcher"
-  ios: false
+  ios: true
   image_path: "assets/branding/nimvo-logo-512.png"
+  remove_alpha_ios: true

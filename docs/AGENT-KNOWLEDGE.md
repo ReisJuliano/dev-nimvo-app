@@ -161,3 +161,8 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   agente local central padrao automaticamente quando a tabela `local_agents`
   existe. A migration `2026_07_02_000200_ensure_default_local_agents_for_tenants`
   faz backfill para tenants antigos sem duplicar agentes ja existentes.
+- 2026-07-02: No app Flutter `nimvo_app/`, a aba `Avisos` usa o mesmo payload
+  de `/mobile-api/v1/dashboard` via `dashboardProvider` para destacar venda do
+  dia, variacao de movimento, produtos abaixo do minimo e contas vencidas. Os
+  launcher icons sao gerados por `flutter_launcher_icons` a partir de
+  `assets/branding/nimvo-logo-512.png`, com iOS habilitado e alpha removido.
