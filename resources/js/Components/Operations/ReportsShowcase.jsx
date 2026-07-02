@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 
+const ALL_CATEGORY_KEY = '__all__'
+
 function ReportCategoryButton({ category, active, onClick }) {
     return (
         <button
@@ -15,13 +17,13 @@ function ReportCategoryButton({ category, active, onClick }) {
             </span>
             <span className="operations-report-category-copy">
                 <strong>{category.label}</strong>
-                <small>{category.report_count} relatórios</small>
+                <small>{category.report_count} relatório{category.report_count === 1 ? '' : 's'}</small>
             </span>
         </button>
     )
 }
 
-function ReportOpenCard({ report }) {
+function ReportOpenCard({ report, showCategory }) {
     return (
         <Link href={report.href} className="operations-report-open-card">
             <div className="operations-report-open-top">
@@ -34,6 +36,9 @@ function ReportOpenCard({ report }) {
             </div>
 
             <div className="operations-report-open-copy">
+                {showCategory && report.categoryLabel ? (
+                    <span className="operations-report-open-category">{report.categoryLabel}</span>
+                ) : null}
                 <strong>{report.title}</strong>
             </div>
 
@@ -58,22 +63,39 @@ export default function ReportsShowcase({ module }) {
         setActiveCategoryKey(module?.catalog?.activeCategory || categories[0]?.key || null)
     }, [module?.catalog?.activeCategory, categories])
 
+    const allReports = useMemo(() => (
+        categories.flatMap((category) => (
+            (category.reports || []).map((report) => ({ ...report, categoryLabel: category.label }))
+        ))
+    ), [categories])
+
+    const totalReportCount = allReports.length
     const currentCategory = categories.find((category) => category.key === activeCategoryKey) || categories[0]
+    const isAllSelected = activeCategoryKey === ALL_CATEGORY_KEY
+
+    const normalizedTerm = normalizeTextSearch(searchControl.draftValue)
+    const isSearching = normalizedTerm.length > 0
+
+    // Enquanto o usuário digita, a busca vale para todos os relatórios,
+    // independente da categoria selecionada — evita a sensação de que um
+    // relatório "sumiu" só porque estava em outra categoria.
+    const baseReports = useMemo(() => {
+        if (isSearching || isAllSelected) {
+            return allReports
+        }
+
+        return (currentCategory?.reports || []).map((report) => ({ ...report, categoryLabel: currentCategory?.label }))
+    }, [isSearching, isAllSelected, allReports, currentCategory])
+
     const filteredReports = useMemo(() => {
-        const normalizedTerm = normalizeTextSearch(searchControl.value)
-
-        if (!currentCategory) {
-            return []
+        if (!isSearching) {
+            return baseReports
         }
 
-        if (!normalizedTerm) {
-            return currentCategory.reports
-        }
-
-        return currentCategory.reports.filter((report) =>
-            matchesTextSearchAny([report.title, ...(report.tags || [])], normalizedTerm),
+        return baseReports.filter((report) =>
+            matchesTextSearchAny([report.title, report.categoryLabel, ...(report.tags || [])], normalizedTerm),
         )
-    }, [currentCategory, searchControl.value])
+    }, [baseReports, isSearching, normalizedTerm])
 
     if (!currentCategory) {
         return (
@@ -86,47 +108,60 @@ export default function ReportsShowcase({ module }) {
         )
     }
 
+    const heroLabel = isSearching
+        ? `Resultados para "${searchControl.draftValue.trim()}"`
+        : isAllSelected
+            ? 'Todos os relatórios'
+            : currentCategory.label
+
     return (
         <div className="operations-reports-showcase">
-            <section className="operations-report-toolbar">
-                <div className="operations-report-category-bar">
-                    {categories.map((category) => (
-                        <ReportCategoryButton
-                            key={category.key}
-                            category={category}
-                            active={category.key === currentCategory.key}
-                            onClick={() => setActiveCategoryKey(category.key)}
-                        />
-                    ))}
-                </div>
-
+            <section className="operations-report-search-bar">
                 <label className="operations-report-search">
                     <i className="fa-solid fa-magnifying-glass" />
                     <input
                         type="text"
                         value={searchControl.draftValue}
                         onChange={(event) => searchControl.setDraftValue(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-
-                            event.preventDefault()
-                            searchControl.apply()
-                        }}
-                        placeholder="Buscar relatório"
+                        placeholder="Buscar relatório em todas as categorias..."
                     />
-                    <button type="button" className="report-icon-button wide" onClick={() => searchControl.apply()}>
-                        <i className="fa-solid fa-magnifying-glass" />
-                        <span>Pesquisar</span>
-                    </button>
+                    {searchControl.draftValue ? (
+                        <button type="button" className="operations-report-search-clear" onClick={() => searchControl.clear()} aria-label="Limpar busca">
+                            <i className="fa-solid fa-xmark" />
+                        </button>
+                    ) : null}
                 </label>
+            </section>
+
+            <section className="operations-report-category-bar">
+                <button
+                    type="button"
+                    className={`operations-report-category ${isAllSelected ? 'active' : ''}`}
+                    onClick={() => setActiveCategoryKey(ALL_CATEGORY_KEY)}
+                >
+                    <span className="operations-report-category-icon">
+                        <i className="fa-solid fa-layer-group" />
+                    </span>
+                    <span className="operations-report-category-copy">
+                        <strong>Todos</strong>
+                        <small>{totalReportCount} relatórios</small>
+                    </span>
+                </button>
+
+                {categories.map((category) => (
+                    <ReportCategoryButton
+                        key={category.key}
+                        category={category}
+                        active={!isSearching && category.key === activeCategoryKey}
+                        onClick={() => setActiveCategoryKey(category.key)}
+                    />
+                ))}
             </section>
 
             <section className="operations-report-preview-hero compact">
                 <div>
-                    <span className="operations-section-kicker">Categoria</span>
-                    <h2>{currentCategory.label}</h2>
+                    <span className="operations-section-kicker">{isSearching ? 'Busca' : 'Categoria'}</span>
+                    <h2>{heroLabel}</h2>
                 </div>
                 <div className="operations-report-preview-badges">
                     <span className="ui-badge success">{filteredReports.length} visões</span>
@@ -136,10 +171,10 @@ export default function ReportsShowcase({ module }) {
             <section className="operations-report-open-grid">
                 {filteredReports.length ? (
                     filteredReports.map((report) => (
-                        <ReportOpenCard key={report.key} report={report} />
+                        <ReportOpenCard key={report.key} report={report} showCategory={isSearching || isAllSelected} />
                     ))
                 ) : (
-                    <div className="operations-empty-state">Sem relatórios</div>
+                    <div className="operations-empty-state">Nenhum relatório encontrado para essa busca</div>
                 )}
             </section>
         </div>
