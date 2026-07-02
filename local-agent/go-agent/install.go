@@ -710,6 +710,7 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 	config = normalizeAgentConfig(config)
 	config.Certificate = normalizeInstallationCertificate(config.Certificate)
 	config.Printer.LogoPath = resolveAutomaticPrinterLogoPath(defaultLogoPath)
+	hasCredentials := hasPermanentAgentCredentials(config)
 
 	if interactive {
 		config.Backend.BaseURL, err = promptRequired("URL do backend do Nimvo", strings.TrimSpace(config.Backend.BaseURL))
@@ -717,9 +718,11 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 			return config, err
 		}
 
-		activationCode, err = promptRequired("Codigo de ativacao do tenant", activationCode)
-		if err != nil {
-			return config, err
+		if !hasCredentials {
+			activationCode, err = promptRequired("Codigo de ativacao do tenant", activationCode)
+			if err != nil {
+				return config, err
+			}
 		}
 	} else {
 		config.Backend.BaseURL = strings.TrimSpace(config.Backend.BaseURL)
@@ -730,18 +733,20 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 		return config, errors.New("informe a URL do backend do Nimvo para concluir a instalacao")
 	}
 
-	if strings.TrimSpace(activationCode) == "" {
+	if !hasCredentials && strings.TrimSpace(activationCode) == "" {
 		return config, errors.New("informe um codigo de ativacao valido para concluir a instalacao")
 	}
 
 	requestedPollInterval := config.Agent.PollInterval
-	activatedConfig, err := activateInstalledAgentConfig(config.Backend.BaseURL, activationCode)
-	if err != nil {
-		return config, err
+	if !hasCredentials {
+		activatedConfig, err := activateInstalledAgentConfig(config.Backend.BaseURL, activationCode)
+		if err != nil {
+			return config, err
+		}
+		config.Backend = activatedConfig.Backend
+		config.Agent = activatedConfig.Agent
+		config.TenantApp = activatedConfig.TenantApp
 	}
-	config.Backend = activatedConfig.Backend
-	config.Agent = activatedConfig.Agent
-	config.TenantApp = activatedConfig.TenantApp
 
 	if interactive {
 		config.Certificate, err = promptInstallationCertificate(config.Certificate)
@@ -848,6 +853,10 @@ func completeInstallationConfig(config AgentConfig, defaultLogoPath, activationC
 
 		return config, nil
 	}
+}
+
+func hasPermanentAgentCredentials(config AgentConfig) bool {
+	return strings.TrimSpace(config.Agent.Key) != "" && strings.TrimSpace(config.Agent.Secret) != ""
 }
 
 func resolveAutomaticPrinterLogoPath(path string) string {

@@ -69,7 +69,13 @@ class LocalAgentInstallerPackageService
 setlocal
 cd /d "%~dp0"
 echo Instalando agente local do Nimvo...
-"%~dp0nimvo-agent.exe" install --seed-config "%~dp0nimvo-agent.json" --non-interactive
+"%~dp0nimvo-agent.exe" install --seed-config "%~dp0nimvo-agent.json"
+if errorlevel 1 (
+    echo.
+    echo Instalacao nao concluida. Veja a mensagem acima, ajuste as informacoes e execute este arquivo novamente.
+    pause
+    exit /b 1
+)
 echo.
 echo Instalacao concluida. Se o agente nao iniciar, execute nimvo-agent.exe tray.
 pause

@@ -62,6 +62,33 @@ func TestBuildUninstallScriptUsesPurgeFlag(t *testing.T) {
 	}
 }
 
+func TestCompleteInstallationConfigAcceptsSeededCredentialsWithoutActivationCode(t *testing.T) {
+	config := defaultAgentConfig()
+	config.Backend.BaseURL = "https://teste.nimvo.com.br"
+	config.Agent.Key = "agent-key"
+	config.Agent.Secret = "agent-secret"
+	config.Printer.Enabled = false
+
+	completed, err := completeInstallationConfig(config, "", "", false)
+	if err != nil {
+		t.Fatalf("expected seeded credentials to install without activation code, got %v", err)
+	}
+
+	if completed.Agent.Key != "agent-key" || completed.Agent.Secret != "agent-secret" {
+		t.Fatalf("expected seeded credentials to be preserved, got %#v", completed.Agent)
+	}
+}
+
+func TestCompleteInstallationConfigRequiresActivationCodeWithoutSeededCredentials(t *testing.T) {
+	config := defaultAgentConfig()
+	config.Backend.BaseURL = "https://teste.nimvo.com.br"
+	config.Printer.Enabled = false
+
+	if _, err := completeInstallationConfig(config, "", "", false); err == nil {
+		t.Fatal("expected missing activation code to be rejected without seeded credentials")
+	}
+}
+
 func TestPathWithinRoot(t *testing.T) {
 	if !pathWithinRoot(`C:\Nimvo\bin\nimvo-fiscal-agent.exe`, `C:\Nimvo`) {
 		t.Fatal("expected executable inside install root to be detected")
