@@ -206,7 +206,7 @@
                 </div>
             </div>
 
-            <button type="button" id="downloadButton" class="download-button" data-url="{{ $downloadUrl }}" @if ($autoDownload ?? false) data-autostart="1" @endif>
+            <button type="button" id="downloadButton" class="download-button" data-url="{{ $downloadUrl }}" data-filename="{{ $downloadFilename ?? 'nimvo-app.apk' }}" @if ($autoDownload ?? false) data-autostart="1" @endif>
                 Baixar o APK
             </button>
 
@@ -297,7 +297,7 @@
                         const blobUrl = URL.createObjectURL(blob);
                         const link = document.createElement('a');
                         link.href = blobUrl;
-                        link.download = 'nimvo-app.apk';
+                        link.download = button.dataset.filename || 'nimvo-app.apk';
                         document.body.appendChild(link);
                         link.click();
                         link.remove();

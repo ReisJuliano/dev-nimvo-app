@@ -24,6 +24,7 @@ class AppDownloadController extends Controller
                 'store' => $store,
                 'cacheKey' => $cacheKey,
                 'autoDownload' => $request->boolean('download'),
+                'downloadFilename' => $this->downloadFilename($packageService),
                 'downloadUrl' => $cacheKey
                     ? route('app.download.apk', ['v' => $cacheKey])
                     : route('app.download.apk'),
@@ -35,10 +36,29 @@ class AppDownloadController extends Controller
     {
         abort_unless($packageService->isAvailable(), 404, 'O app Nimvo ainda nao foi publicado.');
 
-        return response()->download($packageService->latestApkPath(), 'nimvo-app.apk', [
+        return response()->download($packageService->latestApkPath(), $this->downloadFilename($packageService), [
             'Content-Type' => 'application/vnd.android.package-archive',
             ...$this->noStoreHeaders(),
         ]);
+    }
+
+    /**
+     * Version-stamped download filename so a freshly downloaded build never
+     * collides with an older "nimvo-app.apk" already sitting in the phone's
+     * Downloads folder - tapping the stale file was installing the old,
+     * Flutter-icon build.
+     */
+    protected function downloadFilename(AppDownloadPackageService $packageService): string
+    {
+        $metadata = $packageService->versionMetadata();
+        $version = $metadata['version'] ?? null;
+        $build = $metadata['build_number'] ?? null;
+
+        if ($version && $build) {
+            return "nimvo-app-{$version}-b{$build}.apk";
+        }
+
+        return 'nimvo-app.apk';
     }
 
     public function qr(AppDownloadPackageService $packageService): Response
