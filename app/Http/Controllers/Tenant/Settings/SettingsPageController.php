@@ -13,11 +13,17 @@ class SettingsPageController extends Controller
     {
         abort_unless(auth()->user()?->role === 'admin', 403);
 
+        $centralDomain = config('tenancy.central_domains')[0] ?? request()->getHost();
+        $storeQuery = 'store='.urlencode(request()->getHost());
+        $baseUrl = sprintf('%s://%s/app/baixar', request()->getScheme(), $centralDomain);
+
         return Inertia::render('Settings/Index', [
             'settings' => $settingsService->get(),
             'businessPresets' => $settingsService->businessPresets(),
             'generalOptions' => $settingsService->generalOptions(),
             'moduleSections' => $settingsService->moduleDefinitions(),
+            'appDownloadUrl' => "{$baseUrl}?{$storeQuery}",
+            'appDownloadQrUrl' => "{$baseUrl}/qr.svg?{$storeQuery}",
         ]);
     }
 }

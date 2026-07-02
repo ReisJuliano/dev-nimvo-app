@@ -5,12 +5,17 @@ class SalesRepository {
 
   final DioClient _client;
 
-  Future<Map<String, dynamic>> list({String? from, String? to}) async {
+  Future<Map<String, dynamic>> list({
+    String? from,
+    String? to,
+    int? sellerId,
+  }) async {
     final response = await _client.dio.get<Map<String, dynamic>>(
       '/sales',
       queryParameters: {
         if (from != null) 'from': from,
         if (to != null) 'to': to,
+        if (sellerId != null) 'seller_id': sellerId,
         'per_page': 30,
       },
     );
@@ -18,9 +23,14 @@ class SalesRepository {
     return response.data ?? <String, dynamic>{};
   }
 
-  Future<Map<String, dynamic>> bySeller() async {
-    final response =
-        await _client.dio.get<Map<String, dynamic>>('/sales/by-seller');
+  Future<Map<String, dynamic>> bySeller({String? from, String? to}) async {
+    final response = await _client.dio.get<Map<String, dynamic>>(
+      '/sales/by-seller',
+      queryParameters: {
+        if (from != null) 'from': from,
+        if (to != null) 'to': to,
+      },
+    );
     return response.data?['data'] as Map<String, dynamic>;
   }
 }

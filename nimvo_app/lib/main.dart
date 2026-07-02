@@ -18,7 +18,7 @@ class NimvoMobileApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Nimvo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
+      theme: AppTheme.light(),
       routerConfig: router,
     );
   }

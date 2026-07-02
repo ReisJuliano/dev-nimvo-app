@@ -26,6 +26,7 @@ class KpiCard extends StatelessWidget {
     final mutedText = featured
         ? Colors.white.withValues(alpha: 0.78)
         : AppColors.textSecondary;
+    final valueColor = featured ? Colors.white : AppColors.textPrimary;
 
     return Container(
       width: 184,
@@ -33,6 +34,7 @@ class KpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         gradient: growth != null ? AppGradients.brand : AppGradients.card,
+        border: featured ? null : Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +74,7 @@ class KpiCard extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
-                ?.copyWith(color: Colors.white),
+                ?.copyWith(color: valueColor),
           ),
         ],
       ),

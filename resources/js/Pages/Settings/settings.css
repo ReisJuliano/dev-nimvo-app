@@ -413,6 +413,37 @@
     flex-wrap: wrap;
 }
 
+.cfg-app-download {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem 1.125rem;
+    flex-wrap: wrap;
+}
+
+.cfg-app-qr {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    border: 1px solid var(--app-border);
+    background: #fff;
+    padding: 8px;
+}
+
+.cfg-app-download-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex: 1;
+    min-width: 220px;
+}
+
+.cfg-app-download-info p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--app-text-secondary);
+}
+
 .cfg-printer-chip {
     display: inline-flex;
     align-items: center;

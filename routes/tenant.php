@@ -21,6 +21,7 @@ use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
 use App\Http\Controllers\Tenant\Mobile\MobileAuthController;
 use App\Http\Controllers\Tenant\Mobile\MobileCashRegisterController;
 use App\Http\Controllers\Tenant\Mobile\MobileDashboardController;
+use App\Http\Controllers\Tenant\Mobile\MobileProductsController;
 use App\Http\Controllers\Tenant\Mobile\MobileReportsController;
 use App\Http\Controllers\Tenant\Mobile\MobileSalesController;
 use App\Http\Controllers\Tenant\Mobile\MobileStockController;
@@ -78,6 +79,8 @@ Route::prefix('mobile-api/v1')->group(function () {
         Route::get('/reports/period', [MobileReportsController::class, 'period'])->name('mobile.reports.period');
         Route::get('/reports/top-products', [MobileReportsController::class, 'topProducts'])->name('mobile.reports.top-products');
         Route::get('/reports/payment-methods', [MobileReportsController::class, 'paymentMethods'])->name('mobile.reports.payment-methods');
+        Route::get('/reports/products', [MobileReportsController::class, 'products'])->name('mobile.reports.products');
+        Route::get('/products/search', [MobileProductsController::class, 'search'])->name('mobile.products.search');
         Route::get('/stock/alerts', [MobileStockController::class, 'alerts'])->name('mobile.stock.alerts');
         Route::get('/cash-register/status', [MobileCashRegisterController::class, 'status'])->name('mobile.cash-register.status');
     });

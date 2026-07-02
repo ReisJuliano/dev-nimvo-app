@@ -44,7 +44,7 @@ function setValueByPath(object, path, value) {
     return nextObject
 }
 
-export default function SettingsIndex({ settings, businessPresets, generalOptions, moduleSections }) {
+export default function SettingsIndex({ settings, businessPresets, generalOptions, moduleSections, appDownloadUrl, appDownloadQrUrl }) {
     const { localAgentBridge } = usePage().props
     const [form, setForm] = useState(settings)
     const [saving, setSaving] = useState(false)
@@ -480,6 +480,30 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                         {localAgentsLoading ? 'Carregando agentes...' : 'Nenhum agente local cadastrado para esta loja.'}
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ─── App mobile ─── */}
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-mobile-screen-button" />
+                            App Nimvo (mobile)
+                            <p>Compartilhe o QR code com o gerente/dono da loja para instalar o app gerencial no celular.</p>
+                        </div>
+
+                        <div className="cfg-app-download">
+                            <img
+                                src={appDownloadQrUrl}
+                                alt="QR code para baixar o app Nimvo"
+                                className="cfg-app-qr"
+                            />
+                            <div className="cfg-app-download-info">
+                                <p>Escaneie o QR code com a câmera do celular ou compartilhe o link abaixo. O login é o mesmo já usado no site.</p>
+                                <a href={appDownloadUrl} target="_blank" rel="noreferrer" className="cfg-agent-button">
+                                    <i className="fa-solid fa-arrow-up-right-from-square" />
+                                    Abrir página de download
+                                </a>
                             </div>
                         </div>
                     </div>

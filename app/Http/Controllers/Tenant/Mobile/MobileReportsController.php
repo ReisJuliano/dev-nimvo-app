@@ -70,6 +70,60 @@ class MobileReportsController extends Controller
         ]));
     }
 
+    public function products(Request $request): JsonResponse
+    {
+        [$from, $to] = $this->dateRange($request->query());
+        $limit = min(max((int) $request->integer('limit', 10), 1), 50);
+        $productId = $request->integer('product_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
+
+        $query = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->where('sales.status', 'finalized')
+            ->whereBetween('sales.created_at', [$from, $to]);
+
+        if ($productId) {
+            $query->where('products.id', $productId);
+        }
+
+        if ($categoryId) {
+            $query->where('products.category_id', $categoryId);
+        }
+
+        $rows = $query
+            ->groupBy('products.id', 'products.code', 'products.name', 'categories.name')
+            ->orderByDesc(DB::raw('SUM(sale_items.total)'))
+            ->limit($limit)
+            ->get([
+                'products.id',
+                'products.code',
+                'products.name',
+                DB::raw("COALESCE(categories.name, 'Sem categoria') as category_name"),
+                DB::raw('SUM(sale_items.quantity) as qty_sold'),
+                DB::raw('SUM(sale_items.total) as revenue'),
+                DB::raw('SUM(sale_items.profit) as profit'),
+            ])
+            ->map(fn ($row) => [
+                'id' => $row->id,
+                'code' => $row->code ?: '-',
+                'name' => $row->name,
+                'category_name' => $row->category_name,
+                'qty_sold' => (float) $row->qty_sold,
+                'revenue' => (float) $row->revenue,
+                'profit' => (float) $row->profit,
+                'margin' => (float) $row->revenue > 0 ? ((float) $row->profit / (float) $row->revenue) * 100 : 0.0,
+            ])
+            ->values()
+            ->all();
+
+        return response()->json($this->success([
+            'period' => $this->periodPayload($from, $to),
+            'items' => $rows,
+        ]));
+    }
+
     protected function salesSummary(Carbon $from, Carbon $to): object
     {
         return Sale::query()

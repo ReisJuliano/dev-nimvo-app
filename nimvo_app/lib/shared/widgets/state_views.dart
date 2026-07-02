@@ -14,12 +14,12 @@ class LoadingList extends StatelessWidget {
       itemCount: count,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => Shimmer.fromColors(
-        baseColor: Colors.white10,
-        highlightColor: Colors.white24,
+        baseColor: const Color(0xFFE2E8F0),
+        highlightColor: const Color(0xFFF8FAFC),
         child: Container(
           height: 92,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(16),
           ),
         ),

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Central\AdminPageController;
 use App\Http\Controllers\Central\Api\LocalAgentApiController;
+use App\Http\Controllers\Central\AppDownloadController;
 use App\Http\Controllers\Central\Auth\LoginController;
 use App\Http\Middleware\Central\AuthenticateLocalAgent;
 use App\Http\Controllers\Central\TenantManagementController;
@@ -10,6 +11,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect()->route('central.admin.home');
 })->name('central.home');
+
+// Public app download landing page - reachable without login so a QR code
+// scanned from any device can open it directly.
+Route::get('/app/baixar', [AppDownloadController::class, 'show'])->name('app.download.page');
+Route::get('/app/baixar.apk', [AppDownloadController::class, 'download'])->name('app.download.apk');
+Route::get('/app/baixar/qr.svg', [AppDownloadController::class, 'qr'])->name('app.download.qr');
 
 Route::prefix('admin')->name('central.admin.')->group(function () {
     Route::get('/', function () {

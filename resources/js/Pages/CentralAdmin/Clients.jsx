@@ -1079,6 +1079,15 @@ function TenantsTable({ tenants, onCreate, onEdit, onManageFiscal, onManageLicen
                                                 <i className="fa-solid fa-desktop" />
                                                 <span>Agente</span>
                                             </button>
+                                            <a
+                                                className="central-admin-secondary-button"
+                                                href={`/app/baixar?store=${encodeURIComponent(tenant.domain || tenant.id)}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                <i className="fa-solid fa-qrcode" />
+                                                <span>App</span>
+                                            </a>
                                             <button type="button" className="central-admin-secondary-button" onClick={() => onManageLicense(tenant)}>
                                                 <i className="fa-solid fa-file-invoice-dollar" />
                                                 <span>Licença</span>
