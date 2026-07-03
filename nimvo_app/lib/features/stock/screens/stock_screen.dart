@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
@@ -417,33 +417,21 @@ class _BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
-  late final MobileScannerController _scannerController;
   bool _handled = false;
+  String? _cameraError;
 
-  @override
-  void initState() {
-    super.initState();
-    _scannerController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
-      facing: CameraFacing.back,
-      formats: const [
-        BarcodeFormat.ean13,
-        BarcodeFormat.ean8,
-        BarcodeFormat.upcA,
-        BarcodeFormat.upcE,
-        BarcodeFormat.code128,
-        BarcodeFormat.code39,
-        BarcodeFormat.code93,
-        BarcodeFormat.codabar,
-        BarcodeFormat.itf,
-      ],
-    );
-  }
+  void _onScan(Code code) {
+    if (_handled) {
+      return;
+    }
 
-  @override
-  void dispose() {
-    unawaited(_scannerController.dispose());
-    super.dispose();
+    final value = code.text?.trim();
+    if (!code.isValid || value == null || value.isEmpty) {
+      return;
+    }
+
+    _handled = true;
+    Navigator.of(context).pop(value);
   }
 
   @override
@@ -453,53 +441,40 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
       appBar: AppBar(title: const Text('Ler codigo')),
       body: Stack(
         children: [
-          MobileScanner(
-            controller: _scannerController,
-            placeholderBuilder: (context, child) => const ColoredBox(
-              color: Colors.black,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            errorBuilder: (context, error, _) =>
-                _ScannerErrorView(error: error),
-            onDetect: (capture) {
-              if (_handled) {
-                return;
+          ReaderWidget(
+            codeFormat: Format.linearCodes,
+            cropPercent: 0,
+            tryHarder: true,
+            tryInverted: true,
+            tryDownscale: true,
+            onScan: _onScan,
+            onControllerCreated: (controller, error) {
+              if (error != null && mounted) {
+                setState(() => _cameraError = error.toString());
               }
-
-              final value = capture.barcodes.firstOrNull?.rawValue?.trim();
-              if (value == null || value.isEmpty) {
-                return;
-              }
-
-              _handled = true;
-              Navigator.of(context).pop(value);
             },
           ),
-          IgnorePointer(
-            child: Center(
-              child: Container(
-                width: 240,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2),
-                  borderRadius: BorderRadius.circular(14),
+          if (_cameraError == null)
+            Align(
+              alignment: Alignment.topCenter,
+              child: SafeArea(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.58),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Aponte a camera para o codigo de barras do produto.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: Colors.black.withValues(alpha: 0.58),
-              child: const Text(
-                'Aponte a camera para o codigo de barras do produto.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ),
+          if (_cameraError != null) _ScannerErrorView(message: _cameraError!),
         ],
       ),
     );
@@ -507,13 +482,13 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
 }
 
 class _ScannerErrorView extends StatelessWidget {
-  const _ScannerErrorView({required this.error});
+  const _ScannerErrorView({required this.message});
 
-  final MobileScannerException error;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    final detail = error.errorDetails?.message ?? error.errorCode.name;
+    final detail = message;
 
     return ColoredBox(
       color: Colors.black,
