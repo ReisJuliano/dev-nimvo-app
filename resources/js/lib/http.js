@@ -30,6 +30,7 @@ function buildApiError(error) {
     normalizedError.status = error?.response?.status ?? null
     normalizedError.isNetworkError = !error?.response
     normalizedError.errors = errors
+    normalizedError.data = error?.response?.data ?? null
 
     return normalizedError
 }

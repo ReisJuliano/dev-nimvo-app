@@ -39,8 +39,21 @@ class ProductsApiController extends Controller
 
     public function destroy(Product $product): JsonResponse
     {
-        $product->update(['active' => false]);
+        $hasStock = (float) $product->stock_quantity > 0;
+        $hasSaleHistory = $product->saleItems()->exists() || $product->conditionalSaleItems()->exists();
 
-        return response()->json(['message' => 'Produto desativado com sucesso.']);
+        if ($hasStock || $hasSaleHistory) {
+            return response()->json([
+                'message' => $hasSaleHistory
+                    ? 'Este produto já teve vendas registradas e não pode ser apagado. Inative-o para deixar de vendê-lo.'
+                    : 'Este produto possui estoque em mãos e não pode ser apagado. Inative-o para deixar de vendê-lo.',
+                'reason' => $hasSaleHistory ? 'has_sales' : 'has_stock',
+                'can_deactivate' => true,
+            ], 422);
+        }
+
+        $product->delete();
+
+        return response()->json(['message' => 'Produto apagado com sucesso.']);
     }
 }

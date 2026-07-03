@@ -142,6 +142,8 @@ export default function ProductFormModal({
     onClose,
     onSubmit,
     loading,
+    onDelete,
+    deleting = false,
     onQuickCreateCategory,
     onQuickCreateSupplier,
 }) {
@@ -677,6 +679,17 @@ export default function ProductFormModal({
                             <span className="products-editor-submit-hint">Obrigatório: nome e preço de venda.</span>
                         )}
                         <div className="products-editor-action-buttons">
+                            {product && onDelete ? (
+                                <button
+                                    className="products-danger-button"
+                                    type="button"
+                                    onClick={() => onDelete(product)}
+                                    disabled={loading || deleting}
+                                >
+                                    <i className="fa-solid fa-trash-can" />
+                                    {deleting ? 'Apagando...' : 'Apagar'}
+                                </button>
+                            ) : null}
                             <button className="ui-button-ghost" type="button" onClick={requestClose}>Cancelar</button>
                             <button className="products-primary-button" type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar produto'}</button>
                         </div>

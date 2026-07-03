@@ -31,6 +31,17 @@ class ProductService
             ->all();
     }
 
+    public function fullCatalog(): array
+    {
+        return Product::query()
+            ->with(['category:id,name', 'supplier:id,name'])
+            ->orderBy('name')
+            ->get($this->productSelectColumns())
+            ->map(fn (Product $product) => $this->mapCatalogProduct($product))
+            ->values()
+            ->all();
+    }
+
     public function save(Product $product, array $data): Product
     {
         if (blank($data['code'] ?? null)) {

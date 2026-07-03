@@ -18,7 +18,7 @@ class ProductsPageController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         return Inertia::render('Products/Index', [
-            'products' => $applied ? $productService->activeCatalog() : [],
+            'products' => $applied ? $productService->fullCatalog() : [],
             'categories' => Category::query()
                 ->where('active', true)
                 ->orderBy('name')

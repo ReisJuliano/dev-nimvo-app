@@ -1,8 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
-import DataTable from '@/Components/UI/DataTable'
-import PageHeader from '@/Components/UI/PageHeader'
-import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
 import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
@@ -100,10 +97,10 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     const [supplierOptions, setSupplierOptions] = useState(suppliers || [])
     const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeFilter, setActiveFilter] = useState('all')
-    const [selectedProductId, setSelectedProductId] = useState((products || [])[0]?.id ?? null)
     const [modalOpen, setModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
     const deferredSearch = useDeferredValue(searchControl.value)
     const normalizedSearch = normalizeTextSearch(deferredSearch)
 
@@ -195,16 +192,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
         }
     }, [categories, localAgentBridge, products, suppliers, tenantId])
 
-    useEffect(() => {
-        setSelectedProductId((current) => {
-            if (current && collectionItems.some((product) => String(product.id) === String(current))) {
-                return current
-            }
-
-            return collectionItems[0]?.id ?? null
-        })
-    }, [collectionItems])
-
     const filteredProducts = useMemo(() => {
         return visibleCollectionItems
             .filter((product) => {
@@ -228,13 +215,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
             })
     }, [activeFilter, normalizedSearch, visibleCollectionItems])
 
-    const selectedRow = useMemo(
-        () => filteredProducts.find((product) => String(product.id) === String(selectedProductId))
-            || visibleCollectionItems.find((product) => String(product.id) === String(selectedProductId))
-            || null,
-        [filteredProducts, selectedProductId, visibleCollectionItems],
-    )
-
     const filterCounts = useMemo(() => ({
         all: visibleCollectionItems.length,
         active: visibleCollectionItems.filter((product) => product.active).length,
@@ -243,13 +223,11 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     }), [visibleCollectionItems])
 
     function handleCreate() {
-        setSelectedProductId(null)
         setSelectedProduct(null)
         setModalOpen(true)
     }
 
     function handleEdit(product) {
-        setSelectedProductId(product.id)
         setSelectedProduct(product)
         setModalOpen(true)
     }
@@ -282,9 +260,9 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     async function handleDelete(product) {
         const confirmed = await confirmPopup({
             type: 'warning',
-            title: 'Desativar produto',
-            message: `Deseja desativar o produto "${product.name}"?`,
-            confirmLabel: 'Desativar',
+            title: 'Apagar produto',
+            message: `Deseja apagar o produto "${product.name}"? Essa ação não pode ser desfeita.`,
+            confirmLabel: 'Apagar',
             cancelLabel: 'Cancelar',
         })
 
@@ -292,23 +270,24 @@ export default function ProductsIndex({ products, categories, suppliers, filters
             return
         }
 
+        setDeleting(true)
+
         try {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
                 removeOfflineProduct(tenantId, product.id)
                 showPopup({
                     type: 'warning',
-                    title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronizaç?.`,
+                    title: 'Produto removido offline',
+                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronização.`,
                 })
+                setModalOpen(false)
+                setSelectedProduct(null)
                 return
             }
 
             const response = await apiRequest(`/api/products/${resolveOfflineEntityId(tenantId, 'products', product.id)}`, { method: 'delete' })
             const nextItems = collectionItems.filter((entry) => entry.id !== product.id)
             setCollectionItems(nextItems)
-            if (String(selectedProductId) === String(product.id)) {
-                setSelectedProductId(nextItems[0]?.id ?? null)
-            }
             seedOfflineWorkspace(tenantId, {
                 products: nextItems,
                 categories: categoryOptions,
@@ -316,20 +295,38 @@ export default function ProductsIndex({ products, categories, suppliers, filters
             })
             showPopup({
                 type: 'success',
-                title: 'Produto desativado',
-                message: response.message || `O produto "${product.name}" foi desativado com sucesso.`,
+                title: 'Produto apagado',
+                message: response.message || `O produto "${product.name}" foi apagado com sucesso.`,
             })
+            setModalOpen(false)
+            setSelectedProduct(null)
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (error.status === 422 && error.data?.can_deactivate) {
+                const shouldDeactivate = await confirmPopup({
+                    type: 'warning',
+                    title: 'Não é possível apagar',
+                    message: error.message,
+                    confirmLabel: 'Inativar produto',
+                    cancelLabel: 'Cancelar',
+                })
+
+                if (shouldDeactivate) {
+                    await handleSubmit({ ...product, active: false })
+                }
+            } else if (tenantId && isNetworkApiError(error)) {
                 removeOfflineProduct(tenantId, product.id)
                 showPopup({
                     type: 'warning',
-                    title: 'Produto salvo offline',
-                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronizaç?.`,
+                    title: 'Produto removido offline',
+                    message: `O produto "${product.name}" foi removido da operação local e entrará na fila de sincronização.`,
                 })
+                setModalOpen(false)
+                setSelectedProduct(null)
             } else {
                 showErrorPopup(error.message)
             }
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -388,7 +385,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 const normalized = normalizeProductRecord(response.product)
                 const nextItems = collectionItems.map((entry) => (entry.id === normalized.id ? normalized : entry))
                 setCollectionItems(nextItems)
-                setSelectedProductId(normalized.id)
                 seedOfflineWorkspace(tenantId, {
                     products: nextItems,
                     categories: categoryOptions,
@@ -399,7 +395,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 const normalized = normalizeProductRecord(response.product)
                 const nextItems = [normalized, ...collectionItems]
                 setCollectionItems(nextItems)
-                setSelectedProductId(normalized.id)
                 seedOfflineWorkspace(tenantId, {
                     products: nextItems,
                     categories: categoryOptions,
@@ -494,14 +489,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
         [visibleCollectionItems],
     )
 
-    const detailProduct = selectedRow
-    const detailInitial = detailProduct ? (detailProduct.name || '?').slice(0, 2).toUpperCase() : ''
-    const detailStatus = detailProduct ? getProductStatusMeta(detailProduct) : null
-    const detailLow = detailProduct ? isLowStock(detailProduct) : false
-    const detailMargin = detailProduct && Number(detailProduct.sale_price || 0) > 0
-        ? ((Number(detailProduct.sale_price || 0) - Number(detailProduct.cost_price || 0)) / Number(detailProduct.sale_price)) * 100
-        : 0
-
     const filtersList = [
         { key: 'all', label: 'Todos', count: hasAppliedFilters ? filterCounts.all : visibleCollectionItems.length },
         { key: 'active', label: 'Ativos', count: filterCounts.active },
@@ -541,208 +528,95 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                     </button>
                 </div>
 
-                {/* Split layout */}
-                <div className="prd-split">
+                {/* Busca — largura total */}
+                <div className="prd-search-row prd-search-row--full">
+                    <label className="prd-search-wrap">
+                        <i className="fa-solid fa-magnifying-glass" />
+                        <input
+                            className="prd-search-input"
+                            placeholder="Nome, código ou EAN..."
+                            value={searchControl.draftValue}
+                            onChange={(e) => searchControl.setDraftValue(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
+                        />
+                    </label>
+                    <button type="button" className="prd-filter-btn" onClick={handleApplyFilters}>Filtrar</button>
+                    <button type="button" className="prd-reset-btn" onClick={handleResetFilters}>
+                        <i className="fa-solid fa-xmark" />
+                    </button>
+                </div>
 
-                    {/* Painel esquerdo — lista */}
-                    <div className="prd-list-panel">
+                {/* Lista de produtos */}
+                <div className="prd-list-panel">
 
-                        {/* Busca */}
-                        <div className="prd-search-row">
-                            <label className="prd-search-wrap">
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    className="prd-search-input"
-                                    placeholder="Nome, código ou EAN..."
-                                    value={searchControl.draftValue}
-                                    onChange={(e) => searchControl.setDraftValue(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
-                                />
-                            </label>
-                            <button type="button" className="prd-filter-btn" onClick={handleApplyFilters}>Filtrar</button>
-                            <button type="button" className="prd-reset-btn" onClick={handleResetFilters}>
-                                <i className="fa-solid fa-xmark" />
+                    {/* Tabs de status */}
+                    <div className="prd-filter-tabs">
+                        {filtersList.map((f) => (
+                            <button
+                                key={f.key}
+                                type="button"
+                                className={`prd-filter-tab ${activeFilter === f.key ? 'active' : ''}`}
+                                onClick={() => setActiveFilter(f.key)}
+                            >
+                                {f.label}
+                                {f.count != null ? <span>{f.count}</span> : null}
                             </button>
-                        </div>
-
-                        {/* Tabs de status */}
-                        <div className="prd-filter-tabs">
-                            {filtersList.map((f) => (
-                                <button
-                                    key={f.key}
-                                    type="button"
-                                    className={`prd-filter-tab ${activeFilter === f.key ? 'active' : ''}`}
-                                    onClick={() => setActiveFilter(f.key)}
-                                >
-                                    {f.label}
-                                    {f.count != null ? <span>{f.count}</span> : null}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Lista de produtos */}
-                        {filteredProducts.length > 0 ? (
-                            <div className="prd-list">
-                                {filteredProducts.map((product) => {
-                                    const low = isLowStock(product)
-                                    const initial = (product.name || '?').slice(0, 2).toUpperCase()
-                                    const isActive = String(selectedProductId) === String(product.id)
-
-                                    return (
-                                        <button
-                                            key={product.id}
-                                            type="button"
-                                            className={`prd-list-row ${isActive ? 'active' : ''} ${!product.active ? 'inactive' : ''}`}
-                                            onClick={() => setSelectedProductId(product.id)}
-                                        >
-                                            <div className={`prd-list-avatar ${low ? 'warn' : ''} ${!product.active ? 'muted' : ''}`}>
-                                                {initial}
-                                            </div>
-                                            <div className="prd-list-info">
-                                                <strong>{product.name}</strong>
-                                                <small>{product.category_name || 'Sem categoria'}</small>
-                                            </div>
-                                            <div className="prd-list-right">
-                                                <span className="prd-list-price">{formatMoney(product.sale_price || 0)}</span>
-                                                {low ? (
-                                                    <span className="prd-list-stock-warn">
-                                                        <i className="fa-solid fa-triangle-exclamation" />
-                                                        {formatNumber(product.stock_quantity || 0)}
-                                                    </span>
-                                                ) : (
-                                                    <span className="prd-list-stock">
-                                                        {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <div className="prd-list-empty">
-                                <i className="fa-solid fa-box-open" />
-                                <strong>{hasAppliedFilters ? 'Nenhum produto encontrado' : 'Filtre para ver produtos'}</strong>
-                                <small>{hasAppliedFilters ? 'Tente outro filtro ou clique em Limpar.' : 'Use a busca acima ou clique em Filtrar.'}</small>
-                            </div>
-                        )}
+                        ))}
                     </div>
 
-                    {/* Painel direito — detalhe */}
-                    <div className="prd-detail-panel">
-                        {detailProduct ? (
-                            <>
-                                {/* Header do produto */}
-                                <div className="prd-detail-head">
-                                    <div className={`prd-detail-avatar ${detailLow ? 'warn' : ''} ${!detailProduct.active ? 'muted' : ''}`}>
-                                        {detailInitial}
-                                    </div>
-                                    <div className="prd-detail-head-info">
-                                        <h2>{detailProduct.name}</h2>
-                                        <span>{detailProduct.category_name || 'Sem categoria'}</span>
-                                    </div>
-                                    <span className={`prd-status-chip prd-status-chip--${detailStatus?.tone}`}>
-                                        {detailStatus?.label}
-                                    </span>
-                                </div>
+                    {filteredProducts.length > 0 ? (
+                        <div className="prd-list">
+                            {filteredProducts.map((product) => {
+                                const low = isLowStock(product)
+                                const initial = (product.name || '?').slice(0, 2).toUpperCase()
+                                const status = getProductStatusMeta(product)
 
-                                {/* Seção: Preços */}
-                                <div className="prd-detail-section">
-                                    <div className="prd-detail-section-title">
-                                        <i className="fa-solid fa-tag" />
-                                        Preços
-                                    </div>
-                                    <div className="prd-detail-kpis">
-                                        <div className="prd-detail-kpi prd-detail-kpi--primary">
-                                            <span>Preço de venda</span>
-                                            <strong>{formatMoney(detailProduct.sale_price || 0)}</strong>
+                                return (
+                                    <button
+                                        key={product.id}
+                                        type="button"
+                                        className={`prd-list-row ${!product.active ? 'inactive' : ''}`}
+                                        onClick={() => handleEdit(product)}
+                                    >
+                                        <div className={`prd-list-avatar ${low ? 'warn' : ''} ${!product.active ? 'muted' : ''}`}>
+                                            {initial}
                                         </div>
-                                        <div className="prd-detail-kpi">
-                                            <span>Custo</span>
-                                            <strong>{formatMoney(detailProduct.cost_price || 0)}</strong>
+                                        <div className="prd-list-info">
+                                            <strong>{product.name}</strong>
+                                            <small>
+                                                {[product.code, product.barcode, product.category_name || 'Sem categoria']
+                                                    .filter(Boolean)
+                                                    .join(' · ')}
+                                            </small>
                                         </div>
-                                        <div className="prd-detail-kpi">
-                                            <span>Margem</span>
-                                            <strong>{formatNumber(detailMargin)}%</strong>
+                                        <span className={`prd-status-chip prd-status-chip--${status.tone}`}>
+                                            {status.label}
+                                        </span>
+                                        <div className="prd-list-right">
+                                            <span className="prd-list-price">{formatMoney(product.sale_price || 0)}</span>
+                                            {low ? (
+                                                <span className="prd-list-stock-warn">
+                                                    <i className="fa-solid fa-triangle-exclamation" />
+                                                    {formatNumber(product.stock_quantity || 0)}
+                                                </span>
+                                            ) : (
+                                                <span className="prd-list-stock">
+                                                    {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
+                                                </span>
+                                            )}
                                         </div>
-                                    </div>
-                                </div>
-
-                                {/* Seção: Estoque */}
-                                <div className="prd-detail-section">
-                                    <div className="prd-detail-section-title">
-                                        <i className="fa-solid fa-box" />
-                                        Estoque
-                                    </div>
-                                    <div className="prd-detail-kpis">
-                                        <div className={`prd-detail-kpi ${detailLow ? 'prd-detail-kpi--warn' : 'prd-detail-kpi--primary'}`}>
-                                            <span>Em estoque</span>
-                                            <strong>{formatNumber(detailProduct.stock_quantity || 0)} {detailProduct.unit || 'UN'}</strong>
-                                        </div>
-                                        <div className="prd-detail-kpi">
-                                            <span>Estoque mínimo</span>
-                                            <strong>{formatNumber(detailProduct.min_stock || 0)} {detailProduct.unit || 'UN'}</strong>
-                                        </div>
-                                    </div>
-                                    {detailLow ? (
-                                        <div className="prd-detail-alert">
-                                            <i className="fa-solid fa-triangle-exclamation" />
-                                            Estoque abaixo do mínimo — repor o quanto antes.
-                                        </div>
-                                    ) : null}
-                                </div>
-
-                                {/* Seção: Identificação */}
-                                <div className="prd-detail-section">
-                                    <div className="prd-detail-section-title">
-                                        <i className="fa-solid fa-fingerprint" />
-                                        Identificação
-                                    </div>
-                                    <div className="prd-detail-fields">
-                                        <div className="prd-detail-field">
-                                            <span>Fornecedor</span>
-                                            <strong>{detailProduct.supplier_name || '—'}</strong>
-                                        </div>
-                                        <div className="prd-detail-field">
-                                            <span>Código interno</span>
-                                            <strong>{detailProduct.code || '—'}</strong>
-                                        </div>
-                                        <div className="prd-detail-field">
-                                            <span>EAN / Código de barras</span>
-                                            <strong>{detailProduct.barcode || '—'}</strong>
-                                        </div>
-                                        <div className="prd-detail-field">
-                                            <span>Unidade</span>
-                                            <strong>{detailProduct.unit || 'UN'}</strong>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Ações */}
-                                <div className="prd-detail-actions">
-                                    <button type="button" className="prd-detail-btn-edit" onClick={() => handleEdit(detailProduct)}>
-                                        <i className="fa-solid fa-pen" />
-                                        Editar produto
+                                        <i className="fa-solid fa-chevron-right prd-list-chevron" />
                                     </button>
-                                    <button type="button" className="prd-detail-btn-delete" onClick={() => handleDelete(detailProduct)}>
-                                        <i className="fa-solid fa-trash-can" />
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="prd-detail-empty">
-                                <div className="prd-detail-empty-icon">
-                                    <i className="fa-solid fa-boxes-stacked" />
-                                </div>
-                                <strong>Selecione um produto</strong>
-                                <p>Clique em qualquer item da lista para ver os detalhes.</p>
-                                <button type="button" className="prd-topbar-cta" onClick={handleCreate}>
-                                    <i className="fa-solid fa-plus" />
-                                    Cadastrar produto
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                                )
+                            })}
+                        </div>
+                    ) : (
+                        <div className="prd-list-empty">
+                            <i className="fa-solid fa-box-open" />
+                            <strong>{hasAppliedFilters ? 'Nenhum produto encontrado' : 'Filtre para ver produtos'}</strong>
+                            <small>{hasAppliedFilters ? 'Tente outro filtro ou clique em Limpar.' : 'Use a busca acima ou clique em Filtrar.'}</small>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -754,6 +628,8 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
                 loading={saving}
+                onDelete={handleDelete}
+                deleting={deleting}
                 onQuickCreateCategory={handleQuickCreateCategory}
                 onQuickCreateSupplier={handleQuickCreateSupplier}
             />
