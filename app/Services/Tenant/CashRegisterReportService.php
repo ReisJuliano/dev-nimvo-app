@@ -34,6 +34,24 @@ class CashRegisterReportService
             'total' => (float) $sale->total,
             'created_at' => $sale->created_at?->toIso8601String(),
         ])->values()->all();
+        $paymentTransactions = $sales
+            ->flatMap(fn ($sale) => $sale->payments->map(fn ($payment) => [
+                'id' => $payment->id,
+                'sale_id' => $sale->id,
+                'sale_number' => $sale->sale_number,
+                'payment_method' => $payment->payment_method,
+                'label' => PaymentMethod::label($payment->payment_method),
+                'amount' => (float) $payment->amount,
+                'details' => $payment->payment_details ?? [],
+                'created_at' => $sale->created_at?->toIso8601String(),
+            ]))
+            ->filter(fn (array $payment) => in_array($payment['payment_method'], [
+                PaymentMethod::DEBIT_CARD,
+                PaymentMethod::CREDIT_CARD,
+                PaymentMethod::CHECK,
+            ], true))
+            ->values()
+            ->all();
 
         $payments = $sales
             ->flatMap(fn ($sale) => $sale->payments)
@@ -78,6 +96,7 @@ class CashRegisterReportService
             ],
             'sales_rows' => $salesRows,
             'payments' => $payments,
+            'payment_transactions' => $paymentTransactions,
             'movements' => $movements,
             'payment_totals' => $paymentTotals,
             'total_sales' => (float) $sales->sum('total'),
@@ -175,6 +194,7 @@ class CashRegisterReportService
                 'closing_notes' => $cashRegisterData['closing_notes'] ?? $cashRegister->closing_notes,
             ],
             'payment_totals' => $snapshot['payment_totals'] ?? $paymentTotals,
+            'payment_transactions' => $snapshot['payment_transactions'] ?? [],
             'closing_breakdown' => $snapshot['closing_breakdown'] ?? $cashRegister->closing_breakdown ?? [],
             'total_difference' => $snapshot['total_difference'] ?? $this->sumClosingDifferences($snapshot['closing_breakdown'] ?? $cashRegister->closing_breakdown ?? []),
         ];
