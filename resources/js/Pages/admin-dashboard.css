@@ -9,6 +9,7 @@
     border-radius: 24px;
     box-shadow: var(--central-admin-shadow);
     padding: 1.4rem;
+    min-width: 0;
 }
 
 .central-admin-hero {
