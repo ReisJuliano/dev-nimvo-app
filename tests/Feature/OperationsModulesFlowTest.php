@@ -85,6 +85,61 @@ class OperationsModulesFlowTest extends TestCase
             'product_id' => $product->id,
             'type' => 'purchase',
         ]);
+        $this->assertDatabaseHas('payables', [
+            'purchase_id' => $response['record']['id'],
+            'supplier_id' => $supplier->id,
+            'amount' => 145.67,
+            'due_date' => '2026-04-20',
+            'barcode' => '34191790010104351004791020150008291070026000',
+        ]);
+    }
+
+    public function test_stock_inbound_entry_can_create_multiple_linked_payables(): void
+    {
+        $user = $this->makeUser();
+        $supplier = $this->makeSupplier();
+        $product = $this->makeProduct([
+            'supplier_id' => $supplier->id,
+            'stock_quantity' => 2,
+        ]);
+
+        $service = app(OperationsWorkspaceService::class);
+
+        $response = $service->store('entrada-estoque', [
+            'supplier_id' => $supplier->id,
+            'invoice_number' => 'NF-PARCELADA',
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 4,
+                    'unit_cost' => 25,
+                ],
+            ],
+            'payables' => [
+                [
+                    'amount' => 60,
+                    'due_date' => '2026-08-10',
+                    'payment_method' => 'boleto',
+                    'barcode' => '34191090086120772730871920601071000000006000',
+                ],
+                [
+                    'amount' => 40,
+                    'due_date' => '2026-09-10',
+                    'payment_method' => 'boleto',
+                    'barcode' => '34191090086120772730871920601071000000004000',
+                ],
+            ],
+        ], $user->id);
+
+        $payables = Payable::query()
+            ->where('purchase_id', $response['record']['id'])
+            ->orderBy('installment_number')
+            ->get();
+
+        $this->assertCount(2, $payables);
+        $this->assertSame([1, 2], $payables->pluck('installment_number')->all());
+        $this->assertSame([2, 2], $payables->pluck('installment_total')->all());
+        $this->assertSame(['2026-08-10', '2026-09-10'], $payables->pluck('due_date')->map->toDateString()->all());
     }
 
     public function test_received_purchase_updates_stock_and_logs_movement(): void

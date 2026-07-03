@@ -182,3 +182,8 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   `mobile_scanner` 6.0.10 apos erro nativo na linha 7.x em Android. O launcher
   Android usa o recurso `@mipmap/nimvo_launcher` para evitar cache do antigo
   `ic_launcher`/Flutter em instalacoes diretas por APK.
+- 2026-07-03: A tela tenant `resources/js/Pages/StockEntry/Entrada.jsx` passou
+  a registrar entrada de mercadoria pelo endpoint
+  `/api/operations/entrada-estoque/records`, em vez de criar entradas manuais
+  por produto e uma conta avulsa. Isso preserva `purchase_id` nos `payables` e
+  permite multiplos boletos vinculados a mesma entrada.

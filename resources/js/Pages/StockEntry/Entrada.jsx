@@ -2,14 +2,20 @@ import { Link } from '@inertiajs/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDate, formatMoney, formatNumber } from '@/lib/format'
-import { apiRequest } from '@/lib/http'
+import { apiRequest, getAmountConfirmationMessage } from '@/lib/http'
+import { confirmPopup } from '@/lib/errorPopup'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import './entrada.css'
 
 /* ─── helpers ─── */
 
 function todayValue() {
-    return new Date().toISOString().slice(0, 10)
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
 }
 
 function findByBarcode(products, raw) {
@@ -27,6 +33,77 @@ function upsertItem(items, product) {
     }
     return items.map((item, i) =>
         i === idx ? { ...item, quantity: item.quantity + 1 } : item,
+    )
+}
+
+function newBoleto() {
+    return {
+        id: `boleto-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        code: '',
+        amount: '',
+        due: '',
+        notes: '',
+    }
+}
+
+function addDays(baseDate, days) {
+    const next = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate())
+    next.setDate(next.getDate() + days)
+
+    return next
+}
+
+function toInputDate(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+}
+
+function parseBoletoDueDate(factor) {
+    const numericFactor = Number(factor)
+
+    if (!Number.isFinite(numericFactor) || numericFactor <= 0) {
+        return ''
+    }
+
+    const legacyDate = addDays(new Date(1997, 9, 7), numericFactor)
+    const resetDate = addDays(new Date(2022, 4, 29), numericFactor)
+    const tooFarFuture = new Date()
+    tooFarFuture.setFullYear(tooFarFuture.getFullYear() + 10)
+
+    return toInputDate(resetDate > tooFarFuture ? legacyDate : resetDate)
+}
+
+function parseBoletoLine(raw) {
+    const digits = String(raw || '').replace(/\D/g, '')
+
+    if (![44, 47, 48].includes(digits.length)) {
+        return null
+    }
+
+    const factor = digits.length === 44
+        ? digits.slice(5, 9)
+        : digits.slice(33, 37)
+    const amountDigits = digits.length === 44
+        ? digits.slice(9, 19)
+        : digits.slice(37, 47)
+    const amount = Number(amountDigits) / 100
+
+    return {
+        normalizedCode: digits,
+        amount: Number.isFinite(amount) && amount > 0 ? amount.toFixed(2) : '',
+        due: parseBoletoDueDate(factor),
+    }
+}
+
+function boletoHasData(boleto) {
+    return Boolean(
+        String(boleto.code || '').trim()
+        || String(boleto.due || '').trim()
+        || String(boleto.notes || '').trim()
+        || Number(boleto.amount || 0) > 0,
     )
 }
 
@@ -76,10 +153,7 @@ export default function StockEntradaPage({ payload }) {
     const [flash,         setFlash]         = useState(null)
 
     /* Etapa 3 — Boleto */
-    const [boletoCode,    setBoletoCode]    = useState('')
-    const [boletoAmount,  setBoletoAmount]  = useState('')
-    const [boletoDue,     setBoletoDue]     = useState('')
-    const [boletoNotes,   setBoletoNotes]   = useState('')
+    const [boletos,       setBoletos]       = useState(() => [newBoleto()])
 
     /* Confirmação */
     const [saving,   setSaving]   = useState(false)
@@ -92,6 +166,8 @@ export default function StockEntradaPage({ payload }) {
     const supplierName = suppliers.find((s) => String(s.id) === String(supplierId))?.name || null
     const totalQty     = items.reduce((s, i) => s + Number(i.quantity), 0)
     const totalValue   = items.reduce((s, i) => s + Number(i.quantity) * Number(i.cost || 0), 0)
+    const activeBoletos = boletos.filter(boletoHasData)
+    const totalBoletos = activeBoletos.reduce((sum, boleto) => sum + Number(boleto.amount || 0), 0)
 
     /* Foco no scan sempre que na etapa 2 */
     const refocus = useCallback(() => {
@@ -157,69 +233,135 @@ export default function StockEntradaPage({ payload }) {
         refocus()
     }
 
-    async function handleConfirm() {
+    function updateBoleto(idx, field, value) {
+        setBoletos((prev) => prev.map((boleto, i) => {
+            if (i !== idx) return boleto
+
+            if (field !== 'code') {
+                return { ...boleto, [field]: value }
+            }
+
+            const parsed = parseBoletoLine(value)
+
+            return {
+                ...boleto,
+                code: parsed?.normalizedCode || value,
+                amount: parsed?.amount || boleto.amount,
+                due: parsed?.due || boleto.due,
+            }
+        }))
+    }
+
+    function addBoleto() {
+        setBoletos((prev) => [...prev, newBoleto()])
+    }
+
+    function removeBoleto(idx) {
+        setBoletos((prev) => {
+            const next = prev.filter((_, i) => i !== idx)
+
+            return next.length ? next : [newBoleto()]
+        })
+    }
+
+    function buildPayables() {
+        const payableBoletos = activeBoletos.filter((boleto) => Number(boleto.amount || 0) > 0)
+        const total = Math.max(1, payableBoletos.length)
+
+        return payableBoletos.map((boleto, index) => ({
+            description: reference
+                ? `Entrada de mercadoria - ${reference}`
+                : `Entrada de mercadoria${supplierName ? ` - ${supplierName}` : ''}`,
+            amount: Number(boleto.amount),
+            due_date: boleto.due || null,
+            payment_method: boleto.code ? 'boleto' : 'cash',
+            barcode: boleto.code || null,
+            installment_label: total > 1 ? `Parcela ${index + 1}/${total}` : 'Parcela unica',
+            installment_number: index + 1,
+            installment_total: total,
+            recurrence: 'once',
+            notes: boleto.notes || null,
+        }))
+    }
+
+    async function confirmZeroAmountBoletos() {
+        const zeroAmountBoletos = activeBoletos.filter((boleto) => Number(boleto.amount || 0) <= 0)
+
+        if (!zeroAmountBoletos.length) {
+            return true
+        }
+
+        return confirmPopup({
+            type: 'warning',
+            title: 'Boleto sem valor',
+            message: 'Existe boleto com codigo, vencimento ou observacao sem valor informado. Ele sera salvo apenas na entrada e nao vai gerar conta a pagar. Continuar?',
+            confirmLabel: 'Continuar',
+            cancelLabel: 'Revisar boleto',
+        })
+    }
+
+    async function handleConfirm(confirmAmountMismatch = false) {
+        const canContinueWithZeroAmount = await confirmZeroAmountBoletos()
+
+        if (!canContinueWithZeroAmount) {
+            setStep(3)
+            return
+        }
+
         setSaving(true)
-        const hasBoleto = Boolean(boletoAmount && Number(boletoAmount) > 0)
-        const totalSteps = items.length + (hasBoleto ? 1 : 0)
-        setProgress({ done: 0, total: totalSteps })
-        let errors = 0
+        setProgress({ done: 0, total: 1 })
 
         const entryNotes = [
-            reference      ? `Ref: ${reference}`             : null,
-            supplierName   ? `Fornecedor: ${supplierName}`   : null,
-            boletoNotes    || null,
+            reference ? `Ref: ${reference}` : null,
+            supplierName ? `Fornecedor: ${supplierName}` : null,
+            ...activeBoletos.map((boleto, index) => boleto.notes ? `Boleto ${index + 1}: ${boleto.notes}` : null),
         ].filter(Boolean).join(' | ') || null
 
-        // 1. Registrar estoque de cada produto
-        let lastError = null
-        for (let i = 0; i < items.length; i++) {
-            const { product, quantity, cost } = items[i]
-            try {
-                await apiRequest('/api/stock/quick-receive', {
-                    method: 'post',
-                    data: {
+        try {
+            await apiRequest('/api/operations/entrada-estoque/records', {
+                method: 'post',
+                data: {
+                    supplier_id: supplierId ? Number(supplierId) : null,
+                    invoice_number: reference || null,
+                    received_at: entryDate || null,
+                    billing_barcode: activeBoletos[0]?.code || null,
+                    billing_amount: totalBoletos > 0 ? totalBoletos : null,
+                    billing_due_date: activeBoletos[0]?.due || null,
+                    notes: entryNotes,
+                    items: items.map(({ product, quantity, cost }) => ({
                         product_id: product.id,
                         quantity: Number(quantity),
-                        cost_price: Number(cost) > 0 ? Number(cost) : null,
-                        notes: entryNotes,
-                    },
-                })
-            } catch (err) {
-                errors++
-                lastError = err?.message || 'Erro ao salvar produto'
-            }
-            setProgress({ done: i + 1, total: totalSteps })
-        }
+                        unit_cost: Number(cost || 0),
+                    })),
+                    payables: buildPayables(),
+                    confirm_amount_mismatch: confirmAmountMismatch,
+                },
+            })
 
-        // 2. Criar conta a pagar se boleto preenchido
-        if (hasBoleto && errors === 0) {
-            try {
-                await apiRequest('/api/operations/contas-a-pagar/records', {
-                    method: 'post',
-                    data: {
-                        description: reference
-                            ? `Entrada de mercadoria — ${reference}`
-                            : `Entrada de mercadoria${supplierName ? ` — ${supplierName}` : ''}`,
-                        supplier_id: supplierId ? Number(supplierId) : null,
-                        category: 'supplier',
-                        payment_method: 'boleto',
-                        amount: Number(boletoAmount),
-                        due_date: boletoDue || null,
-                        barcode: boletoCode || null,
-                        notes: entryNotes,
-                        status: 'open',
-                    },
-                })
-            } catch { errors++ }
-            setProgress({ done: totalSteps, total: totalSteps })
-        }
-
-        setSaving(false)
-        setProgress(null)
-        if (errors === 0) {
+            setProgress({ done: 1, total: 1 })
             setDone(true)
-        } else {
-            showFlash('err', lastError || `${errors} item(ns) com erro ao salvar.`)
+        } catch (error) {
+            const confirmationMessage = !confirmAmountMismatch ? getAmountConfirmationMessage(error) : null
+
+            if (confirmationMessage) {
+                const confirmed = await confirmPopup({
+                    type: 'warning',
+                    title: 'Valor fora do padrao',
+                    message: confirmationMessage,
+                    confirmLabel: 'Confirmar mesmo assim',
+                    cancelLabel: 'Revisar valor',
+                })
+
+                if (confirmed) {
+                    await handleConfirm(true)
+                    return
+                }
+            } else {
+                showFlash('err', error?.message || 'Erro ao registrar entrada.')
+            }
+        } finally {
+            setSaving(false)
+            setProgress(null)
         }
     }
 
@@ -231,10 +373,7 @@ export default function StockEntradaPage({ payload }) {
         setItems([])
         setScanValue('')
         setTextSearch('')
-        setBoletoCode('')
-        setBoletoAmount('')
-        setBoletoDue('')
-        setBoletoNotes('')
+        setBoletos([newBoleto()])
         setDone(false)
         setFlash(null)
     }
@@ -518,8 +657,8 @@ export default function StockEntradaPage({ payload }) {
                                 <label>Código de barras do boleto</label>
                                 <input
                                     className="ui-input"
-                                    value={boletoCode}
-                                    onChange={(e) => setBoletoCode(e.target.value)}
+                                    value={boletos[0]?.code || ''}
+                                    onChange={(e) => updateBoleto(0, 'code', e.target.value)}
                                     placeholder="Linha digitável"
                                     autoFocus
                                 />
@@ -532,8 +671,8 @@ export default function StockEntradaPage({ payload }) {
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={boletoAmount}
-                                    onChange={(e) => setBoletoAmount(e.target.value)}
+                                    value={boletos[0]?.amount || ''}
+                                    onChange={(e) => updateBoleto(0, 'amount', e.target.value)}
                                     placeholder="R$ 0,00"
                                 />
                             </div>
@@ -543,8 +682,8 @@ export default function StockEntradaPage({ payload }) {
                                 <input
                                     className="ui-input"
                                     type="date"
-                                    value={boletoDue}
-                                    onChange={(e) => setBoletoDue(e.target.value)}
+                                    value={boletos[0]?.due || ''}
+                                    onChange={(e) => updateBoleto(0, 'due', e.target.value)}
                                 />
                             </div>
 
@@ -553,11 +692,79 @@ export default function StockEntradaPage({ payload }) {
                                 <textarea
                                     className="ui-textarea"
                                     rows="2"
-                                    value={boletoNotes}
-                                    onChange={(e) => setBoletoNotes(e.target.value)}
+                                    value={boletos[0]?.notes || ''}
+                                    onChange={(e) => updateBoleto(0, 'notes', e.target.value)}
                                     placeholder="Informações adicionais..."
                                 />
                             </div>
+                        </div>
+
+                        {boletos.slice(1).map((boleto, offset) => {
+                            const boletoIndex = offset + 1
+
+                            return (
+                                <div className="ent-boleto-extra" key={boleto.id}>
+                                    <div className="ent-boleto-extra-head">
+                                        <strong>Boleto {boletoIndex + 1}</strong>
+                                        <button type="button" className="ent-remove-btn" onClick={() => removeBoleto(boletoIndex)}>
+                                            <i className="fa-solid fa-xmark" />
+                                        </button>
+                                    </div>
+
+                                    <div className="ent-form-grid">
+                                        <div className="ent-field ent-field--full">
+                                            <label>Codigo de barras do boleto</label>
+                                            <input
+                                                className="ui-input"
+                                                value={boleto.code}
+                                                onChange={(e) => updateBoleto(boletoIndex, 'code', e.target.value)}
+                                                placeholder="Linha digitavel"
+                                            />
+                                        </div>
+
+                                        <div className="ent-field">
+                                            <label>Valor do boleto</label>
+                                            <input
+                                                className="ui-input"
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={boleto.amount}
+                                                onChange={(e) => updateBoleto(boletoIndex, 'amount', e.target.value)}
+                                                placeholder="R$ 0,00"
+                                            />
+                                        </div>
+
+                                        <div className="ent-field">
+                                            <label>Vencimento</label>
+                                            <input
+                                                className="ui-input"
+                                                type="date"
+                                                value={boleto.due}
+                                                onChange={(e) => updateBoleto(boletoIndex, 'due', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="ent-field ent-field--full">
+                                            <label>Observacao</label>
+                                            <textarea
+                                                className="ui-textarea"
+                                                rows="2"
+                                                value={boleto.notes}
+                                                onChange={(e) => updateBoleto(boletoIndex, 'notes', e.target.value)}
+                                                placeholder="Informacoes adicionais..."
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+
+                        <div className="ent-boleto-actions">
+                            <button type="button" className="ent-add-boleto-btn" onClick={addBoleto}>
+                                <i className="fa-solid fa-plus" />
+                                Adicionar boleto
+                            </button>
                         </div>
 
                         <div className="ent-step-nav">
@@ -565,7 +772,7 @@ export default function StockEntradaPage({ payload }) {
                                 <i className="fa-solid fa-arrow-left" /> Voltar
                             </button>
                             <button type="button" className="ent-confirm-btn" onClick={() => setStep(4)}>
-                                {boletoCode || boletoAmount ? 'Avançar — Confirmar' : 'Pular — Confirmar'}
+                                {activeBoletos.length ? 'Avancar - Confirmar' : 'Pular - Confirmar'}
                                 <i className="fa-solid fa-arrow-right" />
                             </button>
                         </div>
@@ -631,32 +838,38 @@ export default function StockEntradaPage({ payload }) {
                         </div>
 
                         {/* Resumo do boleto (se preenchido) */}
-                        {(boletoCode || boletoAmount || boletoDue) && (
+                        {activeBoletos.length > 0 && (
                             <div className="ent-summary-section">
                                 <div className="ent-summary-section-title">
                                     <i className="fa-solid fa-receipt" />
-                                    Boleto
+                                    {activeBoletos.length === 1 ? 'Boleto' : `${activeBoletos.length} boletos`}
                                 </div>
-                                <div className="ent-summary-row">
-                                    {boletoAmount && (
+                                {activeBoletos.map((boleto, index) => (
+                                    <div className="ent-summary-row" key={`boleto-summary-${boleto.id || index}`}>
                                         <div className="ent-summary-item">
-                                            <span>Valor</span>
-                                            <strong>{formatMoney(Number(boletoAmount))}</strong>
+                                            <span>Parcela</span>
+                                            <strong>{index + 1}/{activeBoletos.length}</strong>
                                         </div>
-                                    )}
-                                    {boletoDue && (
-                                        <div className="ent-summary-item">
-                                            <span>Vencimento</span>
-                                            <strong>{formatDate(boletoDue)}</strong>
-                                        </div>
-                                    )}
-                                    {boletoCode && (
-                                        <div className="ent-summary-item ent-summary-item--wide">
-                                            <span>Código de barras</span>
-                                            <strong className="ent-barcode-text">{boletoCode}</strong>
-                                        </div>
-                                    )}
-                                </div>
+                                        {Number(boleto.amount || 0) > 0 ? (
+                                            <div className="ent-summary-item">
+                                                <span>Valor</span>
+                                                <strong>{formatMoney(Number(boleto.amount))}</strong>
+                                            </div>
+                                        ) : null}
+                                        {boleto.due ? (
+                                            <div className="ent-summary-item">
+                                                <span>Vencimento</span>
+                                                <strong>{formatDate(boleto.due)}</strong>
+                                            </div>
+                                        ) : null}
+                                        {boleto.code ? (
+                                            <div className="ent-summary-item ent-summary-item--wide">
+                                                <span>Codigo de barras</span>
+                                                <strong className="ent-barcode-text">{boleto.code}</strong>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ))}
                             </div>
                         )}
 

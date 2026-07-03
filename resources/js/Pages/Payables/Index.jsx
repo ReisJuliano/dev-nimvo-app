@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { Link } from '@inertiajs/react'
+import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
@@ -18,6 +19,7 @@ const STATUS_FILTERS = [
 ]
 
 const QUICK_DATE_FILTERS = [
+    { key: 'open-window', label: 'Vencidas + 30 dias', getRange: openWindowRange },
     { key: 'current-month', label: 'Mês atual', getRange: currentMonthRange },
     { key: 'today', label: 'Hoje', getRange: todayRange },
     { key: 'yesterday', label: 'Ontem', getRange: yesterdayRange },
@@ -42,6 +44,10 @@ function addDays(date, days) {
 
 function todayInput() {
     return formatInputDate(new Date())
+}
+
+function openWindowRange() {
+    return { from: '', to: formatInputDate(addDays(new Date(), 30)) }
 }
 
 function currentMonthRange() {
@@ -151,8 +157,14 @@ function buildPaymentDraft(record) {
     }
 }
 
+function purchaseMaintenanceUrl(record) {
+    const reference = record?.purchase_code || record?.purchase_id
+
+    return reference ? `/entrada-estoque/manutencao?nf=${encodeURIComponent(reference)}` : null
+}
+
 export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload }) {
-    const defaultRange = useMemo(() => currentMonthRange(), [])
+    const defaultRange = useMemo(() => openWindowRange(), [])
     const suppliers = Array.isArray(payload?.suppliers) ? payload.suppliers : []
     const categories = Array.isArray(payload?.categories) ? payload.categories : []
     const paymentMethods = Array.isArray(payload?.payment_methods) ? payload.payment_methods : []
@@ -163,7 +175,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const [appliedFilter, setAppliedFilter] = useState('open')
     const [range, setRange] = useState(defaultRange)
     const [appliedRange, setAppliedRange] = useState(defaultRange)
-    const [activeQuickRange, setActiveQuickRange] = useState('current-month')
+    const [activeQuickRange, setActiveQuickRange] = useState('open-window')
     const [selectedId, setSelectedId] = useState(null)
     const [detailModalOpen, setDetailModalOpen] = useState(false)
     const [launchModalOpen, setLaunchModalOpen] = useState(false)
@@ -225,6 +237,10 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
             all: records.length,
         }
     }, [hasLoadedRecords, records])
+
+    useEffect(() => {
+        void handleApplyFilters()
+    }, [])
 
 
     function openCreateModal() {
@@ -407,7 +423,7 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
         setAppliedFilter('open')
         setRange(defaultRange)
         setAppliedRange(defaultRange)
-        setActiveQuickRange('current-month')
+        setActiveQuickRange('open-window')
         setRecords([])
         setSelectedId(null)
         setHasLoadedRecords(false)
@@ -702,7 +718,14 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
                             <div className="proc-ui-card-toolbar">
                                 <div className="proc-ui-section-title">
                                     <h3>{selectedRecord.description}</h3>
-                                    <p>{selectedRecord.supplier_name || 'Credor avulso'} · {selectedRecord.purchase_code || 'Sem vínculo com NF'}</p>
+                                    <p>
+                                        {selectedRecord.supplier_name || 'Credor avulso'} ·{' '}
+                                        {purchaseMaintenanceUrl(selectedRecord) ? (
+                                            <Link href={purchaseMaintenanceUrl(selectedRecord)}>
+                                                {selectedRecord.purchase_code || `Entrada #${selectedRecord.purchase_id}`}
+                                            </Link>
+                                        ) : 'Sem vinculo com NF'}
+                                    </p>
                                 </div>
                                 <StatusBadge compact label={selectedRecord.status_label} tone={selectedRecord.status_tone} />
                             </div>
