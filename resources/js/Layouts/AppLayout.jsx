@@ -126,7 +126,7 @@ export default function AppLayout({
             ? 'Reconectado com fila pendente'
             : 'Sincronização requer revisão'
     const offlineBannerText = offlineStatus.isOffline
-        ? `As alterações ficam salvas nesta máquina e serão sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
+        ? `Acesso limitado a Painel, PDV, Caixa, Pedidos e Produtos. As alterações ficam salvas nesta máquina e serão sincronizadas depois. ${offlineStatus.pendingCount} pendencia(s) local(is).`
         : offlineStatus.pendingCount > 0
             ? `${offlineStatus.pendingCount} pendencia(s) aguardando sincronização com o servidor.`
             : offlineStatus.lastSyncError || 'Existe uma sincronização que precisa de atenção.'

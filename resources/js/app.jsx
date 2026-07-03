@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client'
 import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { registerOfflineServiceWorker } from '@/lib/offline/serviceWorker'
+import { initOfflineNavigationGuard } from '@/lib/offline/navigationGuard'
 
 const CHUNK_RECOVERY_FLAG = 'nimvo:chunk-recovery'
 
@@ -102,6 +103,7 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 registerOfflineServiceWorker()
+initOfflineNavigationGuard()
 
 createInertiaApp({
   resolve: name => resolvePageComponent(

@@ -1,6 +1,7 @@
-const CACHE_VERSION = 'nimvo-offline-v4'
+const CACHE_VERSION = 'nimvo-offline-v5'
 const APP_CACHE = `${CACHE_VERSION}:app`
 const PAGE_CACHE = `${CACHE_VERSION}:pages`
+const OFFLINE_FALLBACK_PATH = '/dashboard'
 
 self.addEventListener('install', (event) => {
     self.skipWaiting()
@@ -84,6 +85,27 @@ async function cacheFirst(request) {
     return response
 }
 
+async function offlineFallbackRedirect(request) {
+    const requestUrl = new URL(request.url)
+
+    if (requestUrl.pathname === OFFLINE_FALLBACK_PATH) {
+        return null
+    }
+
+    const fallbackUrl = new URL(OFFLINE_FALLBACK_PATH, self.location.origin)
+    const cache = await caches.open(PAGE_CACHE)
+    const cachedFallback = await cache.match(fallbackUrl.toString())
+
+    if (!cachedFallback) {
+        return null
+    }
+
+    // A real redirect (rather than serving the cached body directly) keeps the
+    // address bar in sync, so the user sees /dashboard instead of the page they
+    // actually tried to open while offline.
+    return Response.redirect(fallbackUrl.toString(), 302)
+}
+
 async function networkFirst(request) {
     const cache = await caches.open(PAGE_CACHE)
 
@@ -100,6 +122,12 @@ async function networkFirst(request) {
 
         if (cached) {
             return cached
+        }
+
+        const fallback = await offlineFallbackRedirect(request)
+
+        if (fallback) {
+            return fallback
         }
 
         throw new Error('Offline page not cached yet.')
