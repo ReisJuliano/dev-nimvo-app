@@ -6,6 +6,8 @@ export default function ClosingReportModal({ report, onClose }) {
         return null
     }
 
+    const totalDifference = Number(report.total_difference ?? report.difference ?? 0)
+
     return (
         <div className="closing-report-modal-backdrop" onClick={onClose}>
             <div className="closing-report-modal-card" onClick={(event) => event.stopPropagation()}>
@@ -21,10 +23,16 @@ export default function ClosingReportModal({ report, onClose }) {
                             {formatDateTime(report.cashRegister.closed_at)}
                         </p>
                     </div>
-                    <button className="ui-button-ghost" type="button" onClick={onClose}>
-                        <i className="fa-solid fa-xmark" />
-                        Fechar
-                    </button>
+                    <div className="closing-report-modal-actions">
+                        <button className="ui-button-ghost" type="button" onClick={() => window.print()}>
+                            <i className="fa-solid fa-print" />
+                            Imprimir
+                        </button>
+                        <button className="ui-button-ghost" type="button" onClick={onClose}>
+                            <i className="fa-solid fa-xmark" />
+                            Fechar
+                        </button>
+                    </div>
                 </div>
 
                 <div className="closing-report-modal-summary">
@@ -35,6 +43,10 @@ export default function ClosingReportModal({ report, onClose }) {
                     <article className={Math.abs(report.difference || 0) > 0.009 ? 'alert' : ''}>
                         <small>Diferenca em dinheiro</small>
                         <strong>{formatMoney(report.difference)}</strong>
+                    </article>
+                    <article className={Math.abs(totalDifference) > 0.009 ? 'alert' : ''}>
+                        <small>Diferenca total</small>
+                        <strong>{formatMoney(totalDifference)}</strong>
                     </article>
                 </div>
 

@@ -187,3 +187,7 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   `/api/operations/entrada-estoque/records`, em vez de criar entradas manuais
   por produto e uma conta avulsa. Isso preserva `purchase_id` nos `payables` e
   permite multiplos boletos vinculados a mesma entrada.
+- 2026-07-03: Pagamentos do PDV aceitam detalhes opcionais em
+  `sale_payments.payment_details` para cartao (bandeira, parcelas, NSU,
+  autorizacao) e cheque (banco, agencia, conta, numero, emitente, documento e
+  data de deposito). `PaymentMethod::CHECK` tambem entra no fechamento de caixa.

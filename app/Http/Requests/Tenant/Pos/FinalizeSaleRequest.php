@@ -66,6 +66,18 @@ class FinalizeSaleRequest extends FormRequest
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.method' => ['required', 'string', Rule::in(PaymentMethod::all())],
             'payments.*.amount' => ['nullable', 'numeric', 'gt:0'],
+            'payments.*.details' => ['nullable', 'array'],
+            'payments.*.details.brand' => ['nullable', 'string', 'max:40'],
+            'payments.*.details.installments' => ['nullable', 'integer', 'min:1', 'max:24'],
+            'payments.*.details.nsu' => ['nullable', 'string', 'max:80'],
+            'payments.*.details.authorization_code' => ['nullable', 'string', 'max:80'],
+            'payments.*.details.bank' => ['nullable', 'string', 'max:80'],
+            'payments.*.details.agency' => ['nullable', 'string', 'max:30'],
+            'payments.*.details.account' => ['nullable', 'string', 'max:40'],
+            'payments.*.details.check_number' => ['nullable', 'string', 'max:40'],
+            'payments.*.details.issuer_name' => ['nullable', 'string', 'max:255'],
+            'payments.*.details.issuer_document' => ['nullable', 'string', 'max:30'],
+            'payments.*.details.deposit_date' => ['nullable', 'date'],
         ];
     }
 

@@ -62,6 +62,8 @@ class CashRegisterReportService
         $difference = (float) ($cashRegister->closing_amount ?? 0) - $expectedCash;
         $paymentTotals = $payments->pluck('total', 'payment_method')->map(fn ($value) => (float) $value)->all();
 
+        $closingBreakdown = $this->buildClosingBreakdown($paymentTotals, $expectedCash, [], $cashRegister->closed_at);
+
         return [
             'cashRegister' => [
                 'id' => $cashRegister->id,
@@ -85,7 +87,8 @@ class CashRegisterReportService
             'cash_sales' => $cashSales,
             'expected_cash' => $expectedCash,
             'difference' => $difference,
-            'closing_breakdown' => $this->buildClosingBreakdown($paymentTotals, $expectedCash, [], $cashRegister->closed_at),
+            'total_difference' => $this->sumClosingDifferences($closingBreakdown),
+            'closing_breakdown' => $closingBreakdown,
         ];
     }
 
@@ -107,6 +110,7 @@ class CashRegisterReportService
         $cashClosing = collect($closingBreakdown)->firstWhere('payment_method', PaymentMethod::CASH);
         $closingAmount = (float) ($cashClosing['informed'] ?? 0);
         $difference = (float) ($cashClosing['difference'] ?? 0);
+        $totalDifference = $this->sumClosingDifferences($closingBreakdown);
 
         return [
             ...$report,
@@ -118,6 +122,7 @@ class CashRegisterReportService
                 'closed_at' => $closedAt->toIso8601String(),
             ],
             'difference' => $difference,
+            'total_difference' => $totalDifference,
             'closing_breakdown' => $closingBreakdown,
         ];
     }
@@ -171,6 +176,7 @@ class CashRegisterReportService
             ],
             'payment_totals' => $snapshot['payment_totals'] ?? $paymentTotals,
             'closing_breakdown' => $snapshot['closing_breakdown'] ?? $cashRegister->closing_breakdown ?? [],
+            'total_difference' => $snapshot['total_difference'] ?? $this->sumClosingDifferences($snapshot['closing_breakdown'] ?? $cashRegister->closing_breakdown ?? []),
         ];
     }
 
@@ -181,8 +187,16 @@ class CashRegisterReportService
             ['key' => PaymentMethod::PIX, 'label' => PaymentMethod::label(PaymentMethod::PIX)],
             ['key' => PaymentMethod::DEBIT_CARD, 'label' => PaymentMethod::label(PaymentMethod::DEBIT_CARD)],
             ['key' => PaymentMethod::CREDIT_CARD, 'label' => PaymentMethod::label(PaymentMethod::CREDIT_CARD)],
+            ['key' => PaymentMethod::CHECK, 'label' => PaymentMethod::label(PaymentMethod::CHECK)],
             ['key' => PaymentMethod::CREDIT, 'label' => PaymentMethod::label(PaymentMethod::CREDIT)],
         ];
+    }
+
+    protected function sumClosingDifferences(array $closingBreakdown): float
+    {
+        return (float) collect($closingBreakdown)
+            ->filter(fn (array $row) => $row['difference'] !== null)
+            ->sum(fn (array $row) => (float) $row['difference']);
     }
 
     public function persistClosingSnapshot(CashRegister $cashRegister, array $snapshot): void

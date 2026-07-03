@@ -2,6 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react'
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import ClosingReportModal from '@/Components/CashRegister/ClosingReportModal'
 import CashierDraftPullModal from '@/Components/Pos/CashierDraftPullModal'
+import PaymentDetailsFields from '@/Components/Pos/PaymentDetailsFields'
+import PaymentModal from '@/Components/Pos/PaymentModal'
 import PrintStatusBadge from '@/Components/Pos/PrintStatusBadge'
 import RecommendationRail from '@/Components/Pos/RecommendationRail'
 import ActionDrawer from '@/Components/UI/ActionDrawer'
@@ -114,6 +116,66 @@ const initialCustomerLinkForm = { name: '', document: '', email: '' }
 const pendingSaleDismissStoragePrefix = 'nimvo:pos-pending-sale:dismissed'
 const cashPanelCollapseStoragePrefix = 'nimvo:pos:cash-panel:collapsed'
 const conditionalPaymentMethod = 'conditional'
+const cardPaymentMethods = ['debit_card', 'credit_card']
+
+function createPaymentDetails(method = 'cash') {
+    return {
+        brand: '',
+        installments: method === 'credit_card' ? '1' : '1',
+        nsu: '',
+        authorization_code: '',
+        bank: '',
+        agency: '',
+        account: '',
+        check_number: '',
+        issuer_name: '',
+        issuer_document: '',
+        deposit_date: formatDateInputValue(new Date()),
+    }
+}
+
+function paymentHasDetails(method) {
+    return cardPaymentMethods.includes(method) || method === 'check'
+}
+
+function cleanPaymentDetails(method, details = {}) {
+    if (cardPaymentMethods.includes(method)) {
+        return {
+            brand: String(details.brand || '').trim(),
+            installments: Math.max(1, Number(details.installments || 1)),
+            nsu: String(details.nsu || '').trim(),
+            authorization_code: String(details.authorization_code || '').trim(),
+        }
+    }
+
+    if (method === 'check') {
+        return {
+            bank: String(details.bank || '').trim(),
+            agency: String(details.agency || '').trim(),
+            account: String(details.account || '').trim(),
+            check_number: String(details.check_number || '').trim(),
+            issuer_name: String(details.issuer_name || '').trim(),
+            issuer_document: normalizeDocument(details.issuer_document || ''),
+            deposit_date: String(details.deposit_date || '').trim(),
+        }
+    }
+
+    return null
+}
+
+function validatePaymentDetails(method, details = {}) {
+    if (method !== 'check') {
+        return
+    }
+
+    const cleaned = cleanPaymentDetails(method, details)
+    const missing = ['bank', 'agency', 'account', 'check_number', 'issuer_name', 'issuer_document', 'deposit_date']
+        .some((field) => !cleaned[field])
+
+    if (missing) {
+        throw new Error('Para pagamento em cheque, informe banco, agencia, conta, numero, emitente, documento e data para deposito.')
+    }
+}
 
 function resolveLocalAgentStatus(bridge) {
     if (!bridge?.enabled) {
@@ -482,10 +544,11 @@ export default function PosIndex({
     const [authorizingDiscount, setAuthorizingDiscount] = useState(false)
     const [paymentModalOpen, setPaymentModalOpen] = useState(false)
     const [paymentMethod, setPaymentMethod] = useState('cash')
+    const [paymentDetails, setPaymentDetails] = useState(() => createPaymentDetails('cash'))
     const [cashReceived, setCashReceived] = useState('')
     const [conditionalDueAt, setConditionalDueAt] = useState(defaultConditionalDueDate)
     const [mixedPayments, setMixedPayments] = useState([])
-    const [mixedDraft, setMixedDraft] = useState({ method: 'cash', amount: '' })
+    const [mixedDraft, setMixedDraft] = useState({ method: 'cash', amount: '', details: createPaymentDetails('cash') })
     const [paymentReady, setPaymentReady] = useState(false)
     const [fiscalDecisionOpen, setFiscalDecisionOpen] = useState(false)
     const [recipientModalOpen, setRecipientModalOpen] = useState(false)
@@ -572,6 +635,7 @@ export default function PosIndex({
                 { value: 'pix', label: 'Pix', icon: 'fa-qrcode' },
                 { value: 'debit_card', label: 'Debito', icon: 'fa-credit-card' },
                 { value: 'credit_card', label: 'Cartao', icon: 'fa-credit-card' },
+                { value: 'check', label: 'Cheque', icon: 'fa-money-check-dollar' },
                 { value: 'credit', label: 'Fiado', icon: 'fa-handshake' },
                 supportsConditionalSale ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'fa-tags' } : null,
                 { value: 'mixed', label: 'Misto', icon: 'fa-layer-group' },
@@ -983,12 +1047,14 @@ export default function PosIndex({
 
         if (paymentMethod === 'credit' || paymentMethod === conditionalPaymentMethod) {
             setPaymentMethod('cash')
+            setPaymentDetails(createPaymentDetails('cash'))
         }
 
         setMixedPayments((current) => current.filter((payment) => payment.method !== 'credit' && payment.method !== conditionalPaymentMethod))
         setMixedDraft((current) => ({
             ...current,
             method: ['credit', conditionalPaymentMethod].includes(current.method) ? 'cash' : current.method,
+            details: ['credit', conditionalPaymentMethod].includes(current.method) ? createPaymentDetails('cash') : current.details,
         }))
         setCreditStatus(null)
     }, [paymentMethod, supportsConditionalSale, supportsDeferredPayment])
@@ -1008,7 +1074,7 @@ export default function PosIndex({
 
     useEffect(() => {
         setPaymentReady(false)
-    }, [paymentMethod, cashReceived, conditionalDueAt, mixedPayments, mixedDraft, totalsKey(cart, selectedCustomer, notes, discountConfig)])
+    }, [paymentMethod, paymentDetails, cashReceived, conditionalDueAt, mixedPayments, mixedDraft, totalsKey(cart, selectedCustomer, notes, discountConfig)])
 
     const selectedCartItem = useMemo(
         () => cart.find((item) => item.id === selectedCartItemId) ?? null,
@@ -1126,7 +1192,7 @@ export default function PosIndex({
         } catch {
             return []
         }
-    }, [paymentMethod, paymentOptions, mixedPayments, totals.total, conditionalDueAt, selectedCustomer])
+    }, [paymentMethod, paymentDetails, paymentOptions, mixedPayments, totals.total, conditionalDueAt, selectedCustomer])
 
     useEffect(() => {
         let ignore = false
@@ -1220,6 +1286,7 @@ export default function PosIndex({
             { value: 'credit_card', label: 'Cartao', icon: 'card' },
             { value: 'cash', label: 'Dinheiro', icon: 'cash' },
             { value: 'pix', label: 'Pix', icon: 'pix' },
+            { value: 'check', label: 'Cheque', icon: 'wallet' },
             supportsDeferredPayment ? { value: 'credit', label: 'Fiado', icon: 'wallet' } : null,
             supportsDeferredPayment && supportsConditionalSale ? { value: conditionalPaymentMethod, label: 'Condicional', icon: 'wallet' } : null,
             { value: 'mixed', label: 'Dividir', icon: 'split' },
@@ -1406,10 +1473,11 @@ export default function PosIndex({
         setDiscountAuthorizer(emptyDiscountAuthorizer)
         setDiscountAuthorizationForm(initialAuthorizationForm)
         setPaymentMethod('cash')
+        setPaymentDetails(createPaymentDetails('cash'))
         setCashReceived('')
         setConditionalDueAt(defaultConditionalDueDate())
         setMixedPayments([])
-        setMixedDraft({ method: 'cash', amount: '' })
+        setMixedDraft({ method: 'cash', amount: '', details: createPaymentDetails('cash') })
         setPaymentReady(false)
         setFiscalDecisionOpen(false)
         setRecipientModalOpen(false)
@@ -1441,10 +1509,11 @@ export default function PosIndex({
         setDiscountAuthorizer(emptyDiscountAuthorizer)
         setDiscountDraft(buildDiscountDraft({ type: 'none' }, String(orderItems[0]?.id ?? '')))
         setPaymentMethod('cash')
+        setPaymentDetails(createPaymentDetails('cash'))
         setCashReceived('')
         setConditionalDueAt(defaultConditionalDueDate())
         setMixedPayments([])
-        setMixedDraft({ method: 'cash', amount: '' })
+        setMixedDraft({ method: 'cash', amount: '', details: createPaymentDetails('cash') })
         setNotes(orderDraft.notes || '')
         setCreditStatus(null)
         setActiveOrderDraftId(orderDraft.id)
@@ -1464,11 +1533,13 @@ export default function PosIndex({
         setDiscountConfig(pendingSale?.discount?.config || { type: 'none' })
         setDiscountAuthorizer(pendingSale?.discount?.authorizer || emptyDiscountAuthorizer)
         setDiscountDraft(buildDiscountDraft(pendingSale?.discount?.config || { type: 'none' }, String(pendingItems[0]?.id ?? '')))
-        setPaymentMethod(pendingSale?.payment?.payment_method || 'cash')
+        const restoredPaymentMethod = pendingSale?.payment?.payment_method || 'cash'
+        setPaymentMethod(restoredPaymentMethod)
+        setPaymentDetails(pendingSale?.payment?.payment_details || createPaymentDetails(restoredPaymentMethod))
         setCashReceived(pendingSale?.payment?.cash_received == null ? '' : String(pendingSale.payment.cash_received))
         setConditionalDueAt(pendingSale?.payment?.conditional_due_at || defaultConditionalDueDate())
         setMixedPayments(pendingSale?.payment?.mixed_payments || [])
-        setMixedDraft(pendingSale?.payment?.mixed_draft || { method: 'cash', amount: '' })
+        setMixedDraft(pendingSale?.payment?.mixed_draft || { method: 'cash', amount: '', details: createPaymentDetails('cash') })
         setNotes(pendingSale?.notes || '')
         setActiveOrderDraftId(pendingSale?.order_draft_id || null)
         setPendingSaleServerState(syncPendingSaleVisibility(pendingSale))
@@ -1705,11 +1776,13 @@ export default function PosIndex({
         }
 
         setPaymentMethod(value)
+        setPaymentDetails(createPaymentDetails(value))
         setFeedback(null)
 
         if (value !== 'mixed') {
             setMixedPayments([])
-            setMixedDraft({ method: value === 'credit' ? 'credit' : 'cash', amount: '' })
+            const draftMethod = value === 'credit' ? 'credit' : value === 'check' ? 'check' : 'cash'
+            setMixedDraft({ method: draftMethod, amount: '', details: createPaymentDetails(draftMethod) })
         }
 
         if (value !== 'cash') {
@@ -1717,8 +1790,28 @@ export default function PosIndex({
         }
     }
 
+    function handlePaymentDetailsChange(field, value) {
+        setPaymentDetails((current) => ({ ...current, [field]: value }))
+    }
+
     function handleMixedDraftChange(field, value) {
-        setMixedDraft((current) => ({ ...current, [field]: value }))
+        setMixedDraft((current) => {
+            if (field === 'method') {
+                return { ...current, method: value, details: createPaymentDetails(value) }
+            }
+
+            return { ...current, [field]: value }
+        })
+    }
+
+    function handleMixedDraftDetailsChange(field, value) {
+        setMixedDraft((current) => ({
+            ...current,
+            details: {
+                ...(current.details || createPaymentDetails(current.method)),
+                [field]: value,
+            },
+        }))
     }
 
     function handleAddMixedPayment() {
@@ -1735,13 +1828,40 @@ export default function PosIndex({
             return
         }
 
-        setMixedPayments((current) => [...current, { method: mixedDraft.method, amount: String(resolvedAmount.toFixed(2)) }])
+        try {
+            validatePaymentDetails(mixedDraft.method, mixedDraft.details)
+        } catch (error) {
+            showFeedback('warning', error.message)
+            return
+        }
+
+        setMixedPayments((current) => [...current, {
+            method: mixedDraft.method,
+            amount: String(resolvedAmount.toFixed(2)),
+            details: paymentHasDetails(mixedDraft.method) ? cleanPaymentDetails(mixedDraft.method, mixedDraft.details) : null,
+        }])
         setMixedDraft((current) => ({ ...current, amount: '' }))
     }
 
     function handleMixedPaymentChange(index, value) {
         setMixedPayments((current) =>
             current.map((payment, currentIndex) => (currentIndex === index ? { ...payment, amount: value } : payment)),
+        )
+    }
+
+    function handleMixedPaymentDetailsChange(index, field, value) {
+        setMixedPayments((current) =>
+            current.map((payment, currentIndex) => (
+                currentIndex === index
+                    ? {
+                        ...payment,
+                        details: {
+                            ...(payment.details || createPaymentDetails(payment.method)),
+                            [field]: value,
+                        },
+                    }
+                    : payment
+            )),
         )
     }
 
@@ -2498,6 +2618,18 @@ export default function PosIndex({
             return
         }
 
+        const totalDifference = closeCashRegisterRows.reduce((total, row) => (
+            row.difference === null ? total : total + Number(row.difference || 0)
+        ), 0)
+
+        if (
+            Math.abs(totalDifference) >= 100
+            && typeof window !== 'undefined'
+            && !window.confirm(`A diferenca total do fechamento e ${formatMoney(totalDifference)}. Confirmar mesmo assim?`)
+        ) {
+            return
+        }
+
         setClosingCashRegister(true)
 
         try {
@@ -2711,6 +2843,10 @@ export default function PosIndex({
                 throw new Error('Escolha quem vai ficar devendo para usar fiado no pagamento misto.')
             }
 
+            mixedPayments.forEach((payment) => {
+                validatePaymentDetails(payment.method, payment.details)
+            })
+
             if (Math.abs(mixedTotal - totals.total) > 0.009) {
                 throw new Error('A soma das parcelas precisa bater exatamente com o total da venda.')
             }
@@ -2718,6 +2854,7 @@ export default function PosIndex({
             return mixedPayments.map((payment) => ({
                 method: payment.method,
                 amount: Number(payment.amount),
+                details: paymentHasDetails(payment.method) ? cleanPaymentDetails(payment.method, payment.details) : null,
             }))
         }
 
@@ -2739,7 +2876,13 @@ export default function PosIndex({
             throw new Error('O valor entregue em dinheiro precisa cobrir o total da venda.')
         }
 
-        return [{ method: paymentMethod, amount: totals.total }]
+        validatePaymentDetails(paymentMethod, paymentDetails)
+
+        return [{
+            method: paymentMethod,
+            amount: totals.total,
+            details: paymentHasDetails(paymentMethod) ? cleanPaymentDetails(paymentMethod, paymentDetails) : null,
+        }]
     }
 
     function openPaymentStep() {
@@ -3667,6 +3810,8 @@ export default function PosIndex({
         paymentGridOptions,
         paymentMethod,
         onPaymentChange: handlePaymentMethodChange,
+        paymentDetails,
+        onPaymentDetailsChange: handlePaymentDetailsChange,
         conditionalDueAt,
         onConditionalDueAtChange: setConditionalDueAt,
         cashReceived,
@@ -3677,7 +3822,9 @@ export default function PosIndex({
         onMixedDraftChange: handleMixedDraftChange,
         mixedPayments,
         onMixedPaymentChange: handleMixedPaymentChange,
+        onMixedPaymentDetailsChange: handleMixedPaymentDetailsChange,
         onMixedPaymentRemove: handleRemoveMixedPayment,
+        onMixedDraftDetailsChange: handleMixedDraftDetailsChange,
         onAddMixedPayment: handleAddMixedPayment,
         mixedRemaining,
         paymentOptions,
@@ -4163,13 +4310,17 @@ export default function PosIndex({
                 paymentOptions={paymentOptions}
                 paymentMethod={paymentMethod}
                 onPaymentChange={handlePaymentMethodChange}
+                paymentDetails={paymentDetails}
+                onPaymentDetailsChange={handlePaymentDetailsChange}
                 conditionalDueAt={conditionalDueAt}
                 onConditionalDueAtChange={setConditionalDueAt}
                 mixedPayments={mixedPayments}
                 mixedDraft={mixedDraft}
                 mixedRemaining={mixedRemaining}
                 onMixedDraftChange={handleMixedDraftChange}
+                onMixedDraftDetailsChange={handleMixedDraftDetailsChange}
                 onMixedPaymentChange={handleMixedPaymentChange}
+                onMixedPaymentDetailsChange={handleMixedPaymentDetailsChange}
                 onMixedPaymentRemove={handleRemoveMixedPayment}
                 onAddMixedPayment={handleAddMixedPayment}
                 totals={totals}
@@ -4528,6 +4679,8 @@ function PosWorkspace({
     paymentGridOptions,
     paymentMethod,
     onPaymentChange,
+    paymentDetails,
+    onPaymentDetailsChange,
     conditionalDueAt,
     onConditionalDueAtChange,
     cashReceived,
@@ -4536,8 +4689,10 @@ function PosWorkspace({
     cashShortfall,
     mixedDraft,
     onMixedDraftChange,
+    onMixedDraftDetailsChange,
     mixedPayments,
     onMixedPaymentChange,
+    onMixedPaymentDetailsChange,
     onMixedPaymentRemove,
     onAddMixedPayment,
     mixedRemaining,
@@ -4941,6 +5096,10 @@ function PosWorkspace({
                     </div>
                 ) : null}
 
+                {paymentMethod !== 'mixed' ? (
+                    <PaymentDetailsFields method={paymentMethod} details={paymentDetails} onChange={onPaymentDetailsChange} />
+                ) : null}
+
                 {paymentMethod === conditionalPaymentMethod ? (
                     <div className="pos-modal-section">
                         <div className="pos-inline-summary">
@@ -4993,20 +5152,33 @@ function PosWorkspace({
                             </button>
                         </div>
 
+                        <PaymentDetailsFields
+                            method={mixedDraft.method}
+                            details={mixedDraft.details}
+                            onChange={onMixedDraftDetailsChange}
+                        />
+
                         <div className="pos-mixed-list">
                             {mixedPayments.length ? mixedPayments.map((payment, index) => (
-                                <div key={`${payment.method}-${index}`} className="pos-mixed-row">
-                                    <span>{paymentOptions.find((option) => option.value === payment.method)?.label || payment.method}</span>
-                                    <input
-                                        className="pos-field-input"
-                                        type="number"
-                                        step="0.01"
-                                        value={payment.amount}
-                                        onChange={(event) => onMixedPaymentChange(index, event.target.value)}
+                                <div key={`${payment.method}-${index}`} className="pos-mixed-payment-block">
+                                    <div className="pos-mixed-row">
+                                        <span>{paymentOptions.find((option) => option.value === payment.method)?.label || payment.method}</span>
+                                        <input
+                                            className="pos-field-input"
+                                            type="number"
+                                            step="0.01"
+                                            value={payment.amount}
+                                            onChange={(event) => onMixedPaymentChange(index, event.target.value)}
+                                        />
+                                        <button type="button" className="pos-inline-button compact" onClick={() => onMixedPaymentRemove(index)}>
+                                            Remover
+                                        </button>
+                                    </div>
+                                    <PaymentDetailsFields
+                                        method={payment.method}
+                                        details={payment.details}
+                                        onChange={(field, value) => onMixedPaymentDetailsChange(index, field, value)}
                                     />
-                                    <button type="button" className="pos-inline-button compact" onClick={() => onMixedPaymentRemove(index)}>
-                                        Remover
-                                    </button>
                                 </div>
                             )) : (
                                 <div className="pos-inline-empty">Adicione ao menos duas formas para dividir o pagamento.</div>

@@ -1,8 +1,9 @@
 export const CASH_REGISTER_PAYMENT_FIELDS = [
     { key: 'cash', label: 'Dinheiro', icon: 'cash', tone: 'cash' },
     { key: 'pix', label: 'Pix', icon: 'pix', tone: 'pix' },
-    { key: 'debit_card', label: 'Cartão de débito', icon: 'card', tone: 'card' },
-    { key: 'credit_card', label: 'Cartão de crédito', icon: 'card', tone: 'card' },
+    { key: 'debit_card', label: 'Cartao de debito', icon: 'card', tone: 'card' },
+    { key: 'credit_card', label: 'Cartao de credito', icon: 'card', tone: 'card' },
+    { key: 'check', label: 'Cheque', icon: 'wallet', tone: 'check' },
     { key: 'credit', label: 'Fiado', icon: 'wallet', tone: 'credit' },
 ]
 
@@ -30,6 +31,7 @@ export function buildCloseCashRegisterModal(report) {
                 pix: '',
                 debit_card: '',
                 credit_card: '',
+                check: '',
                 credit: '',
             },
         },

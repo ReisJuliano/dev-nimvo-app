@@ -2016,6 +2016,35 @@
     gap: 10px;
 }
 
+.pos-payment-modal-card {
+    max-width: min(720px, calc(100vw - 24px));
+}
+
+.pos-payment-method-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    margin-top: 12px;
+}
+
+.pos-payment-method-card {
+    min-height: 72px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 8px;
+    background: var(--pos-surface-alt);
+    color: var(--pos-text);
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.pos-payment-method-card.active {
+    border-color: rgba(24, 95, 165, 0.38);
+    background: rgba(24, 95, 165, 0.08);
+    color: var(--pos-blue);
+}
+
 .pos-field {
     display: grid;
     gap: 6px;
@@ -2145,6 +2174,7 @@
 }
 
 .pos-mixed-entry,
+.pos-mixed-form,
 .pos-mixed-row {
     display: grid;
     gap: 8px;
@@ -2152,9 +2182,50 @@
     align-items: center;
 }
 
+.pos-mixed-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--pos-surface-alt);
+}
+
 .pos-mixed-list {
     display: grid;
     gap: 8px;
+}
+
+.pos-mixed-payment-block {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.pos-mixed-item {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) auto;
+    align-items: center;
+}
+
+.pos-payment-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px;
+    border: 0.5px solid var(--pos-border);
+    border-radius: 8px;
+    background: var(--pos-surface-alt);
+}
+
+.pos-payment-details--check {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pos-payment-details .span-2 {
+    grid-column: span 2;
 }
 
 .pos-inline-empty,
@@ -2558,9 +2629,17 @@
     .pos-credit-strip,
     .pos-payment-summary-grid,
     .pos-mixed-entry,
-    .pos-mixed-row {
+    .pos-mixed-form,
+    .pos-mixed-row,
+    .pos-mixed-item,
+    .pos-payment-details,
+    .pos-payment-details--check {
         grid-template-columns: 1fr;
         display: grid;
+    }
+
+    .pos-payment-details .span-2 {
+        grid-column: auto;
     }
 
     .pos-toolbar-status {

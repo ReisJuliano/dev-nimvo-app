@@ -21,6 +21,7 @@ class CloseCashRegisterRequest extends FormRequest
             'closing_totals.pix' => ['nullable', 'numeric', 'min:0'],
             'closing_totals.debit_card' => ['nullable', 'numeric', 'min:0'],
             'closing_totals.credit_card' => ['nullable', 'numeric', 'min:0'],
+            'closing_totals.check' => ['nullable', 'numeric', 'min:0'],
             'closing_totals.credit' => ['nullable', 'numeric', 'min:0'],
         ];
     }

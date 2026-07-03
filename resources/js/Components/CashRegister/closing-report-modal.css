@@ -58,6 +58,12 @@
     line-height: 1.5;
 }
 
+.closing-report-modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
 .closing-report-modal-summary,
 .closing-report-modal-grid {
     display: grid;
@@ -193,5 +199,42 @@
 
     .closing-report-modal-header .ui-button-ghost {
         width: 100%;
+    }
+
+    .closing-report-modal-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    .closing-report-modal-card,
+    .closing-report-modal-card * {
+        visibility: visible;
+    }
+
+    .closing-report-modal-backdrop {
+        position: static;
+        padding: 0;
+        background: #fff;
+        backdrop-filter: none;
+    }
+
+    .closing-report-modal-card {
+        width: 100%;
+        max-height: none;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: #fff;
+    }
+
+    .closing-report-modal-actions {
+        display: none;
     }
 }

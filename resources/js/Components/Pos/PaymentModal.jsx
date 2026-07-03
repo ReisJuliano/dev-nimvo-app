@@ -1,4 +1,5 @@
 import { formatMoney } from '@/lib/format'
+import PaymentDetailsFields from './PaymentDetailsFields'
 
 export default function PaymentModal({
     open,
@@ -7,13 +8,17 @@ export default function PaymentModal({
     paymentOptions,
     paymentMethod,
     onPaymentChange,
+    paymentDetails,
+    onPaymentDetailsChange,
     conditionalDueAt,
     onConditionalDueAtChange,
     mixedPayments,
     mixedDraft,
     mixedRemaining,
     onMixedDraftChange,
+    onMixedDraftDetailsChange,
     onMixedPaymentChange,
+    onMixedPaymentDetailsChange,
     onMixedPaymentRemove,
     onAddMixedPayment,
     totals,
@@ -116,22 +121,35 @@ export default function PaymentModal({
                             </button>
                         </div>
 
+                        <PaymentDetailsFields
+                            method={mixedDraft.method}
+                            details={mixedDraft.details}
+                            onChange={onMixedDraftDetailsChange}
+                        />
+
                         <div className="pos-mixed-list">
                             {mixedPayments.length ? (
                                 mixedPayments.map((payment, index) => (
-                                    <div key={`${payment.method}-${index}`} className="pos-mixed-item">
-                                        <span>{paymentLabels[payment.method] ?? payment.method}</span>
-                                        <input
-                                            className="ui-input"
-                                            type="number"
-                                            step="0.01"
-                                            value={payment.amount}
-                                            onChange={(event) => onMixedPaymentChange(index, event.target.value)}
+                                    <div key={`${payment.method}-${index}`} className="pos-mixed-payment-block">
+                                        <div className="pos-mixed-item">
+                                            <span>{paymentLabels[payment.method] ?? payment.method}</span>
+                                            <input
+                                                className="ui-input"
+                                                type="number"
+                                                step="0.01"
+                                                value={payment.amount}
+                                                onChange={(event) => onMixedPaymentChange(index, event.target.value)}
+                                            />
+                                            <button type="button" onClick={() => onMixedPaymentRemove(index)}>
+                                                <i className="fa-solid fa-trash-can" />
+                                                Remover
+                                            </button>
+                                        </div>
+                                        <PaymentDetailsFields
+                                            method={payment.method}
+                                            details={payment.details}
+                                            onChange={(field, value) => onMixedPaymentDetailsChange(index, field, value)}
                                         />
-                                        <button type="button" onClick={() => onMixedPaymentRemove(index)}>
-                                            <i className="fa-solid fa-trash-can" />
-                                            Remover
-                                        </button>
                                     </div>
                                 ))
                             ) : (
@@ -196,6 +214,14 @@ export default function PaymentModal({
                             <strong>{formatMoney(cashShortfall > 0 ? cashShortfall : cashChange)}</strong>
                         </div>
                     </div>
+                ) : null}
+
+                {paymentMethod !== 'mixed' ? (
+                    <PaymentDetailsFields
+                        method={paymentMethod}
+                        details={paymentDetails}
+                        onChange={onPaymentDetailsChange}
+                    />
                 ) : null}
 
                 {paymentMethod === 'credit' && selectedCustomerData && creditStatus ? (

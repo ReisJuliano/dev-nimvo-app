@@ -146,9 +146,12 @@ class PosService
                 : null;
 
             $payments = collect($payload['payments'])->map(function (array $payment) {
+                $method = PaymentMethod::normalize($payment['method'] ?? null);
+
                 return [
-                    'method' => PaymentMethod::normalize($payment['method'] ?? null),
+                    'method' => $method,
                     'amount' => $payment['amount'] ?? null,
+                    'details' => $this->normalizePaymentDetails($method, $payment['details'] ?? null),
                 ];
             });
 
@@ -160,7 +163,7 @@ class PosService
 
             $resolvedPayments = $payments->values()->map(function (array $payment) use ($payments, $total) {
                 if ($payments->count() === 1 && $payment['amount'] === null) {
-                    return ['method' => $payment['method'], 'amount' => $total];
+                    return ['method' => $payment['method'], 'amount' => $total, 'details' => $payment['details'] ?? null];
                 }
 
                 if ($payment['amount'] === null) {
@@ -169,7 +172,7 @@ class PosService
                     ]);
                 }
 
-                return ['method' => $payment['method'], 'amount' => (float) $payment['amount']];
+                return ['method' => $payment['method'], 'amount' => (float) $payment['amount'], 'details' => $payment['details'] ?? null];
             });
 
             $isConditionalPayment = $resolvedPayments->count() === 1
@@ -413,6 +416,9 @@ class PosService
                 $sale->payments()->create([
                     'payment_method' => $payment['method'],
                     'amount' => $payment['amount'],
+                    ...($this->hasColumn('sale_payments', 'payment_details') ? [
+                        'payment_details' => $payment['details'],
+                    ] : []),
                 ]);
             }
 
@@ -456,6 +462,54 @@ class PosService
         }
 
         return implode(' ', $segments);
+    }
+
+    protected function normalizePaymentDetails(string $method, mixed $details): ?array
+    {
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        $stringValue = fn (string $key) => filled($details[$key] ?? null)
+            ? trim((string) $details[$key])
+            : null;
+
+        $normalized = match ($method) {
+            PaymentMethod::DEBIT_CARD, PaymentMethod::CREDIT_CARD => [
+                'brand' => $stringValue('brand'),
+                'installments' => $method === PaymentMethod::CREDIT_CARD
+                    ? max(1, min(24, (int) ($details['installments'] ?? 1)))
+                    : 1,
+                'nsu' => $stringValue('nsu'),
+                'authorization_code' => $stringValue('authorization_code'),
+            ],
+            PaymentMethod::CHECK => [
+                'bank' => $stringValue('bank'),
+                'agency' => $stringValue('agency'),
+                'account' => $stringValue('account'),
+                'check_number' => $stringValue('check_number'),
+                'issuer_name' => $stringValue('issuer_name'),
+                'issuer_document' => filled($details['issuer_document'] ?? null)
+                    ? preg_replace('/\D+/', '', (string) $details['issuer_document'])
+                    : null,
+                'deposit_date' => $stringValue('deposit_date'),
+            ],
+            default => [],
+        };
+
+        $normalized = array_filter($normalized, fn ($value) => $value !== null && $value !== '');
+
+        if ($method === PaymentMethod::CHECK) {
+            foreach (['bank', 'agency', 'account', 'check_number', 'issuer_name', 'issuer_document', 'deposit_date'] as $field) {
+                if (blank($normalized[$field] ?? null)) {
+                    throw ValidationException::withMessages([
+                        'payments' => 'Para pagamento em cheque, informe banco, agencia, conta, numero, emitente, documento e data para deposito.',
+                    ]);
+                }
+            }
+        }
+
+        return $normalized === [] ? null : $normalized;
     }
 
     protected function normalizeRecipientPayload(mixed $payload): ?array

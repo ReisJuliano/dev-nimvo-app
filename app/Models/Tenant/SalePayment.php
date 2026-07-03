@@ -10,10 +10,11 @@ class SalePayment extends Model
 {
     use UsesTenantConnection;
 
-    protected $fillable = ['sale_id', 'payment_method', 'amount'];
+    protected $fillable = ['sale_id', 'payment_method', 'amount', 'payment_details'];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'payment_details' => 'array',
     ];
 
     public function sale(): BelongsTo

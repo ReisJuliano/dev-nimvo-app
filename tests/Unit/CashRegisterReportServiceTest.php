@@ -63,7 +63,8 @@ class CashRegisterReportServiceTest extends TestCase
         $this->assertSame('closed', $snapshot['cashRegister']['status']);
         $this->assertSame(168.0, $snapshot['cashRegister']['closing_amount']);
         $this->assertSame(-2.0, $snapshot['difference']);
-        $this->assertCount(5, $snapshot['closing_breakdown']);
+        $this->assertSame(-2.0, $snapshot['total_difference']);
+        $this->assertCount(6, $snapshot['closing_breakdown']);
         $this->assertSame(170.0, $snapshot['closing_breakdown'][0]['expected']);
         $this->assertSame(168.0, $snapshot['closing_breakdown'][0]['informed']);
         $this->assertSame(-2.0, $snapshot['closing_breakdown'][0]['difference']);
@@ -119,6 +120,7 @@ class CashRegisterReportServiceTest extends TestCase
 
         $this->assertSame('Fechamento auditado.', $report['cashRegister']['closing_notes']);
         $this->assertSame(-20, $report['difference']);
+        $this->assertSame(-20.0, $report['total_difference']);
         $this->assertSame(20.0, $report['payment_totals']['cash']);
         $this->assertSame(45, $report['cashRegister']['closing_amount']);
     }

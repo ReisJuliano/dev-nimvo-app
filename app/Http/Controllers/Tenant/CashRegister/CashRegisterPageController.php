@@ -41,7 +41,8 @@ class CashRegisterPageController extends Controller
                     'closing_amount' => (float) ($cashRegister->closing_amount ?? 0),
                     'opened_at' => $cashRegister->opened_at?->toIso8601String(),
                     'closed_at' => $cashRegister->closed_at?->toIso8601String(),
-                    'difference' => (float) ($report['difference'] ?? 0),
+                    'difference' => (float) ($report['total_difference'] ?? $report['difference'] ?? 0),
+                    'cash_difference' => (float) ($report['difference'] ?? 0),
                     'sales_count' => (int) ($report['sales_count'] ?? 0),
                     'total_sales' => (float) ($report['total_sales'] ?? 0),
                 ];

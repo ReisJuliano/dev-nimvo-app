@@ -8,6 +8,7 @@ class PaymentMethod
     public const PIX = 'pix';
     public const DEBIT_CARD = 'debit_card';
     public const CREDIT_CARD = 'credit_card';
+    public const CHECK = 'check';
     public const CREDIT = 'credit';
     public const CONDITIONAL = 'conditional';
     public const MIXED = 'mixed';
@@ -18,6 +19,7 @@ class PaymentMethod
             'dinheiro' => self::CASH,
             'cartao_debito' => self::DEBIT_CARD,
             'cartao_credito' => self::CREDIT_CARD,
+            'cheque' => self::CHECK,
             'fiado', 'a_prazo', 'a-prazo', 'a prazo' => self::CREDIT,
             'condicional', 'venda_condicional', 'venda-condicional' => self::CONDITIONAL,
             'misto' => self::MIXED,
@@ -31,8 +33,9 @@ class PaymentMethod
         return match (self::normalize($method)) {
             self::CASH => 'Dinheiro',
             self::PIX => 'Pix',
-            self::DEBIT_CARD => 'Cartão de débito',
-            self::CREDIT_CARD => 'Cartão de crédito',
+            self::DEBIT_CARD => 'Cartao de debito',
+            self::CREDIT_CARD => 'Cartao de credito',
+            self::CHECK => 'Cheque',
             self::CREDIT => 'Fiado',
             self::CONDITIONAL => 'Venda Condicional',
             self::MIXED => 'Misto',
@@ -47,6 +50,7 @@ class PaymentMethod
             self::PIX,
             self::DEBIT_CARD,
             self::CREDIT_CARD,
+            self::CHECK,
             self::CREDIT,
             self::CONDITIONAL,
             self::MIXED,
@@ -60,6 +64,7 @@ class PaymentMethod
             self::PIX,
             self::DEBIT_CARD,
             self::CREDIT_CARD,
+            self::CHECK,
             self::CREDIT,
             self::MIXED,
         ];
@@ -72,6 +77,7 @@ class PaymentMethod
             self::PIX,
             self::DEBIT_CARD,
             self::CREDIT_CARD,
+            self::CHECK,
             self::CREDIT,
         ];
     }

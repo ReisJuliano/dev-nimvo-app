@@ -354,7 +354,7 @@ class PosApiController extends Controller
                 try {
                     $saleModel->loadMissing('payments');
                     $singlePayment = $saleModel->payments->count() === 1 ? $saleModel->payments->first() : null;
-                    $operationMethods = ['pix', 'debit_card', 'credit_card', 'credit'];
+                    $operationMethods = ['pix', 'debit_card', 'credit_card', 'check', 'credit'];
                     $printResult = $singlePayment && in_array($singlePayment->payment_method, $operationMethods, true)
                         ? $printQueueService->queueOperationReceiptForSalePayment($saleModel, $singlePayment)
                         : $printQueueService->queuePaymentReceiptForSale($saleModel);

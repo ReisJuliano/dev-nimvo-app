@@ -71,6 +71,7 @@ class OperationsApiController extends Controller
                 PaymentMethod::PIX,
                 PaymentMethod::DEBIT_CARD,
                 PaymentMethod::CREDIT_CARD,
+                PaymentMethod::CHECK,
             ])],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);

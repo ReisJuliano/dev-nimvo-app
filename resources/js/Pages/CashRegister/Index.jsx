@@ -83,6 +83,12 @@ function buildHistoryRows(history) {
     }))
 }
 
+function sumClosingDifferences(rows) {
+    return (rows || []).reduce((total, row) => (
+        row.difference === null ? total : total + Number(row.difference || 0)
+    ), 0)
+}
+
 function PaymentSummaryTable({ report }) {
     const rows = (report?.payments || []).map((payment) => ({
         key: payment.payment_method,
@@ -378,6 +384,16 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 Object.entries(closeConferenceModal.form.amounts).map(([key, value]) => [key, Number(value || 0)]),
             ),
         }
+        const totalDifference = sumClosingDifferences(closeConferenceRows)
+
+        if (
+            Math.abs(totalDifference) >= 100
+            && typeof window !== 'undefined'
+            && !window.confirm(`A diferenca total do fechamento e ${formatMoney(totalDifference)}. Confirmar mesmo assim?`)
+        ) {
+            setClosingCashRegister(false)
+            return
+        }
 
         try {
             if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -473,6 +489,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
     }
 
     const closeConferenceRows = buildCloseCashRegisterRows(closeConferenceModal, requireConference)
+    const closeTotalDifference = sumClosingDifferences(closeConferenceRows)
     const movementRows = useMemo(() => buildMovementRows(openRegisterState?.movements || []), [openRegisterState?.movements])
     const historyRows = useMemo(() => buildHistoryRows(historyState || []), [historyState])
     const movementConfig = movementModalType ? movementMeta(movementModalType) : null
@@ -534,6 +551,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             label: 'Esperado',
             value: formatMoney(openRegisterState.expected_cash),
             meta: 'dinheiro no caixa',
+            alert: Number(openRegisterState.expected_cash || 0) < 0,
         },
         {
             key: 'manual',
@@ -614,7 +632,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         {/* Métricas do turno */}
                         <div className="cr-metrics">
                             {summaryTiles.map((tile) => (
-                                <div key={tile.key} className="cr-metric">
+                                <div key={tile.key} className={`cr-metric ${tile.alert ? 'alert' : ''}`}>
                                     <span>{tile.label}</span>
                                     <strong>{tile.value}</strong>
                                     <small>{tile.meta}</small>
@@ -825,6 +843,11 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                                 onChange={(event) => handleCloseConferenceNotesChange(event.target.value)}
                             />
                         </label>
+
+                        <div className={`cash-close-total-difference ${Math.abs(closeTotalDifference) > 0.009 ? 'alert' : ''}`}>
+                            <span>Diferenca total</span>
+                            <strong>{formatMoney(closeTotalDifference)}</strong>
+                        </div>
 
                         <div className="cash-compact-form-actions">
                             <button type="button" className="ui-button-ghost" onClick={closeConference}>Voltar</button>
