@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
+import { confirmPopup } from '@/lib/errorPopup'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import './stock-entry-simple.css'
 
@@ -33,7 +34,7 @@ const TYPE_TONES = {
 }
 
 export default function StockEntryIndex({ payload }) {
-    const [products] = useState(Array.isArray(payload?.products) ? payload.products : [])
+    const [products, setProducts] = useState(Array.isArray(payload?.products) ? payload.products : [])
     const [query, setQuery] = useState('')
     const [selectedProduct, setSelectedProduct] = useState(null)
 
@@ -43,6 +44,14 @@ export default function StockEntryIndex({ payload }) {
     const [movFilter, setMovFilter] = useState('')
     const [movFrom, setMovFrom] = useState('')
     const [movTo, setMovTo] = useState('')
+
+    // Ajuste de estoque (inline, dentro do painel do produto)
+    const [adjusting, setAdjusting] = useState(false)
+    const [adjustQty, setAdjustQty] = useState('')
+    const [adjustReason, setAdjustReason] = useState('Ajuste manual de estoque')
+    const [adjustNotes, setAdjustNotes] = useState('')
+    const [adjustSaving, setAdjustSaving] = useState(false)
+    const [adjustFeedback, setAdjustFeedback] = useState(null)
 
     const filteredProducts = useMemo(() => {
         const q = normalizeTextSearch(query)
@@ -72,16 +81,72 @@ export default function StockEntryIndex({ payload }) {
         setMovFilter('')
         setMovFrom('')
         setMovTo('')
+        cancelAdjust()
         loadMovements(product)
     }
 
     function closePanel() {
         setSelectedProduct(null)
         setMovements([])
+        cancelAdjust()
     }
 
     function applyMovFilter() {
         if (selectedProduct) loadMovements(selectedProduct, movFilter, movFrom, movTo)
+    }
+
+    function startAdjust() {
+        setAdjusting(true)
+        setAdjustQty(String(selectedProduct?.stock_quantity || 0))
+        setAdjustReason('Ajuste manual de estoque')
+        setAdjustNotes('')
+        setAdjustFeedback(null)
+    }
+
+    function cancelAdjust() {
+        setAdjusting(false)
+        setAdjustQty('')
+        setAdjustReason('Ajuste manual de estoque')
+        setAdjustNotes('')
+        setAdjustFeedback(null)
+    }
+
+    async function submitAdjust(event) {
+        event.preventDefault()
+        if (!selectedProduct || adjustQty === '') return
+
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Confirmar ajuste',
+            message: `Atualizar "${selectedProduct.name}" de ${formatNumber(selectedProduct.stock_quantity || 0)} para ${formatNumber(Number(adjustQty))} ${selectedProduct.unit || 'UN'}?`,
+            confirmLabel: 'Confirmar',
+            cancelLabel: 'Cancelar',
+        })
+        if (!confirmed) return
+
+        setAdjustSaving(true)
+        setAdjustFeedback(null)
+        try {
+            const res = await apiRequest('/api/stock/quick-adjust', {
+                method: 'post',
+                data: {
+                    product_id: selectedProduct.id,
+                    counted_quantity: Number(adjustQty),
+                    reason: adjustReason.trim() || null,
+                    notes: adjustNotes.trim() || null,
+                },
+            })
+            const updated = res.product
+            setProducts((prev) => prev.map((p) => String(p.id) === String(updated.id) ? { ...p, ...updated } : p))
+            setSelectedProduct((prev) => prev ? { ...prev, ...updated } : prev)
+            setAdjustFeedback({ type: 'success', text: res.message })
+            setAdjusting(false)
+            loadMovements({ id: updated.id })
+        } catch (err) {
+            setAdjustFeedback({ type: 'error', text: err.message })
+        } finally {
+            setAdjustSaving(false)
+        }
     }
 
     // Fechar painel com Escape
@@ -220,10 +285,93 @@ export default function StockEntryIndex({ payload }) {
                                         <span className="se-mov-label">em estoque</span>
                                     </div>
                                 </div>
+                                {!adjusting ? (
+                                    <button type="button" className="se-mov-adjust-btn" onClick={startAdjust}>
+                                        <i className="fa-solid fa-scale-balanced" /> Ajustar
+                                    </button>
+                                ) : null}
                                 <button type="button" className="se-mov-close" onClick={closePanel}>
                                     <i className="fa-solid fa-xmark" />
                                 </button>
                             </div>
+
+                            {adjustFeedback && !adjusting ? (
+                                <div className={`se-feedback se-feedback--${adjustFeedback.type} se-mov-adjust-feedback`}>
+                                    <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                    {adjustFeedback.text}
+                                </div>
+                            ) : null}
+
+                            {/* Ajuste de estoque inline */}
+                            {adjusting ? (
+                                <form className="se-mov-adjust-form" onSubmit={submitAdjust}>
+                                    <div className="se-form-section">
+                                        <label className="se-form-label">Novo estoque (total real) *</label>
+                                        <input
+                                            className="ui-input"
+                                            type="number"
+                                            min="0"
+                                            step="0.001"
+                                            value={adjustQty}
+                                            onChange={(e) => setAdjustQty(e.target.value)}
+                                            placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
+                                            autoFocus
+                                            required
+                                        />
+                                    </div>
+                                    <div className="se-form-section">
+                                        <label className="se-form-label">Motivo do ajuste</label>
+                                        <input
+                                            className="ui-input"
+                                            value={adjustReason}
+                                            onChange={(e) => setAdjustReason(e.target.value)}
+                                            placeholder="Ex: Inventário, quebra, furto..."
+                                        />
+                                    </div>
+
+                                    {adjustQty !== '' ? (
+                                        (() => {
+                                            const delta = Number(adjustQty) - Number(selectedProduct.stock_quantity || 0)
+                                            return (
+                                                <div className={`se-adjust-preview ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral'}`}>
+                                                    <i className={`fa-solid ${delta > 0 ? 'fa-arrow-trend-up' : delta < 0 ? 'fa-arrow-trend-down' : 'fa-equals'}`} />
+                                                    {delta === 0
+                                                        ? 'Sem alteração no estoque'
+                                                        : `Diferença: ${delta > 0 ? '+' : ''}${formatNumber(delta)} ${selectedProduct.unit || 'UN'}`
+                                                    }
+                                                </div>
+                                            )
+                                        })()
+                                    ) : null}
+
+                                    <div className="se-form-section">
+                                        <label className="se-form-label">Observação (opcional)</label>
+                                        <textarea
+                                            className="ui-textarea"
+                                            rows="2"
+                                            value={adjustNotes}
+                                            onChange={(e) => setAdjustNotes(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {adjustFeedback ? (
+                                        <div className={`se-feedback se-feedback--${adjustFeedback.type}`}>
+                                            <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                            {adjustFeedback.text}
+                                        </div>
+                                    ) : null}
+
+                                    <div className="se-form-actions">
+                                        <button type="button" className="ui-button-ghost" onClick={cancelAdjust}>
+                                            <i className="fa-solid fa-rotate-left" /> Cancelar
+                                        </button>
+                                        <button type="submit" className="se-submit-btn se-submit-btn--violet" disabled={adjustSaving}>
+                                            <i className="fa-solid fa-check" />
+                                            {adjustSaving ? 'Salvando...' : 'Confirmar ajuste'}
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : null}
 
                             {/* Filtros */}
                             <div className="se-mov-filters">

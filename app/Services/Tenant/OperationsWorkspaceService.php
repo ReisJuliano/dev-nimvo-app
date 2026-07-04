@@ -54,7 +54,6 @@ class OperationsWorkspaceService
             'compras',
             'contas-a-pagar',
             'entrada-estoque',
-            'movimentacao-estoque',
             'usuarios',
         ];
     }
@@ -111,12 +110,6 @@ class OperationsWorkspaceService
                 'moduleDescription' => 'Recebimento em etapas com fornecedor, nota, bipagem de itens e dados do boleto.',
                 'payload' => $this->stockInboundPayload(false),
             ],
-            'movimentacao-estoque' => [
-                'moduleKey' => 'movimentacao-estoque',
-                'moduleTitle' => 'Movimentacao de estoque',
-                'moduleDescription' => 'Bipe o produto, confira o estoque atual e ajuste a quantidade final com confirmação.',
-                'payload' => $this->stockMovementsPayload(false),
-            ],
             'usuarios' => [
                 'moduleKey' => 'usuarios',
                 'moduleTitle' => 'Usuarios',
@@ -137,7 +130,6 @@ class OperationsWorkspaceService
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar salva com sucesso.', 'record' => $this->serializePayable($this->savePayable(null, $input, $userId))],
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
-            'movimentacao-estoque' => ['message' => 'Estoque atualizado com sucesso.', 'record' => $this->serializeStockMovement($this->saveStockLevelUpdate($input, $userId))],
             'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
             default => abort(404),
         };
@@ -165,11 +157,6 @@ class OperationsWorkspaceService
             'entrada-estoque' => [
                 'records' => $this->stockInboundRecords($filters),
             ],
-            'movimentacao-estoque' => [
-                'records' => $this->shouldLoadListRecords($filters)
-                    ? $this->stockMovementRecords(['manual_adjustment'], 120, $filters)
-                    : [],
-            ],
             'usuarios' => [
                 'records' => $this->userRecords($filters),
             ],
@@ -188,7 +175,7 @@ class OperationsWorkspaceService
             'delivery' => ['message' => 'Entrega atualizada com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder($this->findRecord(DeliveryOrder::class, $recordId), $input))],
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar atualizada com sucesso.', 'record' => $this->serializePayable($this->savePayable($this->findRecord(Payable::class, $recordId), $input, $userId))],
-            'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
+            'entrada-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque não podem ser alterados. Crie um novo lançamento.',
             ]),
             'usuarios' => ['message' => 'Usuario atualizado com sucesso.', 'record' => $this->serializeUser($this->saveUser($this->findRecord(User::class, $recordId), $input))],
@@ -206,7 +193,7 @@ class OperationsWorkspaceService
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
             'contas-a-pagar' => tap($this->findRecord(Payable::class, $recordId))->delete() ? 'Conta a pagar removida com sucesso.' : 'Conta a pagar removida com sucesso.',
             'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
-            'entrada-estoque', 'movimentacao-estoque' => throw ValidationException::withMessages([
+            'entrada-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque não podem ser excluídos para preservar a rastreabilidade.',
             ]),
             default => abort(404),
@@ -558,14 +545,6 @@ class OperationsWorkspaceService
         ];
     }
 
-    protected function stockMovementsPayload(bool $includeRecords = false, array $filters = []): array
-    {
-        return [
-            'records' => $includeRecords ? $this->stockMovementRecords(['manual_adjustment'], 120, $filters) : [],
-            'products' => $this->stockProductOptions(),
-        ];
-    }
-
     protected function usersPayload(bool $includeRecords = true): array
     {
         return [
@@ -789,52 +768,6 @@ class OperationsWorkspaceService
             ...$this->normalizeStockInboundInput($input),
             'status' => 'received',
         ], $userId);
-    }
-
-    protected function saveStockLevelUpdate(array $input, int $userId): InventoryMovement
-    {
-        $validated = Validator::make($input, [
-            'product_id' => ['required', 'integer', 'exists:products,id'],
-            'counted_quantity' => ['required', 'numeric', 'min:0'],
-            'reason' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string'],
-            'occurred_at' => ['nullable', 'date'],
-        ])->validate();
-
-        $product = Product::query()->findOrFail((int) $validated['product_id']);
-        $expected = round((float) $product->stock_quantity, 3);
-        $counted = round((float) $validated['counted_quantity'], 3);
-        $delta = round($counted - $expected, 3);
-
-        if (abs($delta) <= 0.0001) {
-            throw ValidationException::withMessages([
-                'counted_quantity' => 'Informe uma quantidade de estoque diferente do estoque atual para registrar a movimentacao.',
-            ]);
-        }
-
-        $stockProduct = $this->inventoryMovementService->apply(
-            $product,
-            $delta,
-            'manual_adjustment',
-            [
-                'user_id' => $userId,
-                'unit_cost' => round((float) $product->cost_price, 2),
-                'notes' => $this->encodeMovementNotes('stock_adjustment', [
-                    'reason' => $validated['reason'] ?? 'Ajuste manual de estoque',
-                    'expected_quantity' => $expected,
-                    'counted_quantity' => $counted,
-                    'adjustment_delta' => $delta,
-                    'notes' => $validated['notes'] ?? null,
-                ]),
-                'occurred_at' => $validated['occurred_at'] ?? null,
-            ],
-        );
-
-        return InventoryMovement::query()
-            ->where('product_id', $stockProduct->id)
-            ->where('type', 'manual_adjustment')
-            ->latest('id')
-            ->firstOrFail();
     }
 
     protected function saveStockAdjustment(array $input, int $userId): InventoryMovement

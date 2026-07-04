@@ -906,6 +906,38 @@
 
 .se-mov-close:hover { background: rgba(239,68,68,0.08); color: var(--app-danger); border-color: rgba(239,68,68,0.25); }
 
+.se-mov-adjust-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.38rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid rgba(139,92,246,0.3);
+    background: rgba(139,92,246,0.08);
+    color: #8b5cf6;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--app-transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.se-mov-adjust-btn:hover { background: rgba(139,92,246,0.16); border-color: rgba(139,92,246,0.45); }
+
+.se-mov-adjust-form {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--app-border);
+    background: rgba(139,92,246,0.03);
+}
+
+.se-mov-adjust-feedback {
+    margin: 0.625rem 1rem 0;
+}
+
 /* Filtros */
 
 .se-mov-filters {

@@ -55,13 +55,6 @@ class TenantNavigationService
                         'request_patterns' => ['entrada-estoque'],
                     ],
                     [
-                        'href' => '/ajuste-estoque',
-                        'label' => 'Ajuste de estoque',
-                        'icon' => 'fa-scale-balanced',
-                        'access_key' => 'entrada_estoque',
-                        'request_patterns' => ['ajuste-estoque'],
-                    ],
-                    [
                         'href' => '/fiado',
                         'label' => 'Fiado',
                         'icon' => 'fa-handshake',
@@ -136,13 +129,6 @@ class TenantNavigationService
                         'icon' => 'fa-building',
                         'access_key' => 'fornecedores',
                         'request_patterns' => ['fornecedores'],
-                    ],
-                    [
-                        'href' => '/movimentacao-estoque',
-                        'label' => 'Histórico de estoque',
-                        'icon' => 'fa-clock-rotate-left',
-                        'access_key' => 'movimentacao_estoque',
-                        'request_patterns' => ['movimentacao-estoque'],
                     ],
                     [
                         'href' => '/relatorios',

@@ -118,8 +118,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/estoque', StockEntryPageController::class)->name('stock.view');
         Route::get('/entrada-estoque/manutencao', StockEntryMaintenancePageController::class)->name('stock.inbound.maintenance');
         Route::get('/entrada-estoque', [StockEntryPageController::class, 'entrada'])->name('stock.entry');
-        Route::get('/ajuste-estoque', [StockEntryPageController::class, 'ajuste'])->name('stock.adjustment');
-        Route::get('/movimentacao-estoque', OperationsPageController::class)->defaults('module', 'movimentacao-estoque')->name('stock.movement');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {

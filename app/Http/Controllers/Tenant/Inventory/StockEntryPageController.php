@@ -40,16 +40,6 @@ class StockEntryPageController extends Controller
         ]);
     }
 
-    // Página /ajuste-estoque — ajuste de estoque
-    public function ajuste(): Response
-    {
-        $products = $this->buildProductPayload();
-
-        return Inertia::render('StockEntry/Ajuste', [
-            'payload' => ['products' => $products],
-        ]);
-    }
-
     // API — entrada rápida sem NF
     public function quickReceive(Request $request, InventoryMovementService $inventoryMovementService): JsonResponse
     {

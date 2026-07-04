@@ -456,33 +456,6 @@ class OperationsModulesFlowTest extends TestCase
         $this->assertSame(['SALE-2605'], collect($overview['recent_sales'])->pluck('sale_number')->all());
     }
 
-    public function test_stock_movement_workspace_updates_product_to_informed_balance(): void
-    {
-        $user = $this->makeUser();
-        $product = $this->makeProduct([
-            'code' => 'MOV-001',
-            'name' => 'Feijao preto',
-            'stock_quantity' => 11,
-        ]);
-
-        $service = app(OperationsWorkspaceService::class);
-
-        $response = $service->store('movimentacao-estoque', [
-            'product_id' => $product->id,
-            'counted_quantity' => 7,
-            'reason' => 'Ajuste do corredor',
-        ], $user->id);
-
-        $this->assertSame(7.0, (float) $product->fresh()->stock_quantity);
-        $this->assertSame('manual_adjustment', $response['record']['type']);
-        $this->assertSame(-4.0, (float) $response['record']['quantity_delta']);
-        $this->assertSame(7.0, (float) $response['record']['counted_quantity']);
-        $this->assertDatabaseHas('inventory_movements', [
-            'product_id' => $product->id,
-            'type' => 'manual_adjustment',
-        ]);
-    }
-
     public function test_pos_finalize_creates_sale_and_inventory_movement(): void
     {
         $user = $this->makeUser();

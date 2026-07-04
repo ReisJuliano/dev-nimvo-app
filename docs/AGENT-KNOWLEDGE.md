@@ -136,9 +136,13 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   que ainda nao tenham essas chaves salvas.
 - 2026-06-23: Os utilitarios visuais compartilhados do frontend ficam em
   `resources/js/styles/nimvo-system.css`, importado por `resources/css/app.css`.
-- 2026-07-01: A workspace tenant de movimentacao/historico de estoque usa a
-  chave ASCII `movimentacao-estoque` vinda do backend. No React, comparar com
-  uma variante acentuada impede a tela de renderizar e deixa a pagina em branco.
+- 2026-07-03: As paginas separadas `/ajuste-estoque` e `/movimentacao-estoque`
+  (workspace `StockMovementsWorkspace`) foram removidas. Ajuste de estoque e
+  historico de movimentacao agora vivem dentro de `/estoque`
+  (`StockEntry/Index.jsx`): buscar produto, clicar no resultado abre o painel
+  lateral com movimentacoes e o botao "Ajustar" para registrar um ajuste,
+  ambos usando as APIs ja existentes (`api/stock/quick-adjust` e
+  `api/stock/products/{id}/movements`) em `StockEntryPageController`.
 - 2026-07-01: Em contas a pagar, a tela deve abrir sem registros nem contadores
   carregados; o carregamento acontece apenas apos o usuario clicar em Filtrar.
 - 2026-07-01: Compras/entrada de estoque e contas a pagar usam
