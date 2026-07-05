@@ -531,6 +531,12 @@ export default function PosIndex({
     const [quickProductOpen, setQuickProductOpen] = useState(false)
     const [quickProductForm, setQuickProductForm] = useState(initialQuickProductForm)
     const [creatingQuickProduct, setCreatingQuickProduct] = useState(false)
+    const [weighableModalOpen, setWeighableModalOpen] = useState(false)
+    const [weighableSearchTerm, setWeighableSearchTerm] = useState('')
+    const [weighableResults, setWeighableResults] = useState([])
+    const [weighableLoading, setWeighableLoading] = useState(false)
+    const [weighableSelected, setWeighableSelected] = useState(null)
+    const [weighableWeight, setWeighableWeight] = useState('')
     const [recommendations, setRecommendations] = useState(normalizeRecommendations(initialRecommendations))
     const [loadingRecommendations, setLoadingRecommendations] = useState(false)
     const [cart, setCart] = useState([])
@@ -1646,6 +1652,11 @@ export default function PosIndex({
     function handleAddProduct(product) {
         setFeedback(null)
         setSelectedCartItemId(product.id)
+
+        const isWeighable = product.sold_by === 'weight'
+        const scannedQty = isWeighable && product.scale_quantity ? Number(product.scale_quantity) : null
+        const increment = scannedQty ?? 1
+
         setCart((current) => {
             const existing = current.find((item) => item.id === product.id)
 
@@ -1655,7 +1666,7 @@ export default function PosIndex({
                         return item
                     }
 
-                    const nextQty = Number(item.qty) + 1
+                    const nextQty = Number((Number(item.qty) + increment).toFixed(3))
                     const stockLimit = Number(item.stock_quantity ?? 0)
 
                     if (!allowOversell && stockLimit > 0 && nextQty > stockLimit) {
@@ -1667,8 +1678,54 @@ export default function PosIndex({
                 })
             }
 
-            return [...current, normalizeCartItem({ ...product, qty: 1 })]
+            return [...current, normalizeCartItem({ ...product, qty: scannedQty ?? 1 })]
         })
+    }
+
+    function openWeighableModal() {
+        setWeighableModalOpen(true)
+        setWeighableSearchTerm('')
+        setWeighableResults([])
+        setWeighableSelected(null)
+        setWeighableWeight('')
+    }
+
+    async function searchWeighableProducts(term) {
+        setWeighableSearchTerm(term)
+        setWeighableSelected(null)
+
+        if (!term.trim()) {
+            setWeighableResults([])
+            return
+        }
+
+        setWeighableLoading(true)
+
+        try {
+            const response = await apiRequest(`/api/pdv/products?term=${encodeURIComponent(term.trim())}`)
+            setWeighableResults((response.products || []).filter((product) => product.sold_by === 'weight'))
+        } catch (error) {
+            showFeedback('error', error.message)
+        } finally {
+            setWeighableLoading(false)
+        }
+    }
+
+    function confirmWeighableAdd() {
+        const weight = Number(weighableWeight)
+
+        if (!weighableSelected) {
+            showFeedback('warning', 'Selecione o produto pesável.')
+            return
+        }
+
+        if (!weight || weight <= 0) {
+            showFeedback('warning', 'Informe o peso em quilos.')
+            return
+        }
+
+        handleAddProduct({ ...weighableSelected, scale_quantity: Number(weight.toFixed(3)) })
+        setWeighableModalOpen(false)
     }
 
     function openQuickProductModal() {
@@ -1747,7 +1804,8 @@ export default function PosIndex({
                 return [item]
             }
 
-            const nextQty = Number(item.qty || 0) + direction
+            const step = item.sold_by === 'weight' ? direction * 0.1 : direction
+            const nextQty = Number(item.qty || 0) + step
 
             if (nextQty <= 0) {
                 return []
@@ -4208,10 +4266,16 @@ export default function PosIndex({
                         title="Selecao de produtos"
                         subtitle="Busque por nome, código ou EAN e adicione direto na venda."
                         actions={
-                            <button type="button" className="ui-button-ghost" onClick={openPaymentStep}>
-                                <i className="fa-solid fa-credit-card" />
-                                Ir para pagamento
-                            </button>
+                            <>
+                                <button type="button" className="ui-button-ghost" onClick={openWeighableModal}>
+                                    <i className="fa-solid fa-weight-scale" />
+                                    Pesável
+                                </button>
+                                <button type="button" className="ui-button-ghost" onClick={openPaymentStep}>
+                                    <i className="fa-solid fa-credit-card" />
+                                    Ir para pagamento
+                                </button>
+                            </>
                         }
                     />
 
@@ -4617,6 +4681,64 @@ export default function PosIndex({
                 onSubmit={handleQuickProductSubmit}
                 onClose={() => setQuickProductOpen(false)}
             />
+
+            <CompactModal
+                open={weighableModalOpen}
+                title="Produto pesável"
+                description="Busque o produto e informe o peso lido na balança."
+                icon="fa-weight-scale"
+                onClose={() => setWeighableModalOpen(false)}
+                footer={
+                    <>
+                        <button type="button" className="ui-button-ghost" onClick={() => setWeighableModalOpen(false)}>Cancelar</button>
+                        <button type="button" className="ui-button" onClick={confirmWeighableAdd} disabled={!weighableSelected}>
+                            Adicionar à venda
+                        </button>
+                    </>
+                }
+            >
+                <input
+                    className="ui-input"
+                    placeholder="Nome ou código do produto"
+                    value={weighableSearchTerm}
+                    onChange={(event) => void searchWeighableProducts(event.target.value)}
+                    autoFocus
+                />
+
+                <div className="pos-search-results" style={{ marginTop: '0.75rem', maxHeight: '220px', overflowY: 'auto' }}>
+                    {weighableLoading ? <p>Buscando...</p> : null}
+                    {!weighableLoading && weighableSearchTerm && weighableResults.length === 0 ? (
+                        <p>Nenhum produto pesável encontrado.</p>
+                    ) : null}
+                    {weighableResults.map((product) => (
+                        <button
+                            key={product.id}
+                            type="button"
+                            className={`ui-button-ghost ${weighableSelected?.id === product.id ? 'active' : ''}`}
+                            style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '0.4rem' }}
+                            onClick={() => setWeighableSelected(product)}
+                        >
+                            <span>{product.name}</span>
+                            <span>{formatMoney(product.sale_price)}/KG</span>
+                        </button>
+                    ))}
+                </div>
+
+                {weighableSelected ? (
+                    <label style={{ display: 'block', marginTop: '0.75rem' }}>
+                        <span>Peso (KG)</span>
+                        <input
+                            className="ui-input"
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value={weighableWeight}
+                            onChange={(event) => setWeighableWeight(event.target.value)}
+                            autoFocus
+                        />
+                    </label>
+                ) : null}
+            </CompactModal>
         </AppLayout>
     )
 }
@@ -4957,7 +5079,11 @@ function PosWorkspace({
                                         >
                                             <PosIcon name="minus" />
                                         </button>
-                                        <span className="pos-item-qty">{formatNumber(item.qty, { maximumFractionDigits: 3 })}x</span>
+                                        <span className="pos-item-qty">
+                                            {item.sold_by === 'weight'
+                                                ? `${formatNumber(item.qty, { maximumFractionDigits: 3 })} KG`
+                                                : `${formatNumber(item.qty, { maximumFractionDigits: 3 })}x`}
+                                        </span>
                                         <button
                                             type="button"
                                             className="pos-item-qty-button"

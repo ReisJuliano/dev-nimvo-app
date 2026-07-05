@@ -28,6 +28,12 @@ class TenantSettingsService
                 'require_conference' => false,
                 'max_cash_before_withdrawal_suggestion' => 0,
             ],
+            'scale_barcode' => [
+                'prefix' => '2',
+                'type' => 'price_embedded',
+                'code_length' => 6,
+                'value_length' => 5,
+            ],
             'modules' => $this->defaultModules(),
         ];
     }
@@ -280,7 +286,7 @@ class TenantSettingsService
     {
         $settings = $this->normalizeIncomingSettings($settings);
         $defaults = $this->defaults();
-        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'modules']));
+        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'modules']));
 
         $merged['business']['preset'] = $this->normalizePreset(data_get($merged, 'business.preset'));
         $merged['cash_closing']['require_conference'] = (bool) data_get(
@@ -293,6 +299,12 @@ class TenantSettingsService
             'cash_closing.max_cash_before_withdrawal_suggestion',
             0,
         ));
+        $merged['scale_barcode']['prefix'] = (string) preg_replace('/\D/', '', (string) data_get($merged, 'scale_barcode.prefix', '2')) ?: '2';
+        $merged['scale_barcode']['type'] = in_array(data_get($merged, 'scale_barcode.type'), ['price_embedded', 'weight_embedded'], true)
+            ? data_get($merged, 'scale_barcode.type')
+            : 'price_embedded';
+        $merged['scale_barcode']['code_length'] = max(1, (int) data_get($merged, 'scale_barcode.code_length', 6));
+        $merged['scale_barcode']['value_length'] = max(1, (int) data_get($merged, 'scale_barcode.value_length', 5));
         $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;
@@ -511,7 +523,7 @@ class TenantSettingsService
 
     protected function payloadForStorage(array $settings): array
     {
-        return Arr::only($settings, ['business', 'cash_closing', 'modules']);
+        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'modules']);
     }
 
     protected function appSettingsTableExists(): bool

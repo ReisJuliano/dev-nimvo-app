@@ -39,6 +39,8 @@ type paymentReceiptItem struct {
 	Quantity  float64 `json:"quantity"`
 	UnitPrice float64 `json:"unit_price"`
 	Total     float64 `json:"total"`
+	Weighable bool    `json:"weighable"`
+	Unit      string  `json:"unit"`
 }
 
 type paymentReceiptPayment struct {
@@ -128,6 +130,7 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 					item.Quantity,
 					item.UnitPrice,
 					item.Total,
+					item.Weighable,
 				),
 			)
 		}
@@ -290,7 +293,7 @@ func buildPaymentReceiptPreviewLines(config PrinterConfig, payload paymentReceip
 			"Descricao             Qt  VlrUn   Total",
 		)
 		for _, item := range payload.Items {
-			lines = append(lines, formatReceiptColumns(item.Name, item.Quantity, item.UnitPrice, item.Total))
+			lines = append(lines, formatReceiptColumns(item.Name, item.Quantity, item.UnitPrice, item.Total, item.Weighable))
 		}
 	}
 
@@ -622,11 +625,16 @@ func resizeImageToWidth(source image.Image, maxWidth int) image.Image {
 	return target
 }
 
-func formatReceiptColumns(name string, quantity, unitPrice, total float64) string {
+func formatReceiptColumns(name string, quantity, unitPrice, total float64, weighable bool) string {
+	quantityColumn := padLeft(formatInteger(quantity), 3)
+	if weighable {
+		quantityColumn = padLeft(formatWeight(quantity)+"KG", 8)
+	}
+
 	return fmt.Sprintf(
 		"%s %s %s %s",
 		padRight(name, 20),
-		padLeft(formatInteger(quantity), 3),
+		quantityColumn,
 		padLeft(formatCurrency(unitPrice), 7),
 		padLeft(formatCurrency(total), 8),
 	)
@@ -643,6 +651,11 @@ func formatCurrency(value float64) string {
 
 func formatInteger(value float64) string {
 	return fmt.Sprintf("%.0f", value)
+}
+
+func formatWeight(value float64) string {
+	formatted := fmt.Sprintf("%.3f", value)
+	return strings.ReplaceAll(formatted, ".", ",")
 }
 
 func formatReceiptDateTime(value string) string {

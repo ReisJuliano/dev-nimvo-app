@@ -48,7 +48,13 @@ class ProductService
             $data['code'] = $product->exists ? $product->code : $this->nextCode();
         }
 
-        $baseUnit = strtoupper((string) ($data['unit'] ?? $product->unit ?? 'UN')) ?: 'UN';
+        $soldBy = in_array($data['sold_by'] ?? null, ['unit', 'weight'], true)
+            ? $data['sold_by']
+            : ($product->exists ? ($product->sold_by ?? 'unit') : 'unit');
+
+        $baseUnit = $soldBy === 'weight'
+            ? 'KG'
+            : (strtoupper((string) ($data['unit'] ?? $product->unit ?? 'UN')) ?: 'UN');
 
         $product->fill([
             'code' => $data['code'],
@@ -149,6 +155,16 @@ class ProductService
 
         if ($this->productColumnExists('ipi_rate')) {
             $product->ipi_rate = $data['ipi_rate'] ?? null;
+        }
+
+        if ($this->productColumnExists('sold_by')) {
+            $product->sold_by = $soldBy;
+        }
+
+        if ($this->productColumnExists('scale_code')) {
+            $product->scale_code = $soldBy === 'weight' && filled($data['scale_code'] ?? null)
+                ? (int) $data['scale_code']
+                : null;
         }
 
         $product->save();

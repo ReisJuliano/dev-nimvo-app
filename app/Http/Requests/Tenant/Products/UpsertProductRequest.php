@@ -39,6 +39,13 @@ class UpsertProductRequest extends FormRequest
             'unit' => ['nullable', 'string', 'max:10'],
             'commercial_unit' => ['nullable', 'string', 'max:10'],
             'taxable_unit' => ['nullable', 'string', 'max:10'],
+            'sold_by' => ['nullable', 'string', Rule::in(['unit', 'weight'])],
+            'scale_code' => [
+                'nullable',
+                'integer',
+                'min:1',
+                Rule::unique('products', 'scale_code')->ignore($this->route('product')),
+            ],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock_quantity' => ['nullable', 'numeric', 'min:0'],

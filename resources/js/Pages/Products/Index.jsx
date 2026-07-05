@@ -351,6 +351,8 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 fiscal_enabled: Boolean(form.fiscal_enabled),
                 commercial_unit: form.commercial_unit?.trim() || form.unit?.trim() || 'UN',
                 taxable_unit: form.taxable_unit?.trim() || form.commercial_unit?.trim() || form.unit?.trim() || 'UN',
+                sold_by: form.sold_by === 'weight' ? 'weight' : 'unit',
+                scale_code: form.sold_by === 'weight' && form.scale_code !== '' ? Number(form.scale_code) : null,
                 cost_price: form.cost_price === '' ? null : Number(form.cost_price),
                 sale_price: form.sale_price === '' ? null : Number(form.sale_price),
                 min_stock: Number(form.min_stock || 0),

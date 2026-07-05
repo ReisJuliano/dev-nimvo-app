@@ -16,7 +16,7 @@ class LocalAgentReceiptPayloadService
         $sale->loadMissing([
             'customer:id,name',
             'company:id,name,trade_name',
-            'items.product:id,name',
+            'items.product:id,name,sold_by',
             'payments',
         ]);
 
@@ -41,6 +41,8 @@ class LocalAgentReceiptPayloadService
                     'quantity' => (float) $item->quantity,
                     'unit_price' => (float) $item->unit_price,
                     'total' => (float) $item->total,
+                    'weighable' => $item->product?->sold_by === 'weight',
+                    'unit' => $item->product?->sold_by === 'weight' ? 'KG' : 'UN',
                 ])
                 ->values()
                 ->all(),

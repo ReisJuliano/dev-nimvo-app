@@ -31,6 +31,8 @@ const emptyForm = {
     unit: 'UN',
     commercial_unit: 'UN',
     taxable_unit: 'UN',
+    sold_by: 'unit',
+    scale_code: '',
     cost_price: '',
     sale_price: '',
     stock_quantity: '',
@@ -78,6 +80,8 @@ function normalizeFormData(product) {
         unit: product.unit ?? 'UN',
         commercial_unit: product.commercial_unit ?? product.unit ?? 'UN',
         taxable_unit: product.taxable_unit ?? product.unit ?? 'UN',
+        sold_by: product.sold_by === 'weight' ? 'weight' : 'unit',
+        scale_code: product.scale_code ?? '',
         cost_price: product.cost_price ?? '',
         sale_price: product.sale_price ?? '',
         stock_quantity: product.stock_quantity ?? '',
@@ -500,6 +504,45 @@ export default function ProductFormModal({
                                             <input value={form.code ?? ''} onChange={(event) => updateField('code', event.target.value)} placeholder="Opcional" />
                                         </div>
                                     </label>
+
+                                    <label className="products-editor-field">
+                                        <span>Vendido por</span>
+                                        <div className="products-editor-input-wrap">
+                                            <i className="fa-solid fa-weight-scale" />
+                                            <select
+                                                value={form.sold_by ?? 'unit'}
+                                                onChange={(event) => {
+                                                    const nextSoldBy = event.target.value
+                                                    updateField('sold_by', nextSoldBy)
+                                                    if (nextSoldBy === 'weight') {
+                                                        updateField('unit', 'KG')
+                                                        updateField('commercial_unit', 'KG')
+                                                        updateField('taxable_unit', 'KG')
+                                                    }
+                                                }}
+                                            >
+                                                <option value="unit">Unidade</option>
+                                                <option value="weight">Peso (balança)</option>
+                                            </select>
+                                        </div>
+                                    </label>
+
+                                    {form.sold_by === 'weight' ? (
+                                        <label className={`products-editor-field ${errors.scale_code ? 'has-error' : ''}`}>
+                                            <span>Código da balança</span>
+                                            <div className="products-editor-input-wrap">
+                                                <i className="fa-solid fa-barcode" />
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={form.scale_code ?? ''}
+                                                    onChange={(event) => updateField('scale_code', event.target.value)}
+                                                    placeholder="Ex.: 123"
+                                                />
+                                            </div>
+                                            {renderFieldError('scale_code')}
+                                        </label>
+                                    ) : null}
 
                                     {showQuickSupplier ? (
                                         <article className="products-inline-create-card span-2">

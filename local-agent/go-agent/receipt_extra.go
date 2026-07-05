@@ -235,10 +235,11 @@ func printFiscalReceipt(config PrinterConfig, payload fiscalReceiptRequest) (str
 		qty := numberFromMap(item, "quantity")
 		unitPrice := numberFromMap(item, "unit_price")
 		total := firstPositive(numberFromMap(item, "total"), qty*unitPrice)
+		weighable := stringFromMap(item, "unit") == "KG"
 		for _, wrapped := range wrapReceiptText(name, columns) {
 			builder.line(wrapped)
 		}
-		builder.line(formatFiscalItemLine(qty, unitPrice, total, columns))
+		builder.line(formatFiscalItemLine(qty, unitPrice, total, columns, weighable))
 	}
 
 	builder.line(separator)
@@ -333,8 +334,9 @@ func buildFiscalReceiptLines(config PrinterConfig, payload fiscalReceiptRequest)
 		qty := numberFromMap(item, "quantity")
 		unitPrice := numberFromMap(item, "unit_price")
 		total := firstPositive(numberFromMap(item, "total"), qty*unitPrice)
+		weighable := stringFromMap(item, "unit") == "KG"
 		lines = append(lines, wrapReceiptText(name, columns)...)
-		lines = append(lines, formatFiscalItemLine(qty, unitPrice, total, columns))
+		lines = append(lines, formatFiscalItemLine(qty, unitPrice, total, columns, weighable))
 	}
 
 	lines = append(lines, separator)
@@ -549,8 +551,13 @@ func receiptColumns(config PrinterConfig) int {
 	return 48
 }
 
-func formatFiscalItemLine(qty, unitPrice, total float64, columns int) string {
-	left := fmt.Sprintf("%sx R$ %s", formatCurrency(qty), formatCurrency(unitPrice))
+func formatFiscalItemLine(qty, unitPrice, total float64, columns int, weighable bool) string {
+	var left string
+	if weighable {
+		left = fmt.Sprintf("%sKG x R$ %s", formatWeight(qty), formatCurrency(unitPrice))
+	} else {
+		left = fmt.Sprintf("%sx R$ %s", formatCurrency(qty), formatCurrency(unitPrice))
+	}
 	right := "R$ " + formatCurrency(total)
 	return padRight(left, maxInt(1, columns-len([]rune(right)))) + right
 }

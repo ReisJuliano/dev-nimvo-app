@@ -72,7 +72,9 @@ class ThermalSaleReceiptPrinter
         foreach ($items as $item) {
             $code = $this->pad((string) ($item['code'] ?? ''), 7);
             $name = (string) ($item['name'] ?? '');
-            $qty = $this->pad(number_format((float) ($item['quantity'] ?? 0), 0, ',', '.'), 4, STR_PAD_LEFT);
+            $rawQuantity = (float) ($item['quantity'] ?? 0);
+            $qtyDecimals = fmod($rawQuantity, 1.0) !== 0.0 ? 3 : 0;
+            $qty = $this->pad(number_format($rawQuantity, $qtyDecimals, ',', '.'), 6, STR_PAD_LEFT);
             $unit = $this->pad(number_format((float) ($item['unit_price'] ?? 0), 2, ',', '.'), 8, STR_PAD_LEFT);
 
             $printer->text("{$code} ".$this->pad($name, 26)." {$qty} {$unit}\n");

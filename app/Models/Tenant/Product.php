@@ -39,6 +39,8 @@ class Product extends Model
         'unit',
         'commercial_unit',
         'taxable_unit',
+        'sold_by',
+        'scale_code',
         'cost_price',
         'sale_price',
         'stock_quantity',
@@ -50,6 +52,7 @@ class Product extends Model
         'active' => 'boolean',
         'catalog_visible' => 'boolean',
         'fiscal_enabled' => 'boolean',
+        'scale_code' => 'integer',
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'stock_quantity' => 'decimal:3',
@@ -59,6 +62,11 @@ class Product extends Model
         'cofins_rate' => 'decimal:4',
         'ipi_rate' => 'decimal:4',
     ];
+
+    public function isWeighable(): bool
+    {
+        return $this->sold_by === 'weight';
+    }
 
     public function category(): BelongsTo
     {

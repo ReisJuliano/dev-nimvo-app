@@ -21,6 +21,7 @@ use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
 use App\Services\Tenant\ProductService;
+use App\Services\Tenant\ScaleBarcodeService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
@@ -36,13 +37,27 @@ class PosApiController extends Controller
 
     protected array $schemaColumnCache = [];
 
-    public function searchProducts(Request $request): JsonResponse
+    public function searchProducts(Request $request, ScaleBarcodeService $scaleBarcodeService): JsonResponse
     {
-        $term = TextSearch::normalize($request->string('term'));
+        $rawTerm = trim($request->string('term'));
+        $term = TextSearch::normalize($rawTerm);
         $categoryId = $request->integer('category_id');
 
         if ($term === '') {
             return response()->json(['products' => []]);
+        }
+
+        if (preg_match('/^\d{13}$/', $rawTerm)) {
+            $scaleResult = $scaleBarcodeService->parse($rawTerm);
+
+            if ($scaleResult) {
+                return response()->json(['products' => [
+                    $this->mapProductForSearch($scaleResult->product) + [
+                        'scale_quantity' => $scaleResult->quantity,
+                        'scale_total_price' => $scaleResult->totalPrice,
+                    ],
+                ]]);
+            }
         }
 
         $productsQuery = Product::query()
@@ -67,19 +82,25 @@ class PosApiController extends Controller
             ->orderBy('name')
             ->limit(15)
             ->get()
-            ->map(fn (Product $product) => [
-                'id' => $product->id,
-                'code' => $product->code,
-                'barcode' => $product->barcode,
-                'name' => $product->name,
-                'description' => $product->description,
-                'unit' => $product->unit,
-                'cost_price' => (float) $product->cost_price,
-                'sale_price' => (float) $product->sale_price,
-                'stock_quantity' => (float) $product->stock_quantity,
-            ]);
+            ->map(fn (Product $product) => $this->mapProductForSearch($product));
 
         return response()->json(['products' => $products]);
+    }
+
+    protected function mapProductForSearch(Product $product): array
+    {
+        return [
+            'id' => $product->id,
+            'code' => $product->code,
+            'barcode' => $product->barcode,
+            'name' => $product->name,
+            'description' => $product->description,
+            'unit' => $product->unit,
+            'sold_by' => $product->sold_by ?? 'unit',
+            'cost_price' => (float) $product->cost_price,
+            'sale_price' => (float) $product->sale_price,
+            'stock_quantity' => (float) $product->stock_quantity,
+        ];
     }
 
     public function quickProduct(Request $request, ProductService $productService): JsonResponse
