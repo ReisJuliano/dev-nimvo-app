@@ -33,6 +33,9 @@ use App\Http\Controllers\Tenant\Operations\OperationsApiController;
 use App\Http\Controllers\Tenant\Operations\OperationsPageController;
 use App\Http\Controllers\Tenant\Orders\OrdersApiController;
 use App\Http\Controllers\Tenant\Orders\OrdersPageController;
+use App\Http\Controllers\Tenant\Inventory\InventoryCollectorController;
+use App\Http\Controllers\Tenant\Inventory\InventoryPageController;
+use App\Http\Controllers\Tenant\Inventory\InventorySessionApiController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryMaintenancePageController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryPageController;
 use App\Http\Controllers\Tenant\Payables\PayablesPageController;
@@ -125,6 +128,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/estoque', StockEntryPageController::class)->name('stock.view');
         Route::get('/entrada-estoque/manutencao', StockEntryMaintenancePageController::class)->name('stock.inbound.maintenance');
         Route::get('/entrada-estoque', [StockEntryPageController::class, 'entrada'])->name('stock.entry');
+        Route::get('/inventario', InventoryPageController::class)->name('inventory.index');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {
@@ -223,6 +227,29 @@ Route::middleware('auth')->group(function () {
             Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
             Route::post('/stock/quick-adjust', [StockEntryPageController::class, 'quickAdjust'])->name('api.stock.quick-adjust');
             Route::get('/stock/products/{product}/movements', [StockEntryPageController::class, 'productMovements'])->name('api.stock.product-movements');
+
+            Route::get('/inventory/sessions', [InventorySessionApiController::class, 'index'])->name('api.inventory.sessions.index');
+            Route::post('/inventory/sessions', [InventorySessionApiController::class, 'store'])->name('api.inventory.sessions.store');
+            Route::get('/inventory/sessions/{inventorySession}', [InventorySessionApiController::class, 'show'])->name('api.inventory.sessions.show');
+            Route::post('/inventory/sessions/{inventorySession}/start', [InventorySessionApiController::class, 'start'])->name('api.inventory.sessions.start');
+            Route::post('/inventory/sessions/{inventorySession}/cancel', [InventorySessionApiController::class, 'cancel'])->name('api.inventory.sessions.cancel');
+            Route::post('/inventory/sessions/{inventorySession}/finish-counting', [InventorySessionApiController::class, 'finishCounting'])->name('api.inventory.sessions.finish-counting');
+            Route::post('/inventory/sessions/{inventorySession}/approve', [InventorySessionApiController::class, 'approve'])->name('api.inventory.sessions.approve');
+            Route::get('/inventory/sessions/{inventorySession}/items', [InventorySessionApiController::class, 'items'])->name('api.inventory.sessions.items.index');
+            Route::post('/inventory/sessions/{inventorySession}/counts', [InventorySessionApiController::class, 'recordCount'])->name('api.inventory.sessions.counts.store');
+            Route::post('/inventory/sessions/{inventorySession}/items/recount', [InventorySessionApiController::class, 'bulkRecount'])->name('api.inventory.sessions.items.recount');
+            Route::post('/inventory/sessions/{inventorySession}/items/mark-zero', [InventorySessionApiController::class, 'bulkMarkZero'])->name('api.inventory.sessions.items.mark-zero');
+            Route::post('/inventory/sessions/{inventorySession}/items/mark-skipped', [InventorySessionApiController::class, 'bulkMarkSkipped'])->name('api.inventory.sessions.items.mark-skipped');
+            Route::post('/inventory/sessions/{inventorySession}/items/{item}/resolve', [InventorySessionApiController::class, 'resolveItem'])->name('api.inventory.sessions.items.resolve');
+
+            Route::get('/inventory/collector-layouts', [InventoryCollectorController::class, 'layouts'])->name('api.inventory.layouts.index');
+            Route::post('/inventory/collector-layouts', [InventoryCollectorController::class, 'storeLayout'])->name('api.inventory.layouts.store');
+            Route::put('/inventory/collector-layouts/{layout}', [InventoryCollectorController::class, 'updateLayout'])->name('api.inventory.layouts.update');
+            Route::delete('/inventory/collector-layouts/{layout}', [InventoryCollectorController::class, 'destroyLayout'])->name('api.inventory.layouts.destroy');
+            Route::post('/inventory/collector-layouts/preview', [InventoryCollectorController::class, 'previewLayout'])->name('api.inventory.layouts.preview');
+            Route::get('/inventory/sessions/{inventorySession}/export', [InventoryCollectorController::class, 'export'])->name('api.inventory.sessions.export');
+            Route::post('/inventory/sessions/{inventorySession}/import', [InventoryCollectorController::class, 'import'])->name('api.inventory.sessions.import');
+            Route::post('/inventory/sessions/{inventorySession}/import-batches/{batch}/resolve-line', [InventoryCollectorController::class, 'resolveUnmatchedLine'])->name('api.inventory.sessions.import-batches.resolve-line');
 
             Route::post('/products', [ProductsApiController::class, 'store'])->name('api.products.store');
             Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');

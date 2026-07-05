@@ -34,6 +34,10 @@ class TenantSettingsService
                 'code_length' => 6,
                 'value_length' => 5,
             ],
+            'inventory' => [
+                'supervisor_threshold_value' => 200.0,
+                'supervisor_threshold_quantity' => 20.0,
+            ],
             'modules' => $this->defaultModules(),
         ];
     }
@@ -286,7 +290,7 @@ class TenantSettingsService
     {
         $settings = $this->normalizeIncomingSettings($settings);
         $defaults = $this->defaults();
-        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'modules']));
+        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'modules']));
 
         $merged['business']['preset'] = $this->normalizePreset(data_get($merged, 'business.preset'));
         $merged['cash_closing']['require_conference'] = (bool) data_get(
@@ -305,6 +309,8 @@ class TenantSettingsService
             : 'price_embedded';
         $merged['scale_barcode']['code_length'] = max(1, (int) data_get($merged, 'scale_barcode.code_length', 6));
         $merged['scale_barcode']['value_length'] = max(1, (int) data_get($merged, 'scale_barcode.value_length', 5));
+        $merged['inventory']['supervisor_threshold_value'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_value', 200));
+        $merged['inventory']['supervisor_threshold_quantity'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_quantity', 20));
         $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;
@@ -523,7 +529,7 @@ class TenantSettingsService
 
     protected function payloadForStorage(array $settings): array
     {
-        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'modules']);
+        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'modules']);
     }
 
     protected function appSettingsTableExists(): bool

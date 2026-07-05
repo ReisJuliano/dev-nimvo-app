@@ -6,6 +6,7 @@ namespace App\Services\Tenant\Reports;
 
 use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
+use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
@@ -105,6 +106,8 @@ class ReportBrowserService
                 'stock-shortages' => $this->stockShortagesReport($resolvedFilters),
                 'stock-position' => $this->stockPositionReport($resolvedFilters),
                 'stock-inbounds' => $this->stockInboundsReport($resolvedFilters),
+                'inventory-divergences' => $this->inventoryDivergencesReport($resolvedFilters),
+                'inventory-history' => $this->inventoryHistoryReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
                 'cash-discrepancy' => $this->cashDiscrepancyReport($resolvedFilters),
                 'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
@@ -251,6 +254,22 @@ class ReportBrowserService
                 'tags' => ['Saldo', 'Mínimo', 'Valor'],
             ],
             [
+                'key' => 'inventory-divergences',
+                'category' => 'stock',
+                'title' => 'Divergências do inventário',
+                'description' => 'Contado x sistema por sessão de inventário, com totais valorizados de sobra e falta.',
+                'icon' => 'fa-clipboard-list',
+                'tags' => ['Sobra', 'Falta', 'Acuracidade'],
+            ],
+            [
+                'key' => 'inventory-history',
+                'category' => 'stock',
+                'title' => 'Histórico de inventários',
+                'description' => 'Sessões de inventário realizadas com status, itens e divergência líquida.',
+                'icon' => 'fa-clock-rotate-left',
+                'tags' => ['Sessões', 'Status', 'Divergência'],
+            ],
+            [
                 'key' => 'stock-inbounds',
                 'category' => 'stock',
                 'title' => 'Entradas de mercadoria',
@@ -377,6 +396,7 @@ class ReportBrowserService
             'category_id' => $this->normalizePositiveInt($filters['category_id'] ?? null),
             'supplier_id' => $this->normalizePositiveInt($filters['supplier_id'] ?? null),
             'till_id' => $this->normalizePositiveInt($filters['till_id'] ?? null),
+            'inventory_session_id' => $this->normalizePositiveInt($filters['inventory_session_id'] ?? null),
             'stock_status' => $this->normalizeSelection($filters['stock_status'] ?? null, ['healthy', 'low', 'out']),
             'balance_status' => $this->normalizeSelection($filters['balance_status'] ?? null, ['with_balance', 'near_limit', 'without_limit']),
             'sort_by' => $sortBy !== '' ? $sortBy : null,
@@ -406,6 +426,7 @@ class ReportBrowserService
             'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : '',
             'supplier_id' => $filters['supplier_id'] ? (string) $filters['supplier_id'] : '',
             'till_id' => $filters['till_id'] ? (string) $filters['till_id'] : '',
+            'inventory_session_id' => $filters['inventory_session_id'] ? (string) $filters['inventory_session_id'] : '',
             'stock_status' => $filters['stock_status'] ?? '',
             'balance_status' => $filters['balance_status'] ?? '',
             'sort_by' => $filters['sort_by'] ?? '',
@@ -589,6 +610,25 @@ class ReportBrowserService
                 'default_sort' => ['by' => 'received_at', 'direction' => 'desc'],
                 'search_placeholder' => 'Código ou fornecedor',
             ],
+            'inventory-divergences' => [
+                'fields' => ['inventory_session_id', 'query', 'category_id', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'delta_value', 'label' => 'Divergência (R$)'],
+                    ['value' => 'delta', 'label' => 'Divergência (qtd)'],
+                    ['value' => 'name', 'label' => 'Produto'],
+                ],
+                'default_sort' => ['by' => 'delta_value', 'direction' => 'desc'],
+                'search_placeholder' => 'Produto ou código',
+            ],
+            'inventory-history' => [
+                'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'created_at', 'label' => 'Criação'],
+                    ['value' => 'code', 'label' => 'Código'],
+                    ['value' => 'status', 'label' => 'Status'],
+                ],
+                'default_sort' => ['by' => 'created_at', 'direction' => 'desc'],
+            ],
             'cashflow-daily' => [
                 'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
@@ -644,6 +684,7 @@ class ReportBrowserService
             'categories' => $this->namedLookupFilterOptions('categories'),
             'suppliers' => $this->namedLookupFilterOptions('suppliers', 120),
             'tills' => $this->namedLookupFilterOptions('tills'),
+            'inventory_sessions' => $this->inventorySessionFilterOptions(),
             'stock_statuses' => [
                 ['value' => 'healthy', 'label' => 'Saudável'],
                 ['value' => 'low', 'label' => 'Baixo estoque'],
@@ -701,6 +742,24 @@ class ReportBrowserService
                 'label' => $customer->phone
                     ? "{$customer->name} - {$customer->phone}"
                     : $customer->name,
+            ])
+            ->all();
+    }
+
+    protected function inventorySessionFilterOptions(): array
+    {
+        if (! $this->hasTableColumns('inventory_sessions', ['id', 'code'])) {
+            return [];
+        }
+
+        return InventorySession::query()
+            ->whereIn('status', ['review', 'adjusting', 'completed'])
+            ->latest('id')
+            ->limit(50)
+            ->get(['id', 'code'])
+            ->map(fn (InventorySession $session) => [
+                'value' => (string) $session->id,
+                'label' => $session->code,
             ])
             ->all();
     }
@@ -1474,6 +1533,142 @@ class ReportBrowserService
             paginator: $paginator,
             emptyText: 'Nenhum produto ativo encontrado para o estoque.',
             table: ['title' => 'Estoque atual'],
+        );
+    }
+
+    protected function inventoryDivergencesReport(array $filters): array
+    {
+        $session = $filters['inventory_session_id']
+            ? InventorySession::query()->find($filters['inventory_session_id'])
+            : InventorySession::query()->whereIn('status', ['review', 'adjusting', 'completed'])->latest('id')->first();
+
+        if (!$session) {
+            return $this->reportPayload(
+                summary: [],
+                columns: [],
+                rows: [],
+                paginator: null,
+                emptyText: 'Nenhuma sessão de inventário encontrada. Selecione uma sessão para ver as divergências.',
+            );
+        }
+
+        $items = $session->items()
+            ->with('product:id,code,barcode,name,category_id')
+            ->with('product.category:id,name')
+            ->whereNotNull('counted_quantity')
+            ->when($filters['category_id'], fn ($query, $categoryId) => $query->whereHas('product', fn ($inner) => $inner->where('category_id', $categoryId)))
+            ->when($filters['query'], fn ($query, $term) => $query->whereHas('product', function ($inner) use ($term) {
+                $inner->where('name', 'like', "%{$term}%")->orWhere('code', 'like', "%{$term}%");
+            }))
+            ->get()
+            ->map(function ($item) {
+                $delta = $item->delta();
+
+                return [
+                    'code' => $item->product?->code ?: '-',
+                    'name' => $item->product?->name,
+                    'category_name' => $item->product?->category?->name ?: 'Sem categoria',
+                    'snapshot_quantity' => (float) $item->snapshot_quantity,
+                    'counted_quantity' => (float) $item->counted_quantity,
+                    'delta' => $delta,
+                    'delta_value' => $item->deltaValue(),
+                    'status' => $item->status,
+                ];
+            });
+
+        $divergentItems = $items->filter(fn (array $row) => abs($row['delta']) > 0.0009);
+        $surplusValue = $divergentItems->filter(fn ($row) => $row['delta_value'] > 0)->sum('delta_value');
+        $shortageValue = $divergentItems->filter(fn ($row) => $row['delta_value'] < 0)->sum('delta_value');
+        $accuracy = $items->count() > 0
+            ? round((($items->count() - $divergentItems->count()) / $items->count()) * 100, 2)
+            : 100.0;
+
+        $sorted = $this->sortCollection($items, $filters, [
+            'delta_value' => 'delta_value',
+            'delta' => 'delta',
+            'name' => 'name',
+        ], 'delta_value', 'desc');
+
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Sessão', $session->code, 'text', 'fa-clipboard-list'),
+                $this->summaryCard('Itens divergentes', $divergentItems->count(), 'number', 'fa-triangle-exclamation'),
+                $this->summaryCard('Sobra (R$)', (float) $surplusValue, 'money', 'fa-arrow-trend-up'),
+                $this->summaryCard('Falta (R$)', (float) abs($shortageValue), 'money', 'fa-arrow-trend-down'),
+            ],
+            highlights: [
+                $this->highlight('Divergência líquida', round($surplusValue + $shortageValue, 2), 'money', $session->code, ($surplusValue + $shortageValue) >= 0 ? 'success' : 'danger'),
+                $this->highlight('Acuracidade', $accuracy, 'percent', "{$items->count()} item(ns) contado(s)", 'primary'),
+            ],
+            columns: [
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'name', 'label' => 'Produto'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'snapshot_quantity', 'label' => 'Sistema', 'format' => 'decimal'],
+                ['key' => 'counted_quantity', 'label' => 'Contado', 'format' => 'decimal'],
+                ['key' => 'delta', 'label' => 'Divergência (qtd)', 'format' => 'decimal'],
+                ['key' => 'delta_value', 'label' => 'Divergência (R$)', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhum item contado nesta sessão.',
+            table: ['title' => "Divergências — {$session->code}"],
+        );
+    }
+
+    protected function inventoryHistoryReport(array $filters): array
+    {
+        $query = InventorySession::query()
+            ->with(['createdBy:id,name', 'approvedBy:id,name'])
+            ->withCount('items')
+            ->whereBetween('created_at', [$filters['from'], $filters['to']]);
+
+        $summary = (clone $query)->get();
+        $completed = $summary->where('status', 'completed');
+
+        $this->applyOrderBy($query, [
+            'created_at' => 'inventory_sessions.created_at',
+            'code' => 'inventory_sessions.code',
+            'status' => 'inventory_sessions.status',
+        ], $filters, 'created_at', 'desc');
+
+        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
+
+        $rows = collect($paginator->items())->map(function (InventorySession $session) {
+            return [
+                'code' => $session->code,
+                'type' => $session->type === 'general' ? 'Geral' : 'Parcial',
+                'mode' => $session->mode === 'frozen' ? 'Congelado' : 'Snapshot',
+                'status' => $session->status,
+                'items_count' => $session->items_count ?? 0,
+                'created_by_name' => $session->createdBy?->name ?: '-',
+                'approved_by_name' => $session->approvedBy?->name ?: '-',
+                'created_at' => $session->created_at?->format('d/m/Y H:i'),
+            ];
+        })->all();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Sessões no período', $summary->count(), 'number', 'fa-clipboard-list'),
+                $this->summaryCard('Concluídas', $completed->count(), 'number', 'fa-circle-check'),
+                $this->summaryCard('Em andamento', $summary->whereIn('status', ['counting', 'review', 'adjusting'])->count(), 'number', 'fa-hourglass-half'),
+            ],
+            columns: [
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'type', 'label' => 'Tipo'],
+                ['key' => 'mode', 'label' => 'Modo'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'items_count', 'label' => 'Itens', 'format' => 'number'],
+                ['key' => 'created_by_name', 'label' => 'Criado por'],
+                ['key' => 'approved_by_name', 'label' => 'Aprovado por'],
+                ['key' => 'created_at', 'label' => 'Criado em'],
+            ],
+            rows: $rows,
+            paginator: $paginator,
+            emptyText: 'Nenhuma sessão de inventário no período selecionado.',
+            table: ['title' => 'Histórico de inventários'],
         );
     }
 

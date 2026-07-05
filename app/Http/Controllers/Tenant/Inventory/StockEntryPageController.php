@@ -161,6 +161,7 @@ class StockEntryPageController extends Controller
             'sale'              => 'Saída por venda',
             'purchase_return'   => 'Devolução de compra',
             'sale_cancellation' => 'Cancelamento de venda',
+            'inventory_count_adjustment' => 'Ajuste de inventário',
             'initial'           => 'Estoque inicial',
             default             => ucfirst(str_replace('_', ' ', $type)),
         };

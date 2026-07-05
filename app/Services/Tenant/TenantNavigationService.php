@@ -55,6 +55,13 @@ class TenantNavigationService
                         'request_patterns' => ['entrada-estoque'],
                     ],
                     [
+                        'href' => '/inventario',
+                        'label' => 'Inventário',
+                        'icon' => 'fa-clipboard-list',
+                        'required_permission' => 'inventario.gerenciar',
+                        'request_patterns' => ['inventario', 'api/inventory*'],
+                    ],
+                    [
                         'href' => '/fiado',
                         'label' => 'Fiado',
                         'icon' => 'fa-handshake',

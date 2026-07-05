@@ -36,6 +36,8 @@ class PermissionRegistry
                     ['key' => 'estoque.visualizar', 'label' => 'Visualizar estoque', 'description' => 'Consulta o saldo e o histórico de movimentações de estoque.'],
                     ['key' => 'estoque.ajustar', 'label' => 'Ajustar estoque', 'description' => 'Permite lançar ajustes manuais de quantidade em estoque.'],
                     ['key' => 'estoque.entrada_mercadoria', 'label' => 'Registrar entrada de mercadoria', 'description' => 'Permite lançar entradas de mercadoria (nota, fornecedor, boleto).'],
+                    ['key' => 'inventario.gerenciar', 'label' => 'Gerenciar inventário', 'description' => 'Permite criar sessões de inventário, contar e enviar para conferência.'],
+                    ['key' => 'inventario.aprovar', 'label' => 'Aprovar inventário', 'description' => 'Permite aprovar a conferência e aplicar os ajustes de um inventário.'],
                 ],
             ],
             [

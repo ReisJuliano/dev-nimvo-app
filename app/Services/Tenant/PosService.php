@@ -7,6 +7,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\Inventory\InventorySessionService;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class PosService
         protected InventoryMovementService $inventoryMovementService,
         protected PendingSaleService $pendingSaleService,
         protected ConditionalSaleService $conditionalSaleService,
+        protected InventorySessionService $inventorySessionService,
     ) {
     }
 
@@ -59,13 +61,21 @@ class PosService
                 }
             }
 
-            $items = collect($payload['items'])->map(function (array $item) {
+            $frozenProductIds = $this->inventorySessionService->frozenProductIds();
+
+            $items = collect($payload['items'])->map(function (array $item) use ($frozenProductIds) {
                 /** @var Product $product */
                 $product = Product::query()->lockForUpdate()->findOrFail($item['id']);
                 $quantity = (float) $item['qty'];
                 $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null
                     ? round((float) $item['unit_price'], 2)
                     : round((float) $product->sale_price, 2);
+
+                if (in_array($product->id, $frozenProductIds, true)) {
+                    throw ValidationException::withMessages([
+                        'items' => "O produto {$product->name} está bloqueado por contagem de estoque em andamento (sessão congelada).",
+                    ]);
+                }
 
                 if ((float) $product->stock_quantity < $quantity) {
                     throw ValidationException::withMessages([
