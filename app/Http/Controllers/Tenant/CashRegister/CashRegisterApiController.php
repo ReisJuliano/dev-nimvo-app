@@ -11,25 +11,28 @@ use App\Models\Tenant\CashRegister;
 use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\LocalAgentPrintQueueService;
 use App\Services\Tenant\SupervisorAuthorizationService;
+use App\Services\Tenant\TillService;
 use Illuminate\Http\JsonResponse;
 
 class CashRegisterApiController extends Controller
 {
-    public function open(OpenCashRegisterRequest $request): JsonResponse
+    public function open(OpenCashRegisterRequest $request, TillService $tillService): JsonResponse
     {
         $userId = auth()->user()?->getKey();
+        $till = $tillService->resolveForOpening($request->validated('till_id'));
 
         $existing = CashRegister::query()
-            ->where('user_id', $userId)
+            ->where('till_id', $till->id)
             ->where('status', 'open')
             ->exists();
 
         if ($existing) {
-            return response()->json(['message' => 'Você já possui um caixa aberto.'], 422);
+            return response()->json(['message' => 'Este caixa já está aberto.'], 422);
         }
 
         $cashRegister = CashRegister::query()->create([
             'user_id' => $userId,
+            'till_id' => $till->id,
             'status' => 'open',
             'opening_amount' => $request->validated('opening_amount', 0),
             'opening_notes' => $request->validated('opening_notes'),
@@ -39,6 +42,8 @@ class CashRegisterApiController extends Controller
         return response()->json([
             'message' => 'Caixa aberto com sucesso.',
             'cash_register_id' => $cashRegister->id,
+            'till_id' => $till->id,
+            'till_name' => $till->name,
         ], 201);
     }
 
@@ -142,7 +147,11 @@ class CashRegisterApiController extends Controller
 
     public function report(CashRegister $cashRegister, CashRegisterReportService $reportService): JsonResponse
     {
-        abort_unless((int) $cashRegister->user_id === (int) auth()->user()?->getKey(), 404);
+        $user = auth()->user();
+        $isOwner = (int) $cashRegister->user_id === (int) $user?->getKey();
+        $isManager = in_array($user?->role, ['admin', 'manager'], true);
+
+        abort_unless($isOwner || $isManager, 404);
 
         return response()->json([
             'report' => $reportService->build($cashRegister),

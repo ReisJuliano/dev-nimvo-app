@@ -26,6 +26,7 @@ class TenantSettingsService
             ],
             'cash_closing' => [
                 'require_conference' => false,
+                'max_cash_before_withdrawal_suggestion' => 0,
             ],
             'modules' => $this->defaultModules(),
         ];
@@ -287,6 +288,11 @@ class TenantSettingsService
             'cash_closing.require_conference',
             true,
         );
+        $merged['cash_closing']['max_cash_before_withdrawal_suggestion'] = max(0, (float) data_get(
+            $merged,
+            'cash_closing.max_cash_before_withdrawal_suggestion',
+            0,
+        ));
         $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;

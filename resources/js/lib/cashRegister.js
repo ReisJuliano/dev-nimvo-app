@@ -7,10 +7,11 @@ export const CASH_REGISTER_PAYMENT_FIELDS = [
     { key: 'credit', label: 'Fiado', icon: 'wallet', tone: 'credit' },
 ]
 
-export function createOpenCashRegisterForm() {
+export function createOpenCashRegisterForm(tillId = '') {
     return {
         openingAmount: '0',
         openingNotes: '',
+        tillId: tillId ? String(tillId) : '',
     }
 }
 

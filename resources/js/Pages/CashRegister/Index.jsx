@@ -9,6 +9,7 @@ import AppLayout from '@/Layouts/AppLayout'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows } from '@/lib/cashRegister'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { formatDateTime, formatMoney } from '@/lib/format'
+import { resolveTillBinding, setTillBinding } from '@/lib/tillBinding'
 import {
     buildOfflineCashRegisterReport,
     cacheOfflineCashRegisterReport,
@@ -132,10 +133,12 @@ function CashRegisterEmpty({ icon, title, text, action = null }) {
     )
 }
 
-export default function CashRegisterIndex({ openRegister, history, settings }) {
+export default function CashRegisterIndex({ openRegister, history, settings, tills = [] }) {
     const { auth, tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
+    const singleTillMode = tills.length <= 1
     const [loading, setLoading] = useState(false)
+    const [openTillId, setOpenTillId] = useState('')
     const [closingCashRegister, setClosingCashRegister] = useState(false)
     const [reportModal, setReportModal] = useState(null)
     const [closeConferenceModal, setCloseConferenceModal] = useState(null)
@@ -230,17 +233,25 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
 
     async function handleOpen(event) {
         event.preventDefault()
+
+        if (!singleTillMode && !openTillId) {
+            setFeedback({ type: 'warning', text: 'Selecione qual caixa (terminal) deseja abrir.' })
+            return
+        }
+
         setLoading(true)
         setFeedback(null)
 
         const formData = new FormData(event.currentTarget)
+        const tillId = openTillId ? Number(openTillId) : null
         const payload = {
+            till_id: tillId,
             opening_amount: Number(formData.get('opening_amount') || 0),
             opening_notes: formData.get('opening_notes') || null,
         }
 
         try {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 createOfflineCashRegister(tenantId, payload, { userName: auth?.user?.name })
                 setOpenModalVisible(false)
                 setFeedback({
@@ -255,9 +266,13 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 data: payload,
             })
 
+            if (tillId) {
+                setTillBinding(tenantId, { id: tillId, name: tills.find((till) => till.id === tillId)?.name })
+            }
+
             window.location.reload()
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 createOfflineCashRegister(tenantId, payload, { userName: auth?.user?.name })
                 setOpenModalVisible(false)
                 setFeedback({
@@ -305,7 +320,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
 
             window.location.reload()
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 registerOfflineCashMovement(tenantId, openRegisterState.cashRegister.id, payload, {
                     userName: auth?.user?.name,
                 })
@@ -396,7 +411,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
         }
 
         try {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const result = closeOfflineCashRegister(tenantId, openRegisterState.cashRegister.id, payload, {
                     userName: auth?.user?.name,
                     fallbackReport: openRegisterState,
@@ -421,7 +436,7 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
             setRefreshAfterClose(true)
             setReportModal(response.report)
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 const result = closeOfflineCashRegister(tenantId, openRegisterState.cashRegister.id, payload, {
                     userName: auth?.user?.name,
                     fallbackReport: openRegisterState,
@@ -651,7 +666,14 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                         </div>
                         <h2 className="cr-closed-title">Caixa fechado</h2>
                         <p className="cr-closed-text">Abra o caixa para começar a registrar vendas do turno.</p>
-                        <button type="button" className="cr-open-btn" onClick={() => setOpenModalVisible(true)}>
+                        <button
+                            type="button"
+                            className="cr-open-btn"
+                            onClick={() => {
+                                setOpenTillId(resolveTillBinding(tenantId, tills)?.till_id || '')
+                                setOpenModalVisible(true)
+                            }}
+                        >
                             <i className="fa-solid fa-lock-open" />
                             Abrir caixa agora
                         </button>
@@ -676,6 +698,17 @@ export default function CashRegisterIndex({ openRegister, history, settings }) {
                 onClose={() => setOpenModalVisible(false)}
             >
                 <form className="cash-compact-form" onSubmit={handleOpen}>
+                    {!singleTillMode ? (
+                        <label>
+                            <span>Caixa (terminal)</span>
+                            <select className="ui-input" value={openTillId} onChange={(event) => setOpenTillId(event.target.value)} required>
+                                <option value="">Selecione o caixa</option>
+                                {tills.map((till) => (
+                                    <option key={till.id} value={till.id}>{till.name}</option>
+                                ))}
+                            </select>
+                        </label>
+                    ) : null}
                     <label>
                         <span>Valor de abertura</span>
                         <input className="ui-input" name="opening_amount" type="number" step="0.01" min="0" defaultValue="0" />

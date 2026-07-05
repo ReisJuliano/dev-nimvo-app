@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney } from '@/lib/format'
@@ -112,6 +112,13 @@ export function DeliveryWorkspace({ moduleKey, payload }) {
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
+
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void handleApplyFilters()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     function deliveryStatusLabel(status) {
         if (status === 'dispatched') return 'Em rota'
@@ -525,6 +532,27 @@ export function PurchasesWorkspace({ moduleKey, payload }) {
     const [form, setForm] = useState(emptyForm)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
+
+    async function loadRecords() {
+        try {
+            const range = currentMonthRange()
+            const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                params: { from: range.from, to: range.to },
+            })
+            setRecords(response.records || [])
+            setHasLoadedRecords(true)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void loadRecords()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const filteredRecords = useMemo(() => records.filter((record) => record.status === activeTab), [records, activeTab])
     const subtotalPreview = useMemo(() => form.items.reduce((total, item) => total + parseNumber(item.quantity, 0) * parseNumber(item.unit_cost, 0), 0), [form.items])

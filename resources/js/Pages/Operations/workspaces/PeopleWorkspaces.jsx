@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { requiredMessage, validateEmail } from '@/lib/formValidation'
 import { apiRequest } from '@/lib/http'
@@ -14,9 +14,204 @@ import {
     Feedback,
     ListCard,
     MetricGrid,
+    SectionTabs,
     WorkspaceCollectionShell,
     upsertRecord,
 } from './shared'
+
+function PermissionAccordion({ categories, isChecked, getTag, onToggle, disabled = false }) {
+    return (
+        <div className="ops-permission-accordion">
+            {categories.map((category) => (
+                <details key={category.key} className="ops-permission-category" open>
+                    <summary>{category.label}</summary>
+                    <div className="ops-permission-items">
+                        {category.items.map((item) => {
+                            const tag = getTag ? getTag(item.key) : null
+
+                            return (
+                                <label key={item.key} className="ops-permission-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked(item.key)}
+                                        disabled={disabled}
+                                        onChange={() => onToggle(item.key)}
+                                    />
+                                    <span>{item.label}</span>
+                                    <i className="fa-solid fa-circle-info" title={item.description} />
+                                    {tag ? <Badge tone={tag.tone}>{tag.text}</Badge> : null}
+                                </label>
+                            )
+                        })}
+                    </div>
+                </details>
+            ))}
+        </div>
+    )
+}
+
+function GroupsPanel({ permissionCategories = [] }) {
+    const emptyForm = { id: null, name: '', permission_keys: [] }
+
+    const [groups, setGroups] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [form, setForm] = useState(emptyForm)
+    const [modalOpen, setModalOpen] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [feedback, setFeedback] = useState(null)
+
+    async function loadGroups() {
+        setLoading(true)
+
+        try {
+            const response = await apiRequest(buildRecordsUrl('grupos'))
+            setGroups(response.records || [])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        void loadGroups()
+    }, [])
+
+    function openCreate() {
+        setForm(emptyForm)
+        setModalOpen(true)
+    }
+
+    function openEdit(group) {
+        setForm({ id: group.id, name: group.name, permission_keys: [...(group.permission_keys || [])] })
+        setModalOpen(true)
+    }
+
+    function togglePermission(key) {
+        setForm((current) => ({
+            ...current,
+            permission_keys: current.permission_keys.includes(key)
+                ? current.permission_keys.filter((item) => item !== key)
+                : [...current.permission_keys, key],
+        }))
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault()
+        setFeedback(null)
+
+        const requiredError = requiredMessage(form.name, 'o nome do grupo')
+        if (requiredError) {
+            setFeedback({ type: 'warning', text: requiredError })
+            return
+        }
+
+        setSaving(true)
+
+        try {
+            const response = form.id
+                ? await apiRequest(buildRecordsUrl('grupos', form.id), { method: 'put', data: form })
+                : await apiRequest(buildRecordsUrl('grupos'), { method: 'post', data: form })
+
+            setGroups((current) => upsertRecord(current, response.record))
+            setModalOpen(false)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    async function handleDelete(group) {
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Remover grupo',
+            message: `Remover o grupo "${group.name}"?`,
+            confirmLabel: 'Remover',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            const response = await apiRequest(buildRecordsUrl('grupos', group.id), { method: 'delete' })
+            setGroups((current) => current.filter((entry) => entry.id !== group.id))
+            setModalOpen(false)
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    return (
+        <>
+            <Feedback feedback={feedback} />
+            <PageHeader
+                title="Grupos de usuário"
+                actions={(
+                    <ActionButton icon="fa-plus" onClick={openCreate}>
+                        Novo grupo
+                    </ActionButton>
+                )}
+            />
+
+            <div className="ops-workspace-list-stack">
+                {loading ? <EmptyState title="Carregando grupos" text="Aguarde um instante." /> : null}
+                {!loading && groups.length === 0 ? (
+                    <EmptyState title="Sem grupos" text="Nenhum grupo cadastrado ainda." />
+                ) : null}
+                {groups.map((group) => (
+                    <ListCard
+                        key={group.id}
+                        onClick={() => openEdit(group)}
+                        title={group.name}
+                        badge={<Badge tone={group.is_default ? 'info' : 'success'}>{group.is_default ? 'Grupo padrão' : 'Personalizado'}</Badge>}
+                        description={`${group.permission_keys?.length || 0} permissão(ões) concedida(s)`}
+                        meta={[`${group.users_count || 0} usuário(s)`]}
+                    />
+                ))}
+            </div>
+
+            <ModalForm
+                open={modalOpen}
+                title={form.id ? 'Editar grupo' : 'Novo grupo'}
+                description="Permissões concedidas ao grupo"
+                icon="fa-people-group"
+                size="lg"
+                onClose={() => setModalOpen(false)}
+                footer={(
+                    <>
+                        {form.id ? (
+                            <ActionButton tone="danger" onClick={() => handleDelete(form)}>
+                                Excluir
+                            </ActionButton>
+                        ) : <span />}
+                        <ActionButton form="group-modal-form" type="submit" disabled={saving}>
+                            {saving ? 'Salvando...' : 'Salvar grupo'}
+                        </ActionButton>
+                    </>
+                )}
+            >
+                <form id="group-modal-form" className="ops-workspace-form-grid" onSubmit={handleSubmit} noValidate>
+                    <label className="span-2">
+                        <FieldLabel icon="fa-signature" text="Nome do grupo" />
+                        <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+                    </label>
+                    <div className="span-2">
+                        <PermissionAccordion
+                            categories={permissionCategories}
+                            isChecked={(key) => form.permission_keys.includes(key)}
+                            onToggle={togglePermission}
+                        />
+                    </div>
+                </form>
+            </ModalForm>
+        </>
+    )
+}
 
 function FieldLabel({ icon, text }) {
     return (
@@ -206,7 +401,9 @@ export function UsersWorkspace({ moduleKey, payload }) {
         id: null,
         name: '',
         username: '',
-        role: 'operator',
+        permission_group_id: payload.groups?.[0]?.id ?? '',
+        permission_overrides: {},
+        initial_overrides: {},
         is_supervisor: false,
         active: true,
         must_change_password: false,
@@ -215,6 +412,7 @@ export function UsersWorkspace({ moduleKey, payload }) {
         has_discount_authorization_password: false,
     }
 
+    const [section, setSection] = useState('users')
     const [records, setRecords] = useState(payload.records || [])
     const [activeTab, setActiveTab] = useState('active')
     const [form, setForm] = useState(emptyForm)
@@ -225,7 +423,17 @@ export function UsersWorkspace({ moduleKey, payload }) {
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
 
-    const roleOptions = payload.roles || []
+    const groupOptions = payload.groups || []
+    const permissionCategories = payload.permissionCategories || []
+    const selectedGroup = groupOptions.find((group) => String(group.id) === String(form.permission_group_id))
+    const groupPermissionKeys = selectedGroup?.permission_keys || []
+
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void handleLoadRecords()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const filteredRecords = useMemo(
         () => {
@@ -265,17 +473,84 @@ export function UsersWorkspace({ moduleKey, payload }) {
         inactive: records.filter((record) => !record.active).length,
     }), [records])
 
-    function roleLabel(value) {
-        return roleOptions.find((role) => role.value === value)?.label || value || '-'
+    function groupLabel(groupId) {
+        return groupOptions.find((group) => String(group.id) === String(groupId))?.name || '-'
     }
 
     function buildUserForm(record = null) {
+        const initialOverrides = {}
+
+        Object.entries(record?.permissions || {}).forEach(([key, info]) => {
+            if (info.source !== 'group') {
+                initialOverrides[key] = info.granted
+            }
+        })
+
         return {
             ...emptyForm,
             ...(record || {}),
             password: '',
             discount_authorization_password: '',
+            permission_overrides: {},
+            initial_overrides: initialOverrides,
         }
+    }
+
+    function effectiveUserPermission(key) {
+        if (Object.prototype.hasOwnProperty.call(form.permission_overrides, key)) {
+            return form.permission_overrides[key]
+        }
+
+        if (Object.prototype.hasOwnProperty.call(form.initial_overrides, key)) {
+            return form.initial_overrides[key]
+        }
+
+        return groupPermissionKeys.includes(key)
+    }
+
+    function userPermissionTag(key) {
+        const baseGranted = groupPermissionKeys.includes(key)
+        const pending = Object.prototype.hasOwnProperty.call(form.permission_overrides, key)
+            ? form.permission_overrides[key]
+            : undefined
+        const initial = Object.prototype.hasOwnProperty.call(form.initial_overrides, key)
+            ? form.initial_overrides[key]
+            : undefined
+        const overrideValue = pending !== undefined ? pending : initial
+
+        if (overrideValue === undefined) {
+            return baseGranted ? { text: `Herdado de ${selectedGroup?.name || 'grupo'}`, tone: 'info' } : null
+        }
+
+        return overrideValue
+            ? { text: 'Individual', tone: 'success' }
+            : { text: 'Removido do grupo', tone: 'danger' }
+    }
+
+    function toggleUserPermission(key) {
+        setForm((current) => {
+            const baseGranted = groupPermissionKeys.includes(key)
+            const hasInitialOverride = Object.prototype.hasOwnProperty.call(current.initial_overrides, key)
+            const currentGranted = Object.prototype.hasOwnProperty.call(current.permission_overrides, key)
+                ? current.permission_overrides[key]
+                : hasInitialOverride
+                    ? current.initial_overrides[key]
+                    : baseGranted
+            const nextGranted = !currentGranted
+            const overrides = { ...current.permission_overrides }
+
+            if (nextGranted === baseGranted) {
+                overrides[key] = hasInitialOverride ? null : undefined
+
+                if (overrides[key] === undefined) {
+                    delete overrides[key]
+                }
+            } else {
+                overrides[key] = nextGranted
+            }
+
+            return { ...current, permission_overrides: overrides }
+        })
     }
 
     function handleCreate() {
@@ -384,8 +659,32 @@ export function UsersWorkspace({ moduleKey, payload }) {
         }
     }
 
+    if (section === 'groups') {
+        return (
+            <>
+                <SectionTabs
+                    tabs={[
+                        { key: 'users', label: 'Usuários', icon: 'fa-user' },
+                        { key: 'groups', label: 'Grupos', icon: 'fa-people-group' },
+                    ]}
+                    activeTab={section}
+                    onChange={setSection}
+                />
+                <GroupsPanel permissionCategories={permissionCategories} />
+            </>
+        )
+    }
+
     return (
         <>
+            <SectionTabs
+                tabs={[
+                    { key: 'users', label: 'Usuários', icon: 'fa-user' },
+                    { key: 'groups', label: 'Grupos', icon: 'fa-people-group' },
+                ]}
+                activeTab={section}
+                onChange={setSection}
+            />
             <Feedback feedback={feedback} />
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
@@ -433,8 +732,8 @@ export function UsersWorkspace({ moduleKey, payload }) {
                                 },
                                 {
                                     key: 'role',
-                                    label: 'Perfil',
-                                    render: (record) => roleLabel(record.role),
+                                    label: 'Grupo',
+                                    render: (record) => record.permission_group_name || groupLabel(record.permission_group_id),
                                 },
                                 {
                                     key: 'supervisor',
@@ -503,11 +802,14 @@ export function UsersWorkspace({ moduleKey, payload }) {
                         <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
                     </label>
                     <label>
-                        <FieldLabel icon="fa-user-shield" text="Perfil" />
-                        <select value={form.role} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
-                            {roleOptions.map((role) => (
-                                <option key={role.value} value={role.value}>
-                                    {role.label}
+                        <FieldLabel icon="fa-user-shield" text="Grupo" />
+                        <select
+                            value={form.permission_group_id}
+                            onChange={(event) => setForm((current) => ({ ...current, permission_group_id: event.target.value }))}
+                        >
+                            {groupOptions.map((group) => (
+                                <option key={group.id} value={group.id}>
+                                    {group.name}
                                 </option>
                             ))}
                         </select>
@@ -554,6 +856,19 @@ export function UsersWorkspace({ moduleKey, payload }) {
                         />
                         <span>Exigir troca de senha no proximo login</span>
                     </label>
+                    <div className="span-2">
+                        <FieldLabel icon="fa-shield-halved" text="Permissões individuais" />
+                        <p className="ops-workspace-hint">
+                            Marcadas ficam herdadas do grupo. Marque uma extra para conceder só a este usuário, ou
+                            desmarque uma herdada para remover só dele.
+                        </p>
+                        <PermissionAccordion
+                            categories={permissionCategories}
+                            isChecked={effectiveUserPermission}
+                            getTag={userPermissionTag}
+                            onToggle={toggleUserPermission}
+                        />
+                    </div>
                 </form>
             </ModalForm>
         </>

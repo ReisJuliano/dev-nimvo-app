@@ -13,6 +13,7 @@ class CashRegister extends Model
 
     protected $fillable = [
         'user_id',
+        'till_id',
         'status',
         'opening_amount',
         'closing_amount',
@@ -36,6 +37,11 @@ class CashRegister extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function till(): BelongsTo
+    {
+        return $this->belongsTo(Till::class);
     }
 
     public function movements(): HasMany

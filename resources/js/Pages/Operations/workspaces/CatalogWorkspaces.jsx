@@ -3,7 +3,7 @@ import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { requiredMessage, validateEmail } from '@/lib/formValidation'
-import { maskDocument, validateCpfOrCnpj } from '@/lib/validation'
+import { maskDocument, maskPhone, validateCpfOrCnpj } from '@/lib/validation'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { matchesTextSearch, matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
 import ActionButton from '@/Components/UI/ActionButton'
@@ -280,6 +280,14 @@ export function CategoriesWorkspace({ moduleKey, payload }) {
     const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void handleApplyFilters()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const normalizedSearch = useMemo(() => normalizeCategorySearch(searchControl.value), [searchControl.value])
     const filteredRecords = useMemo(
         () => records.filter((record) => {
@@ -578,6 +586,14 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void handleApplyFilters()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const normalizedSearch = useMemo(() => normalizeSupplierSearch(searchControl.value), [searchControl.value])
     const filteredRecords = useMemo(
         () => records.filter((record) => {
@@ -859,7 +875,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                     </label>
                     <label>
                         <FieldLabel icon="fa-id-card" text="CNPJ / Documento" />
-                        <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: event.target.value }))} placeholder="Somente números ou formatado" />
+                        <input value={form.document || ''} onChange={(event) => setForm((current) => ({ ...current, document: maskDocument(event.target.value) }))} placeholder="Somente números ou formatado" />
                     </label>
                     <label>
                         <FieldLabel icon="fa-store" text="Nome fantasia" />
@@ -879,7 +895,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                     </label>
                     <label>
                         <FieldLabel icon="fa-phone" text="Telefone" />
-                        <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+                        <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} />
                     </label>
                     <label>
                         <FieldLabel icon="fa-toggle-on" text="Status" />
@@ -929,6 +945,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const requestIdRef = useRef(0)
+    const hasAutoLoadedRef = useRef(false)
     const normalizedSearch = useMemo(() => normalizeCustomerSearch(searchControl.value), [searchControl.value])
     const normalizedSearchKey = useMemo(() => normalizeCustomerSearchKey(searchControl.value), [searchControl.value])
     const hasSearch = normalizedSearch !== ''
@@ -960,12 +977,17 @@ export function CustomersWorkspace({ moduleKey, payload }) {
 
     useEffect(() => {
         if (!hasSearch) {
-            requestIdRef.current += 1
-            setRecords([])
-            setLoading(false)
-            return
+            if (hasAutoLoadedRef.current) {
+                requestIdRef.current += 1
+                setRecords([])
+                setLoading(false)
+                return
+            }
+
+            hasAutoLoadedRef.current = true
         }
 
+        const effectiveSearch = hasSearch ? normalizedSearch : '%'
         const requestId = requestIdRef.current + 1
         requestIdRef.current = requestId
         setLoading(true)
@@ -974,7 +996,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         const timer = window.setTimeout(async () => {
             try {
                 const response = await apiRequest(buildRecordsUrl(moduleKey), {
-                    params: { search: normalizedSearch },
+                    params: { search: effectiveSearch },
                 })
 
                 if (cancelled || requestId !== requestIdRef.current) {
@@ -1284,7 +1306,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             </label>
                             <label>
                                 <FieldLabel icon="fa-phone" text="Telefone" />
-                                <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} />
+                                <input value={form.phone || ''} onChange={(event) => setForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} />
                             </label>
                             <label>
                                 <FieldLabel icon="fa-envelope" text="E-mail" />

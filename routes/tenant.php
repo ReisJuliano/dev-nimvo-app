@@ -6,6 +6,8 @@ use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
+use App\Http\Controllers\Tenant\CashRegister\CashRegisterPanelApiController;
+use App\Http\Controllers\Tenant\CashRegister\CashRegisterPanelPageController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
@@ -43,6 +45,8 @@ use App\Http\Controllers\Tenant\Reports\ReportPageController;
 use App\Http\Controllers\Tenant\Settings\SettingsApiController;
 use App\Http\Controllers\Tenant\Settings\LocalAgentSettingsController;
 use App\Http\Controllers\Tenant\Settings\SettingsPageController;
+use App\Http\Controllers\Tenant\Settings\TillSettingsController;
+use App\Http\Controllers\Tenant\Till\TillApiController;
 use App\Http\Controllers\Tenant\Shop\ShopApiController;
 use App\Http\Controllers\Tenant\Shop\ShopPageController;
 use App\Http\Middleware\Tenant\EnsurePasswordIsChanged;
@@ -98,6 +102,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::get('/pdv', PosPageController::class)->name('pos.index');
         Route::get('/caixa', CashRegisterPageController::class)->name('cash-register.index');
+        Route::get('/caixa/painel', CashRegisterPanelPageController::class)->name('cash-register.panel');
         Route::get('/produtos', ProductsPageController::class)->name('products.index');
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
@@ -201,11 +206,14 @@ Route::middleware('auth')->group(function () {
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');
             Route::post('/delivery/orders/{deliveryOrder}/status', [DeliveryApiController::class, 'updateStatus'])->name('api.delivery.orders.status');
 
+            Route::get('/tills', [TillApiController::class, 'index'])->name('api.tills.index');
             Route::post('/cash-registers', [CashRegisterApiController::class, 'open'])->name('api.cash-registers.open');
             Route::post('/cash-registers/{cashRegister}/movements', [CashRegisterApiController::class, 'movement'])->name('api.cash-registers.movements.store');
             Route::post('/cash-registers/supervisor-authorize', [CashRegisterApiController::class, 'authorizeSupervisor'])->name('api.cash-registers.supervisor-authorize');
             Route::post('/cash-registers/{cashRegister}/close', [CashRegisterApiController::class, 'close'])->name('api.cash-registers.close');
             Route::get('/cash-registers/{cashRegister}/report', [CashRegisterApiController::class, 'report'])->name('api.cash-registers.report');
+            Route::get('/cash-registers/panel/open', [CashRegisterPanelApiController::class, 'openRegisters'])->name('api.cash-registers.panel.open');
+            Route::get('/cash-registers/panel/closed', [CashRegisterPanelApiController::class, 'closedRegisters'])->name('api.cash-registers.panel.closed');
             Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
             Route::post('/stock/quick-adjust', [StockEntryPageController::class, 'quickAdjust'])->name('api.stock.quick-adjust');
             Route::get('/stock/products/{product}/movements', [StockEntryPageController::class, 'productMovements'])->name('api.stock.product-movements');
@@ -228,6 +236,9 @@ Route::middleware('auth')->group(function () {
             Route::put('/settings/local-agent/{agent}', [LocalAgentSettingsController::class, 'update'])->name('api.settings.local-agent.update');
             Route::get('/settings/local-agent/{agent}/download', [LocalAgentSettingsController::class, 'download'])->name('api.settings.local-agent.download');
             Route::post('/settings/local-agent/{agent}/activation-code', [LocalAgentSettingsController::class, 'activationCode'])->name('api.settings.local-agent.activation-code');
+            Route::get('/settings/tills', [TillSettingsController::class, 'index'])->name('api.settings.tills.index');
+            Route::post('/settings/tills', [TillSettingsController::class, 'store'])->name('api.settings.tills.store');
+            Route::put('/settings/tills/{till}', [TillSettingsController::class, 'update'])->name('api.settings.tills.update');
             Route::post('/fiado/receber', [OperationsApiController::class, 'receiveCreditPayment'])->name('api.credit.receive');
 
             Route::prefix('fashion')->group(function () {

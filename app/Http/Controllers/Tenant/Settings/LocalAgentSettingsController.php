@@ -155,6 +155,6 @@ class LocalAgentSettingsController extends Controller
 
     protected function authorizeTenantAdmin(): void
     {
-        abort_unless(auth()->user()?->role === 'admin', 403);
+        abort_unless(auth()->user()?->hasPermission('configuracoes.editar'), 403);
     }
 }

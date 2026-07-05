@@ -52,6 +52,9 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
     const [localAgents, setLocalAgents] = useState([])
     const [localAgentsLoading, setLocalAgentsLoading] = useState(false)
     const [newAgentLabel, setNewAgentLabel] = useState('Caixa 1')
+    const [tills, setTills] = useState([])
+    const [tillsLoading, setTillsLoading] = useState(false)
+    const [newTillName, setNewTillName] = useState('')
     const [printers, setPrinters] = useState([])
     const [printersLoading, setPrintersLoading] = useState(false)
     const moduleState = useModules(form)
@@ -95,6 +98,10 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
         }, 5000)
 
         return () => window.clearInterval(timer)
+    }, [])
+
+    useEffect(() => {
+        void refreshTills()
     }, [])
 
     function handleToggle(path) {
@@ -216,6 +223,70 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
         window.location.href = `/api/settings/local-agent/${agentId}/download`
     }
 
+    async function refreshTills() {
+        setTillsLoading(true)
+        try {
+            const response = await apiRequest('/api/settings/tills')
+            setTills(response.tills || [])
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setTillsLoading(false)
+        }
+    }
+
+    async function createTill() {
+        const name = newTillName.trim()
+        if (!name) {
+            setFeedback({ type: 'warning', text: 'Informe um nome para o caixa, ex. Caixa 1.' })
+            return
+        }
+
+        setTillsLoading(true)
+        try {
+            const response = await apiRequest('/api/settings/tills', {
+                method: 'post',
+                data: { name },
+            })
+            setTills((current) => [response.till, ...current])
+            setNewTillName('')
+            setFeedback({ type: 'success', text: response.message })
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setTillsLoading(false)
+        }
+    }
+
+    async function toggleTillActive(till) {
+        try {
+            const response = await apiRequest(`/api/settings/tills/${till.id}`, {
+                method: 'put',
+                data: { active: !till.active },
+            })
+            setTills((current) => current.map((item) => item.id === till.id ? response.till : item))
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
+    async function renameTill(tillId, name) {
+        const trimmed = name.trim()
+        if (!trimmed) {
+            return
+        }
+
+        try {
+            const response = await apiRequest(`/api/settings/tills/${tillId}`, {
+                method: 'put',
+                data: { name: trimmed },
+            })
+            setTills((current) => current.map((item) => item.id === tillId ? response.till : item))
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        }
+    }
+
     async function refreshPrinters() {
         if (!canUseLocalAgentBridge(localAgentBridge)) {
             setFeedback({ type: 'warning', text: 'Este navegador ainda não está conectado ao agente local.' })
@@ -315,35 +386,48 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                     ) : null}
 
                     {/* ─── Seção: Opções gerais ─── */}
-                    {generalOptions.length > 0 ? (
-                        <div className="cfg-section">
-                            <div className="cfg-section-title">
-                                <i className="fa-solid fa-sliders" />
-                                Preferências gerais
-                                <p>Opções que afetam o comportamento geral do sistema.</p>
-                            </div>
-                            <div className="cfg-options-list">
-                                {generalOptions.map((option) => {
-                                    const active = Boolean(getValueByPath(form, option.key))
-                                    return (
-                                        <div key={option.key} className={`cfg-option ${active ? 'active' : ''}`}>
-                                            <div className="cfg-option-info">
-                                                <strong>{option.label}</strong>
-                                                <p>{option.description}</p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                className={`cfg-toggle ${active ? 'active' : ''}`}
-                                                onClick={() => handleToggle(option.key)}
-                                            >
-                                                <span className="cfg-toggle-knob" />
-                                            </button>
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-sliders" />
+                            Preferências gerais
+                            <p>Opções que afetam o comportamento geral do sistema.</p>
+                        </div>
+                        <div className="cfg-options-list">
+                            {generalOptions.map((option) => {
+                                const active = Boolean(getValueByPath(form, option.key))
+                                return (
+                                    <div key={option.key} className={`cfg-option ${active ? 'active' : ''}`}>
+                                        <div className="cfg-option-info">
+                                            <strong>{option.label}</strong>
+                                            <p>{option.description}</p>
                                         </div>
-                                    )
-                                })}
+                                        <button
+                                            type="button"
+                                            className={`cfg-toggle ${active ? 'active' : ''}`}
+                                            onClick={() => handleToggle(option.key)}
+                                        >
+                                            <span className="cfg-toggle-knob" />
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                            <div className="cfg-option">
+                                <div className="cfg-option-info">
+                                    <strong>Valor máximo em caixa antes de sugerir sangria</strong>
+                                    <p>Depois de uma venda em dinheiro, sugere sangria se o saldo em caixa passar desse valor. Deixe 0 para desativar.</p>
+                                </div>
+                                <input
+                                    type="number"
+                                    className="ui-input"
+                                    style={{ maxWidth: '9rem' }}
+                                    min="0"
+                                    step="0.01"
+                                    value={form.cash_closing?.max_cash_before_withdrawal_suggestion ?? 0}
+                                    onChange={(event) => setForm((current) => setValueByPath(current, 'cash_closing.max_cash_before_withdrawal_suggestion', Number(event.target.value)))}
+                                />
                             </div>
                         </div>
-                    ) : null}
+                    </div>
 
                     {/* ─── Seção: Recursos da loja ─── */}
                     <div className="cfg-section">
@@ -384,6 +468,57 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* ─── Seção: Cadastro de Caixas ─── */}
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-cash-register" />
+                            Caixas
+                            <p>Cadastre um caixa por terminal/gaveta física. Com mais de um caixa ativo, é possível abrir vários ao mesmo tempo.</p>
+                        </div>
+
+                        <div className="cfg-agent-panel">
+                            <div className="cfg-agent-create">
+                                <input
+                                    type="text"
+                                    className="cfg-agent-input"
+                                    value={newTillName}
+                                    onChange={(event) => setNewTillName(event.target.value)}
+                                    placeholder="Nome do caixa, ex. Caixa 2"
+                                />
+                                <button type="button" className="cfg-agent-button" onClick={createTill} disabled={tillsLoading}>
+                                    <i className="fa-solid fa-plus" />
+                                    Adicionar
+                                </button>
+                            </div>
+
+                            <div className="cfg-agent-list">
+                                {tills.length ? tills.map((till) => (
+                                    <div key={till.id} className="cfg-agent-card">
+                                        <div className="cfg-agent-main">
+                                            <input
+                                                type="text"
+                                                defaultValue={till.name}
+                                                onBlur={(event) => renameTill(till.id, event.target.value)}
+                                            />
+                                            <span className={`cfg-agent-status ${till.active ? 'online' : 'offline'}`}>
+                                                {till.active ? 'Ativo' : 'Inativo'}
+                                            </span>
+                                        </div>
+                                        <div className="cfg-agent-actions">
+                                            <button type="button" className="cfg-agent-button ghost" onClick={() => toggleTillActive(till)}>
+                                                {till.active ? 'Desativar' : 'Ativar'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="cfg-agent-empty">
+                                        {tillsLoading ? 'Carregando caixas...' : 'Nenhum caixa cadastrado — a loja usa o caixa único padrão.'}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\CashRegister;
 use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\TenantSettingsService;
+use App\Services\Tenant\TillService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,15 +15,21 @@ class CashRegisterPageController extends Controller
     public function __invoke(
         CashRegisterReportService $reportService,
         TenantSettingsService $settingsService,
+        TillService $tillService,
     ): Response
     {
         $userId = auth()->user()?->getKey();
+        $requestedTillId = request()->integer('till_id') ?: null;
 
-        $openRegister = CashRegister::query()
+        $openRegisterQuery = CashRegister::query()
             ->where('user_id', $userId)
-            ->where('status', 'open')
-            ->latest('opened_at')
-            ->first();
+            ->where('status', 'open');
+
+        if ($requestedTillId) {
+            $openRegisterQuery->where('till_id', $requestedTillId);
+        }
+
+        $openRegister = $openRegisterQuery->latest('opened_at')->first();
 
         $history = CashRegister::query()
             ->with('user:id,name')
@@ -49,10 +56,16 @@ class CashRegisterPageController extends Controller
             })
             ->values();
 
+        $tills = $tillService->activeTills()->map(fn ($till) => [
+            'id' => $till->id,
+            'name' => $till->name,
+        ])->values();
+
         return Inertia::render('CashRegister/Index', [
             'openRegister' => $openRegister ? $reportService->build($openRegister) : null,
             'history' => $history,
             'settings' => $settingsService->get(),
+            'tills' => $tills,
         ]);
     }
 }

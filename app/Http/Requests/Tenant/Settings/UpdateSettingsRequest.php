@@ -10,7 +10,7 @@ class UpdateSettingsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->user()?->role === 'admin';
+        return (bool) auth()->user()?->hasPermission('configuracoes.editar');
     }
 
     public function rules(): array
@@ -22,6 +22,7 @@ class UpdateSettingsRequest extends FormRequest
             'business.preset' => ['required', 'string', Rule::in($settingsService->presetKeys())],
             'cash_closing' => ['required', 'array'],
             'cash_closing.require_conference' => ['required', 'boolean'],
+            'cash_closing.max_cash_before_withdrawal_suggestion' => ['nullable', 'numeric', 'min:0'],
             'modules' => ['required', 'array'],
             'modules.comandas' => ['required', 'boolean'],
             'modules.pdv_simples' => ['required', 'boolean'],

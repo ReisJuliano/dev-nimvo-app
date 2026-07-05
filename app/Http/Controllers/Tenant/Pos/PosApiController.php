@@ -13,6 +13,7 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Services\Central\LocalAgentCommandService;
+use App\Services\Tenant\CashWithdrawalSuggestionService;
 use App\Services\Tenant\DiscountAuthorizationService;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\LocalAgentPrintQueueService;
@@ -341,11 +342,17 @@ class PosApiController extends Controller
         FinalizeSaleRequest $request,
         PosService $posService,
         LocalAgentPrintQueueService $printQueueService,
+        CashWithdrawalSuggestionService $cashWithdrawalSuggestionService,
+        TenantSettingsService $settingsService,
     ): JsonResponse {
         $this->validateDiscountAuthorizations($request);
 
         $sale = $posService->finalize($request->validated(), (int) auth()->user()?->getKey());
         $printResult = null;
+
+        if (($sale['type'] ?? null) === 'sale') {
+            $sale['cash_withdrawal_suggestion'] = $cashWithdrawalSuggestionService->evaluate($sale, $settingsService->get());
+        }
 
         if (($sale['fiscal_decision'] ?? null) === 'close' && ! empty($sale['sale_id'])) {
             $saleModel = Sale::query()->find($sale['sale_id']);

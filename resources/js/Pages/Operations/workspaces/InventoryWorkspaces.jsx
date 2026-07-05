@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import './inventory-workspaces.css'
 import { apiRequest, getAmountConfirmationMessage } from '@/lib/http'
@@ -148,6 +148,14 @@ function InboundItemsTable({ items, onChange, onRemove }) {
    ENTRADA DE ESTOQUE
 ═══════════════════════════════════════════════════════════ */
 
+function defaultHistoryRange() {
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - 30)
+
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
+}
+
 export function StockInboundWorkspace({ moduleKey, payload }) {
     const suppliers = payload.suppliers || []
     const emptyForm = {
@@ -160,7 +168,7 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     const [products] = useState(payload.products || [])
     const [form, setForm] = useState(emptyForm)
     const historySearchControl = useConfirmedSearch('')
-    const [historyRange, setHistoryRange] = useState({ from: '', to: '' })
+    const [historyRange, setHistoryRange] = useState(defaultHistoryRange)
     const [historyLoading, setHistoryLoading] = useState(false)
     const [hasLoadedHistory, setHasLoadedHistory] = useState((payload.records || []).length > 0)
     const [scanCode, setScanCode] = useState('')
@@ -169,6 +177,13 @@ export function StockInboundWorkspace({ moduleKey, payload }) {
     const [feedback, setFeedback] = useState(null)
     const [showBilling, setShowBilling] = useState(false)
     const scanInputRef = useRef(null)
+
+    useEffect(() => {
+        if (!hasLoadedHistory) {
+            void handleLoadHistory()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const filteredProducts = useMemo(() => (
         form.supplier_id

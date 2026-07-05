@@ -9,12 +9,14 @@ use App\Models\Tenant\IncomingNfeDocument;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Payable;
+use App\Models\Tenant\PermissionGroup;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
 use App\Models\Tenant\User;
 use App\Services\Tenant\Purchases\IncomingNfeService;
 use App\Support\TextSearch;
+use App\Support\Tenant\PermissionRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +57,7 @@ class OperationsWorkspaceService
             'contas-a-pagar',
             'entrada-estoque',
             'usuarios',
+            'grupos',
         ];
     }
 
@@ -116,6 +119,12 @@ class OperationsWorkspaceService
                 'moduleDescription' => 'Perfis de acesso, senha de autorização gerencial e status operacional.',
                 'payload' => $this->usersPayload(false),
             ],
+            'grupos' => [
+                'moduleKey' => 'grupos',
+                'moduleTitle' => 'Grupos de usuário',
+                'moduleDescription' => 'Grupos com permissões por categoria, reaproveitados pelos usuários da loja.',
+                'payload' => $this->groupsPayload(false),
+            ],
             default => abort(404),
         };
     }
@@ -131,6 +140,7 @@ class OperationsWorkspaceService
             'contas-a-pagar' => ['message' => 'Conta a pagar salva com sucesso.', 'record' => $this->serializePayable($this->savePayable(null, $input, $userId))],
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
             'usuarios' => ['message' => 'Usuario salvo com sucesso.', 'record' => $this->serializeUser($this->saveUser(null, $input))],
+            'grupos' => ['message' => 'Grupo criado com sucesso.', 'record' => $this->serializeGroup($this->saveGroup(null, $input))],
             default => abort(404),
         };
     }
@@ -160,6 +170,9 @@ class OperationsWorkspaceService
             'usuarios' => [
                 'records' => $this->userRecords($filters),
             ],
+            'grupos' => [
+                'records' => $this->groupRecords($filters),
+            ],
             default => [
                 'records' => data_get($this->build($module), 'payload.records', []),
             ],
@@ -179,6 +192,7 @@ class OperationsWorkspaceService
                 'record' => 'Registros de estoque não podem ser alterados. Crie um novo lançamento.',
             ]),
             'usuarios' => ['message' => 'Usuario atualizado com sucesso.', 'record' => $this->serializeUser($this->saveUser($this->findRecord(User::class, $recordId), $input))],
+            'grupos' => ['message' => 'Grupo atualizado com sucesso.', 'record' => $this->serializeGroup($this->saveGroup($this->findRecord(PermissionGroup::class, $recordId), $input))],
             default => abort(404),
         };
     }
@@ -193,6 +207,7 @@ class OperationsWorkspaceService
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
             'contas-a-pagar' => tap($this->findRecord(Payable::class, $recordId))->delete() ? 'Conta a pagar removida com sucesso.' : 'Conta a pagar removida com sucesso.',
             'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
+            'grupos' => $this->destroyGroup($this->findRecord(PermissionGroup::class, $recordId)),
             'entrada-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque não podem ser excluídos para preservar a rastreabilidade.',
             ]),
@@ -549,11 +564,91 @@ class OperationsWorkspaceService
     {
         return [
             'records' => $includeRecords ? $this->userRecords(['applied' => true]) : [],
-            'roles' => [
-                ['value' => 'admin', 'label' => 'Dono'],
-                ['value' => 'manager', 'label' => 'Gerente'],
-                ['value' => 'operator', 'label' => 'Operador'],
-            ],
+            'groups' => PermissionGroup::query()
+                ->orderBy('name')
+                ->get()
+                ->map(fn (PermissionGroup $group) => [
+                    'id' => $group->id,
+                    'name' => $group->name,
+                    'permission_keys' => $group->permissionKeys(),
+                ])
+                ->values()
+                ->all(),
+            'permissionCategories' => PermissionRegistry::categories(),
+        ];
+    }
+
+    protected function groupsPayload(bool $includeRecords = true): array
+    {
+        return [
+            'records' => $includeRecords ? $this->groupRecords() : [],
+            'permissionCategories' => PermissionRegistry::categories(),
+        ];
+    }
+
+    protected function groupRecords(array $filters = []): array
+    {
+        return PermissionGroup::query()
+            ->withCount('users')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PermissionGroup $group) => $this->serializeGroup($group))
+            ->values()
+            ->all();
+    }
+
+    protected function saveGroup(?PermissionGroup $group, array $input): PermissionGroup
+    {
+        $validated = Validator::make($input, [
+            'name' => ['required', 'string', 'max:255', Rule::unique('permission_groups', 'name')->ignore($group?->id)],
+            'permission_keys' => ['nullable', 'array'],
+            'permission_keys.*' => ['string', Rule::in(PermissionRegistry::allKeys())],
+        ])->validate();
+
+        $group ??= new PermissionGroup;
+        $group->fill(['name' => $validated['name']])->save();
+
+        $keys = collect($validated['permission_keys'] ?? [])->unique()->values();
+
+        $group->grants()->delete();
+
+        if ($keys->isNotEmpty()) {
+            $group->grants()->createMany(
+                $keys->map(fn (string $key) => ['permission_key' => $key, 'created_at' => now()])->all(),
+            );
+        }
+
+        return $group->fresh();
+    }
+
+    protected function destroyGroup(PermissionGroup $group): string
+    {
+        if ($group->base_role !== null) {
+            throw ValidationException::withMessages([
+                'record' => 'Os grupos padrão (Dono, Gerente, Operador) não podem ser excluídos.',
+            ]);
+        }
+
+        if ($group->users()->exists()) {
+            throw ValidationException::withMessages([
+                'record' => 'Mova os usuários deste grupo para outro grupo antes de excluí-lo.',
+            ]);
+        }
+
+        $group->delete();
+
+        return 'Grupo removido com sucesso.';
+    }
+
+    protected function serializeGroup(PermissionGroup $group): array
+    {
+        return [
+            'id' => $group->id,
+            'name' => $group->name,
+            'base_role' => $group->base_role,
+            'is_default' => $group->base_role !== null,
+            'users_count' => $group->users_count ?? $group->users()->count(),
+            'permission_keys' => $group->permissionKeys(),
         ];
     }
 
@@ -726,20 +821,25 @@ class OperationsWorkspaceService
         $validated = Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user?->id)],
-            'role' => ['required', Rule::in(['admin', 'manager', 'operator'])],
+            'permission_group_id' => ['required', 'integer', 'exists:permission_groups,id'],
             'is_supervisor' => ['nullable', 'boolean'],
             'active' => ['required', 'boolean'],
             'must_change_password' => ['nullable', 'boolean'],
             'password' => [$isCreate ? 'required' : 'nullable', 'string', 'min:4'],
             'discount_authorization_password' => ['nullable', 'string', 'min:4'],
+            'permission_overrides' => ['nullable', 'array'],
+            'permission_overrides.*' => ['nullable', 'boolean'],
         ])->validate();
+
+        $group = PermissionGroup::query()->findOrFail($validated['permission_group_id']);
 
         $user ??= new User;
 
         $payload = [
             'name' => $validated['name'],
             'username' => $validated['username'],
-            'role' => $validated['role'],
+            'permission_group_id' => $group->id,
+            'role' => $group->base_role ?? 'operator',
             'is_supervisor' => $this->hasColumn('users', 'is_supervisor')
                 ? (bool) ($validated['is_supervisor'] ?? false)
                 : false,
@@ -759,7 +859,34 @@ class OperationsWorkspaceService
 
         $user->fill($payload)->save();
 
+        $this->syncUserPermissionOverrides($user, $validated['permission_overrides'] ?? null);
+
         return $user->fresh();
+    }
+
+    protected function syncUserPermissionOverrides(User $user, ?array $overrides): void
+    {
+        if ($overrides === null) {
+            return;
+        }
+
+        foreach (PermissionRegistry::allKeys() as $key) {
+            if (! array_key_exists($key, $overrides)) {
+                continue;
+            }
+
+            $value = $overrides[$key];
+
+            if ($value === null) {
+                $user->permissionOverrides()->where('permission_key', $key)->delete();
+                continue;
+            }
+
+            $user->permissionOverrides()->updateOrCreate(
+                ['permission_key' => $key],
+                ['granted' => (bool) $value],
+            );
+        }
     }
 
     protected function saveStockInbound(array $input, int $userId): Purchase
@@ -1876,11 +2003,34 @@ class OperationsWorkspaceService
 
     protected function serializeUser(User $user): array
     {
+        $user->loadMissing(['permissionGroup', 'permissionOverrides']);
+        $groupKeys = $user->permissionGroup?->permissionKeys() ?? [];
+        $overridesByKey = $user->permissionOverrides->keyBy('permission_key');
+
+        $permissions = collect(PermissionRegistry::allKeys())->mapWithKeys(function (string $key) use ($groupKeys, $overridesByKey) {
+            $override = $overridesByKey->get($key);
+
+            if ($override) {
+                return [$key => [
+                    'granted' => (bool) $override->granted,
+                    'source' => $override->granted ? 'individual_grant' : 'individual_revoke',
+                ]];
+            }
+
+            return [$key => [
+                'granted' => in_array($key, $groupKeys, true),
+                'source' => 'group',
+            ]];
+        })->all();
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'username' => $user->username,
             'role' => $user->role,
+            'permission_group_id' => $user->permission_group_id,
+            'permission_group_name' => $user->permissionGroup?->name,
+            'permissions' => $permissions,
             'is_supervisor' => $this->hasColumn('users', 'is_supervisor')
                 ? (bool) $user->is_supervisor
                 : false,

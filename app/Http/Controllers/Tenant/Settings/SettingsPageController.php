@@ -11,7 +11,7 @@ class SettingsPageController extends Controller
 {
     public function __invoke(TenantSettingsService $settingsService): Response
     {
-        abort_unless(auth()->user()?->role === 'admin', 403);
+        abort_unless(auth()->user()?->hasPermission('configuracoes.editar'), 403);
 
         $centralDomain = config('tenancy.central_domains')[0] ?? request()->getHost();
         $storeQuery = 'store='.urlencode(request()->getHost());

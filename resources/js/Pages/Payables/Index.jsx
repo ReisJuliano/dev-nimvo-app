@@ -186,6 +186,13 @@ export default function PayablesIndex({ moduleTitle = 'Contas a pagar', payload 
     const [feedback, setFeedback] = useState(null)
     const [hasLoadedRecords, setHasLoadedRecords] = useState(false)
 
+    useEffect(() => {
+        if (!hasLoadedRecords) {
+            void handleApplyFilters()
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const normalizedSearch = normalizeTextSearch(searchControl.value)
     const filteredRecords = useMemo(() => (
         records.filter((record) => {

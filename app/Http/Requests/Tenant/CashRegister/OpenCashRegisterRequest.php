@@ -14,6 +14,7 @@ class OpenCashRegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'till_id' => ['nullable', 'integer', 'exists:tills,id'],
             'opening_amount' => ['nullable', 'numeric', 'min:0'],
             'opening_notes' => ['nullable', 'string'],
         ];

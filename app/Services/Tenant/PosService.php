@@ -30,22 +30,7 @@ class PosService
 
     public function finalize(array $payload, int $userId): array
     {
-        $cashRegister = null;
-
-        if (!empty($payload['cash_register_id'])) {
-            $cashRegister = CashRegister::query()
-                ->where('user_id', $userId)
-                ->where('status', 'open')
-                ->find($payload['cash_register_id']);
-        }
-
-        if (! $cashRegister) {
-            $cashRegister = CashRegister::query()
-                ->where('user_id', $userId)
-                ->where('status', 'open')
-                ->latest('opened_at')
-                ->first();
-        }
+        $cashRegister = $this->resolveCashRegister($payload, $userId);
 
         if (! $cashRegister) {
             throw ValidationException::withMessages([
@@ -432,6 +417,7 @@ class PosService
                 'type' => 'sale',
                 'sale_id' => $sale->id,
                 'sale_number' => $sale->sale_number,
+                'cash_register_id' => $cashRegister->id,
                 'total' => (float) $sale->total,
                 'subtotal' => (float) $sale->subtotal,
                 'discount' => (float) $sale->discount,
@@ -554,6 +540,29 @@ class PosService
         $normalized = array_filter($normalized, fn ($value) => $value !== null && $value !== '');
 
         return $normalized === [] ? null : $normalized;
+    }
+
+    protected function resolveCashRegister(array $payload, int $userId): ?CashRegister
+    {
+        if (!empty($payload['cash_register_id'])) {
+            return CashRegister::query()
+                ->where('user_id', $userId)
+                ->where('status', 'open')
+                ->find($payload['cash_register_id']);
+        }
+
+        $openRegisters = CashRegister::query()
+            ->where('user_id', $userId)
+            ->where('status', 'open')
+            ->get();
+
+        if ($openRegisters->count() > 1) {
+            throw ValidationException::withMessages([
+                'cash_register_id' => 'Selecione o caixa (terminal) antes de finalizar a venda.',
+            ]);
+        }
+
+        return $openRegisters->first();
     }
 
     protected function nextSaleNumber(): string

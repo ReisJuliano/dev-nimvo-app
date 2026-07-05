@@ -156,14 +156,14 @@ class TenantNavigationService
                         'label' => 'Usuarios',
                         'icon' => 'fa-user-gear',
                         'access_key' => 'usuarios',
-                        'required_role' => 'admin',
-                        'request_patterns' => ['usuarios'],
+                        'required_permission' => 'usuarios.gerenciar',
+                        'request_patterns' => ['usuarios', 'api/operations/usuarios*', 'api/operations/grupos*'],
                     ],
                     [
                         'href' => '/configuracoes',
                         'label' => 'Configuracoes',
                         'icon' => 'fa-sliders',
-                        'required_role' => 'admin',
+                        'required_permission' => 'configuracoes.editar',
                         'request_patterns' => ['configuracoes', 'api/settings*'],
                     ],
                 ],
@@ -236,6 +236,12 @@ class TenantNavigationService
     public function userHasRequiredRole(Request $request, ?array $item = null): bool
     {
         $item ??= $this->resolveItem($request);
+        $requiredPermission = $item['required_permission'] ?? null;
+
+        if ($requiredPermission) {
+            return (bool) $request->user()?->hasPermission($requiredPermission);
+        }
+
         $requiredRole = $item['required_role'] ?? null;
 
         return ! $requiredRole || $request->user()?->role === $requiredRole;

@@ -16,6 +16,7 @@ use App\Services\Tenant\OrderDraftService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\ProductService;
 use App\Services\Tenant\TenantSettingsService;
+use App\Services\Tenant\TillService;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,18 +36,24 @@ class PosPageController extends Controller
         TenantSettingsService $settingsService,
         FiscalConsultationService $fiscalConsultationService,
         FiscalContingencyService $fiscalContingencyService,
+        TillService $tillService,
     ): Response {
         $userId = auth()->user()?->getKey();
         $requestedOrderDraftId = request()->integer('orderDraft');
+        $requestedTillId = request()->integer('till_id') ?: null;
         $ordersEnabled = $settingsService->isModuleEnabled('pedidos');
 
         $fiscalContingencyService->retryPending();
 
-        $cashRegister = CashRegister::query()
+        $cashRegisterQuery = CashRegister::query()
             ->where('user_id', $userId)
-            ->where('status', 'open')
-            ->latest('opened_at')
-            ->first();
+            ->where('status', 'open');
+
+        if ($requestedTillId) {
+            $cashRegisterQuery->where('till_id', $requestedTillId);
+        }
+
+        $cashRegister = $cashRegisterQuery->latest('opened_at')->first();
         $openRegister = $cashRegister ? $cashRegisterReportService->build($cashRegister) : null;
         $cashRegisterHistory = CashRegister::query()
             ->with('user:id,name')
@@ -77,6 +84,10 @@ class PosPageController extends Controller
             : null;
         $pendingSale = $pendingSaleService->currentForUser((int) $userId);
         $settings = $settingsService->get();
+        $tills = $tillService->activeTills()->map(fn ($till) => [
+            'id' => $till->id,
+            'name' => $till->name,
+        ])->values();
 
         return Inertia::render('Pos/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
@@ -100,6 +111,7 @@ class PosPageController extends Controller
             'openRegister' => $openRegister,
             'cashRegisterHistory' => $cashRegisterHistory,
             'cashRegisterSettings' => $settings,
+            'tills' => $tills,
             'posCapabilities' => [
                 'pending_sales' => $this->hasTable('pending_sales'),
                 'companies' => $this->hasTable('companies'),

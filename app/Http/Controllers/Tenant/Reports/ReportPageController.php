@@ -47,6 +47,7 @@ class ReportPageController extends Controller
             'customer_id' => $request->query('customer_id'),
             'category_id' => $request->query('category_id'),
             'supplier_id' => $request->query('supplier_id'),
+            'till_id' => $request->query('till_id'),
             'stock_status' => $request->query('stock_status'),
             'balance_status' => $request->query('balance_status'),
             'sort_by' => $request->query('sort_by'),

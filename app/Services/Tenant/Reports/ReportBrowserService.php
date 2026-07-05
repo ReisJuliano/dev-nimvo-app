@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Tenant\Reports;
 
+use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\CashRegisterReportService;
 use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
 use Carbon\Carbon;
@@ -18,6 +20,11 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportBrowserService
 {
+    public function __construct(
+        protected CashRegisterReportService $cashRegisterReportService,
+    ) {
+    }
+
     public function catalog(array $enabledModules = []): array
     {
         $categories = collect($this->categoryDefinitions())
@@ -99,6 +106,7 @@ class ReportBrowserService
                 'stock-position' => $this->stockPositionReport($resolvedFilters),
                 'stock-inbounds' => $this->stockInboundsReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
+                'cash-discrepancy' => $this->cashDiscrepancyReport($resolvedFilters),
                 'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
                 default => abort(404),
             }
@@ -259,6 +267,14 @@ class ReportBrowserService
                 'tags' => ['Entradas', 'Saidas', 'Saldo'],
             ],
             [
+                'key' => 'cash-discrepancy',
+                'category' => 'cashflow',
+                'title' => 'Quebra de caixa',
+                'description' => 'Diferenças de fechamento por caixa, operador e forma de pagamento.',
+                'icon' => 'fa-triangle-exclamation',
+                'tags' => ['Diferença', 'Operador', 'Caixa'],
+            ],
+            [
                 'key' => 'receivables-open',
                 'category' => 'receivables',
                 'title' => 'Fiados em aberto',
@@ -360,6 +376,7 @@ class ReportBrowserService
             'customer_id' => $this->normalizePositiveInt($filters['customer_id'] ?? null),
             'category_id' => $this->normalizePositiveInt($filters['category_id'] ?? null),
             'supplier_id' => $this->normalizePositiveInt($filters['supplier_id'] ?? null),
+            'till_id' => $this->normalizePositiveInt($filters['till_id'] ?? null),
             'stock_status' => $this->normalizeSelection($filters['stock_status'] ?? null, ['healthy', 'low', 'out']),
             'balance_status' => $this->normalizeSelection($filters['balance_status'] ?? null, ['with_balance', 'near_limit', 'without_limit']),
             'sort_by' => $sortBy !== '' ? $sortBy : null,
@@ -388,6 +405,7 @@ class ReportBrowserService
             'customer_id' => $filters['customer_id'] ? (string) $filters['customer_id'] : '',
             'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : '',
             'supplier_id' => $filters['supplier_id'] ? (string) $filters['supplier_id'] : '',
+            'till_id' => $filters['till_id'] ? (string) $filters['till_id'] : '',
             'stock_status' => $filters['stock_status'] ?? '',
             'balance_status' => $filters['balance_status'] ?? '',
             'sort_by' => $filters['sort_by'] ?? '',
@@ -444,6 +462,7 @@ class ReportBrowserService
             'customer_id',
             'category_id',
             'supplier_id',
+            'till_id',
             'stock_status',
             'balance_status',
             'sort_by',
@@ -581,6 +600,17 @@ class ReportBrowserService
                 ],
                 'default_sort' => ['by' => 'reference_date', 'direction' => 'desc'],
             ],
+            'cash-discrepancy' => [
+                'fields' => ['scope', 'till_id', 'operator_id', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'abs_difference', 'label' => 'Diferença (abs.)'],
+                    ['value' => 'total_difference', 'label' => 'Diferença'],
+                    ['value' => 'closed_at', 'label' => 'Fechamento'],
+                    ['value' => 'till_name', 'label' => 'Caixa'],
+                    ['value' => 'user_name', 'label' => 'Operador'],
+                ],
+                'default_sort' => ['by' => 'abs_difference', 'direction' => 'desc'],
+            ],
             'receivables-open' => [
                 'fields' => ['query', 'customer_id', 'balance_status', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
@@ -613,6 +643,7 @@ class ReportBrowserService
             'customers' => $this->customerFilterOptions(),
             'categories' => $this->namedLookupFilterOptions('categories'),
             'suppliers' => $this->namedLookupFilterOptions('suppliers', 120),
+            'tills' => $this->namedLookupFilterOptions('tills'),
             'stock_statuses' => [
                 ['value' => 'healthy', 'label' => 'Saudável'],
                 ['value' => 'low', 'label' => 'Baixo estoque'],
@@ -1891,6 +1922,72 @@ class ReportBrowserService
             paginator: $paginator,
             emptyText: 'Nenhum movimento de caixa encontrado no recorte selecionado.',
             table: ['title' => 'Movimentos'],
+        );
+    }
+
+    protected function cashDiscrepancyReport(array $filters): array
+    {
+        $registers = CashRegister::query()
+            ->with(['till:id,name', 'user:id,name'])
+            ->where('status', 'closed')
+            ->whereBetween('closed_at', [$filters['from'], $filters['to']])
+            ->when($filters['till_id'], fn ($query, $tillId) => $query->where('till_id', $tillId))
+            ->when($filters['operator_id'], fn ($query, $userId) => $query->where('user_id', $userId))
+            ->get();
+
+        $rows = $registers->map(function (CashRegister $register) {
+            $report = $this->cashRegisterReportService->build($register);
+            $breakdown = collect($report['closing_breakdown'] ?? []);
+            $cashRow = $breakdown->firstWhere('payment_method', PaymentMethod::CASH);
+            $totalDifference = (float) ($report['total_difference'] ?? $breakdown
+                ->filter(fn (array $row) => $row['difference'] !== null)
+                ->sum(fn (array $row) => (float) $row['difference']));
+
+            return [
+                'id' => $register->id,
+                'till_id' => $register->till_id,
+                'till_name' => $register->till?->name ?? 'Caixa principal',
+                'user_name' => $register->user?->name,
+                'closed_at' => $register->closed_at?->format('Y-m-d H:i:s'),
+                'cash_difference' => (float) ($cashRow['difference'] ?? 0),
+                'total_difference' => $totalDifference,
+                'abs_difference' => abs($totalDifference),
+                'breakdown' => $breakdown->values()->all(),
+            ];
+        });
+
+        $sortedRows = $this->sortCollection($rows, $filters, [
+            'abs_difference' => 'abs_difference',
+            'total_difference' => 'total_difference',
+            'closed_at' => 'closed_at',
+            'till_name' => 'till_name',
+            'user_name' => 'user_name',
+        ], 'abs_difference', 'desc');
+        $paginator = $this->paginateCollection($sortedRows, $filters['per_page'], $filters['page']);
+        $biggestDiscrepancy = $rows->sortByDesc('abs_difference')->first();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Diferença total', $rows->sum('total_difference'), 'money', 'fa-scale-balanced'),
+                $this->summaryCard('Maior quebra (abs.)', $rows->max('abs_difference') ?? 0, 'money', 'fa-triangle-exclamation'),
+                $this->summaryCard('Fechamentos no período', $rows->count(), 'number', 'fa-calendar-check'),
+            ],
+            highlights: [
+                $biggestDiscrepancy
+                    ? $this->highlight('Maior quebra', $biggestDiscrepancy['total_difference'], 'money', $biggestDiscrepancy['till_name'], 'warning')
+                    : null,
+            ],
+            columns: [
+                ['key' => 'closed_at', 'label' => 'Fechamento', 'format' => 'datetime'],
+                ['key' => 'till_name', 'label' => 'Caixa'],
+                ['key' => 'user_name', 'label' => 'Operador'],
+                ['key' => 'cash_difference', 'label' => 'Dif. dinheiro', 'format' => 'money'],
+                ['key' => 'total_difference', 'label' => 'Dif. total', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhum fechamento com quebra no recorte selecionado.',
+            table: ['title' => 'Quebras de caixa'],
         );
     }
 

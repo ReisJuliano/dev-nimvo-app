@@ -10,13 +10,14 @@ import ActionDrawer from '@/Components/UI/ActionDrawer'
 import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
-import { useErrorFeedbackPopup } from '@/lib/errorPopup'
+import { showPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
 import { buildCloseCashRegisterModal, buildCloseCashRegisterRows, createOpenCashRegisterForm } from '@/lib/cashRegister'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
+import { resolveTillBinding, setTillBinding } from '@/lib/tillBinding'
 import {
     cacheOfflineCashRegisterReport,
     closeOfflineCashRegister,
@@ -485,9 +486,11 @@ export default function PosIndex({
     pendingNfces: initialPendingNfces = [],
     recommendations: initialRecommendations,
     posCapabilities = {},
+    tills = [],
 }) {
     const { tenant, auth, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
+    const singleTillMode = tills.length <= 1
     const moduleState = useModules()
     const supportsOrders = false
     const supportsDeferredPayment = moduleState.isCapabilityEnabled('prazo')
@@ -579,6 +582,7 @@ export default function PosIndex({
     const [discountReason, setDiscountReason] = useState('')
     const [cashMovementModalType, setCashMovementModalType] = useState(null)
     const [cashMovementForm, setCashMovementForm] = useState({ amount: '', reason: '' })
+    const [cashWithdrawalSuggestion, setCashWithdrawalSuggestion] = useState(null)
     const [submittingCashMovement, setSubmittingCashMovement] = useState(false)
     const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false)
     const [mobileCashPanelOpen, setMobileCashPanelOpen] = useState(false)
@@ -714,15 +718,18 @@ export default function PosIndex({
         }
     }
 
-    function openCashMovementModal(type) {
+    function openCashMovementModal(type, prefillAmount = '') {
         if (!cashRegisterState) {
             showFeedback('warning', 'Abra o caixa antes de registrar uma movimentação.')
             return
         }
 
+        const resolvedPrefill = prefillAmount || (type === 'withdrawal' ? cashWithdrawalSuggestion?.excess : '') || ''
+
         setMobileCashPanelOpen(false)
-        setCashMovementForm({ amount: '', reason: '' })
+        setCashMovementForm({ amount: resolvedPrefill ? String(resolvedPrefill) : '', reason: '' })
         setCashMovementModalType(type)
+        setCashWithdrawalSuggestion(null)
     }
 
     function closeCashMovementModal() {
@@ -2237,7 +2244,8 @@ export default function PosIndex({
         }
 
         setFeedback(null)
-        setOpenCashRegisterModal(createOpenCashRegisterForm())
+        const boundTill = resolveTillBinding(tenantId, tills)
+        setOpenCashRegisterModal(createOpenCashRegisterForm(boundTill?.till_id || ''))
     }
 
     function handleOpenCashRegisterFieldChange(field, value) {
@@ -2256,12 +2264,18 @@ export default function PosIndex({
 
         if (!openCashRegisterModal) return
 
+        if (!singleTillMode && !openCashRegisterModal.tillId) {
+            showFeedback('warning', 'Selecione qual caixa (terminal) deseja abrir.')
+            return
+        }
+
         setOpeningCashRegister(true)
 
         try {
             const openingAmount = Number(openCashRegisterModal.openingAmount || 0)
+            const tillId = openCashRegisterModal.tillId ? Number(openCashRegisterModal.tillId) : null
 
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 createOfflineCashRegister(tenantId, {
                     opening_amount: openingAmount,
                     opening_notes: openCashRegisterModal.openingNotes.trim() || null,
@@ -2277,10 +2291,15 @@ export default function PosIndex({
             const response = await apiRequest('/api/cash-registers', {
                 method: 'post',
                 data: {
+                    till_id: tillId,
                     opening_amount: openingAmount,
                     opening_notes: openCashRegisterModal.openingNotes.trim() || null,
                 },
             })
+
+            if (tillId) {
+                setTillBinding(tenantId, { id: tillId, name: tills.find((till) => till.id === tillId)?.name })
+            }
 
             setCashRegisterState({
                 id: response.cash_register_id,
@@ -2304,7 +2323,7 @@ export default function PosIndex({
             setOpenCashRegisterModal(null)
             showFeedback('success', response.message || 'Caixa aberto com sucesso.')
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 const openingAmount = Number(openCashRegisterModal.openingAmount || 0)
 
                 createOfflineCashRegister(tenantId, {
@@ -2348,7 +2367,7 @@ export default function PosIndex({
         setSubmittingCashMovement(true)
 
         try {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 registerOfflineCashMovement(tenantId, cashRegisterState.id, {
                     type: cashMovementModalType,
                     amount,
@@ -2380,7 +2399,7 @@ export default function PosIndex({
             closeCashMovementModal()
             showFeedback('success', response.message || 'Movimentação registrada com sucesso.')
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 registerOfflineCashMovement(tenantId, cashRegisterState.id, {
                     type: cashMovementModalType,
                     amount,
@@ -2411,7 +2430,7 @@ export default function PosIndex({
         setLoadingClosePreview(true)
 
         try {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const offlineReport = getOfflineCashRegisterReport(tenantId, cashRegisterState.id, {
                     userName: auth?.user?.name,
                 })
@@ -2428,7 +2447,7 @@ export default function PosIndex({
             cacheOfflineCashRegisterReport(tenantId, response.report)
             setCloseCashRegisterModal(buildCloseCashRegisterModal(response.report))
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 const offlineReport = getOfflineCashRegisterReport(tenantId, cashRegisterState.id, {
                     userName: auth?.user?.name,
                 })
@@ -2548,7 +2567,7 @@ export default function PosIndex({
             return
         }
 
-        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
             authorizeCloseCashSupervisorOffline()
             return
         }
@@ -2592,7 +2611,7 @@ export default function PosIndex({
             ))
             showFeedback('success', response.message || 'Edição liberada pelo supervisor.')
         } catch (error) {
-            if (tenantId && isNetworkApiError(error) && authorizeCloseCashSupervisorOffline()) {
+            if (singleTillMode && tenantId && isNetworkApiError(error) && authorizeCloseCashSupervisorOffline()) {
                 return
             }
 
@@ -2643,7 +2662,7 @@ export default function PosIndex({
                 ),
             }
 
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            if (singleTillMode && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 const result = closeOfflineCashRegister(tenantId, cashRegisterState.id, payload, {
                     userName: auth?.user?.name,
                     fallbackReport: closeCashRegisterModal.report,
@@ -2673,7 +2692,7 @@ export default function PosIndex({
             setCashReportModal(response.report)
             showFeedback('success', response.message || 'Caixa fechado com sucesso.')
         } catch (error) {
-            if (tenantId && isNetworkApiError(error)) {
+            if (singleTillMode && tenantId && isNetworkApiError(error)) {
                 const payload = {
                     closing_amount: Number(closeCashRegisterModal.form.amounts.cash || 0),
                     closing_notes: closeCashRegisterModal.form.notes || null,
@@ -3228,6 +3247,15 @@ export default function PosIndex({
                     ? `Venda ${response.sale.sale_number} registrada no modo offline.`
                     : `Venda ${response.sale.sale_number} finalizada.${printMessage}`,
             )
+
+            if (response.sale?.cash_withdrawal_suggestion) {
+                setCashWithdrawalSuggestion(response.sale.cash_withdrawal_suggestion)
+                showPopup({
+                    type: 'warning',
+                    title: 'Sugestão de sangria',
+                    message: `O saldo em dinheiro do caixa passou de ${formatMoney(response.sale.cash_withdrawal_suggestion.threshold)}. Considere fazer uma sangria de ${formatMoney(response.sale.cash_withdrawal_suggestion.excess)} (atalho Shift+S).`,
+                })
+            }
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -3287,6 +3315,15 @@ export default function PosIndex({
                         ? `Venda ${response.sale.sale_number} enviada para emissão com contato por e-mail.`
                         : `Venda ${response.sale.sale_number} enviada para emissão fiscal.`,
             )
+
+            if (response.sale?.cash_withdrawal_suggestion) {
+                setCashWithdrawalSuggestion(response.sale.cash_withdrawal_suggestion)
+                showPopup({
+                    type: 'warning',
+                    title: 'Sugestão de sangria',
+                    message: `O saldo em dinheiro do caixa passou de ${formatMoney(response.sale.cash_withdrawal_suggestion.threshold)}. Considere fazer uma sangria de ${formatMoney(response.sale.cash_withdrawal_suggestion.excess)} (atalho Shift+S).`,
+                })
+            }
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -3955,6 +3992,18 @@ export default function PosIndex({
                             <button className="pos-button ghost small" type="button" onClick={closeOpenCashRegisterModal}>Cancelar</button>
                         </div>
 
+                        {!singleTillMode ? (
+                            <label className="pos-field">
+                                <span>Caixa (terminal)</span>
+                                <select className="pos-field-input" value={openCashRegisterModal.tillId} onChange={(event) => handleOpenCashRegisterFieldChange('tillId', event.target.value)} required>
+                                    <option value="">Selecione o caixa</option>
+                                    {tills.map((till) => (
+                                        <option key={till.id} value={till.id}>{till.name}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        ) : null}
+
                         <label className="pos-field">
                             <span>Valor de abertura</span>
                             <input className="pos-field-input" type="number" min="0" step="0.01" value={openCashRegisterModal.openingAmount} onChange={(event) => handleOpenCashRegisterFieldChange('openingAmount', event.target.value)} autoFocus />
@@ -4390,6 +4439,18 @@ export default function PosIndex({
                             </div>
                             <button className="ui-button-ghost" type="button" onClick={closeOpenCashRegisterModal}>Cancelar</button>
                         </div>
+
+                        {!singleTillMode ? (
+                            <label className="pos-discount-form-field">
+                                Caixa (terminal)
+                                <select className="ui-input" value={openCashRegisterModal.tillId} onChange={(event) => handleOpenCashRegisterFieldChange('tillId', event.target.value)} required>
+                                    <option value="">Selecione o caixa</option>
+                                    {tills.map((till) => (
+                                        <option key={till.id} value={till.id}>{till.name}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        ) : null}
 
                         <label className="pos-discount-form-field">
                             Valor de abertura
