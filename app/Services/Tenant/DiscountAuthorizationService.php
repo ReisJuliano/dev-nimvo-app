@@ -3,12 +3,18 @@
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\User;
+use App\Support\Tenant\AuditActions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class DiscountAuthorizationService
 {
-    public function authorize(?int $userId, ?string $password): User
+    public function __construct(
+        protected AuditLogService $auditLogService,
+    ) {
+    }
+
+    public function authorize(?int $userId, ?string $password, array $context = []): User
     {
         $user = $userId ? User::query()->find($userId) : null;
 
@@ -35,6 +41,15 @@ class DiscountAuthorizationService
                 'authorizer_password' => 'Senha gerencial inválida.',
             ]);
         }
+
+        $this->auditLogService->record(
+            AuditActions::DISCOUNT_AUTHORIZED,
+            metadata: [
+                'authorizer_id' => $user->id,
+                'authorizer_name' => $user->name,
+                ...$context,
+            ],
+        );
 
         return $user;
     }

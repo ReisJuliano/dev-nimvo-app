@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Tenant\Audit\AuditApiController;
+use App\Http\Controllers\Tenant\Audit\AuditPageController;
 use App\Http\Controllers\Tenant\Auth\LoginController;
 use App\Http\Controllers\Tenant\Auth\PasswordChangeController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterApiController;
@@ -158,6 +160,7 @@ Route::middleware('auth')->group(function () {
         })->name('shortages.index');
         Route::get('/usuarios', OperationsPageController::class)->defaults('module', 'usuarios')->name('users.index');
         Route::get('/configuracoes', SettingsPageController::class)->name('settings.index');
+        Route::get('/auditoria', AuditPageController::class)->name('audit.index');
         Route::get('/moda/{module}', FashionModulePageController::class)
             ->where('module', 'promotions|returns|catalog|online-orders|whatsapp')
             ->name('fashion.workspace');
@@ -205,6 +208,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');
             Route::post('/delivery/orders/{deliveryOrder}/status', [DeliveryApiController::class, 'updateStatus'])->name('api.delivery.orders.status');
+
+            Route::get('/audit/logs', [AuditApiController::class, 'index'])->name('api.audit.logs.index');
+            Route::get('/audit/logs/{auditLog}', [AuditApiController::class, 'show'])->name('api.audit.logs.show');
 
             Route::get('/tills', [TillApiController::class, 'index'])->name('api.tills.index');
             Route::post('/cash-registers', [CashRegisterApiController::class, 'open'])->name('api.cash-registers.open');

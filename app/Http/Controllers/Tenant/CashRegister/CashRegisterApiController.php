@@ -8,15 +8,17 @@ use App\Http\Requests\Tenant\CashRegister\CloseCashRegisterRequest;
 use App\Http\Requests\Tenant\CashRegister\OpenCashRegisterRequest;
 use App\Http\Requests\Tenant\CashRegister\RegisterCashMovementRequest;
 use App\Models\Tenant\CashRegister;
+use App\Services\Tenant\AuditLogService;
 use App\Services\Tenant\CashRegisterReportService;
 use App\Services\Tenant\LocalAgentPrintQueueService;
 use App\Services\Tenant\SupervisorAuthorizationService;
 use App\Services\Tenant\TillService;
+use App\Support\Tenant\AuditActions;
 use Illuminate\Http\JsonResponse;
 
 class CashRegisterApiController extends Controller
 {
-    public function open(OpenCashRegisterRequest $request, TillService $tillService): JsonResponse
+    public function open(OpenCashRegisterRequest $request, TillService $tillService, AuditLogService $auditLogService): JsonResponse
     {
         $userId = auth()->user()?->getKey();
         $till = $tillService->resolveForOpening($request->validated('till_id'));
@@ -39,6 +41,12 @@ class CashRegisterApiController extends Controller
             'opened_at' => now(),
         ]);
 
+        $auditLogService->record(AuditActions::CASH_REGISTER_OPENED, $cashRegister, after: [
+            'till_id' => $till->id,
+            'till_name' => $till->name,
+            'opening_amount' => $cashRegister->opening_amount,
+        ]);
+
         return response()->json([
             'message' => 'Caixa aberto com sucesso.',
             'cash_register_id' => $cashRegister->id,
@@ -51,6 +59,7 @@ class CashRegisterApiController extends Controller
         RegisterCashMovementRequest $request,
         CashRegister $cashRegister,
         LocalAgentPrintQueueService $printQueueService,
+        AuditLogService $auditLogService,
     ): JsonResponse
     {
         $userId = auth()->user()?->getKey();
@@ -63,6 +72,13 @@ class CashRegisterApiController extends Controller
             'amount' => $request->validated('amount'),
             'reason' => $request->validated('reason'),
         ]);
+
+        $auditLogService->record(AuditActions::CASH_REGISTER_MOVEMENT, $cashRegister, after: [
+            'type' => $movement->type,
+            'amount' => $movement->amount,
+            'reason' => $movement->reason,
+        ]);
+
         $printResult = null;
 
         try {
@@ -86,6 +102,7 @@ class CashRegisterApiController extends Controller
         CloseCashRegisterRequest $request,
         CashRegister $cashRegister,
         CashRegisterReportService $reportService,
+        AuditLogService $auditLogService,
     ): JsonResponse {
         $userId = auth()->user()?->getKey();
         $closedAt = now();
@@ -118,6 +135,16 @@ class CashRegisterApiController extends Controller
         if (!$reportService->supportsDatabaseSnapshotStorage()) {
             $reportService->persistClosingSnapshot($cashRegister->fresh(), $closingSnapshot);
         }
+
+        $difference = (float) ($closingSnapshot['difference'] ?? $closingSnapshot['total_difference'] ?? 0);
+        $auditLogService->record(
+            abs($difference) > 0.009 ? AuditActions::CASH_REGISTER_CLOSED_WITH_DIFFERENCE : AuditActions::CASH_REGISTER_CLOSED,
+            $cashRegister,
+            after: [
+                'closing_amount' => $updates['closing_amount'],
+                'difference' => $difference,
+            ],
+        );
 
         return response()->json([
             'message' => 'Caixa fechado com sucesso.',

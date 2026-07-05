@@ -16,8 +16,10 @@ use App\Models\Tenant\Supplier;
 use App\Models\Tenant\User;
 use App\Services\Tenant\Purchases\IncomingNfeService;
 use App\Support\TextSearch;
+use App\Support\Tenant\AuditActions;
 use App\Support\Tenant\PermissionRegistry;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -44,6 +46,7 @@ class OperationsWorkspaceService
     public function __construct(
         protected InventoryMovementService $inventoryMovementService,
         protected IncomingNfeService $incomingNfeService,
+        protected AuditLogService $auditLogService,
     ) {}
 
     public function workspaceModules(): array
@@ -200,19 +203,29 @@ class OperationsWorkspaceService
     public function destroy(string $module, int $recordId): string
     {
         return match ($module) {
-            'clientes' => tap($this->findRecord(Customer::class, $recordId))->delete() ? 'Cliente removido com sucesso.' : 'Cliente removido com sucesso.',
-            'fornecedores' => tap($this->findRecord(Supplier::class, $recordId))->delete() ? 'Fornecedor removido com sucesso.' : 'Fornecedor removido com sucesso.',
-            'categorias' => tap($this->findRecord(Category::class, $recordId))->delete() ? 'Categoria removida com sucesso.' : 'Categoria removida com sucesso.',
-            'delivery' => tap($this->findRecord(DeliveryOrder::class, $recordId))->delete() ? 'Entrega removida com sucesso.' : 'Entrega removida com sucesso.',
+            'clientes' => $this->auditDelete($this->findRecord(Customer::class, $recordId), 'Cliente removido com sucesso.'),
+            'fornecedores' => $this->auditDelete($this->findRecord(Supplier::class, $recordId), 'Fornecedor removido com sucesso.'),
+            'categorias' => $this->auditDelete($this->findRecord(Category::class, $recordId), 'Categoria removida com sucesso.'),
+            'delivery' => $this->auditDelete($this->findRecord(DeliveryOrder::class, $recordId), 'Entrega removida com sucesso.'),
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
-            'contas-a-pagar' => tap($this->findRecord(Payable::class, $recordId))->delete() ? 'Conta a pagar removida com sucesso.' : 'Conta a pagar removida com sucesso.',
-            'usuarios' => tap($this->findRecord(User::class, $recordId))->delete() ? 'Usuario removido com sucesso.' : 'Usuario removido com sucesso.',
+            'contas-a-pagar' => $this->auditDelete($this->findRecord(Payable::class, $recordId), 'Conta a pagar removida com sucesso.'),
+            'usuarios' => $this->auditDelete($this->findRecord(User::class, $recordId), 'Usuario removido com sucesso.'),
             'grupos' => $this->destroyGroup($this->findRecord(PermissionGroup::class, $recordId)),
             'entrada-estoque' => throw ValidationException::withMessages([
                 'record' => 'Registros de estoque não podem ser excluídos para preservar a rastreabilidade.',
             ]),
             default => abort(404),
         };
+    }
+
+    protected function auditDelete(Model $model, string $message): string
+    {
+        $before = $model->attributesToArray();
+        $model->delete();
+
+        $this->auditLogService->record(AuditActions::RECORD_DELETED, $model, before: $before);
+
+        return $message;
     }
 
     protected function deleteStockSensitiveRecord(Model $model, string $message): string
@@ -223,6 +236,7 @@ class OperationsWorkspaceService
             ]);
         }
 
+        $this->auditLogService->record(AuditActions::RECORD_DELETED, $model, before: $model->attributesToArray());
         $model->delete();
 
         return $message;
@@ -605,6 +619,7 @@ class OperationsWorkspaceService
             'permission_keys.*' => ['string', Rule::in(PermissionRegistry::allKeys())],
         ])->validate();
 
+        $beforeKeys = $group?->permissionKeys() ?? [];
         $group ??= new PermissionGroup;
         $group->fill(['name' => $validated['name']])->save();
 
@@ -617,6 +632,13 @@ class OperationsWorkspaceService
                 $keys->map(fn (string $key) => ['permission_key' => $key, 'created_at' => now()])->all(),
             );
         }
+
+        $this->auditLogService->record(
+            AuditActions::USER_ABILITIES_CHANGED,
+            $group,
+            before: ['permission_keys' => $beforeKeys],
+            after: ['permission_keys' => $keys->all()],
+        );
 
         return $group->fresh();
     }
@@ -833,6 +855,9 @@ class OperationsWorkspaceService
 
         $group = PermissionGroup::query()->findOrFail($validated['permission_group_id']);
 
+        $wasActive = $user?->active;
+        $previousGroupId = $user?->permission_group_id;
+
         $user ??= new User;
 
         $payload = [
@@ -860,6 +885,27 @@ class OperationsWorkspaceService
         $user->fill($payload)->save();
 
         $this->syncUserPermissionOverrides($user, $validated['permission_overrides'] ?? null);
+
+        $auditableAttributes = fn (User $target) => Arr::except($target->attributesToArray(), ['password', 'discount_authorization_password']);
+
+        if ($isCreate) {
+            $this->auditLogService->record(AuditActions::USER_CREATED, $user, after: $auditableAttributes($user));
+        } else {
+            $this->auditLogService->record(AuditActions::USER_UPDATED, $user, after: $auditableAttributes($user->fresh()));
+
+            if ($wasActive && ! $payload['active']) {
+                $this->auditLogService->record(AuditActions::USER_DEACTIVATED, $user);
+            }
+
+            if ($previousGroupId !== $group->id) {
+                $this->auditLogService->record(
+                    AuditActions::USER_ABILITIES_CHANGED,
+                    $user,
+                    before: ['permission_group_id' => $previousGroupId],
+                    after: ['permission_group_id' => $group->id],
+                );
+            }
+        }
 
         return $user->fresh();
     }

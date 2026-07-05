@@ -166,6 +166,13 @@ class TenantNavigationService
                         'required_permission' => 'configuracoes.editar',
                         'request_patterns' => ['configuracoes', 'api/settings*'],
                     ],
+                    [
+                        'href' => '/auditoria',
+                        'label' => 'Auditoria',
+                        'icon' => 'fa-clipboard-check',
+                        'required_permission' => 'auditoria.visualizar',
+                        'request_patterns' => ['auditoria', 'api/audit*'],
+                    ],
                 ],
             ],
         ];

@@ -1,0 +1,34 @@
+.audit-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.audit-detail-grid > div {
+    min-width: 0;
+}
+
+.audit-detail-metadata {
+    grid-column: 1 / -1;
+}
+
+.audit-detail-grid h4 {
+    margin: 0 0 0.4rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.audit-detail-grid pre {
+    margin: 0;
+    padding: 0.75rem;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    max-height: 320px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}

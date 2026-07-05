@@ -111,6 +111,13 @@ class PermissionRegistry
                     ['key' => 'configuracoes.editar', 'label' => 'Editar configurações', 'description' => 'Permite alterar as configurações da loja, incluindo caixas e agente local.'],
                 ],
             ],
+            [
+                'key' => 'auditoria',
+                'label' => 'Auditoria',
+                'items' => [
+                    ['key' => 'auditoria.visualizar', 'label' => 'Visualizar logs de auditoria', 'description' => 'Consulta o histórico de ações auditadas da loja.'],
+                ],
+            ],
         ];
     }
 
@@ -129,7 +136,7 @@ class PermissionRegistry
         return match ($baseRole) {
             'admin' => $all,
             'manager' => collect($all)
-                ->reject(fn (string $key) => str_starts_with($key, 'usuarios.') || str_starts_with($key, 'configuracoes.'))
+                ->reject(fn (string $key) => str_starts_with($key, 'usuarios.') || str_starts_with($key, 'configuracoes.') || str_starts_with($key, 'auditoria.'))
                 ->values()
                 ->all(),
             'operator' => collect($all)
