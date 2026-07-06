@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->string('permission_key');
             $table->timestamp('created_at')->nullable();
 
-            $table->unique(['permission_group_id', 'permission_key']);
+            $table->unique(['permission_group_id', 'permission_key'], 'permission_group_grants_group_key_unique');
         });
 
         Schema::create('user_permission_overrides', function (Blueprint $table) {
