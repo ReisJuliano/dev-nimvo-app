@@ -57,7 +57,7 @@ class OrdersPageController extends Controller
                 'from' => $request->query('from'),
                 'to' => $request->query('to'),
             ],
-            'productCatalog' => $productService->activeCatalog(),
+            'productCatalog' => $productService->activeCatalog((bool) auth()->user()?->hasPermission('produtos.ver_custo')),
             'cashRegister' => $cashRegister ? [
                 'id' => $cashRegister->id,
                 'user_name' => auth()->user()?->name,

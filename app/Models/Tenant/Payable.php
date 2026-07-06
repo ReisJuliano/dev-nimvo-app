@@ -3,8 +3,10 @@
 namespace App\Models\Tenant;
 
 use App\Models\Tenant\Concerns\UsesTenantConnection;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class Payable extends Model
 {
@@ -40,6 +42,13 @@ class Payable extends Model
         'paid_at' => 'datetime',
         'metadata' => 'array',
     ];
+
+    protected function dueDate(): Attribute
+    {
+        return Attribute::make(
+            set: fn ($value) => filled($value) ? Carbon::parse($value)->toDateString() : null,
+        );
+    }
 
     public function purchase(): BelongsTo
     {

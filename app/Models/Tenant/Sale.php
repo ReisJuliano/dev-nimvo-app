@@ -31,6 +31,8 @@ class Sale extends Model
         'fiscal_decision',
         'notes',
         'recipient_payload',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

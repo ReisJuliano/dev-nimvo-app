@@ -195,3 +195,13 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   `sale_payments.payment_details` para cartao (bandeira, parcelas, NSU,
   autorizacao) e cheque (banco, agencia, conta, numero, emitente, documento e
   data de deposito). `PaymentMethod::CHECK` tambem entra no fechamento de caixa.
+- 2026-07-06: `ProductService::activeCatalog()`/`fullCatalog()` usam um select
+  defensivo via `productSelectColumns()` e depois normalizam o payload em
+  `mapCatalogProduct()`. Ao adicionar colunas de produto consumidas por telas
+  tenant (ex.: pesaveis, validade, etiquetas), atualize os dois pontos para a
+  UI nao perder valores ao abrir/editar registros.
+- 2026-07-06: Custo de produto agora depende da permissao
+  `produtos.ver_custo`. Catalogos de produto, APIs de produtos, busca do PDV e
+  busca mobile devem omitir `cost_price` para usuarios sem essa permissao; em
+  updates, `ProductService` preserva o custo existente quando o campo nao vem no
+  payload.

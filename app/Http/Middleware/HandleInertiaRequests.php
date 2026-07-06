@@ -6,6 +6,7 @@ use App\Services\Central\TenantLicenseService;
 use App\Services\Tenant\LocalAgentBridgeService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Services\Tenant\TenantNavigationService;
+use App\Support\Tenant\PermissionRegistry;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -26,16 +27,25 @@ class HandleInertiaRequests extends Middleware
         $licenseState = $tenant ? app(TenantLicenseService::class)->stateForTenant((string) $tenant->getTenantKey()) : null;
         $localAgentBridge = $tenant ? app(LocalAgentBridgeService::class)->forCurrentTenant() : null;
         $centralAdmin = auth('central_admin')->user();
+        $tenantUser = $request->user();
+        $permissions = $tenantUser && method_exists($tenantUser, 'hasPermission')
+            ? collect(PermissionRegistry::allKeys())
+                ->filter(fn (string $key) => $tenantUser->hasPermission($key))
+                ->values()
+                ->all()
+            : [];
 
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id'       => $request->user()->id,
-                    'name'     => $request->user()->name,
-                    'username' => $request->user()->username,
-                    'role'     => $request->user()->role,
+                'user' => $tenantUser ? [
+                    'id'       => $tenantUser->id,
+                    'name'     => $tenantUser->name,
+                    'username' => $tenantUser->username,
+                    'role'     => $tenantUser->role,
                 ] : null,
+                'permissions' => $permissions,
+                'abilities' => $permissions,
             ],
             'centralAuth' => [
                 'user' => $centralAdmin ? [

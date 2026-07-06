@@ -55,6 +55,13 @@ class TenantNavigationService
                         'request_patterns' => ['entrada-estoque'],
                     ],
                     [
+                        'href' => '/entrada-estoque/manutencao',
+                        'label' => 'Manutencao de entradas',
+                        'icon' => 'fa-clipboard-check',
+                        'access_key' => 'entrada_estoque_avancado',
+                        'request_patterns' => ['entrada-estoque/manutencao', 'api/purchases*'],
+                    ],
+                    [
                         'href' => '/inventario',
                         'label' => 'Inventário',
                         'icon' => 'fa-clipboard-list',
@@ -113,8 +120,9 @@ class TenantNavigationService
                         'label' => 'Suporte fiscal',
                         'icon' => 'fa-magnifying-glass-dollar',
                         'access_key' => 'consultas_fiscais',
-                        'required_role' => 'admin',
-                        'request_patterns' => ['consultas-cancelamentos*'],
+                        'allowed_roles' => ['admin', 'operator'],
+                        'module_bypass' => true,
+                        'request_patterns' => ['consultas-cancelamentos*', 'api/fiscal*'],
                     ],
                     [
                         'href' => '/delivery',
@@ -210,6 +218,11 @@ class TenantNavigationService
     public function resolveModuleAccessKey(Request $request): ?string
     {
         $item = $this->resolveItem($request);
+
+        if ((bool) ($item['module_bypass'] ?? false)) {
+            return null;
+        }
+
         $fromNav = $item['access_key'] ?? null;
 
         if (filled($fromNav)) {
@@ -241,7 +254,6 @@ class TenantNavigationService
             'api/fashion*' => 'moda',
             'api/fiado*' => 'prazo',
             'api/receivables*' => 'prazo',
-            'api/fiscal*' => 'fiscal_avancado',
             'api/purchases*' => 'compras',
             'api/stock*' => 'entrada_estoque',
         ];
@@ -269,6 +281,12 @@ class TenantNavigationService
 
         if ($requiredPermission) {
             return (bool) $request->user()?->hasPermission($requiredPermission);
+        }
+
+        $allowedRoles = $item['allowed_roles'] ?? null;
+
+        if (is_array($allowedRoles) && $allowedRoles !== []) {
+            return in_array($request->user()?->role, $allowedRoles, true);
         }
 
         $requiredRole = $item['required_role'] ?? null;

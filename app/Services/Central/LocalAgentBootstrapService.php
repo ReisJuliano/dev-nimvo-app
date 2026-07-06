@@ -6,6 +6,7 @@ use App\Models\Central\LocalAgent;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -58,13 +59,18 @@ class LocalAgentBootstrapService
             $agent->agent_key = Str::lower(Str::random(24));
         }
 
-        $agent->forceFill([
+        $attributes = [
             'name' => (string) ($data['name'] ?? $agent->name ?? sprintf('Agente fiscal %s', $tenantId)),
-            'label' => (string) ($data['label'] ?? $data['name'] ?? $agent->label ?? $agent->name ?? 'Caixa 1'),
             'active' => (bool) ($data['active'] ?? true),
             'secret_hash' => $credentials['secret_hash'] ?? $agent->secret_hash,
             'metadata' => $metadata,
-        ])->save();
+        ];
+
+        if (Schema::connection($agent->getConnectionName())->hasColumn($agent->getTable(), 'label')) {
+            $attributes['label'] = (string) ($data['label'] ?? $data['name'] ?? $agent->label ?? $agent->name ?? 'Caixa 1');
+        }
+
+        $agent->forceFill($attributes)->save();
 
         return $agent->refresh();
     }

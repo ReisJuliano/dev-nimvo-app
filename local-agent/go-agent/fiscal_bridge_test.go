@@ -9,7 +9,7 @@ import (
 func TestSupportedCommandTypesForConfigWithoutBridge(t *testing.T) {
 	config := defaultAgentConfig()
 	supported := supportedCommandTypesForConfig(config)
-	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt"}
+	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt", "print_label"}
 
 	if len(supported) != len(expected) {
 		t.Fatalf("expected %v, got %v", expected, supported)
@@ -52,7 +52,7 @@ func TestSupportedCommandTypesForConfigWithBridge(t *testing.T) {
 	config.Software.PHPPath = phpBinary
 
 	supported := supportedCommandTypesForConfig(config)
-	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt"}
+	expected := []string{"print_payment_receipt", "print_test", "print_fiscal_receipt", "print_operation_receipt", "print_label"}
 
 	if len(supported) != len(expected) {
 		t.Fatalf("expected %v, got %v", expected, supported)

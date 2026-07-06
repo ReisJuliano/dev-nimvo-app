@@ -12,28 +12,28 @@ class ProductsApiController extends Controller
 {
     public function store(UpsertProductRequest $request, ProductService $productService): JsonResponse
     {
-        $product = $productService->save(new Product(), $request->validated());
+        $product = $productService->save(new Product(), $this->authorizedPayload($request->validated()));
 
         return response()->json([
             'message' => 'Produto cadastrado com sucesso.',
-            'product' => $product,
+            'product' => $productService->serialize($product, $this->canViewCost()),
         ], 201);
     }
 
-    public function show(Product $product): JsonResponse
+    public function show(Product $product, ProductService $productService): JsonResponse
     {
         $product->load(['category:id,name', 'supplier:id,name']);
 
-        return response()->json(['product' => $product]);
+        return response()->json(['product' => $productService->serialize($product, $this->canViewCost())]);
     }
 
     public function update(UpsertProductRequest $request, Product $product, ProductService $productService): JsonResponse
     {
-        $product = $productService->save($product, $request->validated());
+        $product = $productService->save($product, $this->authorizedPayload($request->validated()));
 
         return response()->json([
             'message' => 'Produto atualizado com sucesso.',
-            'product' => $product,
+            'product' => $productService->serialize($product, $this->canViewCost()),
         ]);
     }
 
@@ -55,5 +55,19 @@ class ProductsApiController extends Controller
         $product->delete();
 
         return response()->json(['message' => 'Produto apagado com sucesso.']);
+    }
+
+    protected function authorizedPayload(array $payload): array
+    {
+        if (! $this->canViewCost()) {
+            unset($payload['cost_price']);
+        }
+
+        return $payload;
+    }
+
+    protected function canViewCost(): bool
+    {
+        return (bool) auth()->user()?->hasPermission('produtos.ver_custo');
     }
 }

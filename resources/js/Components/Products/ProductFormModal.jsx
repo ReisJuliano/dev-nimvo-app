@@ -107,11 +107,14 @@ function getNumberValue(value) {
     return Number.isNaN(parsed) ? NaN : parsed
 }
 
-function validateForm(form) {
+function validateForm(form, canViewCost = false) {
     const errors = {}
     const ncm = String(form.ncm || '').trim()
     const cfop = String(form.cfop || '').trim()
     const cest = String(form.cest || '').trim()
+    const numericLabels = canViewCost
+        ? numericFieldLabels
+        : Object.fromEntries(Object.entries(numericFieldLabels).filter(([field]) => field !== 'cost_price'))
 
     if (!String(form.name || '').trim()) errors.name = 'Informe o nome do produto.'
     if (form.sale_price === '' || form.sale_price === null || form.sale_price === undefined) errors.sale_price = 'Informe o preço de venda.'
@@ -119,7 +122,7 @@ function validateForm(form) {
     if (cfop !== '' && !/^\d{4}$/.test(cfop)) errors.cfop = 'CFOP deve ter 4 dígitos.'
     if (cest !== '' && !/^\d{7}$/.test(cest)) errors.cest = 'CEST deve ter 7 dígitos.'
 
-    Object.entries(numericFieldLabels).forEach(([field, label]) => {
+    Object.entries(numericLabels).forEach(([field, label]) => {
         const numericValue = getNumberValue(form[field])
         if (Number.isNaN(numericValue)) {
             errors[field] = `${label} precisa ser um número válido.`
@@ -154,6 +157,7 @@ export default function ProductFormModal({
     deleting = false,
     onQuickCreateCategory,
     onQuickCreateSupplier,
+    canViewCost = false,
 }) {
     const moduleState = useModules()
     const [form, setForm] = useState(emptyForm)
@@ -238,7 +242,7 @@ export default function ProductFormModal({
         event.preventDefault()
         setSubmitError('')
 
-        const nextErrors = validateForm(form)
+        const nextErrors = validateForm(form, canViewCost)
         setErrors(nextErrors)
 
         if (Object.keys(nextErrors).length > 0) {
@@ -248,13 +252,19 @@ export default function ProductFormModal({
         }
 
         try {
-            await onSubmit({
+            const payload = {
                 ...form,
                 fiscal_enabled: fiscalFieldsEnabled ? Boolean(form.fiscal_enabled) : false,
                 unit: form.unit || 'UN',
                 commercial_unit: form.commercial_unit || form.unit || 'UN',
                 taxable_unit: form.taxable_unit || form.commercial_unit || form.unit || 'UN',
-            })
+            }
+
+            if (!canViewCost) {
+                delete payload.cost_price
+            }
+
+            await onSubmit(payload)
         } catch (error) {
             const message = error.message || 'Não foi possível salvar o produto.'
             setSubmitError(message)
@@ -424,15 +434,17 @@ export default function ProductFormModal({
                                 {renderFieldError('sale_price')}
                             </label>
 
-                            <label className={`products-editor-field ${errors.cost_price ? 'has-error' : ''}`}>
-                                <span>Custo</span>
-                                <div className="products-editor-input-wrap">
-                                    <i className="fa-solid fa-coins" />
-                                    <input type="number" step="0.01" min="0" value={form.cost_price ?? ''} onChange={(event) => updateField('cost_price', event.target.value)} placeholder="Opcional" />
-                                </div>
-                                <small className="products-field-help">Usado para calcular seu lucro.</small>
-                                {renderFieldError('cost_price')}
-                            </label>
+                            {canViewCost ? (
+                                <label className={`products-editor-field ${errors.cost_price ? 'has-error' : ''}`}>
+                                    <span>Custo</span>
+                                    <div className="products-editor-input-wrap">
+                                        <i className="fa-solid fa-coins" />
+                                        <input type="number" step="0.01" min="0" value={form.cost_price ?? ''} onChange={(event) => updateField('cost_price', event.target.value)} placeholder="Opcional" />
+                                    </div>
+                                    <small className="products-field-help">Usado para calcular seu lucro.</small>
+                                    {renderFieldError('cost_price')}
+                                </label>
+                            ) : null}
 
                             {product ? (
                                 <div className="products-editor-field">

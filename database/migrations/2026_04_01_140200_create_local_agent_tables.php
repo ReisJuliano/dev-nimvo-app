@@ -14,6 +14,7 @@ return new class extends Migration
             $table->id();
             $table->string('tenant_id')->index();
             $table->string('name');
+            $table->string('label')->nullable();
             $table->string('agent_key')->unique();
             $table->string('secret_hash');
             $table->boolean('active')->default(true);

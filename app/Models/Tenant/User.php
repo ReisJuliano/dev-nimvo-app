@@ -56,6 +56,10 @@ class User extends Authenticatable
 
     public function hasPermission(string $key): bool
     {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
         $override = $this->permissionOverrides->firstWhere('permission_key', $key);
 
         if ($override) {

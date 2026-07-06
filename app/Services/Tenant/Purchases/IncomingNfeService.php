@@ -777,7 +777,7 @@ class IncomingNfeService
                     $previous = $existingMap->get($itemData['item_number']);
                     $matched = $this->resolveProductMatch($itemData, $products, $previous);
                     $document->items()->create([
-                        'purchase_item_id' => $previousó->purchase_item_id,
+                        'purchase_item_id' => $previous?->purchase_item_id,
                         'product_id' => $matched['product_id'],
                         'item_number' => $itemData['item_number'],
                         'supplier_code' => $itemData['supplier_code'],

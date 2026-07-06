@@ -32,7 +32,8 @@ class ConditionalSaleService
 
     public function pageData(array $filters = []): array
     {
-        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
+        $selectedConditionalId = $filters['conditional'] ?? null;
+        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL) || filled($selectedConditionalId);
         $status = $filters['status'] ?? 'open';
         $search = trim((string) ($filters['search'] ?? ''));
         $from = filled($filters['from'] ?? null) ? (string) $filters['from'] : null;
@@ -70,7 +71,7 @@ class ConditionalSaleService
             'topProducts' => $applied ? $this->topProductsPayload() : [],
             'conditionals' => $conditionals,
             'selectedConditionalId' => $applied
-                ? $this->resolveSelectedConditionalId($conditionals, $filters['conditional'] ?? null)
+                ? $this->resolveSelectedConditionalId($conditionals, $selectedConditionalId)
                 : null,
             'customers' => $this->customersPayload(),
             'products' => $this->productsPayload(),

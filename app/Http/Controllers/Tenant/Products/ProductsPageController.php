@@ -17,8 +17,10 @@ class ProductsPageController extends Controller
         $applied = $request->boolean('applied');
         $search = trim((string) $request->query('search', ''));
 
+        $canViewCost = (bool) auth()->user()?->hasPermission('produtos.ver_custo');
+
         return Inertia::render('Products/Index', [
-            'products' => $applied ? $productService->fullCatalog() : [],
+            'products' => $applied ? $productService->fullCatalog($canViewCost) : [],
             'categories' => Category::query()
                 ->where('active', true)
                 ->orderBy('name')
@@ -31,6 +33,7 @@ class ProductsPageController extends Controller
                 'applied' => $applied,
                 'search' => $search,
             ],
+            'canViewCost' => $canViewCost,
         ]);
     }
 }

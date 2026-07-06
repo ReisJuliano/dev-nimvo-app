@@ -153,8 +153,8 @@ class IncomingNfeSefazGateway
             }
 
             $documents[] = [
-                'schema' => (string) $docNode->attributesó->getNamedItem('schema')?->nodeValue,
-                'nsu' => (string) $docNode->attributesó->getNamedItem('NSU')?->nodeValue,
+                'schema' => (string) $docNode->attributes->getNamedItem('schema')?->nodeValue,
+                'nsu' => (string) $docNode->attributes->getNamedItem('NSU')?->nodeValue,
                 'xml' => $unzipped,
             ];
         }

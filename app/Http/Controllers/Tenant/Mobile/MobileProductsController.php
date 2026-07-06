@@ -48,18 +48,19 @@ class MobileProductsController extends Controller
 
         $sales = $this->salesSnapshot($products->pluck('id'));
 
+        $canViewCost = (bool) $request->user()?->hasPermission('produtos.ver_custo');
+
         $items = $products
-            ->map(function (Product $product) use ($sales) {
+            ->map(function (Product $product) use ($sales, $canViewCost) {
                 $snapshot = $sales->get($product->id);
 
-                return [
+                $payload = [
                     'id' => $product->id,
                     'code' => $product->code ?: '-',
                     'barcode' => $product->barcode ?: null,
                     'name' => $product->name,
                     'category_name' => $product->category?->name,
                     'unit' => $product->unit,
-                    'cost_price' => (float) $product->cost_price,
                     'sale_price' => (float) $product->sale_price,
                     'stock_quantity' => (float) $product->stock_quantity,
                     'min_stock' => (float) $product->min_stock,
@@ -68,6 +69,12 @@ class MobileProductsController extends Controller
                     'last_sale_qty' => (float) ($snapshot?->last_sale_qty ?? 0),
                     'last_sale_total' => (float) ($snapshot?->last_sale_total ?? 0),
                 ];
+
+                if ($canViewCost) {
+                    $payload['cost_price'] = (float) $product->cost_price;
+                }
+
+                return $payload;
             })
             ->values();
 

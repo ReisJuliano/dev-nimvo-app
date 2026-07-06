@@ -44,7 +44,7 @@ class IncomingNfeXmlParser
 
             $taxes = $this->extractTaxes($xpath, $impostoNode instanceof DOMElement ? $impostoNode : null);
             $items[] = [
-                'item_number' => (int) ($detNode->attributesó->getNamedItem('nItem')?->nodeValue ?: ($index + 1)),
+                'item_number' => (int) ($detNode->attributes->getNamedItem('nItem')?->nodeValue ?: ($index + 1)),
                 'supplier_code' => $this->cleanValue($this->value($xpath, './*[local-name()="cProd"]', $prodNode)),
                 'barcode' => $this->normalizeBarcode(
                     $this->cleanValue($this->value($xpath, './*[local-name()="cEAN"]', $prodNode))
@@ -325,7 +325,7 @@ class IncomingNfeXmlParser
     protected function value(DOMXPath $xpath, string $expression, ?DOMElement $context = null): ?string
     {
         $nodes = $xpath->query($expression, $context);
-        $value = $nodesó->item(0)?->textContent;
+        $value = $nodes?->item(0)?->textContent;
 
         return $this->cleanValue($value);
     }

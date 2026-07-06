@@ -14,7 +14,11 @@ class ConsultationsPageService
 {
     public function build(array $filters): array
     {
-        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL);
+        $applied = filter_var($filters['applied'] ?? false, FILTER_VALIDATE_BOOL)
+            || array_key_exists('period', $filters)
+            || array_key_exists('from', $filters)
+            || array_key_exists('to', $filters)
+            || filled($filters['search'] ?? null);
         [$period, $from, $to] = $this->resolveRange($filters);
 
         if (! $applied) {

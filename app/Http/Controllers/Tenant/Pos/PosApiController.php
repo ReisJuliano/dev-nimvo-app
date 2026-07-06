@@ -90,7 +90,7 @@ class PosApiController extends Controller
 
     protected function mapProductForSearch(Product $product): array
     {
-        return [
+        $payload = [
             'id' => $product->id,
             'code' => $product->code,
             'barcode' => $product->barcode,
@@ -98,10 +98,15 @@ class PosApiController extends Controller
             'description' => $product->description,
             'unit' => $product->unit,
             'sold_by' => $product->sold_by ?? 'unit',
-            'cost_price' => (float) $product->cost_price,
             'sale_price' => (float) $product->sale_price,
             'stock_quantity' => (float) $product->stock_quantity,
         ];
+
+        if ($this->canViewCost()) {
+            $payload['cost_price'] = (float) $product->cost_price;
+        }
+
+        return $payload;
     }
 
     public function evaluatePromotions(Request $request, PromotionEngine $promotionEngine): JsonResponse
@@ -162,18 +167,13 @@ class PosApiController extends Controller
 
         return response()->json([
             'message' => 'Produto cadastrado e adicionado a venda.',
-            'product' => [
-                'id' => $product->id,
-                'code' => $product->code,
-                'barcode' => $product->barcode,
-                'name' => $product->name,
-                'description' => $product->description,
-                'unit' => $product->unit,
-                'cost_price' => (float) $product->cost_price,
-                'sale_price' => (float) $product->sale_price,
-                'stock_quantity' => (float) $product->stock_quantity,
-            ],
+            'product' => $this->mapProductForSearch($product),
         ], 201);
+    }
+
+    protected function canViewCost(): bool
+    {
+        return (bool) auth()->user()?->hasPermission('produtos.ver_custo');
     }
 
     public function recommendations(

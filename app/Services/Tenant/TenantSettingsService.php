@@ -225,7 +225,7 @@ class TenantSettingsService
         return [
             'pdv' => $modules['pdv_simples'] || $modules['pdv_avancado'],
             'caixa' => $modules['caixa'],
-            'pedidos' => $modules['comandas'],
+            'pedidos' => $modules['comandas'] || $modules['pdv_avancado'] || $modules['pdv_simples'],
             'prazo' => $modules['prazo'],
             'crediario' => $modules['prazo'],
             'fiado' => $modules['prazo'],

@@ -25,13 +25,17 @@
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="CENTRAL_DOMAINS" value="admin.nimvo.com.br"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
-        <env name="DB_URL" value=""/>
+        <env name="DB_CONNECTION" value="sqlite" force="true"/>
+        <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_URL" value="" force="true"/>
+        <env name="CENTRAL_DB_DRIVER" value="sqlite" force="true"/>
+        <env name="CENTRAL_DB_DATABASE" value=":memory:" force="true"/>
+        <env name="CENTRAL_DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TENANT_BASE_DOMAIN" value="nimvo.com.br"/>
+        <env name="TENANT_DEV_SINGLE_DATABASE" value="true" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

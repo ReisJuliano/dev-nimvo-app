@@ -12,7 +12,7 @@ function getStockLabel(product) {
     return 'Saudável'
 }
 
-export default function ProductsTable({ products, onEdit, onDelete }) {
+export default function ProductsTable({ products, onEdit, onDelete, canViewCost = false }) {
     if (!products.length) {
         return null
     }
@@ -53,7 +53,7 @@ export default function ProductsTable({ products, onEdit, onDelete }) {
                                     </td>
                                     <td>
                                         <div className="products-price-cell">
-                                            <small>Custo {formatMoney(product.cost_price)}</small>
+                                            {canViewCost ? <small>Custo {formatMoney(product.cost_price)}</small> : null}
                                             <strong>{formatMoney(product.sale_price)}</strong>
                                         </div>
                                     </td>

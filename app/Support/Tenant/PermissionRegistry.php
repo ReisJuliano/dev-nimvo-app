@@ -55,6 +55,7 @@ class PermissionRegistry
                     ['key' => 'produtos.adicionar', 'label' => 'Adicionar produto', 'description' => 'Permite cadastrar novos produtos.'],
                     ['key' => 'produtos.editar', 'label' => 'Editar produto', 'description' => 'Permite alterar dados de um produto já cadastrado.'],
                     ['key' => 'produtos.excluir', 'label' => 'Excluir produto', 'description' => 'Permite excluir um produto do cadastro.'],
+                    ['key' => 'produtos.ver_custo', 'label' => 'Ver custo e margem', 'description' => 'Mostra custo, margem e campos financeiros internos do produto.'],
                     ['key' => 'produtos.imprimir_etiquetas', 'label' => 'Imprimir etiquetas', 'description' => 'Permite gerar e imprimir etiquetas de gôndola e código de barras.'],
                 ],
             ],

@@ -131,8 +131,10 @@ class PosService
 
             $subtotal = round($items->sum('lineSubtotal'), 2);
             $costTotal = $items->sum(fn ($item) => (float) $item['product']->cost_price * $item['quantity']);
-            $discount = round((float) ($payload['discount'] ?? 0), 2);
             $itemDiscountTotal = round($items->sum('lineDiscount'), 2);
+            $discount = array_key_exists('discount', $payload)
+                ? round((float) ($payload['discount'] ?? 0), 2)
+                : $itemDiscountTotal;
 
             if (abs($itemDiscountTotal - $discount) > 0.02) {
                 throw ValidationException::withMessages([

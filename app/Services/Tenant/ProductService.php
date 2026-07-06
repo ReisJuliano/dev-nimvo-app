@@ -19,27 +19,34 @@ class ProductService
         return str_pad(((int) $lastNumericCode) + 1, 6, '0', STR_PAD_LEFT);
     }
 
-    public function activeCatalog(): array
+    public function activeCatalog(bool $includeCost = true): array
     {
         return Product::query()
             ->with(['category:id,name', 'supplier:id,name'])
             ->where('active', true)
             ->orderBy('name')
             ->get($this->productSelectColumns())
-            ->map(fn (Product $product) => $this->mapCatalogProduct($product))
+            ->map(fn (Product $product) => $this->mapCatalogProduct($product, $includeCost))
             ->values()
             ->all();
     }
 
-    public function fullCatalog(): array
+    public function fullCatalog(bool $includeCost = true): array
     {
         return Product::query()
             ->with(['category:id,name', 'supplier:id,name'])
             ->orderBy('name')
             ->get($this->productSelectColumns())
-            ->map(fn (Product $product) => $this->mapCatalogProduct($product))
+            ->map(fn (Product $product) => $this->mapCatalogProduct($product, $includeCost))
             ->values()
             ->all();
+    }
+
+    public function serialize(Product $product, bool $includeCost = true): array
+    {
+        $product->loadMissing(['category:id,name', 'supplier:id,name']);
+
+        return $this->mapCatalogProduct($product, $includeCost);
     }
 
     public function save(Product $product, array $data): Product
@@ -66,7 +73,7 @@ class ProductService
             'category_id' => $data['category_id'] ?? null,
             'supplier_id' => $data['supplier_id'] ?? null,
             'unit' => $baseUnit,
-            'cost_price' => $data['cost_price'] ?? 0,
+            'cost_price' => $data['cost_price'] ?? ($product->exists ? $product->cost_price : 0),
             'sale_price' => $data['sale_price'] ?? 0,
             'stock_quantity' => $product->exists
                 ? $product->stock_quantity
@@ -186,9 +193,9 @@ class ProductService
         return $product->fresh(['category:id,name', 'supplier:id,name']);
     }
 
-    protected function mapCatalogProduct(Product $product): array
+    protected function mapCatalogProduct(Product $product, bool $includeCost = true): array
     {
-        return [
+        $payload = [
             'id' => $product->id,
             'code' => $product->code,
             'barcode' => $product->barcode,
@@ -212,10 +219,14 @@ class ProductService
             'unit' => $product->unit,
             'commercial_unit' => $this->productColumnExists('commercial_unit') ? ($product->commercial_unit ?: $product->unit) : $product->unit,
             'taxable_unit' => $this->productColumnExists('taxable_unit') ? ($product->taxable_unit ?: $product->unit) : $product->unit,
-            'cost_price' => (float) $product->cost_price,
+            'sold_by' => $this->productColumnExists('sold_by') ? ($product->sold_by ?: 'unit') : 'unit',
+            'scale_code' => $this->productColumnExists('scale_code') ? $product->scale_code : null,
+            'label_printed_at' => $this->productColumnExists('label_printed_at') ? optional($product->label_printed_at)?->toIso8601String() : null,
             'sale_price' => (float) $product->sale_price,
             'stock_quantity' => (float) $product->stock_quantity,
             'min_stock' => (float) $product->min_stock,
+            'track_expiry' => $this->productColumnExists('track_expiry') ? (bool) $product->track_expiry : false,
+            'expiry_alert_days' => $this->productColumnExists('expiry_alert_days') ? $product->expiry_alert_days : null,
             'icms_rate' => $this->productColumnExists('icms_rate') && $product->icms_rate !== null ? (float) $product->icms_rate : null,
             'pis_rate' => $this->productColumnExists('pis_rate') && $product->pis_rate !== null ? (float) $product->pis_rate : null,
             'cofins_rate' => $this->productColumnExists('cofins_rate') && $product->cofins_rate !== null ? (float) $product->cofins_rate : null,
@@ -225,6 +236,12 @@ class ProductService
             'category_name' => $product->category?->name,
             'supplier_name' => $product->supplier?->name,
         ];
+
+        if ($includeCost) {
+            $payload['cost_price'] = (float) $product->cost_price;
+        }
+
+        return $payload;
     }
 
     protected function productSelectColumns(): array
@@ -266,6 +283,11 @@ class ProductService
             'size',
             'collection',
             'catalog_visible',
+            'sold_by',
+            'scale_code',
+            'track_expiry',
+            'expiry_alert_days',
+            'label_printed_at',
         ] as $column) {
             if ($this->productColumnExists($column)) {
                 $columns[] = $column;

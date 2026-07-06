@@ -30,7 +30,7 @@ function normalizeProductRecord(product) {
         supplier_id: product.supplier_id ?? product.supplier?.id ?? null,
         category_name: product.category_name ?? product.category?.name ?? null,
         supplier_name: product.supplier_name ?? product.supplier?.name ?? null,
-        cost_price: Number(product.cost_price || 0),
+        cost_price: product.cost_price === undefined ? null : Number(product.cost_price || 0),
         sale_price: Number(product.sale_price || 0),
         stock_quantity: Number(product.stock_quantity || 0),
         min_stock: Number(product.min_stock || 0),
@@ -88,7 +88,7 @@ function getProductStatusMeta(product) {
     return { label: 'Ativo', tone: 'active' }
 }
 
-export default function ProductsIndex({ products, categories, suppliers, filters = {} }) {
+export default function ProductsIndex({ products, categories, suppliers, filters = {}, canViewCost = false }) {
     const { tenant, localAgentBridge } = usePage().props
     const tenantId = tenant?.id
     const hasAppliedFilters = Boolean(filters?.applied)
@@ -355,7 +355,6 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 scale_code: form.sold_by === 'weight' && form.scale_code !== '' ? Number(form.scale_code) : null,
                 track_expiry: Boolean(form.track_expiry),
                 expiry_alert_days: form.track_expiry && form.expiry_alert_days !== '' ? Number(form.expiry_alert_days) : null,
-                cost_price: form.cost_price === '' ? null : Number(form.cost_price),
                 sale_price: form.sale_price === '' ? null : Number(form.sale_price),
                 min_stock: Number(form.min_stock || 0),
                 icms_rate: form.icms_rate === '' ? null : Number(form.icms_rate),
@@ -364,6 +363,13 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 ipi_rate: form.ipi_rate === '' ? null : Number(form.ipi_rate),
                 active: Boolean(form.active),
             }
+
+            if (canViewCost) {
+                payload.cost_price = form.cost_price === '' ? null : Number(form.cost_price)
+            } else {
+                delete payload.cost_price
+            }
+
             const category = categoryOptions.find((option) => String(option.id) === String(payload.category_id))
             const supplier = supplierOptions.find((option) => String(option.id) === String(payload.supplier_id))
 
@@ -416,6 +422,11 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                     category_id: form.category_id ? Number(form.category_id) : null,
                     supplier_id: form.supplier_id ? Number(form.supplier_id) : null,
                 }
+
+                if (!canViewCost) {
+                    delete payload.cost_price
+                }
+
                 const category = categoryOptions.find((option) => String(option.id) === String(payload.category_id))
                 const supplier = supplierOptions.find((option) => String(option.id) === String(payload.supplier_id))
 
@@ -636,6 +647,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 deleting={deleting}
                 onQuickCreateCategory={handleQuickCreateCategory}
                 onQuickCreateSupplier={handleQuickCreateSupplier}
+                canViewCost={canViewCost}
             />
         </AppLayout>
     )

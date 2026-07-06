@@ -48,13 +48,13 @@ class TenantFiscalAutofillService
         $missingFields = [];
 
         foreach ([
-            'company_name' => 'Razão social',
+            'company_name' => 'Razao social',
             'cnpj' => 'CNPJ',
             'street' => 'Logradouro',
-            'number' => 'Número',
+            'number' => 'Numero',
             'district' => 'Bairro',
-            'city_name' => 'Município',
-            'city_code' => 'Código IBGE',
+            'city_name' => 'Municipio',
+            'city_code' => 'Codigo IBGE',
             'state' => 'UF',
             'zip_code' => 'CEP',
         ] as $field => $label) {
@@ -66,11 +66,11 @@ class TenantFiscalAutofillService
         $warnings = [];
 
         if ($companyLookup === []) {
-            $warnings[] = 'Consulta de CNPJ indisponível no momento.';
+            $warnings[] = 'Consulta de CNPJ indisponivel no momento.';
         }
 
         if (! array_key_exists('city_code', $suggested)) {
-            $warnings[] = 'Código IBGE não foi localizado automaticamente.';
+            $warnings[] = 'Codigo IBGE nao foi localizado automaticamente.';
         }
 
         return [

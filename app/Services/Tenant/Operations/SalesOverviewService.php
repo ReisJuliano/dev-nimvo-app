@@ -656,7 +656,7 @@ class SalesOverviewService
 
         return empty($normalized)
             ? '/relatorios'
-            : '/relatoriosó'.http_build_query($normalized);
+            : '/relatorios?'.http_build_query($normalized);
     }
 
     protected function resolveProductFilter(array $filters): ?string

@@ -3,6 +3,7 @@
 namespace App\Services\Tenant\Inventory;
 
 use App\Models\Tenant\InventoryCount;
+use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\InventorySessionItem;
 use App\Models\Tenant\Product;
@@ -171,12 +172,28 @@ class InventorySessionService
     protected function settleItem(InventorySessionItem $item, float $countedQuantity): InventorySessionItem
     {
         $item->counted_quantity = $countedQuantity;
-        $item->status = $this->approximatelyEqual($countedQuantity, (float) $item->snapshot_quantity)
+        $item->status = $this->approximatelyEqual($countedQuantity, $this->expectedQuantityForCount($item))
             ? 'counted'
             : 'divergent';
         $item->save();
 
         return $item;
+    }
+
+    protected function expectedQuantityForCount(InventorySessionItem $item): float
+    {
+        $session = $item->session;
+
+        if ($session?->mode !== 'snapshot' || ! $session->started_at) {
+            return (float) $item->snapshot_quantity;
+        }
+
+        $interimDelta = InventoryMovement::query()
+            ->where('product_id', $item->product_id)
+            ->where('occurred_at', '>=', $session->started_at)
+            ->sum('quantity_delta');
+
+        return round((float) $item->snapshot_quantity + (float) $interimDelta, 3);
     }
 
     protected function roundTotal(InventorySessionItem $item, int $round): ?float

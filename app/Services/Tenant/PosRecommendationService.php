@@ -229,6 +229,13 @@ class PosRecommendationService
         )
             ->orderByDesc(DB::raw('COUNT(DISTINCT sales.id)'))
             ->orderByDesc(DB::raw('SUM(sale_items.quantity)'))
+            ->orderByDesc(DB::raw("(
+                SELECT COUNT(DISTINCT global_sales.id)
+                FROM sale_items AS global_items
+                INNER JOIN sales AS global_sales ON global_sales.id = global_items.sale_id
+                WHERE global_sales.status = 'finalized'
+                    AND global_items.product_id = products.id
+            )"))
             ->orderByDesc(DB::raw('MAX(sales.created_at)'))
             ->limit($limit)
             ->get()

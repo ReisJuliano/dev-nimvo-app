@@ -91,7 +91,7 @@ class PosPageController extends Controller
 
         return Inertia::render('Pos/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
-            'productCatalog' => $productService->activeCatalog(),
+            'productCatalog' => $productService->activeCatalog((bool) auth()->user()?->hasPermission('produtos.ver_custo')),
             'customers' => $this->customersPayload(),
             'companies' => $this->companiesPayload(),
             'managers' => User::query()

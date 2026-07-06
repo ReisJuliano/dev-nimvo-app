@@ -479,7 +479,7 @@ class ReportBrowserService
             'supplier_id' => $this->normalizePositiveInt($filters['supplier_id'] ?? null),
             'till_id' => $this->normalizePositiveInt($filters['till_id'] ?? null),
             'inventory_session_id' => $this->normalizePositiveInt($filters['inventory_session_id'] ?? null),
-            'days' => in_array((int) ($filters['days'] ?? 30), [7, 15, 30, 60], true) ? (int) $filters['days'] : 30,
+            'days' => in_array($days = (int) ($filters['days'] ?? 30), [7, 15, 30, 60], true) ? $days : 30,
             'loss_reason' => $this->normalizeSelection($filters['loss_reason'] ?? null, ['vencido', 'avaria', 'quebra', 'outro']),
             'stock_status' => $this->normalizeSelection($filters['stock_status'] ?? null, ['healthy', 'low', 'out']),
             'balance_status' => $this->normalizeSelection($filters['balance_status'] ?? null, ['with_balance', 'near_limit', 'without_limit']),
@@ -1445,24 +1445,16 @@ class ReportBrowserService
             ])
             ->values();
 
-        $query = (clone $customersBaseQuery);
-
-        $this->applyOrderBy($query, [
-            'customer_name' => 'customers.name',
+        $sortedRows = $this->sortCollection($customerRows, $filters, [
+            'customer_name' => 'customer_name',
             'sales_count' => 'sales_count',
             'total' => 'total',
             'avg_ticket' => 'avg_ticket',
             'last_sale_at' => 'last_sale_at',
-        ], $filters, 'total', 'desc');
+        ], 'total', 'desc');
 
-        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
-        $rows = collect($paginator->items())->map(fn ($row) => [
-            'customer_name' => $row->customer_name,
-            'sales_count' => (int) $row->sales_count,
-            'total' => (float) $row->total,
-            'avg_ticket' => (float) $row->avg_ticket,
-            'last_sale_at' => $row->last_sale_at,
-        ])->all();
+        $paginator = $this->paginateCollection($sortedRows, $filters['per_page'], $filters['page']);
+        $rows = $paginator->items();
         $leader = $customerRows->first();
         $mostRecurring = $customerRows->sortByDesc('sales_count')->first();
         $recentCustomer = $customerRows->sortByDesc('last_sale_at')->first();

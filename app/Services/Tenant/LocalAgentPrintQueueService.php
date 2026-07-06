@@ -44,13 +44,6 @@ class LocalAgentPrintQueueService
             ];
         }
 
-        if (! $this->bridgeService->isOnline($agent)) {
-            return [
-                'status' => 'unavailable',
-                'message' => 'Agente local offline. A venda foi finalizada, mas nenhum comando de impressão foi criado.',
-            ];
-        }
-
         $command = $this->commandService->queuePaymentReceipt(
             $agent,
             (string) $tenantId,
