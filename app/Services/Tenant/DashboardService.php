@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardService
 {
+    public function __construct(
+        protected ExpiryService $expiryService,
+        protected TenantSettingsService $settingsService,
+    ) {
+    }
+
     public function build(): array
     {
         $today = Carbon::today();
@@ -199,6 +205,21 @@ class DashboardService
             ? (($activeProductsCount - $lowStockCount) / $activeProductsCount) * 100
             : 0;
 
+        $expiryAlertDays = (int) data_get($this->settingsService->get(), 'expiry.default_alert_days', 30);
+        $expiringSoonItems = $this->expiryService->expiringSoon($expiryAlertDays)
+            ->take(6)
+            ->map(fn ($lot) => [
+                'id' => $lot->id,
+                'product_id' => $lot->product_id,
+                'product_name' => $lot->product?->name,
+                'expires_at' => $lot->expires_at?->toDateString(),
+                'quantity' => (float) $lot->quantity,
+                'cost_at_risk' => round((float) $lot->quantity * (float) ($lot->product?->cost_price ?? 0), 2),
+            ])
+            ->values();
+        $expiringSoonCount = $this->expiryService->expiringSoonCount($expiryAlertDays);
+        $expiringSoonCost = $this->expiryService->expiringSoonCostAtRisk($expiryAlertDays);
+
         return [
             'summary' => [
                 'today_sales_total' => (float) ($todaySales->total ?? 0),
@@ -220,6 +241,9 @@ class DashboardService
                     : 0,
                 'overdue_payables_count' => (int) ($overduePayables->count ?? 0),
                 'overdue_payables_total' => (float) ($overduePayables->total ?? 0),
+                'expiring_soon_count' => $expiringSoonCount,
+                'expiring_soon_cost' => $expiringSoonCost,
+                'expiring_soon_alert_days' => $expiryAlertDays,
                 'today_growth' => $this->growthPercentage(
                     (float) ($todaySales->total ?? 0),
                     (float) ($yesterdaySales->total ?? 0),
@@ -232,6 +256,7 @@ class DashboardService
             'recentSales' => $recentSales,
             'topProducts' => $topProducts,
             'lowStockItems' => $lowStockItems,
+            'expiringSoonItems' => $expiringSoonItems,
             'salesTrend' => $salesTrend,
             'hourlySales' => $hourlySales,
             'paymentBreakdown' => $paymentBreakdown,

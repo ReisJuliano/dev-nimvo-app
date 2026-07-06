@@ -47,6 +47,8 @@ class Product extends Model
         'min_stock',
         'active',
         'label_printed_at',
+        'track_expiry',
+        'expiry_alert_days',
     ];
 
     protected $casts = [
@@ -63,6 +65,8 @@ class Product extends Model
         'cofins_rate' => 'decimal:4',
         'ipi_rate' => 'decimal:4',
         'label_printed_at' => 'datetime',
+        'track_expiry' => 'boolean',
+        'expiry_alert_days' => 'integer',
     ];
 
     public function isWeighable(): bool
@@ -88,5 +92,10 @@ class Product extends Model
     public function conditionalSaleItems(): HasMany
     {
         return $this->hasMany(ConditionalSaleItem::class);
+    }
+
+    public function expiries(): HasMany
+    {
+        return $this->hasMany(ProductExpiry::class);
     }
 }

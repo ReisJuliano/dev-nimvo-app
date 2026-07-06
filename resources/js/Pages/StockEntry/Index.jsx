@@ -21,6 +21,7 @@ const TYPE_LABELS = {
     sale:              'Saída por venda',
     purchase_return:   'Devolução',
     sale_cancellation: 'Cancel. de venda',
+    loss:              'Perda registrada',
     initial:           'Estoque inicial',
 }
 
@@ -30,6 +31,7 @@ const TYPE_TONES = {
     sale:              'red',
     purchase_return:   'blue',
     sale_cancellation: 'gray',
+    loss:              'red',
     initial:           'blue',
 }
 
@@ -52,6 +54,18 @@ export default function StockEntryIndex({ payload }) {
     const [adjustNotes, setAdjustNotes] = useState('')
     const [adjustSaving, setAdjustSaving] = useState(false)
     const [adjustFeedback, setAdjustFeedback] = useState(null)
+
+    // Registrar perda (inline, dentro do painel do produto)
+    const [registeringLoss, setRegisteringLoss] = useState(false)
+    const [lossQty, setLossQty] = useState('')
+    const [lossReason, setLossReason] = useState('vencido')
+    const [lossSaving, setLossSaving] = useState(false)
+    const [lossFeedback, setLossFeedback] = useState(null)
+
+    // Painel "Vencendo em breve"
+    const [showExpiring, setShowExpiring] = useState(false)
+    const [expiringLots, setExpiringLots] = useState([])
+    const [expiringLoading, setExpiringLoading] = useState(false)
 
     const filteredProducts = useMemo(() => {
         const q = normalizeTextSearch(query)
@@ -109,6 +123,76 @@ export default function StockEntryIndex({ payload }) {
         setAdjustReason('Ajuste manual de estoque')
         setAdjustNotes('')
         setAdjustFeedback(null)
+    }
+
+    function startLoss() {
+        setRegisteringLoss(true)
+        setLossQty('')
+        setLossReason('vencido')
+        setLossFeedback(null)
+    }
+
+    function cancelLoss() {
+        setRegisteringLoss(false)
+        setLossQty('')
+        setLossFeedback(null)
+    }
+
+    async function submitLoss(event, expiryLot = null) {
+        event.preventDefault()
+        const targetProduct = expiryLot ? { id: expiryLot.product_id, name: expiryLot.product_name } : selectedProduct
+        const quantity = expiryLot ? expiryLot.quantity : Number(lossQty)
+
+        if (!targetProduct || !quantity) return
+
+        setLossSaving(true)
+        setLossFeedback(null)
+        try {
+            const res = await apiRequest('/api/stock/register-loss', {
+                method: 'post',
+                data: {
+                    product_id: targetProduct.id,
+                    quantity,
+                    reason: lossReason,
+                    expiry_id: expiryLot?.id || null,
+                },
+            })
+            if (res.product) {
+                setProducts((prev) => prev.map((p) => String(p.id) === String(res.product.id) ? { ...p, ...res.product } : p))
+                setSelectedProduct((prev) => prev && String(prev.id) === String(res.product.id) ? { ...prev, ...res.product } : prev)
+            }
+            setLossFeedback({ type: 'success', text: res.message })
+            setRegisteringLoss(false)
+            if (expiryLot) {
+                await loadExpiring()
+            } else if (selectedProduct) {
+                loadMovements(selectedProduct)
+            }
+        } catch (err) {
+            setLossFeedback({ type: 'error', text: err.message })
+        } finally {
+            setLossSaving(false)
+        }
+    }
+
+    async function loadExpiring() {
+        setExpiringLoading(true)
+        try {
+            const res = await apiRequest('/api/stock/expiring')
+            setExpiringLots(res.lots || [])
+        } catch {
+            setExpiringLots([])
+        } finally {
+            setExpiringLoading(false)
+        }
+    }
+
+    function toggleExpiring() {
+        setShowExpiring((current) => {
+            const next = !current
+            if (next) loadExpiring()
+            return next
+        })
     }
 
     async function submitAdjust(event) {
@@ -173,7 +257,49 @@ export default function StockEntryIndex({ payload }) {
                             <p className="se-header-sub">Pesquise um produto para ver o estoque e a movimentação.</p>
                         </div>
                     </div>
+                    <button type="button" className="ui-button-ghost" onClick={toggleExpiring}>
+                        <i className="fa-solid fa-calendar-days" /> {showExpiring ? 'Ocultar vencendo' : 'Vencendo em breve'}
+                    </button>
                 </div>
+
+                {showExpiring ? (
+                    <div className="se-table-card" style={{ margin: '0 0 1rem' }}>
+                        {expiringLoading ? (
+                            <div className="se-mov-loading"><i className="fa-solid fa-spinner fa-spin" /> Carregando...</div>
+                        ) : expiringLots.length ? (
+                            <table className="se-table">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Categoria</th>
+                                        <th>Vence em</th>
+                                        <th>Quantidade</th>
+                                        <th>Custo em risco</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {expiringLots.map((lot) => (
+                                        <tr key={lot.id} className={lot.is_past ? 'se-row--zero' : 'se-row--low'}>
+                                            <td>{lot.product_name}</td>
+                                            <td>{lot.category_name || 'Sem categoria'}</td>
+                                            <td>{formatDateTime(lot.expires_at)}</td>
+                                            <td>{formatNumber(lot.quantity)}</td>
+                                            <td>{formatMoney(lot.cost_at_risk)}</td>
+                                            <td>
+                                                <button type="button" className="ui-button-ghost" disabled={lossSaving} onClick={(event) => submitLoss(event, lot)}>
+                                                    Registrar perda
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <div className="se-empty-state"><strong>Nenhum lote vencendo no período configurado.</strong></div>
+                        )}
+                    </div>
+                ) : null}
 
                 <div className="se-split">
                     {/* ─── Busca + tabela ─── */}
@@ -285,9 +411,14 @@ export default function StockEntryIndex({ payload }) {
                                         <span className="se-mov-label">em estoque</span>
                                     </div>
                                 </div>
-                                {!adjusting ? (
+                                {!adjusting && !registeringLoss ? (
                                     <button type="button" className="se-mov-adjust-btn" onClick={startAdjust}>
                                         <i className="fa-solid fa-scale-balanced" /> Ajustar
+                                    </button>
+                                ) : null}
+                                {!adjusting && !registeringLoss ? (
+                                    <button type="button" className="se-mov-adjust-btn" onClick={startLoss}>
+                                        <i className="fa-solid fa-triangle-exclamation" /> Registrar perda
                                     </button>
                                 ) : null}
                                 <button type="button" className="se-mov-close" onClick={closePanel}>
@@ -373,6 +504,52 @@ export default function StockEntryIndex({ payload }) {
                                 </form>
                             ) : null}
 
+                            {/* Registrar perda inline */}
+                            {registeringLoss ? (
+                                <form className="se-mov-adjust-form" onSubmit={(event) => submitLoss(event, null)}>
+                                    <div className="se-form-section">
+                                        <label className="se-form-label">Quantidade perdida *</label>
+                                        <input
+                                            className="ui-input"
+                                            type="number"
+                                            min="0.001"
+                                            step="0.001"
+                                            value={lossQty}
+                                            onChange={(e) => setLossQty(e.target.value)}
+                                            placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
+                                            autoFocus
+                                            required
+                                        />
+                                    </div>
+                                    <div className="se-form-section">
+                                        <label className="se-form-label">Motivo</label>
+                                        <select className="ui-input" value={lossReason} onChange={(e) => setLossReason(e.target.value)}>
+                                            <option value="vencido">Vencido</option>
+                                            <option value="avaria">Avaria</option>
+                                            <option value="quebra">Quebra</option>
+                                            <option value="outro">Outro</option>
+                                        </select>
+                                    </div>
+
+                                    {lossFeedback ? (
+                                        <div className={`se-feedback se-feedback--${lossFeedback.type}`}>
+                                            <i className={`fa-solid ${lossFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                            {lossFeedback.text}
+                                        </div>
+                                    ) : null}
+
+                                    <div className="se-form-actions">
+                                        <button type="button" className="ui-button-ghost" onClick={cancelLoss}>
+                                            <i className="fa-solid fa-rotate-left" /> Cancelar
+                                        </button>
+                                        <button type="submit" className="se-submit-btn se-submit-btn--violet" disabled={lossSaving}>
+                                            <i className="fa-solid fa-check" />
+                                            {lossSaving ? 'Salvando...' : 'Confirmar perda'}
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : null}
+
                             {/* Filtros */}
                             <div className="se-mov-filters">
                                 <select
@@ -385,6 +562,7 @@ export default function StockEntryIndex({ payload }) {
                                     <option value="manual_adjustment">Ajustes</option>
                                     <option value="sale">Saídas (venda)</option>
                                     <option value="sale_cancellation">Cancelamentos</option>
+                                    <option value="loss">Perdas</option>
                                 </select>
                                 <input
                                     type="date"

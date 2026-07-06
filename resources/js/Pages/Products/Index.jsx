@@ -353,6 +353,8 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 taxable_unit: form.taxable_unit?.trim() || form.commercial_unit?.trim() || form.unit?.trim() || 'UN',
                 sold_by: form.sold_by === 'weight' ? 'weight' : 'unit',
                 scale_code: form.sold_by === 'weight' && form.scale_code !== '' ? Number(form.scale_code) : null,
+                track_expiry: Boolean(form.track_expiry),
+                expiry_alert_days: form.track_expiry && form.expiry_alert_days !== '' ? Number(form.expiry_alert_days) : null,
                 cost_price: form.cost_price === '' ? null : Number(form.cost_price),
                 sale_price: form.sale_price === '' ? null : Number(form.sale_price),
                 min_stock: Number(form.min_stock || 0),

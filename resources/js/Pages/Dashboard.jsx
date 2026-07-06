@@ -49,7 +49,7 @@ function growthBadge(value) {
     }
 }
 
-export default function Dashboard({ summary = {}, lowStockItems = [], recentSales = [] }) {
+export default function Dashboard({ summary = {}, lowStockItems = [], expiringSoonItems = [], recentSales = [] }) {
     const { auth, tenant } = usePage().props
     const firstName = String(auth?.user?.name || 'loja').trim().split(/\s+/)[0]
     const salesGrowth = growthBadge(summary.today_growth)
@@ -277,6 +277,37 @@ export default function Dashboard({ summary = {}, lowStockItems = [], recentSale
                                             <Link href={`/entrada-estoque?product=${product.id}`} className="ds-repor-btn">
                                                 Repor
                                             </Link>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        ) : null}
+
+                        {/* Alerta de vencimento */}
+                        {expiringSoonItems?.length ? (
+                            <section className="ds-panel ds-panel--alert">
+                                <div className="ds-panel-header">
+                                    <div>
+                                        <h2>
+                                            <i className="fa-solid fa-calendar-days" />
+                                            Vencendo em breve
+                                        </h2>
+                                        <p>
+                                            {formatNumber(summary.expiring_soon_count || expiringSoonItems.length)} lote(s) vencendo em até {summary.expiring_soon_alert_days || 30} dias, {formatMoney(summary.expiring_soon_cost || 0)} em custo.
+                                        </p>
+                                    </div>
+                                    <Link href="/estoque" className="ds-panel-link">Ver todos</Link>
+                                </div>
+                                <div className="ds-stock-list">
+                                    {expiringSoonItems.slice(0, 6).map((lot) => (
+                                        <div key={lot.id} className="ds-stock-row">
+                                            <div className="ds-stock-icon">
+                                                <i className="fa-solid fa-hourglass-half" />
+                                            </div>
+                                            <div className="ds-stock-info">
+                                                <strong>{lot.product_name}</strong>
+                                                <small>{formatNumber(lot.quantity)} un. vencendo em {formatDateTime(lot.expires_at)}</small>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

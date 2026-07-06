@@ -243,6 +243,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/cash-registers/panel/closed', [CashRegisterPanelApiController::class, 'closedRegisters'])->name('api.cash-registers.panel.closed');
             Route::post('/stock/quick-receive', [StockEntryPageController::class, 'quickReceive'])->name('api.stock.quick-receive');
             Route::post('/stock/quick-adjust', [StockEntryPageController::class, 'quickAdjust'])->name('api.stock.quick-adjust');
+            Route::post('/stock/register-loss', [StockEntryPageController::class, 'registerLoss'])->name('api.stock.register-loss');
+            Route::get('/stock/expiring', [StockEntryPageController::class, 'expiring'])->name('api.stock.expiring');
             Route::get('/stock/products/{product}/movements', [StockEntryPageController::class, 'productMovements'])->name('api.stock.product-movements');
 
             Route::get('/inventory/sessions', [InventorySessionApiController::class, 'index'])->name('api.inventory.sessions.index');

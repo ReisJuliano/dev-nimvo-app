@@ -173,6 +173,14 @@ class ProductService
             $product->label_printed_at = null;
         }
 
+        if ($this->productColumnExists('track_expiry')) {
+            $product->track_expiry = (bool) ($data['track_expiry'] ?? false);
+        }
+
+        if ($this->productColumnExists('expiry_alert_days')) {
+            $product->expiry_alert_days = filled($data['expiry_alert_days'] ?? null) ? (int) $data['expiry_alert_days'] : null;
+        }
+
         $product->save();
 
         return $product->fresh(['category:id,name', 'supplier:id,name']);

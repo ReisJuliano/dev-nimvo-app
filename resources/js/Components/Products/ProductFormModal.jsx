@@ -33,6 +33,8 @@ const emptyForm = {
     taxable_unit: 'UN',
     sold_by: 'unit',
     scale_code: '',
+    track_expiry: false,
+    expiry_alert_days: '',
     cost_price: '',
     sale_price: '',
     stock_quantity: '',
@@ -82,6 +84,8 @@ function normalizeFormData(product) {
         taxable_unit: product.taxable_unit ?? product.unit ?? 'UN',
         sold_by: product.sold_by === 'weight' ? 'weight' : 'unit',
         scale_code: product.scale_code ?? '',
+        track_expiry: product.track_expiry === true,
+        expiry_alert_days: product.expiry_alert_days ?? '',
         cost_price: product.cost_price ?? '',
         sale_price: product.sale_price ?? '',
         stock_quantity: product.stock_quantity ?? '',
@@ -541,6 +545,33 @@ export default function ProductFormModal({
                                                 />
                                             </div>
                                             {renderFieldError('scale_code')}
+                                        </label>
+                                    ) : null}
+
+                                    <label className="products-editor-field">
+                                        <span>Controla validade</span>
+                                        <div className="products-editor-input-wrap">
+                                            <i className="fa-solid fa-calendar-days" />
+                                            <select value={form.track_expiry ? '1' : '0'} onChange={(event) => updateField('track_expiry', event.target.value === '1')}>
+                                                <option value="0">Não</option>
+                                                <option value="1">Sim</option>
+                                            </select>
+                                        </div>
+                                    </label>
+
+                                    {form.track_expiry ? (
+                                        <label className="products-editor-field">
+                                            <span>Avisar quantos dias antes?</span>
+                                            <div className="products-editor-input-wrap">
+                                                <i className="fa-solid fa-bell" />
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={form.expiry_alert_days ?? ''}
+                                                    onChange={(event) => updateField('expiry_alert_days', event.target.value)}
+                                                    placeholder="Padrão da loja"
+                                                />
+                                            </div>
                                         </label>
                                     ) : null}
 

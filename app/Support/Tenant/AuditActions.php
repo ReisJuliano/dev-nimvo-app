@@ -27,6 +27,7 @@ class AuditActions
     public const PRODUCT_PRICE_CHANGED = 'produto.preco_alterado';
     public const PRODUCT_COST_CHANGED = 'produto.custo_alterado';
     public const RECORD_DELETED = 'registro.excluido';
+    public const STOCK_LOSS_REGISTERED = 'estoque.perda_registrada';
 
     public static function labels(): array
     {
@@ -54,6 +55,7 @@ class AuditActions
             self::PRODUCT_PRICE_CHANGED => 'Preco de produto alterado',
             self::PRODUCT_COST_CHANGED => 'Custo de produto alterado',
             self::RECORD_DELETED => 'Registro excluido',
+            self::STOCK_LOSS_REGISTERED => 'Perda de estoque registrada',
         ];
     }
 

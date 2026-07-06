@@ -10,6 +10,7 @@ use App\Models\Tenant\IncomingNfeItem;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Supplier;
+use App\Services\Tenant\ExpiryService;
 use App\Services\Tenant\InventoryMovementService;
 use App\Services\Tenant\ProductService;
 use App\Support\DanfePdfRenderer;
@@ -31,6 +32,7 @@ class IncomingNfeService
         protected InventoryMovementService $inventoryMovementService,
         protected ProductService $productService,
         protected DanfePdfRenderer $danfePdfRenderer,
+        protected ExpiryService $expiryService,
     ) {
     }
 
@@ -360,11 +362,14 @@ class IncomingNfeService
             'purchase_id' => ['nullable', 'integer', 'exists:purchases,id'],
             'received_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            'expiry_dates' => ['nullable', 'array'],
+            'expiry_dates.*' => ['nullable', 'date'],
         ])->validate();
 
         $costMethod = $validated['cost_method'] ?? 'last_cost';
+        $expiryDates = (array) ($validated['expiry_dates'] ?? []);
 
-        return DB::transaction(function () use ($document, $validated, $costMethod, $userId) {
+        return DB::transaction(function () use ($document, $validated, $costMethod, $userId, $expiryDates) {
             $document = IncomingNfeDocument::query()
                 ->with(['items.product', 'purchase.items', 'taxCredits'])
                 ->lockForUpdate()
@@ -462,6 +467,12 @@ class IncomingNfeService
                     'notes' => sprintf('Entrada por NF-e %s', $document->access_key),
                     'occurred_at' => $receivedAt,
                 ]);
+
+                $expiryDate = $expiryDates[$incomingItem->id] ?? null;
+
+                if ($product->track_expiry && filled($expiryDate)) {
+                    $this->expiryService->recordEntry($product, (float) $incomingItem->quantity, $expiryDate, $document, $userId);
+                }
 
                 $incomingItem->forceFill([
                     'purchase_item_id' => $purchaseItem->id,

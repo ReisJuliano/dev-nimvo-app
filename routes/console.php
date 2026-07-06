@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('nimvo:prune-pending-sales --days=3')->daily();
 Schedule::command('nimvo:fail-stale-local-agent-commands')->everyMinute();
 Schedule::command('nimvo:export-audit-logs --months=12')->monthly();
+Schedule::command('nimvo:prune-expired-lots')->daily();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

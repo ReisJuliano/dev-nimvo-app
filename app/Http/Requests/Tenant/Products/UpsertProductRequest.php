@@ -46,6 +46,8 @@ class UpsertProductRequest extends FormRequest
                 'min:1',
                 Rule::unique('products', 'scale_code')->ignore($this->route('product')),
             ],
+            'track_expiry' => ['nullable', 'boolean'],
+            'expiry_alert_days' => ['nullable', 'integer', 'min:1'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'sale_price' => ['required', 'numeric', 'min:0'],
             'stock_quantity' => ['nullable', 'numeric', 'min:0'],

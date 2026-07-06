@@ -28,6 +28,7 @@ class PosService
         protected ConditionalSaleService $conditionalSaleService,
         protected InventorySessionService $inventorySessionService,
         protected PromotionEngine $promotionEngine,
+        protected ExpiryService $expiryService,
     ) {
     }
 
@@ -418,6 +419,10 @@ class PosService
                     'notes' => "Saida pela venda {$sale->sale_number}",
                     'occurred_at' => $sale->created_at,
                 ]);
+
+                if ($product->track_expiry) {
+                    $this->expiryService->consumeFefo($product, $quantity);
+                }
             }
 
             foreach ($resolvedPayments as $payment) {

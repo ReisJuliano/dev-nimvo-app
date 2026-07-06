@@ -55,6 +55,7 @@ export default function IncomingNfeWorkspace({ payload }) {
     const [costMethod, setCostMethod] = useState(payload.cost_methods?.[0]?.value || 'last_cost')
     const [autoCreateMissing, setAutoCreateMissing] = useState(false)
     const [receiptAt, setReceiptAt] = useState('')
+    const [expiryDatesByItem, setExpiryDatesByItem] = useState({})
     const [manifestEvent, setManifestEvent] = useState('science')
     const [manifestJustification, setManifestJustification] = useState('')
     const [busyAction, setBusyAction] = useState(null)
@@ -367,6 +368,7 @@ export default function IncomingNfeWorkspace({ payload }) {
                     auto_create_missing: autoCreateMissing,
                     purchase_id: purchaseLinkId ? Number(purchaseLinkId) : null,
                     received_at: receiptAt || null,
+                    expiry_dates: expiryDatesByItem,
                 },
             })
             replaceRecord(response.record)
@@ -701,6 +703,16 @@ export default function IncomingNfeWorkspace({ payload }) {
                                                     ))}
                                                 </select>
                                             </label>
+                                            {products.find((product) => String(product.id) === String(item.product_id))?.track_expiry ? (
+                                                <label className="span-2">
+                                                    <FieldLabel icon="fa-calendar-days" text="Validade deste lote" />
+                                                    <input
+                                                        type="date"
+                                                        value={expiryDatesByItem[item.id] || ''}
+                                                        onChange={(event) => setExpiryDatesByItem((current) => ({ ...current, [item.id]: event.target.value }))}
+                                                    />
+                                                </label>
+                                            ) : null}
                                             <div className="ops-workspace-actions span-2">
                                                 <button type="button" className="ui-button-ghost" onClick={() => handleItemAutoCreate(item.id)} disabled={busyAction === `item-auto-${item.id}` || item.match_status === 'matched'}>
                                                     {busyAction === `item-auto-${item.id}` ? 'Criando...' : 'Auto cadastrar'}

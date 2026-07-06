@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Tenant\Inventory;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\ProductExpiry;
 use App\Models\Tenant\Supplier;
+use App\Services\Tenant\ExpiryService;
 use App\Services\Tenant\InventoryMovementService;
+use App\Services\Tenant\TenantSettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,13 +45,14 @@ class StockEntryPageController extends Controller
     }
 
     // API — entrada rápida sem NF
-    public function quickReceive(Request $request, InventoryMovementService $inventoryMovementService): JsonResponse
+    public function quickReceive(Request $request, InventoryMovementService $inventoryMovementService, ExpiryService $expiryService): JsonResponse
     {
         $validated = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'quantity'   => ['required', 'numeric', 'min:0.001'],
             'cost_price' => ['nullable', 'numeric', 'min:0'],
             'notes'      => ['nullable', 'string', 'max:500'],
+            'expiry_date' => ['nullable', 'date', 'after_or_equal:today'],
         ]);
 
         $product = Product::query()->findOrFail((int) $validated['product_id']);
@@ -67,6 +72,10 @@ class StockEntryPageController extends Controller
                 'notes'    => $validated['notes'] ?? 'Recebi mercadoria',
             ],
         );
+
+        if (filled($validated['expiry_date'] ?? null)) {
+            $expiryService->recordEntry($product, round((float) $validated['quantity'], 3), $validated['expiry_date'], null, (int) auth()->id());
+        }
 
         return response()->json([
             'message' => 'Mercadoria recebida e estoque atualizado.',
@@ -111,6 +120,49 @@ class StockEntryPageController extends Controller
             'message' => 'Estoque ajustado com sucesso.',
             'product' => $this->formatProduct($updated),
         ]);
+    }
+
+    // API — registrar perda (vencido, avaria, quebra, outro)
+    public function registerLoss(Request $request, ExpiryService $expiryService): JsonResponse
+    {
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'quantity' => ['required', 'numeric', 'min:0.001'],
+            'reason' => ['required', 'string', Rule::in(['vencido', 'avaria', 'quebra', 'outro'])],
+            'expiry_id' => ['nullable', 'integer', 'exists:product_expiries,id'],
+        ]);
+
+        $product = Product::query()->findOrFail((int) $validated['product_id']);
+        $lot = filled($validated['expiry_id'] ?? null)
+            ? ProductExpiry::query()->where('product_id', $product->id)->findOrFail($validated['expiry_id'])
+            : null;
+
+        $expiryService->registerLoss($product, round((float) $validated['quantity'], 3), $validated['reason'], (int) auth()->id(), $lot);
+
+        return response()->json([
+            'message' => 'Perda registrada com sucesso.',
+            'product' => $this->formatProduct($product->fresh()),
+        ]);
+    }
+
+    // API — lotes vencendo em breve, para a tela de estoque
+    public function expiring(Request $request, ExpiryService $expiryService, TenantSettingsService $settingsService): JsonResponse
+    {
+        $days = $request->integer('days') ?: (int) data_get($settingsService->get(), 'expiry.default_alert_days', 30);
+        $categoryId = $request->integer('category_id') ?: null;
+
+        $lots = $expiryService->expiringSoon($days, $categoryId)->map(fn (ProductExpiry $lot) => [
+            'id' => $lot->id,
+            'product_id' => $lot->product_id,
+            'product_name' => $lot->product?->name,
+            'category_name' => $lot->product?->category?->name,
+            'expires_at' => $lot->expires_at?->toDateString(),
+            'quantity' => (float) $lot->quantity,
+            'cost_at_risk' => round((float) $lot->quantity * (float) ($lot->product?->cost_price ?? 0), 2),
+            'is_past' => $lot->expires_at?->isPast() ?? false,
+        ])->values();
+
+        return response()->json(['lots' => $lots]);
     }
 
     // API — movimentações de estoque de um produto
@@ -162,6 +214,7 @@ class StockEntryPageController extends Controller
             'purchase_return'   => 'Devolução de compra',
             'sale_cancellation' => 'Cancelamento de venda',
             'inventory_count_adjustment' => 'Ajuste de inventário',
+            'loss'              => 'Perda registrada',
             'initial'           => 'Estoque inicial',
             default             => ucfirst(str_replace('_', ' ', $type)),
         };
@@ -190,6 +243,7 @@ class StockEntryPageController extends Controller
             'stock_quantity' => (float) $product->stock_quantity,
             'min_stock'      => (float) $product->min_stock,
             'supplier_name'  => $product->supplier?->name ?? null,
+            'track_expiry'   => (bool) $product->track_expiry,
         ];
     }
 }

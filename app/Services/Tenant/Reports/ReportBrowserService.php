@@ -8,6 +8,7 @@ use App\Models\Tenant\CashRegister;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\ProductExpiry;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\CashRegisterReportService;
@@ -109,6 +110,8 @@ class ReportBrowserService
                 'inventory-divergences' => $this->inventoryDivergencesReport($resolvedFilters),
                 'inventory-history' => $this->inventoryHistoryReport($resolvedFilters),
                 'promotions-impact' => $this->promotionsImpactReport($resolvedFilters),
+                'expiring-products' => $this->expiringProductsReport($resolvedFilters),
+                'losses-registered' => $this->lossesRegisteredReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
                 'cash-discrepancy' => $this->cashDiscrepancyReport($resolvedFilters),
                 'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
@@ -285,6 +288,22 @@ class ReportBrowserService
                 'tags' => ['Desconto', 'Margem', 'Faturamento'],
             ],
             [
+                'key' => 'expiring-products',
+                'category' => 'stock',
+                'title' => 'Vencimentos',
+                'description' => 'Produtos vencendo no período selecionado, com quantidade e custo em risco.',
+                'icon' => 'fa-calendar-days',
+                'tags' => ['Validade', 'Custo em risco'],
+            ],
+            [
+                'key' => 'losses-registered',
+                'category' => 'stock',
+                'title' => 'Perdas registradas',
+                'description' => 'Perdas de estoque por motivo, categoria e período, valorizadas a custo.',
+                'icon' => 'fa-dumpster-fire',
+                'tags' => ['Vencido', 'Avaria', 'Quebra'],
+            ],
+            [
                 'key' => 'stock-inbounds',
                 'category' => 'stock',
                 'title' => 'Entradas de mercadoria',
@@ -412,6 +431,8 @@ class ReportBrowserService
             'supplier_id' => $this->normalizePositiveInt($filters['supplier_id'] ?? null),
             'till_id' => $this->normalizePositiveInt($filters['till_id'] ?? null),
             'inventory_session_id' => $this->normalizePositiveInt($filters['inventory_session_id'] ?? null),
+            'days' => in_array((int) ($filters['days'] ?? 30), [7, 15, 30, 60], true) ? (int) $filters['days'] : 30,
+            'loss_reason' => $this->normalizeSelection($filters['loss_reason'] ?? null, ['vencido', 'avaria', 'quebra', 'outro']),
             'stock_status' => $this->normalizeSelection($filters['stock_status'] ?? null, ['healthy', 'low', 'out']),
             'balance_status' => $this->normalizeSelection($filters['balance_status'] ?? null, ['with_balance', 'near_limit', 'without_limit']),
             'sort_by' => $sortBy !== '' ? $sortBy : null,
@@ -442,6 +463,8 @@ class ReportBrowserService
             'supplier_id' => $filters['supplier_id'] ? (string) $filters['supplier_id'] : '',
             'till_id' => $filters['till_id'] ? (string) $filters['till_id'] : '',
             'inventory_session_id' => $filters['inventory_session_id'] ? (string) $filters['inventory_session_id'] : '',
+            'days' => (string) $filters['days'],
+            'loss_reason' => $filters['loss_reason'] ?? '',
             'stock_status' => $filters['stock_status'] ?? '',
             'balance_status' => $filters['balance_status'] ?? '',
             'sort_by' => $filters['sort_by'] ?? '',
@@ -643,6 +666,24 @@ class ReportBrowserService
                     ['value' => 'status', 'label' => 'Status'],
                 ],
                 'default_sort' => ['by' => 'created_at', 'direction' => 'desc'],
+            ],
+            'expiring-products' => [
+                'fields' => ['days', 'category_id', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'expires_at', 'label' => 'Vencimento'],
+                    ['value' => 'cost_at_risk', 'label' => 'Custo em risco'],
+                    ['value' => 'quantity', 'label' => 'Quantidade'],
+                ],
+                'default_sort' => ['by' => 'expires_at', 'direction' => 'asc'],
+            ],
+            'losses-registered' => [
+                'fields' => ['scope', 'category_id', 'loss_reason', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'occurred_at', 'label' => 'Data'],
+                    ['value' => 'cost_value', 'label' => 'Custo'],
+                    ['value' => 'quantity', 'label' => 'Quantidade'],
+                ],
+                'default_sort' => ['by' => 'occurred_at', 'direction' => 'desc'],
             ],
             'promotions-impact' => [
                 'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
@@ -1753,6 +1794,143 @@ class ReportBrowserService
             paginator: $paginator,
             emptyText: 'Nenhuma venda com promoção no período selecionado.',
             table: ['title' => 'Impacto de promoções'],
+        );
+    }
+
+    protected function expiringProductsReport(array $filters): array
+    {
+        $today = Carbon::today();
+        $limit = $today->copy()->addDays($filters['days']);
+
+        $lots = ProductExpiry::query()
+            ->join('products', 'products.id', '=', 'product_expiries.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->where('product_expiries.quantity', '>', 0)
+            ->whereBetween('product_expiries.expires_at', [$today, $limit])
+            ->when($filters['category_id'], fn ($query, $categoryId) => $query->where('products.category_id', $categoryId))
+            ->selectRaw("
+                product_expiries.id,
+                products.name,
+                products.code,
+                COALESCE(categories.name, 'Sem categoria') as category_name,
+                product_expiries.expires_at,
+                product_expiries.quantity,
+                (product_expiries.quantity * products.cost_price) as cost_at_risk
+            ")
+            ->get();
+
+        $summary = [
+            'lots_count' => $lots->count(),
+            'cost_at_risk' => round((float) $lots->sum('cost_at_risk'), 2),
+        ];
+
+        $sorted = $this->sortCollection($lots->map(fn ($row) => [
+            'code' => $row->code ?: '-',
+            'name' => $row->name,
+            'category_name' => $row->category_name,
+            'expires_at' => Carbon::parse($row->expires_at)->format('d/m/Y'),
+            'expires_at_raw' => $row->expires_at,
+            'quantity' => (float) $row->quantity,
+            'cost_at_risk' => (float) $row->cost_at_risk,
+        ]), $filters, [
+            'expires_at' => 'expires_at_raw',
+            'cost_at_risk' => 'cost_at_risk',
+            'quantity' => 'quantity',
+        ], 'expires_at', 'asc');
+
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Lotes vencendo', $summary['lots_count'], 'number', 'fa-calendar-days'),
+                $this->summaryCard('Custo em risco', $summary['cost_at_risk'], 'money', 'fa-triangle-exclamation'),
+                $this->summaryCard('Período', "{$filters['days']} dias", 'text', 'fa-hourglass-half'),
+            ],
+            columns: [
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'name', 'label' => 'Produto'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'expires_at', 'label' => 'Vence em'],
+                ['key' => 'quantity', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'cost_at_risk', 'label' => 'Custo em risco', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhum produto vencendo no período selecionado.',
+            table: ['title' => 'Vencimentos'],
+        );
+    }
+
+    protected function lossesRegisteredReport(array $filters): array
+    {
+        $query = DB::table('inventory_movements')
+            ->join('products', 'products.id', '=', 'inventory_movements.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->where('inventory_movements.type', 'loss')
+            ->whereBetween('inventory_movements.occurred_at', [$filters['from'], $filters['to']])
+            ->when($filters['category_id'], fn ($q, $categoryId) => $q->where('products.category_id', $categoryId))
+            ->when($filters['loss_reason'], fn ($q, $reason) => $q->where('inventory_movements.notes', $reason));
+
+        $summary = (clone $query)
+            ->selectRaw('COUNT(*) as movements_count, COALESCE(SUM(ABS(inventory_movements.quantity_delta) * inventory_movements.unit_cost), 0) as cost_value')
+            ->first();
+
+        $reasonRows = (clone $query)
+            ->selectRaw("COALESCE(inventory_movements.notes, 'outro') as reason, COALESCE(SUM(ABS(inventory_movements.quantity_delta) * inventory_movements.unit_cost), 0) as cost_value")
+            ->groupBy('reason')
+            ->orderByDesc('cost_value')
+            ->get()
+            ->map(fn ($row) => ['reason' => $row->reason, 'cost_value' => (float) $row->cost_value])
+            ->values();
+
+        $listQuery = (clone $query)
+            ->selectRaw("
+                products.name,
+                products.code,
+                COALESCE(categories.name, 'Sem categoria') as category_name,
+                COALESCE(inventory_movements.notes, 'outro') as reason,
+                inventory_movements.occurred_at,
+                ABS(inventory_movements.quantity_delta) as quantity,
+                (ABS(inventory_movements.quantity_delta) * inventory_movements.unit_cost) as cost_value
+            ");
+
+        $this->applyOrderBy($listQuery, [
+            'occurred_at' => 'inventory_movements.occurred_at',
+            'cost_value' => 'cost_value',
+            'quantity' => 'quantity',
+        ], $filters, 'occurred_at', 'desc');
+
+        $paginator = $listQuery->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
+
+        $rows = collect($paginator->items())->map(fn ($row) => [
+            'code' => $row->code ?: '-',
+            'name' => $row->name,
+            'category_name' => $row->category_name,
+            'reason' => $row->reason,
+            'occurred_at' => Carbon::parse($row->occurred_at)->format('d/m/Y H:i'),
+            'quantity' => (float) $row->quantity,
+            'cost_value' => (float) $row->cost_value,
+        ])->all();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Perdas registradas', (int) ($summary->movements_count ?? 0), 'number', 'fa-dumpster-fire'),
+                $this->summaryCard('Custo total', (float) ($summary->cost_value ?? 0), 'money', 'fa-sack-dollar'),
+            ],
+            highlights: $reasonRows->map(fn (array $row) => $this->highlight(ucfirst($row['reason']), $row['cost_value'], 'money', null, 'warning'))->all(),
+            columns: [
+                ['key' => 'code', 'label' => 'Código'],
+                ['key' => 'name', 'label' => 'Produto'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'reason', 'label' => 'Motivo'],
+                ['key' => 'occurred_at', 'label' => 'Data'],
+                ['key' => 'quantity', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'cost_value', 'label' => 'Custo', 'format' => 'money'],
+            ],
+            rows: $rows,
+            paginator: $paginator,
+            emptyText: 'Nenhuma perda registrada no período selecionado.',
+            table: ['title' => 'Perdas registradas'],
         );
     }
 

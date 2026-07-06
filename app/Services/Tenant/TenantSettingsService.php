@@ -38,6 +38,9 @@ class TenantSettingsService
                 'supervisor_threshold_value' => 200.0,
                 'supervisor_threshold_quantity' => 20.0,
             ],
+            'expiry' => [
+                'default_alert_days' => 30,
+            ],
             'modules' => $this->defaultModules(),
         ];
     }
@@ -290,7 +293,7 @@ class TenantSettingsService
     {
         $settings = $this->normalizeIncomingSettings($settings);
         $defaults = $this->defaults();
-        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'modules']));
+        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'modules']));
 
         $merged['business']['preset'] = $this->normalizePreset(data_get($merged, 'business.preset'));
         $merged['cash_closing']['require_conference'] = (bool) data_get(
@@ -311,6 +314,7 @@ class TenantSettingsService
         $merged['scale_barcode']['value_length'] = max(1, (int) data_get($merged, 'scale_barcode.value_length', 5));
         $merged['inventory']['supervisor_threshold_value'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_value', 200));
         $merged['inventory']['supervisor_threshold_quantity'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_quantity', 20));
+        $merged['expiry']['default_alert_days'] = max(1, (int) data_get($merged, 'expiry.default_alert_days', 30));
         $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;
@@ -529,7 +533,7 @@ class TenantSettingsService
 
     protected function payloadForStorage(array $settings): array
     {
-        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'modules']);
+        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'modules']);
     }
 
     protected function appSettingsTableExists(): bool

@@ -8,6 +8,7 @@ const emptyForm = {
     quantity: '',
     cost_price: '',
     notes: '',
+    expiry_date: '',
 }
 
 export default function RecebiMercadoriaModal({
@@ -90,6 +91,7 @@ export default function RecebiMercadoriaModal({
                     quantity: Number(form.quantity),
                     cost_price: form.cost_price === '' ? null : Number(form.cost_price),
                     notes: form.notes.trim() || null,
+                    expiry_date: form.expiry_date || null,
                 },
             })
 
@@ -182,6 +184,13 @@ export default function RecebiMercadoriaModal({
                         <span>Custo unitário</span>
                         <input type="number" min="0" step="0.01" value={form.cost_price} onChange={(event) => updateForm('cost_price', event.target.value)} placeholder="Opcional" />
                     </label>
+
+                    {selectedProduct?.track_expiry ? (
+                        <label className="stock-receive-field">
+                            <span>Validade deste lote</span>
+                            <input type="date" value={form.expiry_date} onChange={(event) => updateForm('expiry_date', event.target.value)} />
+                        </label>
+                    ) : null}
 
                     <label className="stock-receive-field span-2">
                         <span>Observação</span>

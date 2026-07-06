@@ -1896,7 +1896,7 @@ class OperationsWorkspaceService
         return Product::query()
             ->where('active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'code', 'barcode', 'ncm', 'cfop', 'unit', 'cost_price', 'sale_price', 'stock_quantity'])
+            ->get(['id', 'name', 'code', 'barcode', 'ncm', 'cfop', 'unit', 'cost_price', 'sale_price', 'stock_quantity', 'track_expiry'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -1908,6 +1908,7 @@ class OperationsWorkspaceService
                 'cost_price' => (float) $product->cost_price,
                 'sale_price' => (float) $product->sale_price,
                 'stock_quantity' => (float) $product->stock_quantity,
+                'track_expiry' => (bool) $product->track_expiry,
                 'label' => "{$product->name} ({$product->code})",
             ])
             ->values()
