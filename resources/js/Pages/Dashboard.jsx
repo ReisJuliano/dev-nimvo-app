@@ -117,6 +117,15 @@ export default function Dashboard({ summary = {}, lowStockItems = [], expiringSo
             icon: 'fa-receipt',
             color: 'violet',
         },
+        {
+            title: 'Saldo projetado (30 dias)',
+            value: formatMoney(summary.projected_balance_30d || 0),
+            note: 'Receita estimada menos contas a pagar',
+            badge: 'Estimativa',
+            badgeTone: 'neutral',
+            icon: 'fa-piggy-bank',
+            color: Number(summary.projected_balance_30d || 0) >= 0 ? 'teal' : 'rose',
+        },
     ]
 
     const quickAccess = [

@@ -1161,17 +1161,23 @@ class OperationsWorkspaceService
                 'user_id' => $userId,
             ];
 
+            $fullyPaid = $nextPaid >= (float) $payable->amount;
+
             $payable->forceFill([
                 'amount_paid' => $nextPaid,
-                'paid_at' => $nextPaid >= (float) $payable->amount ? ($validated['payment_date'] ?? $payable->paid_at) : $payable->paid_at,
+                'paid_at' => $fullyPaid ? ($validated['payment_date'] ?? $payable->paid_at) : $payable->paid_at,
                 'payment_method' => $validated['payment_method'],
                 'bank_name' => $validated['payment_account'] ?? $payable->bank_name,
                 'notes' => $validated['payment_notes'] ?? $payable->notes,
-                'status' => $nextPaid >= (float) $payable->amount ? 'paid' : 'open',
+                'status' => $fullyPaid ? 'paid' : 'open',
                 'metadata' => array_merge($metadata, [
                     'payments' => $payments,
                 ]),
             ])->save();
+
+            if ($fullyPaid && in_array($payable->recurrence, ['monthly', 'weekly'], true)) {
+                $this->generateNextRecurrence($payable);
+            }
 
             return $payable->fresh(['supplier:id,name', 'purchase:id,code', 'user:id,name']);
         }
@@ -1236,6 +1242,35 @@ class OperationsWorkspaceService
         ])->save();
 
         return $payable->fresh(['supplier:id,name', 'purchase:id,code', 'user:id,name']);
+    }
+
+    protected function generateNextRecurrence(Payable $payable): void
+    {
+        $baseDueDate = $payable->due_date ? Carbon::parse($payable->due_date) : now();
+        $nextDueDate = $payable->recurrence === 'weekly'
+            ? $baseDueDate->copy()->addWeek()
+            : $baseDueDate->copy()->addMonthNoOverflow();
+
+        Payable::query()->create([
+            'purchase_id' => null,
+            'supplier_id' => $payable->supplier_id,
+            'user_id' => $payable->user_id,
+            'code' => $this->nextCode(Payable::class, 'PAG'),
+            'description' => $payable->description,
+            'category' => $payable->category,
+            'status' => 'open',
+            'payment_method' => null,
+            'amount' => $payable->amount,
+            'amount_paid' => 0,
+            'due_date' => $nextDueDate,
+            'paid_at' => null,
+            'bank_name' => $payable->bank_name,
+            'installment_label' => $payable->installment_label,
+            'installment_number' => $payable->installment_number,
+            'installment_total' => $payable->installment_total,
+            'recurrence' => $payable->recurrence,
+            'notes' => $payable->notes,
+        ]);
     }
 
     protected function savePurchase(?Purchase $purchase, array $input, int $userId): Purchase

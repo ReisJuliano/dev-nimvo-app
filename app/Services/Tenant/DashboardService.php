@@ -205,6 +205,18 @@ class DashboardService
             ? (($activeProductsCount - $lowStockCount) / $activeProductsCount) * 100
             : 0;
 
+        $averageDailyRevenue = (float) (Sale::query()
+            ->where('status', 'finalized')
+            ->where('created_at', '>=', $today->copy()->subDays(30))
+            ->sum('total')) / 30;
+
+        $payablesDue30d = (float) Payable::query()
+            ->where('status', 'open')
+            ->whereBetween('due_date', [$today->toDateString(), $today->copy()->addDays(30)->toDateString()])
+            ->sum(DB::raw('amount - amount_paid'));
+
+        $projectedBalance30d = round(($averageDailyRevenue * 30) - $payablesDue30d, 2);
+
         $expiryAlertDays = (int) data_get($this->settingsService->get(), 'expiry.default_alert_days', 30);
         $expiringSoonItems = $this->expiryService->expiringSoon($expiryAlertDays)
             ->take(6)
@@ -244,6 +256,7 @@ class DashboardService
                 'expiring_soon_count' => $expiringSoonCount,
                 'expiring_soon_cost' => $expiringSoonCost,
                 'expiring_soon_alert_days' => $expiryAlertDays,
+                'projected_balance_30d' => $projectedBalance30d,
                 'today_growth' => $this->growthPercentage(
                     (float) ($todaySales->total ?? 0),
                     (float) ($yesterdaySales->total ?? 0),

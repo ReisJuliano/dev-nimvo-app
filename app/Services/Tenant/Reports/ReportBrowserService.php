@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Tenant\Reports;
 
 use App\Models\Tenant\CashRegister;
+use App\Models\Tenant\ConditionalSale;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\Product;
@@ -112,6 +113,9 @@ class ReportBrowserService
                 'inventory-divergences' => $this->inventoryDivergencesReport($resolvedFilters),
                 'inventory-history' => $this->inventoryHistoryReport($resolvedFilters),
                 'promotions-impact' => $this->promotionsImpactReport($resolvedFilters),
+                'cashflow-realized' => $this->cashFlowRealizedReport($resolvedFilters),
+                'cashflow-projected' => $this->cashFlowProjectedReport($resolvedFilters),
+                'dre-simplified' => $this->dreSimplifiedReport($resolvedFilters),
                 'receivables-aging' => $this->receivablesAgingReport($resolvedFilters),
                 'receivables-delinquency' => $this->receivablesDelinquencyReport($resolvedFilters),
                 'expiring-products' => $this->expiringProductsReport($resolvedFilters),
@@ -322,6 +326,30 @@ class ReportBrowserService
                 'description' => 'Entradas de vendas, suprimentos e sangrias por dia.',
                 'icon' => 'fa-money-bill-transfer',
                 'tags' => ['Entradas', 'Saidas', 'Saldo'],
+            ],
+            [
+                'key' => 'cashflow-realized',
+                'category' => 'cashflow',
+                'title' => 'Fluxo de caixa realizado',
+                'description' => 'Entradas por forma de pagamento e recebimento de fiado x saídas de contas pagas e sangrias, com saldo acumulado.',
+                'icon' => 'fa-chart-line',
+                'tags' => ['Entradas', 'Saídas', 'Saldo acumulado'],
+            ],
+            [
+                'key' => 'cashflow-projected',
+                'category' => 'cashflow',
+                'title' => 'Fluxo de caixa projetado',
+                'description' => 'Contas a pagar em aberto e recebíveis com vencimento nos próximos 30/60/90 dias, com receita estimada pela média móvel de vendas.',
+                'icon' => 'fa-chart-area',
+                'tags' => ['30 dias', '60 dias', '90 dias'],
+            ],
+            [
+                'key' => 'dre-simplified',
+                'category' => 'cashflow',
+                'title' => 'DRE simplificado',
+                'description' => 'Receita bruta, cancelamentos, CMV, margem bruta, despesas por categoria e perdas de estoque no mês, comparado ao mês anterior.',
+                'icon' => 'fa-file-invoice',
+                'tags' => ['Receita', 'CMV', 'Margem', 'Despesas'],
             ],
             [
                 'key' => 'cash-discrepancy',
@@ -725,6 +753,26 @@ class ReportBrowserService
                     ['value' => 'balance', 'label' => 'Saldo'],
                 ],
                 'default_sort' => ['by' => 'reference_date', 'direction' => 'desc'],
+            ],
+            'cashflow-realized' => [
+                'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'reference_date', 'label' => 'Data'],
+                    ['value' => 'incoming_total', 'label' => 'Entradas'],
+                    ['value' => 'outgoing_total', 'label' => 'Saídas'],
+                    ['value' => 'balance', 'label' => 'Saldo do dia'],
+                ],
+                'default_sort' => ['by' => 'reference_date', 'direction' => 'desc'],
+            ],
+            'cashflow-projected' => [
+                'fields' => ['per_page'],
+                'sort_options' => [],
+                'default_sort' => ['by' => 'bucket_end', 'direction' => 'asc'],
+            ],
+            'dre-simplified' => [
+                'fields' => ['scope'],
+                'sort_options' => [],
+                'default_sort' => ['by' => 'category', 'direction' => 'asc'],
             ],
             'cash-discrepancy' => [
                 'fields' => ['scope', 'till_id', 'operator_id', 'sort_by', 'sort_direction', 'per_page'],
@@ -2417,6 +2465,303 @@ class ReportBrowserService
             emptyText: 'Nenhum movimento de caixa encontrado no recorte selecionado.',
             table: ['title' => 'Movimentos'],
         );
+    }
+
+    protected function cashFlowRealizedReport(array $filters): array
+    {
+        $salesByDay = DB::table('sale_payments')
+            ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
+            ->where('sales.status', 'finalized')
+            ->where('sale_payments.payment_method', '!=', PaymentMethod::CREDIT)
+            ->whereBetween('sales.created_at', [$filters['from'], $filters['to']])
+            ->groupBy(DB::raw('DATE(sales.created_at)'))
+            ->get([DB::raw('DATE(sales.created_at) as day'), DB::raw('COALESCE(SUM(sale_payments.amount), 0) as sales_total')])
+            ->keyBy('day');
+
+        $creditPaymentsByDay = DB::table('credit_payments')
+            ->whereBetween('received_at', [$filters['from'], $filters['to']])
+            ->groupBy(DB::raw('DATE(received_at)'))
+            ->get([DB::raw('DATE(received_at) as day'), DB::raw('COALESCE(SUM(amount), 0) as credit_received')])
+            ->keyBy('day');
+
+        $payablesByDay = DB::table('payables')
+            ->where('status', 'paid')
+            ->whereNotNull('paid_at')
+            ->whereBetween('paid_at', [$filters['from'], $filters['to']])
+            ->groupBy(DB::raw('DATE(paid_at)'))
+            ->get([DB::raw('DATE(paid_at) as day'), DB::raw('COALESCE(SUM(amount_paid), 0) as payables_paid')])
+            ->keyBy('day');
+
+        $withdrawalsByDay = DB::table('cash_movements')
+            ->where('type', 'withdrawal')
+            ->whereBetween('created_at', [$filters['from'], $filters['to']])
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->get([DB::raw('DATE(created_at) as day'), DB::raw('COALESCE(SUM(amount), 0) as withdrawals')])
+            ->keyBy('day');
+
+        $days = collect();
+        $cursor = $filters['from']->copy()->startOfDay();
+
+        while ($cursor->lessThanOrEqualTo($filters['to'])) {
+            $days->push($cursor->format('Y-m-d'));
+            $cursor->addDay();
+        }
+
+        $accumulated = 0.0;
+        $rows = $days->map(function (string $day) use ($salesByDay, $creditPaymentsByDay, $payablesByDay, $withdrawalsByDay, &$accumulated) {
+            $salesTotal = (float) ($salesByDay->get($day)->sales_total ?? 0);
+            $creditReceived = (float) ($creditPaymentsByDay->get($day)->credit_received ?? 0);
+            $payablesPaid = (float) ($payablesByDay->get($day)->payables_paid ?? 0);
+            $withdrawals = (float) ($withdrawalsByDay->get($day)->withdrawals ?? 0);
+
+            $incomingTotal = round($salesTotal + $creditReceived, 2);
+            $outgoingTotal = round($payablesPaid + $withdrawals, 2);
+            $accumulated = round($accumulated + $incomingTotal - $outgoingTotal, 2);
+
+            return [
+                'reference_date' => $day,
+                'sales_total' => $salesTotal,
+                'credit_received' => $creditReceived,
+                'incoming_total' => $incomingTotal,
+                'payables_paid' => $payablesPaid,
+                'withdrawals' => $withdrawals,
+                'outgoing_total' => $outgoingTotal,
+                'balance' => round($incomingTotal - $outgoingTotal, 2),
+                'balance_accumulated' => $accumulated,
+            ];
+        })->filter(fn (array $row) => $row['incoming_total'] > 0 || $row['outgoing_total'] > 0)->values();
+
+        $sortedRows = $this->sortCollection($rows, $filters, [
+            'reference_date' => 'reference_date',
+            'incoming_total' => 'incoming_total',
+            'outgoing_total' => 'outgoing_total',
+            'balance' => 'balance',
+        ], 'reference_date', 'desc');
+
+        $paginator = $this->paginateCollection($sortedRows, $filters['per_page'], $filters['page']);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Entradas', round((float) $rows->sum('incoming_total'), 2), 'money', 'fa-arrow-trend-up'),
+                $this->summaryCard('Saídas', round((float) $rows->sum('outgoing_total'), 2), 'money', 'fa-arrow-trend-down'),
+                $this->summaryCard('Saldo do período', round((float) $rows->sum('balance'), 2), 'money', 'fa-scale-balanced'),
+                $this->summaryCard('Saldo acumulado', (float) ($rows->last()['balance_accumulated'] ?? 0), 'money', 'fa-piggy-bank'),
+            ],
+            charts: [
+                [
+                    'key' => 'cashflow-realized-balance',
+                    'type' => 'area',
+                    'title' => 'Saldo acumulado',
+                    'meta' => 'Entradas x saídas',
+                    'data' => $rows->map(fn (array $row) => [
+                        'label' => Carbon::parse($row['reference_date'])->format('d/m'),
+                        'incoming_total' => $row['incoming_total'],
+                        'balance_accumulated' => $row['balance_accumulated'],
+                    ])->all(),
+                    'series' => [
+                        ['key' => 'incoming_total', 'label' => 'Entradas', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'area'],
+                        ['key' => 'balance_accumulated', 'label' => 'Saldo acumulado', 'color' => '#14b8a6', 'format' => 'money', 'variant' => 'line'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'reference_date', 'label' => 'Data', 'format' => 'date'],
+                ['key' => 'sales_total', 'label' => 'Vendas', 'format' => 'money'],
+                ['key' => 'credit_received', 'label' => 'Fiado recebido', 'format' => 'money'],
+                ['key' => 'payables_paid', 'label' => 'Contas pagas', 'format' => 'money'],
+                ['key' => 'withdrawals', 'label' => 'Sangrias', 'format' => 'money'],
+                ['key' => 'balance', 'label' => 'Saldo do dia', 'format' => 'money'],
+                ['key' => 'balance_accumulated', 'label' => 'Saldo acumulado', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma entrada ou saída no período selecionado.',
+            table: ['title' => 'Fluxo de caixa realizado'],
+        );
+    }
+
+    protected function cashFlowProjectedReport(array $filters): array
+    {
+        $today = Carbon::today();
+        $buckets = [
+            ['label' => '0-30 dias', 'start' => $today->copy(), 'end' => $today->copy()->addDays(30)],
+            ['label' => '31-60 dias', 'start' => $today->copy()->addDays(31), 'end' => $today->copy()->addDays(60)],
+            ['label' => '61-90 dias', 'start' => $today->copy()->addDays(61), 'end' => $today->copy()->addDays(90)],
+        ];
+
+        $averageDailyRevenue = round((float) (Sale::query()
+            ->where('status', 'finalized')
+            ->where('created_at', '>=', $today->copy()->subDays(30))
+            ->sum('total')) / 30, 2);
+
+        $conditionalReceivables = ConditionalSale::query()
+            ->with('items')
+            ->where('status', 'open')
+            ->whereNotNull('due_at')
+            ->get();
+
+        $rows = collect($buckets)->map(function (array $bucket) use ($averageDailyRevenue, $conditionalReceivables) {
+            $payablesDue = round((float) DB::table('payables')
+                ->where('status', 'open')
+                ->whereBetween('due_date', [$bucket['start']->toDateString(), $bucket['end']->toDateString()])
+                ->sum(DB::raw('amount - amount_paid')), 2);
+
+            $receivablesDue = round((float) $conditionalReceivables
+                ->filter(fn ($sale) => Carbon::parse($sale->due_at)->between($bucket['start'], $bucket['end']))
+                ->sum(fn ($sale) => $sale->items->sum(fn ($item) => round(
+                    (float) $item->quantity_sent - $item->quantity_returned - $item->quantity_kept - $item->quantity_lost - $item->quantity_damaged,
+                    3,
+                ) * (float) $item->unit_price)), 2);
+
+            $days = $bucket['start']->diffInDays($bucket['end']) + 1;
+            $estimatedRevenue = round($averageDailyRevenue * $days, 2);
+
+            return [
+                'bucket' => $bucket['label'],
+                'bucket_end' => $bucket['end']->toDateString(),
+                'payables_due' => $payablesDue,
+                'receivables_due' => $receivablesDue,
+                'estimated_revenue' => $estimatedRevenue,
+                'projected_balance' => round($estimatedRevenue + $receivablesDue - $payablesDue, 2),
+            ];
+        });
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Contas a pagar (90 dias)', round((float) $rows->sum('payables_due'), 2), 'money', 'fa-file-invoice-dollar'),
+                $this->summaryCard('Receita estimada (90 dias)', round((float) $rows->sum('estimated_revenue'), 2), 'money', 'fa-chart-line'),
+                $this->summaryCard('Saldo projetado (30 dias)', (float) ($rows->first()['projected_balance'] ?? 0), 'money', 'fa-piggy-bank'),
+            ],
+            charts: [
+                [
+                    'key' => 'cashflow-projected-buckets',
+                    'type' => 'bar',
+                    'title' => 'Projeção por período',
+                    'meta' => 'Receita estimada x contas a pagar',
+                    'data' => $rows->map(fn (array $row) => ['label' => $row['bucket'], 'estimated_revenue' => $row['estimated_revenue'], 'payables_due' => $row['payables_due']])->all(),
+                    'series' => [
+                        ['key' => 'estimated_revenue', 'label' => 'Receita estimada', 'color' => '#14b8a6', 'format' => 'money', 'variant' => 'bar'],
+                        ['key' => 'payables_due', 'label' => 'Contas a pagar', 'color' => '#ef4444', 'format' => 'money', 'variant' => 'bar'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'bucket', 'label' => 'Período'],
+                ['key' => 'estimated_revenue', 'label' => 'Receita estimada (média móvel)', 'format' => 'money'],
+                ['key' => 'receivables_due', 'label' => 'Recebíveis com prazo', 'format' => 'money'],
+                ['key' => 'payables_due', 'label' => 'Contas a pagar', 'format' => 'money'],
+                ['key' => 'projected_balance', 'label' => 'Saldo projetado', 'format' => 'money'],
+            ],
+            rows: $rows->values()->all(),
+            paginator: null,
+            emptyText: 'Nenhum lançamento futuro encontrado.',
+            table: ['title' => 'Fluxo de caixa projetado (estimativa)'],
+        );
+    }
+
+    protected function dreSimplifiedReport(array $filters): array
+    {
+        $monthStart = $filters['month']->copy()->startOfMonth();
+        $monthEnd = $filters['month']->copy()->endOfMonth();
+        $previousMonthStart = $monthStart->copy()->subMonthNoOverflow()->startOfMonth();
+        $previousMonthEnd = $monthStart->copy()->subMonthNoOverflow()->endOfMonth();
+
+        $current = $this->dreFigures($monthStart, $monthEnd);
+        $previous = $this->dreFigures($previousMonthStart, $previousMonthEnd);
+
+        $rows = collect([
+            ['category' => 'Receita bruta', 'current' => $current['gross_revenue'], 'previous' => $previous['gross_revenue']],
+            ['category' => 'Cancelamentos', 'current' => -$current['cancellations'], 'previous' => -$previous['cancellations']],
+            ['category' => 'CMV', 'current' => -$current['cogs'], 'previous' => -$previous['cogs']],
+            ['category' => 'Margem bruta', 'current' => $current['gross_margin'], 'previous' => $previous['gross_margin']],
+            ...$current['expenses_by_category']->map(fn (array $expense) => [
+                'category' => 'Despesa: '.$expense['label'],
+                'current' => -$expense['amount'],
+                'previous' => -(float) ($previous['expenses_by_category']->firstWhere('key', $expense['key'])['amount'] ?? 0),
+            ])->all(),
+            ['category' => 'Resultado operacional', 'current' => $current['operating_result'], 'previous' => $previous['operating_result']],
+            ['category' => 'Perdas de estoque', 'current' => -$current['losses'], 'previous' => -$previous['losses']],
+            ['category' => 'Resultado final', 'current' => $current['final_result'], 'previous' => $previous['final_result']],
+        ]);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Receita bruta', $current['gross_revenue'], 'money', 'fa-cash-register'),
+                $this->summaryCard('CMV', $current['cogs'], 'money', 'fa-boxes-stacked'),
+                $this->summaryCard('Margem bruta', $current['gross_margin'], 'money', 'fa-chart-pie'),
+                $this->summaryCard('Resultado final', $current['final_result'], 'money', 'fa-file-invoice'),
+            ],
+            columns: [
+                ['key' => 'category', 'label' => 'Categoria'],
+                ['key' => 'current', 'label' => 'Mês atual', 'format' => 'money'],
+                ['key' => 'previous', 'label' => 'Mês anterior', 'format' => 'money'],
+            ],
+            rows: $rows->all(),
+            paginator: null,
+            emptyText: 'Sem movimentação no mês selecionado.',
+            table: ['title' => 'DRE simplificado — '.$monthStart->translatedFormat('F/Y')],
+        );
+    }
+
+    protected function dreFigures(Carbon $start, Carbon $end): array
+    {
+        $salesSummary = Sale::query()
+            ->where('status', 'finalized')
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('COALESCE(SUM(total), 0) as revenue, COALESCE(SUM(cost_total), 0) as cost')
+            ->first();
+
+        $cancellations = (float) Sale::query()
+            ->where('status', 'cancelled')
+            ->whereBetween('updated_at', [$start, $end])
+            ->sum('total');
+
+        $grossRevenue = (float) $salesSummary->revenue;
+        $cogs = (float) $salesSummary->cost;
+        $grossMargin = round($grossRevenue - $cancellations - $cogs, 2);
+
+        $expensesByCategory = DB::table('payables')
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$start, $end])
+            ->groupBy('category')
+            ->get(['category', DB::raw('COALESCE(SUM(amount_paid), 0) as amount')])
+            ->map(fn ($row) => [
+                'key' => $row->category,
+                'label' => $this->payableCategoryLabel($row->category),
+                'amount' => (float) $row->amount,
+            ]);
+
+        $totalExpenses = round((float) $expensesByCategory->sum('amount'), 2);
+        $operatingResult = round($grossMargin - $totalExpenses, 2);
+
+        $losses = round((float) DB::table('inventory_movements')
+            ->where('type', 'loss')
+            ->whereBetween('occurred_at', [$start, $end])
+            ->sum(DB::raw('ABS(quantity_delta) * unit_cost')), 2);
+
+        $finalResult = round($operatingResult - $losses, 2);
+
+        return [
+            'gross_revenue' => round($grossRevenue, 2),
+            'cancellations' => round($cancellations, 2),
+            'cogs' => round($cogs, 2),
+            'gross_margin' => $grossMargin,
+            'expenses_by_category' => $expensesByCategory,
+            'total_expenses' => $totalExpenses,
+            'operating_result' => $operatingResult,
+            'losses' => $losses,
+            'final_result' => $finalResult,
+        ];
+    }
+
+    protected function payableCategoryLabel(string $category): string
+    {
+        return match ($category) {
+            'supplier' => 'Fornecedores',
+            'rent' => 'Aluguel',
+            'utilities' => 'Utilities',
+            default => 'Outros',
+        };
     }
 
     protected function cashDiscrepancyReport(array $filters): array
