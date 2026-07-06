@@ -17,6 +17,7 @@ class LocalAgentReceiptPayloadService
             'customer:id,name',
             'company:id,name,trade_name',
             'items.product:id,name,sold_by',
+            'items.promotion:id,name',
             'payments',
         ]);
 
@@ -43,6 +44,7 @@ class LocalAgentReceiptPayloadService
                     'total' => (float) $item->total,
                     'weighable' => $item->product?->sold_by === 'weight',
                     'unit' => $item->product?->sold_by === 'weight' ? 'KG' : 'UN',
+                    'promotion_name' => $item->promotion?->name,
                 ])
                 ->values()
                 ->all(),

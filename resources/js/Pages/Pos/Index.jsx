@@ -540,6 +540,7 @@ export default function PosIndex({
     const [recommendations, setRecommendations] = useState(normalizeRecommendations(initialRecommendations))
     const [loadingRecommendations, setLoadingRecommendations] = useState(false)
     const [cart, setCart] = useState([])
+    const [promotionInfo, setPromotionInfo] = useState({})
     const [selectedCartItemId, setSelectedCartItemId] = useState(null)
     const [selectedCustomer, setSelectedCustomer] = useState('')
     const [selectedCompany, setSelectedCompany] = useState('')
@@ -1115,6 +1116,30 @@ export default function PosIndex({
     }, [selectedCartItemId, recommendationProductIds])
 
     const pricing = useMemo(() => resolvePricing(cart, discountConfig, selectedCartItem), [cart, discountConfig, selectedCartItem])
+
+    useEffect(() => {
+        if (!cart.length) {
+            setPromotionInfo({})
+            return undefined
+        }
+
+        const timer = window.setTimeout(() => {
+            apiRequest('/api/pdv/promotions/evaluate', {
+                method: 'post',
+                data: { items: cart.map((item) => ({ id: item.id, qty: item.qty, unit_price: item.sale_price })) },
+            })
+                .then((response) => {
+                    const next = {}
+                    for (const line of response.items || []) {
+                        if (line.promotion_id) next[line.id] = line
+                    }
+                    setPromotionInfo(next)
+                })
+                .catch(() => {})
+        }, 300)
+
+        return () => window.clearTimeout(timer)
+    }, [cart])
 
     const discountPreview = useMemo(() => {
         const previewConfig = buildPreviewConfigFromDraft(discountDraft, pricing.subtotal)
@@ -3853,6 +3878,7 @@ export default function PosIndex({
         onSelectSuggestedProduct: handleSelectSuggestedProduct,
         paymentReady,
         pricing,
+        promotionInfo,
         selectedCartItemId,
         onSelectItem: setSelectedCartItemId,
         onAdjustItemQuantity: handleStepQuantity,
@@ -4810,6 +4836,7 @@ function PosWorkspace({
     onSelectSuggestedProduct,
     paymentReady,
     pricing,
+    promotionInfo = {},
     selectedCartItemId,
     onSelectItem,
     onAdjustItemQuantity,
@@ -5064,7 +5091,12 @@ function PosWorkspace({
                                     }}
                                 >
                                     <span className="pos-item-index">{index + 1}</span>
-                                    <span className="pos-item-name">{item.name}</span>
+                                    <span className="pos-item-name" title={item.name}>{item.name}</span>
+                                    {promotionInfo[item.id] ? (
+                                        <span className="pos-item-promotion-badge" title={`Promoção: ${promotionInfo[item.id].promotion_name}`}>
+                                            <i className="fa-solid fa-tag" />
+                                        </span>
+                                    ) : null}
                                     <span className="pos-item-divider" aria-hidden="true" />
                                     <div className="pos-item-qty-controls">
                                         <button

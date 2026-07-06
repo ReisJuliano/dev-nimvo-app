@@ -35,12 +35,13 @@ type paymentReceiptCustomer struct {
 }
 
 type paymentReceiptItem struct {
-	Name      string  `json:"name"`
-	Quantity  float64 `json:"quantity"`
-	UnitPrice float64 `json:"unit_price"`
-	Total     float64 `json:"total"`
-	Weighable bool    `json:"weighable"`
-	Unit      string  `json:"unit"`
+	Name          string  `json:"name"`
+	Quantity      float64 `json:"quantity"`
+	UnitPrice     float64 `json:"unit_price"`
+	Total         float64 `json:"total"`
+	Weighable     bool    `json:"weighable"`
+	Unit          string  `json:"unit"`
+	PromotionName string  `json:"promotion_name"`
 }
 
 type paymentReceiptPayment struct {
@@ -133,6 +134,9 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 					item.Weighable,
 				),
 			)
+			if strings.TrimSpace(item.PromotionName) != "" {
+				builder.line("  Promo: " + strings.TrimSpace(item.PromotionName))
+			}
 		}
 	}
 
@@ -294,6 +298,9 @@ func buildPaymentReceiptPreviewLines(config PrinterConfig, payload paymentReceip
 		)
 		for _, item := range payload.Items {
 			lines = append(lines, formatReceiptColumns(item.Name, item.Quantity, item.UnitPrice, item.Total, item.Weighable))
+			if strings.TrimSpace(item.PromotionName) != "" {
+				lines = append(lines, "  Promo: "+strings.TrimSpace(item.PromotionName))
+			}
 		}
 	}
 

@@ -20,6 +20,7 @@ class SaleItem extends Model
         'discount_percent',
         'discount_authorized_by',
         'discount_authorization_scope',
+        'promotion_id',
         'total',
         'profit',
     ];
@@ -47,5 +48,10 @@ class SaleItem extends Model
     public function discountAuthorizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'discount_authorized_by');
+    }
+
+    public function promotion(): BelongsTo
+    {
+        return $this->belongsTo(Promotion::class);
     }
 }

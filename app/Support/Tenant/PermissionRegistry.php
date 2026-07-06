@@ -41,6 +41,13 @@ class PermissionRegistry
                 ],
             ],
             [
+                'key' => 'promocoes',
+                'label' => 'Promoções',
+                'items' => [
+                    ['key' => 'promocoes.gerenciar', 'label' => 'Gerenciar promoções', 'description' => 'Permite criar, editar e desativar promoções aplicadas automaticamente no PDV.'],
+                ],
+            ],
+            [
                 'key' => 'produtos',
                 'label' => 'Produtos',
                 'items' => [

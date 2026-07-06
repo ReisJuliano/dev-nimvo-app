@@ -21,6 +21,7 @@ use App\Services\Tenant\PendingSaleService;
 use App\Services\Tenant\PosRecommendationService;
 use App\Services\Tenant\PosService;
 use App\Services\Tenant\ProductService;
+use App\Services\Tenant\PromotionEngine;
 use App\Services\Tenant\ScaleBarcodeService;
 use App\Services\Tenant\TenantSettingsService;
 use App\Support\TextSearch;
@@ -101,6 +102,42 @@ class PosApiController extends Controller
             'sale_price' => (float) $product->sale_price,
             'stock_quantity' => (float) $product->stock_quantity,
         ];
+    }
+
+    public function evaluatePromotions(Request $request, PromotionEngine $promotionEngine): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id' => ['required', 'integer'],
+            'items.*.qty' => ['required', 'numeric', 'gt:0'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $productIds = collect($validated['items'])->pluck('id')->unique();
+        $products = Product::query()->whereIn('id', $productIds)->get()->keyBy('id');
+
+        $lines = collect($validated['items'])
+            ->filter(fn (array $item) => $products->has($item['id']))
+            ->map(fn (array $item) => [
+                'product_id' => $item['id'],
+                'product' => $products->get($item['id']),
+                'quantity' => (float) $item['qty'],
+                'unit_price' => array_key_exists('unit_price', $item) && $item['unit_price'] !== null
+                    ? (float) $item['unit_price']
+                    : (float) $products->get($item['id'])->sale_price,
+            ]);
+
+        $evaluated = $promotionEngine->evaluate($lines);
+
+        return response()->json([
+            'items' => $evaluated->map(fn (array $line) => [
+                'id' => $line['product_id'],
+                'promotion_id' => $line['promotion_id'],
+                'promotion_name' => $line['promotion_name'],
+                'promotion_discount' => $line['promotion_discount'],
+                'promotion_effective_unit_price' => $line['promotion_effective_unit_price'],
+            ])->values(),
+        ]);
     }
 
     public function quickProduct(Request $request, ProductService $productService): JsonResponse

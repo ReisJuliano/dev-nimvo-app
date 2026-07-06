@@ -1,0 +1,53 @@
+.promotions-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.promotions-status-badge.ativa {
+    background: rgba(22, 163, 74, 0.15);
+    color: #16a34a;
+}
+
+.promotions-status-badge.agendada {
+    background: rgba(37, 99, 235, 0.15);
+    color: #2563eb;
+}
+
+.promotions-status-badge.expirada,
+.promotions-status-badge.inativa {
+    background: rgba(100, 116, 139, 0.15);
+    color: #64748b;
+}
+
+.promotions-tier-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.promotions-weekday-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.promotions-weekday-chip {
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.promotions-weekday-chip.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}

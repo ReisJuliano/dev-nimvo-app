@@ -27,6 +27,7 @@ class PosService
         protected PendingSaleService $pendingSaleService,
         protected ConditionalSaleService $conditionalSaleService,
         protected InventorySessionService $inventorySessionService,
+        protected PromotionEngine $promotionEngine,
     ) {
     }
 
@@ -84,23 +85,30 @@ class PosService
                 }
 
                 $lineSubtotal = round($unitPrice * $quantity, 2);
-                $lineDiscount = round((float) ($item['discount'] ?? 0), 2);
+                $manualDiscount = round((float) ($item['discount'] ?? 0), 2);
 
-                if ($lineDiscount < 0 || $lineDiscount > $lineSubtotal) {
+                if ($manualDiscount < 0 || $manualDiscount > $lineSubtotal) {
                     throw ValidationException::withMessages([
                         'items' => "Desconto inválido para {$product->name}.",
                     ]);
                 }
 
-                $discountPercent = array_key_exists('discount_percent', $item)
+                $promotion = $this->promotionEngine->evaluateLine($product, $quantity, $unitPrice);
+                $promotionDiscount = round((float) $promotion['promotion_discount'], 2);
+
+                $usesPromotion = $promotionDiscount > $manualDiscount;
+                $lineDiscount = $usesPromotion ? $promotionDiscount : $manualDiscount;
+                $promotionId = $usesPromotion ? $promotion['promotion_id'] : null;
+
+                $discountPercent = array_key_exists('discount_percent', $item) && !$usesPromotion
                     ? round((float) ($item['discount_percent'] ?? 0), 4)
                     : ($lineSubtotal > 0 && $lineDiscount > 0 ? round(($lineDiscount / $lineSubtotal) * 100, 4) : null);
 
-                $discountAuthorizer = $lineDiscount > 0
+                $discountAuthorizer = ($manualDiscount > 0 && !$usesPromotion)
                     ? ($item['discount_authorized_by'] ?? null)
                     : null;
 
-                if ($lineDiscount > 0 && !$discountAuthorizer) {
+                if ($manualDiscount > 0 && !$usesPromotion && !$discountAuthorizer) {
                     throw ValidationException::withMessages([
                         'items' => "O desconto do produto {$product->name} precisa de autorização gerencial.",
                     ]);
@@ -113,8 +121,9 @@ class PosService
                     'lineSubtotal' => $lineSubtotal,
                     'lineDiscount' => $lineDiscount,
                     'discountPercent' => $discountPercent,
-                    'discountScope' => $item['discount_scope'] ?? ($lineDiscount > 0 ? 'item' : null),
+                    'discountScope' => $usesPromotion ? 'promotion' : ($item['discount_scope'] ?? ($lineDiscount > 0 ? 'item' : null)),
                     'discountAuthorizedBy' => $discountAuthorizer,
+                    'promotionId' => $promotionId,
                 ];
             });
 
@@ -394,6 +403,10 @@ class PosService
 
                 if ($this->hasColumn('sale_items', 'discount_authorization_scope')) {
                     $saleItemAttributes['discount_authorization_scope'] = $entry['discountScope'];
+                }
+
+                if ($this->hasColumn('sale_items', 'promotion_id')) {
+                    $saleItemAttributes['promotion_id'] = $entry['promotionId'] ?? null;
                 }
 
                 $sale->items()->create($saleItemAttributes);

@@ -108,6 +108,7 @@ class ReportBrowserService
                 'stock-inbounds' => $this->stockInboundsReport($resolvedFilters),
                 'inventory-divergences' => $this->inventoryDivergencesReport($resolvedFilters),
                 'inventory-history' => $this->inventoryHistoryReport($resolvedFilters),
+                'promotions-impact' => $this->promotionsImpactReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
                 'cash-discrepancy' => $this->cashDiscrepancyReport($resolvedFilters),
                 'receivables-open' => $this->receivablesOpenReport($resolvedFilters),
@@ -182,6 +183,12 @@ class ReportBrowserService
                 'label' => 'Clientes',
                 'icon' => 'fa-users',
                 'description' => 'Ranking por faturamento e frequência de compra.',
+            ],
+            [
+                'key' => 'promotions',
+                'label' => 'Promoções',
+                'icon' => 'fa-tags',
+                'description' => 'Impacto das promoções aplicadas automaticamente no PDV.',
             ],
         ];
     }
@@ -268,6 +275,14 @@ class ReportBrowserService
                 'description' => 'Sessões de inventário realizadas com status, itens e divergência líquida.',
                 'icon' => 'fa-clock-rotate-left',
                 'tags' => ['Sessões', 'Status', 'Divergência'],
+            ],
+            [
+                'key' => 'promotions-impact',
+                'category' => 'promotions',
+                'title' => 'Impacto de promoções',
+                'description' => 'Quantidade vendida, faturamento, desconto concedido e margem por promoção.',
+                'icon' => 'fa-tags',
+                'tags' => ['Desconto', 'Margem', 'Faturamento'],
             ],
             [
                 'key' => 'stock-inbounds',
@@ -628,6 +643,16 @@ class ReportBrowserService
                     ['value' => 'status', 'label' => 'Status'],
                 ],
                 'default_sort' => ['by' => 'created_at', 'direction' => 'desc'],
+            ],
+            'promotions-impact' => [
+                'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'discount_granted', 'label' => 'Desconto concedido'],
+                    ['value' => 'revenue', 'label' => 'Faturamento'],
+                    ['value' => 'quantity_sold', 'label' => 'Quantidade'],
+                    ['value' => 'margin', 'label' => 'Margem'],
+                ],
+                'default_sort' => ['by' => 'discount_granted', 'direction' => 'desc'],
             ],
             'cashflow-daily' => [
                 'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
@@ -1669,6 +1694,65 @@ class ReportBrowserService
             paginator: $paginator,
             emptyText: 'Nenhuma sessão de inventário no período selecionado.',
             table: ['title' => 'Histórico de inventários'],
+        );
+    }
+
+    protected function promotionsImpactReport(array $filters): array
+    {
+        $query = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('promotions', 'promotions.id', '=', 'sale_items.promotion_id')
+            ->where('sales.status', 'finalized')
+            ->whereBetween('sales.created_at', [$filters['from'], $filters['to']])
+            ->groupBy('promotions.id', 'promotions.name', 'promotions.type')
+            ->selectRaw('
+                promotions.id as promotion_id,
+                promotions.name as promotion_name,
+                promotions.type as promotion_type,
+                COALESCE(SUM(sale_items.quantity), 0) as quantity_sold,
+                COALESCE(SUM(sale_items.total), 0) as revenue,
+                COALESCE(SUM(sale_items.discount_amount), 0) as discount_granted,
+                COALESCE(SUM(sale_items.profit), 0) as margin
+            ');
+
+        $summary = (clone $query)->get();
+
+        $this->applyOrderBy($query, [
+            'discount_granted' => 'discount_granted',
+            'revenue' => 'revenue',
+            'quantity_sold' => 'quantity_sold',
+            'margin' => 'margin',
+        ], $filters, 'discount_granted', 'desc');
+
+        $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
+
+        $rows = collect($paginator->items())->map(fn ($row) => [
+            'promotion_name' => $row->promotion_name,
+            'promotion_type' => $row->promotion_type,
+            'quantity_sold' => (float) $row->quantity_sold,
+            'revenue' => (float) $row->revenue,
+            'discount_granted' => (float) $row->discount_granted,
+            'margin' => (float) $row->margin,
+        ])->all();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Promoções com vendas', $summary->count(), 'number', 'fa-tags'),
+                $this->summaryCard('Faturamento com promoção', (float) $summary->sum('revenue'), 'money', 'fa-cash-register'),
+                $this->summaryCard('Desconto concedido', (float) $summary->sum('discount_granted'), 'money', 'fa-percent'),
+                $this->summaryCard('Margem', (float) $summary->sum('margin'), 'money', 'fa-chart-line'),
+            ],
+            columns: [
+                ['key' => 'promotion_name', 'label' => 'Promoção'],
+                ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'revenue', 'label' => 'Faturamento', 'format' => 'money'],
+                ['key' => 'discount_granted', 'label' => 'Desconto concedido', 'format' => 'money'],
+                ['key' => 'margin', 'label' => 'Margem', 'format' => 'money'],
+            ],
+            rows: $rows,
+            paginator: $paginator,
+            emptyText: 'Nenhuma venda com promoção no período selecionado.',
+            table: ['title' => 'Impacto de promoções'],
         );
     }
 

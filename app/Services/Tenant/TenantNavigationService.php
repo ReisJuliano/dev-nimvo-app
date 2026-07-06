@@ -62,6 +62,13 @@ class TenantNavigationService
                         'request_patterns' => ['inventario', 'api/inventory*'],
                     ],
                     [
+                        'href' => '/promocoes',
+                        'label' => 'Promoções',
+                        'icon' => 'fa-tags',
+                        'required_permission' => 'promocoes.gerenciar',
+                        'request_patterns' => ['promocoes', 'api/promotions*'],
+                    ],
+                    [
                         'href' => '/fiado',
                         'label' => 'Fiado',
                         'icon' => 'fa-handshake',

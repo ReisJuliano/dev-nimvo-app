@@ -43,6 +43,8 @@ use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
+use App\Http\Controllers\Tenant\Promotions\PromotionsApiController;
+use App\Http\Controllers\Tenant\Promotions\PromotionsPageController;
 use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
 use App\Http\Controllers\Tenant\Purchases\PurchasesPageController;
 use App\Http\Controllers\Tenant\Purchases\PurchaseReportController;
@@ -129,6 +131,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/entrada-estoque/manutencao', StockEntryMaintenancePageController::class)->name('stock.inbound.maintenance');
         Route::get('/entrada-estoque', [StockEntryPageController::class, 'entrada'])->name('stock.entry');
         Route::get('/inventario', InventoryPageController::class)->name('inventory.index');
+        Route::get('/promocoes', PromotionsPageController::class)->name('promotions.index');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {
@@ -190,6 +193,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/pdv/customers/quick', [PosApiController::class, 'quickCustomer'])->name('api.pos.customers.quick');
             Route::post('/pdv/companies/quick', [PosApiController::class, 'quickCompany'])->name('api.pos.companies.quick');
             Route::post('/pdv/discounts/authorize', [PosApiController::class, 'authorizeDiscount'])->name('api.pos.discounts.authorize');
+            Route::post('/pdv/promotions/evaluate', [PosApiController::class, 'evaluatePromotions'])->name('api.pos.promotions.evaluate');
+
+            Route::get('/promotions', [PromotionsApiController::class, 'index'])->name('api.promotions.index');
+            Route::post('/promotions', [PromotionsApiController::class, 'store'])->name('api.promotions.store');
+            Route::put('/promotions/{promotion}', [PromotionsApiController::class, 'update'])->name('api.promotions.update');
+            Route::delete('/promotions/{promotion}', [PromotionsApiController::class, 'destroy'])->name('api.promotions.destroy');
+            Route::post('/promotions/{promotion}/duplicate', [PromotionsApiController::class, 'duplicate'])->name('api.promotions.duplicate');
             Route::get('/pdv/pending-sale', [PosApiController::class, 'currentPendingSale'])->name('api.pos.pending-sale.show');
             Route::post('/pdv/pending-sale', [PosApiController::class, 'savePendingSale'])->name('api.pos.pending-sale.store');
             Route::post('/pdv/pending-sale/restore', [PosApiController::class, 'restorePendingSale'])->name('api.pos.pending-sale.restore');
