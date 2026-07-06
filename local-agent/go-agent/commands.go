@@ -171,6 +171,30 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (resul
 		}
 
 		return result, nil
+	case "print_label":
+		payload := labelPrintRequest{}
+		if err := decodeCommandPayload(command.Payload, &payload); err != nil {
+			return nil, err
+		}
+
+		outputPath, err := executeLocalPrint(config, "/v1/prints/label", payload, func() (string, error) {
+			return printLabel(config.Printer, payload)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		result := map[string]any{
+			"message":    "Etiquetas enviadas para a impressora local.",
+			"printed_at": time.Now().Format(time.RFC3339),
+			"labels":     len(payload.Labels),
+		}
+		if strings.TrimSpace(outputPath) != "" {
+			result["message"] = "Preview PDF das etiquetas gerado com sucesso."
+			result["output_file"] = outputPath
+		}
+
+		return result, nil
 	default:
 		return nil, fmt.Errorf("tipo de comando nao suportado neste agente: %s", command.Type)
 	}

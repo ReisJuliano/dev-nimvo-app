@@ -81,6 +81,43 @@ class LocalAgentPrintQueueService
         );
     }
 
+    public function queueLabelPrint(array $labels): array
+    {
+        $tenantId = tenant()?->getTenantKey();
+
+        if (! filled($tenantId)) {
+            return [
+                'status' => 'unavailable',
+                'message' => 'Não foi possível identificar o tenant para enfileirar a impressão.',
+            ];
+        }
+
+        $agent = $this->resolveAgent((string) $tenantId, 'print_label');
+
+        if (! $agent) {
+            return [
+                'status' => 'skipped',
+                'message' => 'Nenhum agente de impressão compatível com etiquetas foi encontrado para este tenant.',
+            ];
+        }
+
+        if (! $this->bridgeService->isOnline($agent)) {
+            return [
+                'status' => 'unavailable',
+                'message' => 'Agente local offline. Nenhuma etiqueta foi enviada para impressão.',
+            ];
+        }
+
+        $command = $this->commandService->queueLabelPrint($agent, (string) $tenantId, ['labels' => $labels]);
+
+        return [
+            'status' => 'queued',
+            'message' => 'Etiquetas enviadas para a fila do agente local.',
+            'command_id' => $command->id,
+            'queued_at' => optional($command->created_at)?->toIso8601String(),
+        ];
+    }
+
     protected function queueOperationReceipt(string $operationType, array $payload): array
     {
         $tenantId = tenant()?->getTenantKey();

@@ -144,6 +144,11 @@ func (server *localAgentHTTPServer) ServeHTTP(writer http.ResponseWriter, reques
 			return
 		}
 		server.handleOperationReceipt(writer, request)
+	case request.URL.Path == "/v1/prints/label" && request.Method == http.MethodPost:
+		if !server.authorize(writer, request) {
+			return
+		}
+		server.handleLabelPrint(writer, request)
 	case strings.HasPrefix(request.URL.Path, "/v1/workspaces/") && request.Method == http.MethodGet:
 		if !server.authorize(writer, request) {
 			return
@@ -329,6 +334,35 @@ func (server *localAgentHTTPServer) handleOperationReceipt(writer http.ResponseW
 	server.writeJSON(writer, http.StatusOK, map[string]any{
 		"status":      "printed",
 		"type":        payload.Type,
+		"printed_at":  time.Now().Format(time.RFC3339),
+		"output_file": outputPath,
+	})
+}
+
+func (server *localAgentHTTPServer) handleLabelPrint(writer http.ResponseWriter, request *http.Request) {
+	payload := labelPrintRequest{}
+	if err := server.decodeJSONBody(request, &payload); err != nil {
+		server.writeJSON(writer, http.StatusBadRequest, localAPIResponse{Status: "invalid_request", Error: err.Error()})
+		return
+	}
+
+	config, err := loadNormalizedAgentConfig(server.configPath)
+	if err != nil {
+		server.writeJSON(writer, http.StatusInternalServerError, localAPIResponse{Status: "error", Error: err.Error()})
+		return
+	}
+
+	outputPath, err := executeLocalPrint(config, "/v1/prints/label", payload, func() (string, error) {
+		return printLabel(config.Printer, payload)
+	})
+	if err != nil {
+		server.writeJSON(writer, http.StatusBadGateway, localAPIResponse{Status: "print_failed", Error: err.Error()})
+		return
+	}
+
+	server.writeJSON(writer, http.StatusOK, map[string]any{
+		"status":      "printed",
+		"labels":      len(payload.Labels),
 		"printed_at":  time.Now().Format(time.RFC3339),
 		"output_file": outputPath,
 	})

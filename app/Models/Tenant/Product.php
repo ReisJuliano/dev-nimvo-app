@@ -46,6 +46,7 @@ class Product extends Model
         'stock_quantity',
         'min_stock',
         'active',
+        'label_printed_at',
     ];
 
     protected $casts = [
@@ -61,6 +62,7 @@ class Product extends Model
         'pis_rate' => 'decimal:4',
         'cofins_rate' => 'decimal:4',
         'ipi_rate' => 'decimal:4',
+        'label_printed_at' => 'datetime',
     ];
 
     public function isWeighable(): bool

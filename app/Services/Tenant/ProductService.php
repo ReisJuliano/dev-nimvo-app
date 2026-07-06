@@ -56,6 +56,8 @@ class ProductService
             ? 'KG'
             : (strtoupper((string) ($data['unit'] ?? $product->unit ?? 'UN')) ?: 'UN');
 
+        $previousSalePrice = $product->exists ? (float) $product->sale_price : null;
+
         $product->fill([
             'code' => $data['code'],
             'barcode' => $data['barcode'] ?? null,
@@ -165,6 +167,10 @@ class ProductService
             $product->scale_code = $soldBy === 'weight' && filled($data['scale_code'] ?? null)
                 ? (int) $data['scale_code']
                 : null;
+        }
+
+        if ($this->productColumnExists('label_printed_at') && $previousSalePrice !== null && abs($previousSalePrice - (float) $product->sale_price) > 0.001) {
+            $product->label_printed_at = null;
         }
 
         $product->save();

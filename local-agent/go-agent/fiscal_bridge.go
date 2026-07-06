@@ -18,6 +18,7 @@ var printerCommandTypes = []string{
 	"print_test",
 	"print_fiscal_receipt",
 	"print_operation_receipt",
+	"print_label",
 }
 
 var fiscalBridgeCommandTypes = []string{

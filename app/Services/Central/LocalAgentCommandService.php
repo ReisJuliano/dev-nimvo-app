@@ -151,6 +151,18 @@ class LocalAgentCommandService
         ]);
     }
 
+    public function queueLabelPrint(LocalAgent $agent, string $tenantId, array $payload): LocalAgentCommand
+    {
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'type' => 'print_label',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
     public function claimNext(LocalAgent $agent, array $supportedTypes = []): ?LocalAgentCommand
     {
         return DB::connection('central')->transaction(function () use ($agent, $supportedTypes) {

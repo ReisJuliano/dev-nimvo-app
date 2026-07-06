@@ -1,0 +1,29 @@
+.labels-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.labels-checkbox-cell {
+    text-align: center;
+}
+
+.labels-pending-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: rgba(217, 119, 6, 0.15);
+    color: #d97706;
+}
+
+.labels-actions-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.75rem 0;
+    flex-wrap: wrap;
+}

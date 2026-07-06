@@ -38,6 +38,8 @@ use App\Http\Controllers\Tenant\Inventory\InventoryPageController;
 use App\Http\Controllers\Tenant\Inventory\InventorySessionApiController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryMaintenancePageController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryPageController;
+use App\Http\Controllers\Tenant\Labels\LabelsApiController;
+use App\Http\Controllers\Tenant\Labels\LabelsPageController;
 use App\Http\Controllers\Tenant\Payables\PayablesPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
@@ -132,6 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/entrada-estoque', [StockEntryPageController::class, 'entrada'])->name('stock.entry');
         Route::get('/inventario', InventoryPageController::class)->name('inventory.index');
         Route::get('/promocoes', PromotionsPageController::class)->name('promotions.index');
+        Route::get('/etiquetas', LabelsPageController::class)->name('labels.index');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {
@@ -200,6 +203,10 @@ Route::middleware('auth')->group(function () {
             Route::put('/promotions/{promotion}', [PromotionsApiController::class, 'update'])->name('api.promotions.update');
             Route::delete('/promotions/{promotion}', [PromotionsApiController::class, 'destroy'])->name('api.promotions.destroy');
             Route::post('/promotions/{promotion}/duplicate', [PromotionsApiController::class, 'duplicate'])->name('api.promotions.duplicate');
+
+            Route::get('/labels', [LabelsApiController::class, 'index'])->name('api.labels.index');
+            Route::post('/labels/print', [LabelsApiController::class, 'print'])->name('api.labels.print');
+            Route::post('/labels/pdf', [LabelsApiController::class, 'pdf'])->name('api.labels.pdf');
             Route::get('/pdv/pending-sale', [PosApiController::class, 'currentPendingSale'])->name('api.pos.pending-sale.show');
             Route::post('/pdv/pending-sale', [PosApiController::class, 'savePendingSale'])->name('api.pos.pending-sale.store');
             Route::post('/pdv/pending-sale/restore', [PosApiController::class, 'restorePendingSale'])->name('api.pos.pending-sale.restore');

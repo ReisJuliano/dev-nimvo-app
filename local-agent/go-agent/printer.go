@@ -171,6 +171,108 @@ func printPaymentReceipt(config PrinterConfig, payload paymentReceiptRequest) (s
 	return "", writeReceiptToPrinter(config, builder.bytes())
 }
 
+type labelPrintRequest struct {
+	Labels []labelItem `json:"labels"`
+}
+
+type labelItem struct {
+	Template       string   `json:"template"`
+	ProductID      int      `json:"product_id"`
+	Name           string   `json:"name"`
+	InternalCode   string   `json:"internal_code"`
+	Barcode        string   `json:"barcode"`
+	BarcodeType    string   `json:"barcode_type"`
+	Price          float64  `json:"price"`
+	UnitLabel      string   `json:"unit_label"`
+	Weighable      bool     `json:"weighable"`
+	Copies         int      `json:"copies"`
+	PromoOldPrice  *float64 `json:"promo_old_price"`
+	PromoNewPrice  *float64 `json:"promo_new_price"`
+}
+
+func printLabel(config PrinterConfig, payload labelPrintRequest) (string, error) {
+	if !config.Enabled {
+		return "", errors.New("a impressao local esta desativada neste agente")
+	}
+
+	if usePDF, notice := resolvePrintDestination(config); usePDF {
+		lines := withFallbackNotice(buildLabelPreviewLines(payload), notice)
+		return writeReceiptPreviewPDF(config, "etiquetas", lines)
+	}
+
+	builder := newEscposBuilder()
+	builder.init()
+
+	for _, label := range payload.Labels {
+		copies := maxInt(1, label.Copies)
+		for copyIndex := 0; copyIndex < copies; copyIndex++ {
+			builder.alignCenter()
+			builder.bold(true)
+			builder.line(label.Name)
+			builder.bold(false)
+
+			if label.PromoNewPrice != nil {
+				builder.line(fmt.Sprintf("De: R$ %s", formatCurrency(*label.PromoOldPrice)))
+				builder.fontSizeLarge()
+				builder.line(fmt.Sprintf("Por: R$ %s", formatCurrency(*label.PromoNewPrice)))
+				builder.fontSizeNormal()
+			} else {
+				unitSuffix := ""
+				if label.Weighable && label.UnitLabel != "" {
+					unitSuffix = "/" + label.UnitLabel
+				}
+				builder.fontSizeLarge()
+				builder.line(fmt.Sprintf("R$ %s%s", formatCurrency(label.Price), unitSuffix))
+				builder.fontSizeNormal()
+			}
+
+			builder.barcodeHeight(56)
+			builder.barcodeWidth(2)
+			builder.barcodeTextPosition(2)
+
+			if label.BarcodeType == "ean13" {
+				builder.barcodeEAN13(label.Barcode)
+			} else {
+				value := label.Barcode
+				if value == "" {
+					value = label.InternalCode
+				}
+				builder.barcodeCode128(value)
+			}
+
+			builder.feed(3)
+		}
+	}
+
+	builder.cut()
+
+	return "", writeReceiptToPrinter(config, builder.bytes())
+}
+
+func buildLabelPreviewLines(payload labelPrintRequest) []string {
+	lines := make([]string, 0, len(payload.Labels)*4)
+
+	for _, label := range payload.Labels {
+		copies := maxInt(1, label.Copies)
+		for copyIndex := 0; copyIndex < copies; copyIndex++ {
+			lines = append(lines, label.Name)
+			if label.PromoNewPrice != nil {
+				lines = append(lines, fmt.Sprintf("De: R$ %s  Por: R$ %s", formatCurrency(*label.PromoOldPrice), formatCurrency(*label.PromoNewPrice)))
+			} else {
+				unitSuffix := ""
+				if label.Weighable && label.UnitLabel != "" {
+					unitSuffix = "/" + label.UnitLabel
+				}
+				lines = append(lines, fmt.Sprintf("R$ %s%s", formatCurrency(label.Price), unitSuffix))
+			}
+			lines = append(lines, label.Barcode)
+			lines = append(lines, strings.Repeat("-", 24))
+		}
+	}
+
+	return lines
+}
+
 func writeReceiptToPrinter(config PrinterConfig, payload []byte) error {
 	writer, err := openPrinterWriter(config)
 	if err != nil {
@@ -553,6 +655,49 @@ func (builder *escposBuilder) logo(path string) {
 
 func (builder *escposBuilder) command(values ...byte) {
 	builder.buffer.Write(values)
+}
+
+func (builder *escposBuilder) barcodeHeight(dots byte) {
+	builder.command(0x1D, 0x68, dots)
+}
+
+func (builder *escposBuilder) barcodeWidth(width byte) {
+	builder.command(0x1D, 0x77, width)
+}
+
+func (builder *escposBuilder) barcodeTextPosition(position byte) {
+	builder.command(0x1D, 0x48, position)
+}
+
+func (builder *escposBuilder) barcodeEAN13(digits string) {
+	digits = strings.TrimSpace(digits)
+	if len(digits) < 12 {
+		return
+	}
+	if len(digits) > 13 {
+		digits = digits[:13]
+	}
+	data := []byte(digits)
+	builder.command(0x1D, 0x6B, 67, byte(len(data)))
+	builder.buffer.Write(data)
+}
+
+func (builder *escposBuilder) barcodeCode128(value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	payload := append([]byte{'{', 'B'}, []byte(value)...)
+	builder.command(0x1D, 0x6B, 73, byte(len(payload)))
+	builder.buffer.Write(payload)
+}
+
+func (builder *escposBuilder) fontSizeLarge() {
+	builder.command(0x1D, 0x21, 0x11)
+}
+
+func (builder *escposBuilder) fontSizeNormal() {
+	builder.command(0x1D, 0x21, 0x00)
 }
 
 func buildEscposLogo(path string, maxWidth int) ([]byte, error) {

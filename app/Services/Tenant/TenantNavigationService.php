@@ -69,6 +69,13 @@ class TenantNavigationService
                         'request_patterns' => ['promocoes', 'api/promotions*'],
                     ],
                     [
+                        'href' => '/etiquetas',
+                        'label' => 'Etiquetas',
+                        'icon' => 'fa-barcode',
+                        'required_permission' => 'produtos.imprimir_etiquetas',
+                        'request_patterns' => ['etiquetas', 'api/labels*'],
+                    ],
+                    [
                         'href' => '/fiado',
                         'label' => 'Fiado',
                         'icon' => 'fa-handshake',
