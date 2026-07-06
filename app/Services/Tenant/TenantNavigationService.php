@@ -76,11 +76,11 @@ class TenantNavigationService
                         'request_patterns' => ['etiquetas', 'api/labels*'],
                     ],
                     [
-                        'href' => '/fiado',
-                        'label' => 'Fiado',
+                        'href' => '/a-receber',
+                        'label' => 'A receber',
                         'icon' => 'fa-handshake',
                         'access_key' => 'prazo',
-                        'request_patterns' => ['a-prazo', 'fiado'],
+                        'request_patterns' => ['a-prazo', 'fiado', 'a-receber', 'api/receivables*'],
                     ],
                     [
                         'href' => '/clientes',
@@ -240,6 +240,7 @@ class TenantNavigationService
             'api/delivery*' => 'delivery',
             'api/fashion*' => 'moda',
             'api/fiado*' => 'prazo',
+            'api/receivables*' => 'prazo',
             'api/fiscal*' => 'fiscal_avancado',
             'api/purchases*' => 'compras',
             'api/stock*' => 'entrada_estoque',

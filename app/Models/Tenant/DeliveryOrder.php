@@ -27,6 +27,8 @@ class DeliveryOrder extends Model
         'dispatched_at',
         'delivered_at',
         'notes',
+        'payment_collected_at',
+        'payment_method',
     ];
 
     protected $casts = [
@@ -35,7 +37,13 @@ class DeliveryOrder extends Model
         'scheduled_for' => 'datetime',
         'dispatched_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'payment_collected_at' => 'datetime',
     ];
+
+    public function isPendingPayment(): bool
+    {
+        return $this->status === 'delivered' && $this->payment_collected_at === null;
+    }
 
     public function customer(): BelongsTo
     {

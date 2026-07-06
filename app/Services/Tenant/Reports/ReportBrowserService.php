@@ -12,6 +12,7 @@ use App\Models\Tenant\ProductExpiry;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\CashRegisterReportService;
+use App\Services\Tenant\ReceivablesOverviewService;
 use App\Support\TextSearch;
 use App\Support\Tenant\PaymentMethod;
 use Carbon\Carbon;
@@ -24,6 +25,7 @@ class ReportBrowserService
 {
     public function __construct(
         protected CashRegisterReportService $cashRegisterReportService,
+        protected ReceivablesOverviewService $receivablesOverviewService,
     ) {
     }
 
@@ -110,6 +112,8 @@ class ReportBrowserService
                 'inventory-divergences' => $this->inventoryDivergencesReport($resolvedFilters),
                 'inventory-history' => $this->inventoryHistoryReport($resolvedFilters),
                 'promotions-impact' => $this->promotionsImpactReport($resolvedFilters),
+                'receivables-aging' => $this->receivablesAgingReport($resolvedFilters),
+                'receivables-delinquency' => $this->receivablesDelinquencyReport($resolvedFilters),
                 'expiring-products' => $this->expiringProductsReport($resolvedFilters),
                 'losses-registered' => $this->lossesRegisteredReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
@@ -334,6 +338,22 @@ class ReportBrowserService
                 'description' => 'Clientes com limite, saldo fiado e disponibilidade.',
                 'icon' => 'fa-file-invoice-dollar',
                 'tags' => ['Limite', 'Carteira', 'Credito'],
+            ],
+            [
+                'key' => 'receivables-aging',
+                'category' => 'receivables',
+                'title' => 'A receber (aging)',
+                'description' => 'Fiado, condicionais em aberto e entregas não pagas consolidados por cliente, com idade do saldo.',
+                'icon' => 'fa-hourglass-half',
+                'tags' => ['Fiado', 'Condicional', 'Entrega'],
+            ],
+            [
+                'key' => 'receivables-delinquency',
+                'category' => 'receivables',
+                'title' => 'Inadimplência',
+                'description' => 'Clientes com saldo em aberto há mais de 60 dias e o último pagamento recebido.',
+                'icon' => 'fa-triangle-exclamation',
+                'tags' => ['+60 dias', 'Último pagamento'],
             ],
             [
                 'key' => 'customer-ranking',
@@ -727,6 +747,23 @@ class ReportBrowserService
                 ],
                 'default_sort' => ['by' => 'launched_credit', 'direction' => 'desc'],
                 'search_placeholder' => 'Cliente ou telefone',
+            ],
+            'receivables-aging' => [
+                'fields' => ['query', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'total', 'label' => 'Total'],
+                    ['value' => 'name', 'label' => 'Cliente'],
+                ],
+                'default_sort' => ['by' => 'total', 'direction' => 'desc'],
+                'search_placeholder' => 'Cliente',
+            ],
+            'receivables-delinquency' => [
+                'fields' => ['sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'total', 'label' => 'Saldo'],
+                    ['value' => 'name', 'label' => 'Cliente'],
+                ],
+                'default_sort' => ['by' => 'total', 'direction' => 'desc'],
             ],
             default => [
                 'fields' => ['scope', 'sort_by', 'sort_direction', 'per_page'],
@@ -2446,6 +2483,110 @@ class ReportBrowserService
             emptyText: 'Nenhum fechamento com quebra no recorte selecionado.',
             table: ['title' => 'Quebras de caixa'],
         );
+    }
+
+    protected function receivablesAgingReport(array $filters): array
+    {
+        $rows = $this->receivablesOverviewService->overview(['search' => $filters['query']]);
+
+        $summary = [
+            'total' => round((float) $rows->sum('total'), 2),
+            'credit_total' => round((float) $rows->sum('credit_balance'), 2),
+            'conditional_total' => round((float) $rows->sum('conditional_balance'), 2),
+            'delivery_total' => round((float) $rows->sum('delivery_balance'), 2),
+        ];
+
+        $bucketCounts = collect(['a_vencer', '1_30', '31_60', '61_90', '90_mais'])
+            ->map(fn (string $bucket) => [
+                'bucket' => $bucket,
+                'total' => round((float) $rows->where('aging_bucket', $bucket)->sum('total'), 2),
+            ]);
+
+        $sorted = $this->sortCollection($rows, $filters, [
+            'total' => 'total',
+            'name' => 'customer_name',
+        ], 'total', 'desc');
+
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Total a receber', $summary['total'], 'money', 'fa-hand-holding-dollar'),
+                $this->summaryCard('Fiado', $summary['credit_total'], 'money', 'fa-handshake'),
+                $this->summaryCard('Condicional em aberto', $summary['conditional_total'], 'money', 'fa-shirt'),
+                $this->summaryCard('Entregas não pagas', $summary['delivery_total'], 'money', 'fa-motorcycle'),
+            ],
+            charts: [
+                [
+                    'key' => 'receivables-aging-buckets',
+                    'type' => 'bar',
+                    'title' => 'Saldo por idade',
+                    'meta' => 'Dias em aberto',
+                    'data' => $bucketCounts->map(fn (array $row) => ['label' => $this->agingBucketLabel($row['bucket']), 'total' => $row['total']])->all(),
+                    'series' => [
+                        ['key' => 'total', 'label' => 'Saldo', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'customer_name', 'label' => 'Cliente'],
+                ['key' => 'credit_balance', 'label' => 'Fiado', 'format' => 'money'],
+                ['key' => 'conditional_balance', 'label' => 'Condicional', 'format' => 'money'],
+                ['key' => 'delivery_balance', 'label' => 'Entrega', 'format' => 'money'],
+                ['key' => 'total', 'label' => 'Total', 'format' => 'money'],
+                ['key' => 'aging_bucket_label', 'label' => 'Idade'],
+            ],
+            rows: collect($paginator->items())->map(fn (array $row) => [...$row, 'aging_bucket_label' => $this->agingBucketLabel($row['aging_bucket'])])->all(),
+            paginator: $paginator,
+            emptyText: 'Nenhum saldo a receber no momento.',
+            table: ['title' => 'Contas a receber'],
+        );
+    }
+
+    protected function receivablesDelinquencyReport(array $filters): array
+    {
+        $rows = $this->receivablesOverviewService->overview()
+            ->whereIn('aging_bucket', ['61_90', '90_mais'])
+            ->values();
+
+        $sorted = $this->sortCollection($rows, $filters, [
+            'total' => 'total',
+            'name' => 'customer_name',
+        ], 'total', 'desc');
+
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Clientes inadimplentes', $rows->count(), 'number', 'fa-triangle-exclamation'),
+                $this->summaryCard('Saldo em risco', round((float) $rows->sum('total'), 2), 'money', 'fa-sack-dollar'),
+            ],
+            columns: [
+                ['key' => 'customer_name', 'label' => 'Cliente'],
+                ['key' => 'total', 'label' => 'Saldo', 'format' => 'money'],
+                ['key' => 'aging_bucket_label', 'label' => 'Idade'],
+                ['key' => 'last_payment_label', 'label' => 'Último pagamento'],
+            ],
+            rows: collect($paginator->items())->map(fn (array $row) => [
+                ...$row,
+                'aging_bucket_label' => $this->agingBucketLabel($row['aging_bucket']),
+                'last_payment_label' => $row['last_payment_at'] ? Carbon::parse($row['last_payment_at'])->format('d/m/Y') : 'Nunca',
+            ])->all(),
+            paginator: $paginator,
+            emptyText: 'Nenhum cliente inadimplente há mais de 60 dias.',
+            table: ['title' => 'Inadimplência'],
+        );
+    }
+
+    protected function agingBucketLabel(string $bucket): string
+    {
+        return match ($bucket) {
+            'a_vencer' => 'A vencer',
+            '1_30' => '1-30 dias',
+            '31_60' => '31-60 dias',
+            '61_90' => '61-90 dias',
+            default => '+90 dias',
+        };
     }
 
     protected function receivablesOpenReport(array $filters): array

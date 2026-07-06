@@ -29,6 +29,7 @@ class PosService
         protected InventorySessionService $inventorySessionService,
         protected PromotionEngine $promotionEngine,
         protected ExpiryService $expiryService,
+        protected SupervisorAuthorizationService $supervisorAuthorizationService,
     ) {
     }
 
@@ -325,9 +326,19 @@ class PosService
                 $availableCredit = max(0, (float) $customer->credit_limit - $openCredit);
 
                 if ((float) $customer->credit_limit > 0 && $creditAmount > $availableCredit) {
-                    throw ValidationException::withMessages([
-                        'payments' => 'O valor do fiado ultrapassa o limite disponível deste cliente.',
-                    ]);
+                    $override = $payload['credit_limit_override'] ?? null;
+
+                    if (!is_array($override) || !filled($override['supervisor_user_id'] ?? null)) {
+                        throw ValidationException::withMessages([
+                            'payments' => 'O valor do fiado ultrapassa o limite disponível deste cliente.',
+                        ]);
+                    }
+
+                    $this->supervisorAuthorizationService->authorize(
+                        (int) $override['supervisor_user_id'],
+                        (string) ($override['supervisor_password'] ?? ''),
+                        ['reason' => 'limite_fiado_excedido', 'customer_id' => $customer->id],
+                    );
                 }
             }
 

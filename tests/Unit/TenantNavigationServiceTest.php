@@ -28,7 +28,7 @@ class TenantNavigationServiceTest extends TestCase
         $this->assertSame('/relatorios', $reportsShortcutItem['href']);
         $this->assertSame('relatorios_avancados', $reportsShortcutItem['access_key']);
         $this->assertNotNull($deferredPaymentItem);
-        $this->assertSame('/fiado', $deferredPaymentItem['href']);
+        $this->assertSame('/a-receber', $deferredPaymentItem['href']);
         $this->assertSame('prazo', $deferredPaymentItem['access_key']);
         $this->assertNotNull($legacyCashShortcutItem);
         $this->assertSame('/caixa', $legacyCashShortcutItem['href']);

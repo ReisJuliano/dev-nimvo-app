@@ -48,6 +48,8 @@ use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Controllers\Tenant\Promotions\PromotionsApiController;
 use App\Http\Controllers\Tenant\Promotions\PromotionsPageController;
 use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
+use App\Http\Controllers\Tenant\Receivables\ReceivablesApiController;
+use App\Http\Controllers\Tenant\Receivables\ReceivablesPageController;
 use App\Http\Controllers\Tenant\Purchases\PurchasesPageController;
 use App\Http\Controllers\Tenant\Purchases\PurchaseReportController;
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
@@ -120,6 +122,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/compras', PurchasesPageController::class)->name('purchases.index');
         Route::get('/contas-a-pagar', PayablesPageController::class)->name('payables.index');
         Route::get('/a-prazo', OperationsPageController::class)->defaults('module', 'a-prazo')->name('credit.index');
+        Route::get('/a-receber', ReceivablesPageController::class)->name('receivables.index');
         Route::get('/fiado', function (Request $request) {
             return redirect()->route('credit.index', array_filter([
                 'from' => $request->query('from'),
@@ -292,6 +295,11 @@ Route::middleware('auth')->group(function () {
             Route::post('/settings/tills', [TillSettingsController::class, 'store'])->name('api.settings.tills.store');
             Route::put('/settings/tills/{till}', [TillSettingsController::class, 'update'])->name('api.settings.tills.update');
             Route::post('/fiado/receber', [OperationsApiController::class, 'receiveCreditPayment'])->name('api.credit.receive');
+
+            Route::get('/receivables', [ReceivablesApiController::class, 'index'])->name('api.receivables.index');
+            Route::get('/receivables/customers/{customer}/statement', [ReceivablesApiController::class, 'statement'])->name('api.receivables.statement');
+            Route::post('/receivables/receive', [ReceivablesApiController::class, 'receive'])->name('api.receivables.receive');
+            Route::post('/receivables/deliveries/{deliveryOrder}/collect', [ReceivablesApiController::class, 'collectDelivery'])->name('api.receivables.deliveries.collect');
 
             Route::prefix('fashion')->group(function () {
                 Route::post('/promotions', [FashionModuleApiController::class, 'storePromotion'])->name('api.fashion.promotions.store');
