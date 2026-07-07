@@ -58,6 +58,24 @@ class LabelSheetPdfService
         ]);
     }
 
+    public function previewSingleLabel(array $label, LabelTemplate $template, array $layout): Response
+    {
+        $width = (float) $template->label_width_mm;
+        $height = (float) $template->label_height_mm;
+
+        $pdf = new Fpdf('P', 'mm', [$width, $height]);
+        $pdf->setAutoPageBreak(false);
+        $pdf->setMargins(0, 0, 0);
+        $pdf->addPage();
+
+        $this->drawLayoutLabel($pdf, $label, $layout, 0, 0);
+
+        return response($pdf->output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="preview-etiqueta.pdf"',
+        ]);
+    }
+
     protected function drawLabel(Fpdf $pdf, array $label, LabelTemplate $template, float $x, float $y, float $width, float $height): void
     {
         if ($template->hasLayout()) {
@@ -125,6 +143,7 @@ class LabelSheetPdfService
         }
 
         $raw = match ($element['binding'] ?? null) {
+            'static' => $element['text'] ?? '',
             'name' => $label['show_name'] ? $label['name'] : null,
             'price' => $label['show_price'] ? $this->formatMoney($label['price']).(($element['show_unit_suffix'] ?? false) && $label['unit_label'] ? '/'.$label['unit_label'] : '') : null,
             'promo_old_price' => $label['show_price'] && $label['promo_old_price'] !== null ? $this->formatMoney($label['promo_old_price']) : null,

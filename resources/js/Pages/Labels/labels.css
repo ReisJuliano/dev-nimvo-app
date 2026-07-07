@@ -27,3 +27,77 @@
     margin: 0.75rem 0;
     flex-wrap: wrap;
 }
+
+.layout-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.layout-editor-canvas-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    overflow: auto;
+}
+
+.layout-editor-canvas {
+    position: relative;
+    background: #ffffff;
+    border: 1px dashed #94a3b8;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+    touch-action: none;
+}
+
+.layout-editor-element {
+    position: absolute;
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    background: rgba(37, 99, 235, 0.06);
+    cursor: move;
+    display: flex;
+    align-items: flex-start;
+    overflow: hidden;
+}
+
+.layout-editor-element.is-selected {
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.15);
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+.layout-editor-element-label {
+    font-size: 0.65rem;
+    line-height: 1.1;
+    color: #1e293b;
+    padding: 2px 4px;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.layout-editor-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.layout-editor-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.layout-editor-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.layout-editor-panel-actions {
+    display: flex;
+    gap: 0.25rem;
+}

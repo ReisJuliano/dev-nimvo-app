@@ -171,6 +171,7 @@ export default function LabelTemplatesIndex() {
                     onRowClick={(row) => openEdit(row)}
                     emptyState={<p>{loading ? 'Carregando...' : 'Nenhum padrão de etiqueta cadastrado.'}</p>}
                     getRowActions={(row) => [
+                        { key: 'layout', icon: 'fa-object-group', label: 'Editar layout', href: `/etiquetas/padroes/${row.id}/layout` },
                         { key: 'delete', icon: 'fa-trash', label: 'Excluir', onClick: () => void removeTemplate(row) },
                     ]}
                 />

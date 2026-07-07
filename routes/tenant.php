@@ -40,6 +40,7 @@ use App\Http\Controllers\Tenant\Inventory\StockEntryMaintenancePageController;
 use App\Http\Controllers\Tenant\Inventory\StockEntryPageController;
 use App\Http\Controllers\Tenant\Labels\LabelsApiController;
 use App\Http\Controllers\Tenant\Labels\LabelsPageController;
+use App\Http\Controllers\Tenant\Labels\LabelLayoutEditorPageController;
 use App\Http\Controllers\Tenant\Labels\LabelTemplatesApiController;
 use App\Http\Controllers\Tenant\Labels\LabelTemplatesPageController;
 use App\Http\Controllers\Tenant\Payables\PayablesPageController;
@@ -141,6 +142,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/promocoes', PromotionsPageController::class)->name('promotions.index');
         Route::get('/etiquetas', LabelsPageController::class)->name('labels.index');
         Route::get('/etiquetas/padroes', LabelTemplatesPageController::class)->name('labels.templates.index');
+        Route::get('/etiquetas/padroes/{labelTemplate}/layout', LabelLayoutEditorPageController::class)->name('labels.templates.layout.edit');
         Route::get('/relatorios', OperationsPageController::class)->defaults('module', 'relatorios')->name('reports.index');
         Route::get('/relatorios/ver/{report}', ReportPageController::class)->name('reports.show');
         Route::get('/vendas', function (Request $request) {
@@ -216,7 +218,10 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/labels/templates', [LabelTemplatesApiController::class, 'index'])->name('api.labels.templates.index');
             Route::post('/labels/templates', [LabelTemplatesApiController::class, 'store'])->name('api.labels.templates.store');
+            Route::get('/labels/templates/{labelTemplate}', [LabelTemplatesApiController::class, 'show'])->name('api.labels.templates.show');
             Route::put('/labels/templates/{labelTemplate}', [LabelTemplatesApiController::class, 'update'])->name('api.labels.templates.update');
+            Route::put('/labels/templates/{labelTemplate}/layout', [LabelTemplatesApiController::class, 'updateLayout'])->name('api.labels.templates.layout.update');
+            Route::post('/labels/templates/{labelTemplate}/layout/preview', [LabelTemplatesApiController::class, 'previewLayout'])->name('api.labels.templates.layout.preview');
             Route::delete('/labels/templates/{labelTemplate}', [LabelTemplatesApiController::class, 'destroy'])->name('api.labels.templates.destroy');
             Route::get('/pdv/pending-sale', [PosApiController::class, 'currentPendingSale'])->name('api.pos.pending-sale.show');
             Route::post('/pdv/pending-sale', [PosApiController::class, 'savePendingSale'])->name('api.pos.pending-sale.store');

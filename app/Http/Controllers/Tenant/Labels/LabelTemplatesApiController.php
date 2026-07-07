@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Tenant\Labels;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\LabelTemplate;
+use App\Services\Tenant\LabelSheetPdfService;
+use App\Support\Labels\LegacyLabelLayoutSynthesizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Validation\Rule;
 
 class LabelTemplatesApiController extends Controller
@@ -21,6 +24,13 @@ class LabelTemplatesApiController extends Controller
             ->map(fn (LabelTemplate $template) => $this->serialize($template));
 
         return response()->json(['templates' => $templates]);
+    }
+
+    public function show(LabelTemplate $labelTemplate): JsonResponse
+    {
+        $this->authorizeManage();
+
+        return response()->json(['template' => $this->serialize($labelTemplate)]);
     }
 
     public function store(Request $request): JsonResponse
@@ -57,6 +67,38 @@ class LabelTemplatesApiController extends Controller
             'message' => 'Padrão de etiqueta atualizado com sucesso.',
             'template' => $this->serialize($labelTemplate->fresh()),
         ]);
+    }
+
+    public function updateLayout(Request $request, LabelTemplate $labelTemplate): JsonResponse
+    {
+        $this->authorizeManage();
+
+        $validated = $request->validate([
+            'layout' => ['nullable', 'array'],
+            'layout.version' => ['required_with:layout', 'integer'],
+            'layout.elements' => ['required_with:layout', 'array'],
+            'layout.elements.*.id' => ['required', 'string'],
+            'layout.elements.*.type' => ['required', 'string', Rule::in(['shape', 'text', 'barcode'])],
+        ]);
+
+        $labelTemplate->update(['layout' => $validated['layout'] ?? null]);
+
+        return response()->json([
+            'message' => 'Layout atualizado com sucesso.',
+            'template' => $this->serialize($labelTemplate->fresh()),
+        ]);
+    }
+
+    public function previewLayout(Request $request, LabelTemplate $labelTemplate, LabelSheetPdfService $labelSheetPdfService): HttpResponse
+    {
+        $this->authorizeManage();
+
+        $validated = $request->validate([
+            'layout' => ['required', 'array'],
+            'layout.elements' => ['required', 'array'],
+        ]);
+
+        return $labelSheetPdfService->previewSingleLabel($this->samplePayload($labelTemplate), $labelTemplate, $validated['layout']);
     }
 
     public function destroy(LabelTemplate $labelTemplate): JsonResponse
@@ -112,6 +154,22 @@ class LabelTemplatesApiController extends Controller
             'gap_x_mm' => (float) $template->gap_x_mm,
             'gap_y_mm' => (float) $template->gap_y_mm,
             'is_default' => $template->is_default,
+            'layout' => $template->layout ?? (new LegacyLabelLayoutSynthesizer())->fromTemplate($template),
+        ];
+    }
+
+    protected function samplePayload(LabelTemplate $template): array
+    {
+        return [
+            'show_name' => $template->show_name,
+            'name' => 'Produto de Exemplo 500g',
+            'barcode' => '7891234567895',
+            'barcode_type' => $template->barcode_mode === 'auto' ? 'ean13' : $template->barcode_mode,
+            'show_price' => $template->show_price,
+            'price' => 19.9,
+            'unit_label' => null,
+            'promo_old_price' => $template->show_promo ? 24.9 : null,
+            'promo_new_price' => $template->show_promo ? 19.9 : null,
         ];
     }
 
