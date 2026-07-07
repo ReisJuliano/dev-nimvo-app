@@ -26,6 +26,7 @@ class LabelTemplate extends Model
         'gap_x_mm',
         'gap_y_mm',
         'is_default',
+        'layout',
     ];
 
     protected $casts = [
@@ -41,5 +42,11 @@ class LabelTemplate extends Model
         'gap_x_mm' => 'decimal:2',
         'gap_y_mm' => 'decimal:2',
         'is_default' => 'boolean',
+        'layout' => 'array',
     ];
+
+    public function hasLayout(): bool
+    {
+        return ! empty($this->layout['elements']);
+    }
 }

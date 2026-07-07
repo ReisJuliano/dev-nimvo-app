@@ -48,7 +48,7 @@ class LabelSheetPdfService
                 $x = $grid['margin_left'] + ($column * ($grid['label_width'] + $grid['gap_x']));
                 $y = $grid['margin_top'] + ($row * ($grid['label_height'] + $grid['gap_y']));
 
-                $this->drawLabel($pdf, $label, $x, $y, $grid['label_width'], $grid['label_height']);
+                $this->drawLabel($pdf, $label, $template, $x, $y, $grid['label_width'], $grid['label_height']);
             }
         });
 
@@ -58,7 +58,130 @@ class LabelSheetPdfService
         ]);
     }
 
-    protected function drawLabel(Fpdf $pdf, array $label, float $x, float $y, float $width, float $height): void
+    protected function drawLabel(Fpdf $pdf, array $label, LabelTemplate $template, float $x, float $y, float $width, float $height): void
+    {
+        if ($template->hasLayout()) {
+            $this->drawLayoutLabel($pdf, $label, $template->layout, $x, $y);
+
+            return;
+        }
+
+        $this->drawLegacyLabel($pdf, $label, $x, $y, $width, $height);
+    }
+
+    protected function drawLayoutLabel(Fpdf $pdf, array $label, array $layout, float $x, float $y): void
+    {
+        foreach ($layout['elements'] as $element) {
+            match ($element['type']) {
+                'shape' => $this->drawShapeElement($pdf, $element, $x, $y),
+                'text' => $this->drawTextElement($pdf, $element, $label, $x, $y),
+                'barcode' => $this->drawBarcodeElement($pdf, $element, $label, $x, $y),
+                default => null,
+            };
+        }
+    }
+
+    protected function drawShapeElement(Fpdf $pdf, array $element, float $x, float $y): void
+    {
+        $style = 'D';
+
+        if (! empty($element['fill_color'])) {
+            [$r, $g, $b] = $this->hexToRgb($element['fill_color']);
+            $pdf->setFillColor($r, $g, $b);
+            $style = 'DF';
+        }
+
+        [$r, $g, $b] = $this->hexToRgb($element['stroke_color'] ?? '#000000');
+        $pdf->setDrawColor($r, $g, $b);
+        $pdf->setLineWidth((float) ($element['stroke_width_mm'] ?? 0.2));
+
+        $pdf->rect($x + $element['x_mm'], $y + $element['y_mm'], $element['width_mm'], $element['height_mm'], $style);
+    }
+
+    protected function drawTextElement(Fpdf $pdf, array $element, array $label, float $x, float $y): void
+    {
+        $value = $this->resolveTextValue($element, $label);
+
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        $fontSize = (float) ($element['font_size_pt'] ?? 8);
+        $style = ($element['bold'] ?? false ? 'B' : '').($element['italic'] ?? false ? 'I' : '').($element['underline'] ?? false ? 'U' : '');
+
+        [$r, $g, $b] = $this->hexToRgb($element['color'] ?? '#000000');
+        $pdf->setTextColor($r, $g, $b);
+        $pdf->setFont($this->pdfFont($element['font_family'] ?? 'helvetica'), $style, $fontSize);
+        $pdf->setXY($x + $element['x_mm'], $y + $element['y_mm']);
+
+        $lineHeight = $fontSize * 0.3528 * 1.15;
+        $pdf->multiCell($element['width_mm'], $lineHeight, $this->pdfText($value), 0, $this->pdfAlign($element['align'] ?? 'left'));
+    }
+
+    protected function resolveTextValue(array $element, array $label): ?string
+    {
+        if (($element['hide_when_promo_active'] ?? false) && $label['promo_new_price'] !== null) {
+            return null;
+        }
+
+        $raw = match ($element['binding'] ?? null) {
+            'name' => $label['show_name'] ? $label['name'] : null,
+            'price' => $label['show_price'] ? $this->formatMoney($label['price']).(($element['show_unit_suffix'] ?? false) && $label['unit_label'] ? '/'.$label['unit_label'] : '') : null,
+            'promo_old_price' => $label['show_price'] && $label['promo_old_price'] !== null ? $this->formatMoney($label['promo_old_price']) : null,
+            'promo_new_price' => $label['show_price'] && $label['promo_new_price'] !== null ? $this->formatMoney($label['promo_new_price']) : null,
+            default => null,
+        };
+
+        if ($raw === null) {
+            return null;
+        }
+
+        return ($element['prefix'] ?? '').$raw;
+    }
+
+    protected function drawBarcodeElement(Fpdf $pdf, array $element, array $label, float $x, float $y): void
+    {
+        if ($label['barcode_type'] === 'none' || ! ($element['show_human_readable'] ?? true)) {
+            return;
+        }
+
+        [$r, $g, $b] = $this->hexToRgb($element['color'] ?? '#000000');
+        $pdf->setTextColor($r, $g, $b);
+        $pdf->setFont('Arial', '', 7);
+        $pdf->setXY($x + $element['x_mm'], $y + $element['y_mm']);
+        $pdf->multiCell($element['width_mm'], $element['height_mm'], $this->pdfText($label['barcode']), 0, 'C');
+    }
+
+    protected function pdfFont(string $fontFamily): string
+    {
+        return match (strtolower($fontFamily)) {
+            'times' => 'Times',
+            'courier' => 'Courier',
+            default => 'Arial',
+        };
+    }
+
+    protected function pdfAlign(string $align): string
+    {
+        return match ($align) {
+            'center' => 'C',
+            'right' => 'R',
+            default => 'L',
+        };
+    }
+
+    protected function hexToRgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+
+        return [
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+        ];
+    }
+
+    protected function drawLegacyLabel(Fpdf $pdf, array $label, float $x, float $y, float $width, float $height): void
     {
         $pdf->rect($x, $y, $width, $height);
 
