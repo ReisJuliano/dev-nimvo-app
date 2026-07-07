@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Tenant\Labels;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Category;
+use App\Models\Tenant\LabelTemplate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,6 +16,10 @@ class LabelsPageController extends Controller
 
         return Inertia::render('Labels/Index', [
             'categories' => Category::query()->where('active', true)->orderBy('name')->get(['id', 'name']),
+            'templates' => LabelTemplate::query()
+                ->orderByDesc('is_default')
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_default']),
         ]);
     }
 }

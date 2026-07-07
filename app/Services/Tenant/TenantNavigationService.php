@@ -80,7 +80,7 @@ class TenantNavigationService
                         'label' => 'Etiquetas',
                         'icon' => 'fa-barcode',
                         'required_permission' => 'produtos.imprimir_etiquetas',
-                        'request_patterns' => ['etiquetas', 'api/labels*'],
+                        'request_patterns' => ['etiquetas*', 'api/labels*'],
                     ],
                     [
                         'href' => '/a-receber',

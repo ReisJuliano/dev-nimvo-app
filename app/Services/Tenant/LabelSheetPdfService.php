@@ -2,28 +2,29 @@
 
 namespace App\Services\Tenant;
 
+use App\Models\Tenant\LabelTemplate;
 use NFePHP\DA\Legacy\FPDF\Fpdf;
 use Symfony\Component\HttpFoundation\Response;
 
 class LabelSheetPdfService
 {
-    /**
-     * Presets de folha de etiqueta adesiva A4 (medidas em mm, aproximadas —
-     * ajustar conforme a folha real do lojista).
-     */
-    public const PRESETS = [
-        'pimaco_6180' => ['columns' => 3, 'rows' => 9, 'label_width' => 66.7, 'label_height' => 25.4, 'margin_left' => 4.5, 'margin_top' => 13.5, 'gap_x' => 3, 'gap_y' => 0],
-        'pimaco_6081' => ['columns' => 2, 'rows' => 5, 'label_width' => 99.6, 'label_height' => 57.0, 'margin_left' => 5, 'margin_top' => 13, 'gap_x' => 5, 'gap_y' => 0],
-    ];
-
     public function __construct(
         protected LabelPayloadService $labelPayloadService,
     ) {
     }
 
-    public function build(array $products, string $template, string $preset = 'pimaco_6180', int $copiesPerProduct = 1): Response
+    public function build(array $products, LabelTemplate $template, int $copiesPerProduct = 1): Response
     {
-        $grid = self::PRESETS[$preset] ?? self::PRESETS['pimaco_6180'];
+        $grid = [
+            'columns' => $template->columns,
+            'rows' => $template->rows,
+            'label_width' => (float) $template->label_width_mm,
+            'label_height' => (float) $template->label_height_mm,
+            'margin_left' => (float) $template->margin_left_mm,
+            'margin_top' => (float) $template->margin_top_mm,
+            'gap_x' => (float) $template->gap_x_mm,
+            'gap_y' => (float) $template->gap_y_mm,
+        ];
 
         $labels = collect($products)
             ->flatMap(fn ($product) => array_fill(0, max(1, $copiesPerProduct), $this->labelPayloadService->build($product, $template)))
@@ -61,26 +62,32 @@ class LabelSheetPdfService
     {
         $pdf->rect($x, $y, $width, $height);
 
-        $pdf->setXY($x + 2, $y + 1.5);
-        $pdf->setFont('Arial', 'B', 8);
-        $pdf->multiCell($width - 4, 3.2, $this->pdfText($label['name']), 0, 'L');
-
-        if ($label['promo_new_price'] !== null) {
-            $pdf->setXY($x + 2, $y + $height - 12);
-            $pdf->setFont('Arial', '', 7);
-            $pdf->cell($width - 4, 3, 'De: '.$this->pdfText($this->formatMoney($label['promo_old_price'])), 0, 2);
-            $pdf->setFont('Arial', 'B', 14);
-            $pdf->cell($width - 4, 6, 'Por: '.$this->pdfText($this->formatMoney($label['promo_new_price'])), 0, 2);
-        } else {
-            $pdf->setXY($x + 2, $y + $height - 10);
-            $pdf->setFont('Arial', 'B', 14);
-            $unitSuffix = $label['unit_label'] ? '/'.$label['unit_label'] : '';
-            $pdf->cell($width - 4, 6, $this->pdfText($this->formatMoney($label['price']).$unitSuffix), 0, 2);
+        if ($label['show_name']) {
+            $pdf->setXY($x + 2, $y + 1.5);
+            $pdf->setFont('Arial', 'B', 8);
+            $pdf->multiCell($width - 4, 3.2, $this->pdfText($label['name']), 0, 'L');
         }
 
-        $pdf->setXY($x + 2, $y + $height - 4);
-        $pdf->setFont('Arial', '', 7);
-        $pdf->cell($width - 4, 3, $this->pdfText($label['barcode']), 0, 0, 'C');
+        if ($label['show_price']) {
+            if ($label['promo_new_price'] !== null) {
+                $pdf->setXY($x + 2, $y + $height - 12);
+                $pdf->setFont('Arial', '', 7);
+                $pdf->cell($width - 4, 3, 'De: '.$this->pdfText($this->formatMoney($label['promo_old_price'])), 0, 2);
+                $pdf->setFont('Arial', 'B', 14);
+                $pdf->cell($width - 4, 6, 'Por: '.$this->pdfText($this->formatMoney($label['promo_new_price'])), 0, 2);
+            } else {
+                $pdf->setXY($x + 2, $y + $height - 10);
+                $pdf->setFont('Arial', 'B', 14);
+                $unitSuffix = $label['unit_label'] ? '/'.$label['unit_label'] : '';
+                $pdf->cell($width - 4, 6, $this->pdfText($this->formatMoney($label['price']).$unitSuffix), 0, 2);
+            }
+        }
+
+        if ($label['barcode_type'] !== 'none') {
+            $pdf->setXY($x + 2, $y + $height - 4);
+            $pdf->setFont('Arial', '', 7);
+            $pdf->cell($width - 4, 3, $this->pdfText($label['barcode']), 0, 0, 'C');
+        }
     }
 
     protected function formatMoney(float $value): string

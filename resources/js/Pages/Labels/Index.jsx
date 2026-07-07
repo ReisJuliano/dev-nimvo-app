@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { Link } from '@inertiajs/react'
 import './labels.css'
 import PageContainer from '@/Components/UI/PageContainer'
 import DenseTable from '@/Components/UI/DenseTable'
@@ -6,28 +7,22 @@ import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 import { formatMoney, formatDateTime } from '@/lib/format'
 
-const TEMPLATE_LABELS = {
-    gondola: 'Gôndola padrão',
-    oferta: 'Gôndola de oferta (De/Por)',
-    adesiva_ean: 'Adesiva com EAN-13',
-    adesiva_interno: 'Adesiva com código interno (Code-128)',
-}
-
-export default function LabelsIndex({ categories = [] }) {
+export default function LabelsIndex({ categories = [], templates = [] }) {
     const [products, setProducts] = useState([])
+    const [hasSearched, setHasSearched] = useState(false)
     const [loading, setLoading] = useState(false)
     const [feedback, setFeedback] = useState(null)
     const [search, setSearch] = useState('')
     const [categoryId, setCategoryId] = useState('')
     const [pendingOnly, setPendingOnly] = useState(true)
     const [selectedIds, setSelectedIds] = useState(new Set())
-    const [template, setTemplate] = useState('gondola')
+    const [templateId, setTemplateId] = useState(() => (templates.find((item) => item.is_default) || templates[0])?.id ?? '')
     const [copies, setCopies] = useState(1)
-    const [preset, setPreset] = useState('pimaco_6180')
     const [printing, setPrinting] = useState(false)
 
     async function refresh() {
         setLoading(true)
+        setHasSearched(true)
         try {
             const query = new URLSearchParams({
                 ...(search ? { search } : {}),
@@ -42,11 +37,6 @@ export default function LabelsIndex({ categories = [] }) {
             setLoading(false)
         }
     }
-
-    useEffect(() => {
-        void refresh()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, categoryId, pendingOnly])
 
     function toggleSelection(id) {
         setSelectedIds((current) => {
@@ -72,7 +62,7 @@ export default function LabelsIndex({ categories = [] }) {
         try {
             const response = await apiRequest('/api/labels/print', {
                 method: 'post',
-                data: { product_ids: Array.from(selectedIds), template, copies },
+                data: { product_ids: Array.from(selectedIds), template_id: templateId, copies },
             })
             setFeedback({ type: response.status === 'queued' ? 'success' : 'warning', text: response.message })
             if (response.status === 'queued') {
@@ -96,7 +86,7 @@ export default function LabelsIndex({ categories = [] }) {
             const response = await window.axios({
                 url: '/api/labels/pdf',
                 method: 'post',
-                data: { product_ids: Array.from(selectedIds), template, copies, preset },
+                data: { product_ids: Array.from(selectedIds), template_id: templateId, copies },
                 responseType: 'blob',
             })
 
@@ -143,7 +133,13 @@ export default function LabelsIndex({ categories = [] }) {
                         <input type="checkbox" checked={pendingOnly} onChange={(event) => setPendingOnly(event.target.checked)} />
                         {' '}Somente pendentes (preço alterado desde a última etiqueta)
                     </label>
+                    <button type="button" className="ui-button" onClick={refresh} disabled={loading}>
+                        <i className="fa-solid fa-magnifying-glass" /> {loading ? 'Buscando...' : 'Buscar'}
+                    </button>
                     <button type="button" className="ui-button-ghost" onClick={selectAllVisible}>Selecionar todos visíveis</button>
+                    <Link href="/etiquetas/padroes" className="ui-button-ghost">
+                        <i className="fa-solid fa-sliders" /> Gerenciar padrões
+                    </Link>
                 </div>
 
                 <DenseTable
@@ -170,15 +166,23 @@ export default function LabelsIndex({ categories = [] }) {
                     rows={rows}
                     rowKey="id"
                     onRowClick={(row) => toggleSelection(row.id)}
-                    emptyState={<p>{loading ? 'Carregando...' : 'Nenhum produto encontrado.'}</p>}
+                    emptyState={(
+                        <p>
+                            {loading
+                                ? 'Carregando...'
+                                : hasSearched
+                                    ? 'Nenhum produto encontrado.'
+                                    : 'Use os filtros acima e clique em "Buscar" para listar os produtos.'}
+                        </p>
+                    )}
                 />
 
                 <div className="labels-actions-bar">
                     <label>
-                        <span>Modelo</span>
-                        <select value={template} onChange={(event) => setTemplate(event.target.value)}>
-                            {Object.entries(TEMPLATE_LABELS).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
+                        <span>Padrão de etiqueta</span>
+                        <select value={templateId} onChange={(event) => setTemplateId(Number(event.target.value))}>
+                            {templates.map((item) => (
+                                <option key={item.id} value={item.id}>{item.name}</option>
                             ))}
                         </select>
                     </label>
@@ -186,18 +190,10 @@ export default function LabelsIndex({ categories = [] }) {
                         <span>Cópias por produto</span>
                         <input className="ui-input" type="number" min="1" max="20" value={copies} onChange={(event) => setCopies(Number(event.target.value) || 1)} style={{ width: '80px' }} />
                     </label>
-                    <button type="button" className="ui-button" onClick={submitPrint} disabled={printing}>
+                    <button type="button" className="ui-button" onClick={submitPrint} disabled={printing || !templateId}>
                         <i className="fa-solid fa-print" /> {printing ? 'Enviando...' : 'Imprimir na térmica'}
                     </button>
-
-                    <label>
-                        <span>Folha A4</span>
-                        <select value={preset} onChange={(event) => setPreset(event.target.value)}>
-                            <option value="pimaco_6180">Pimaco 6180 (66,7 x 25,4mm)</option>
-                            <option value="pimaco_6081">Pimaco 6081 (99,6 x 57mm)</option>
-                        </select>
-                    </label>
-                    <button type="button" className="ui-button-ghost" onClick={downloadPdf}>
+                    <button type="button" className="ui-button-ghost" onClick={downloadPdf} disabled={!templateId}>
                         <i className="fa-solid fa-file-pdf" /> Baixar PDF A4
                     </button>
                 </div>

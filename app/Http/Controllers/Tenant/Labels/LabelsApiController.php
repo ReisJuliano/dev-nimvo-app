@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tenant\Labels;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\LabelTemplate;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Purchase;
 use App\Services\Tenant\LabelPayloadService;
@@ -11,7 +12,6 @@ use App\Services\Tenant\LocalAgentPrintQueueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Validation\Rule;
 
 class LabelsApiController extends Controller
 {
@@ -71,9 +71,10 @@ class LabelsApiController extends Controller
         $this->authorizeManage();
 
         $validated = $this->validateRequest($request);
+        $template = LabelTemplate::query()->findOrFail($validated['template_id']);
         $products = Product::query()->whereIn('id', $validated['product_ids'])->get();
 
-        $labels = $products->map(fn (Product $product) => $labelPayloadService->build($product, $validated['template'], $validated['copies']))->all();
+        $labels = $products->map(fn (Product $product) => $labelPayloadService->build($product, $template, $validated['copies']))->all();
 
         $result = $printQueueService->queueLabelPrint($labels);
 
@@ -88,24 +89,24 @@ class LabelsApiController extends Controller
     {
         $this->authorizeManage();
 
-        $validated = $this->validateRequest($request, requirePreset: true);
+        $validated = $this->validateRequest($request);
+        $template = LabelTemplate::query()->findOrFail($validated['template_id']);
         $products = Product::query()->whereIn('id', $validated['product_ids'])->get();
 
-        $response = $labelSheetPdfService->build($products, $validated['template'], $validated['preset'], $validated['copies']);
+        $response = $labelSheetPdfService->build($products, $template, $validated['copies']);
 
         Product::query()->whereIn('id', $validated['product_ids'])->update(['label_printed_at' => now()]);
 
         return $response;
     }
 
-    protected function validateRequest(Request $request, bool $requirePreset = false): array
+    protected function validateRequest(Request $request): array
     {
         $validated = $request->validate([
             'product_ids' => ['required', 'array', 'min:1'],
             'product_ids.*' => ['integer', 'exists:products,id'],
-            'template' => ['required', 'string', Rule::in(['gondola', 'oferta', 'adesiva_ean', 'adesiva_interno'])],
+            'template_id' => ['required', 'integer', 'exists:label_templates,id'],
             'copies' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'preset' => [$requirePreset ? 'required' : 'nullable', 'string', Rule::in(array_keys(LabelSheetPdfService::PRESETS))],
         ]);
 
         $validated['copies'] = max(1, (int) ($validated['copies'] ?? 1));

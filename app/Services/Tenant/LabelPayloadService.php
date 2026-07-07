@@ -2,6 +2,7 @@
 
 namespace App\Services\Tenant;
 
+use App\Models\Tenant\LabelTemplate;
 use App\Models\Tenant\Product;
 
 class LabelPayloadService
@@ -11,18 +12,20 @@ class LabelPayloadService
     ) {
     }
 
-    public function build(Product $product, string $template, int $copies = 1): array
+    public function build(Product $product, LabelTemplate $template, int $copies = 1): array
     {
         $isWeighable = $product->sold_by === 'weight';
         $salePrice = (float) $product->sale_price;
 
         $data = [
-            'template' => $template,
+            'template_id' => $template->id,
             'product_id' => $product->id,
+            'show_name' => $template->show_name,
             'name' => (string) $product->name,
             'internal_code' => (string) $product->code,
             'barcode' => (string) ($product->barcode ?: $product->code),
-            'barcode_type' => $this->barcodeType($product),
+            'barcode_type' => $this->barcodeType($product, $template),
+            'show_price' => $template->show_price,
             'price' => $salePrice,
             'unit_label' => $isWeighable ? 'KG' : null,
             'weighable' => $isWeighable,
@@ -32,7 +35,7 @@ class LabelPayloadService
             'promo_valid_until' => null,
         ];
 
-        if ($template === 'oferta') {
+        if ($template->show_promo) {
             $promotion = $this->promotionEngine->evaluateLine($product, 1.0, $salePrice);
 
             if ($promotion['promotion_id']) {
@@ -45,8 +48,12 @@ class LabelPayloadService
         return $data;
     }
 
-    protected function barcodeType(Product $product): string
+    protected function barcodeType(Product $product, LabelTemplate $template): string
     {
+        if ($template->barcode_mode !== 'auto') {
+            return $template->barcode_mode;
+        }
+
         $barcode = (string) ($product->barcode ?: '');
 
         return preg_match('/^\d{13}$/', $barcode) ? 'ean13' : 'code128';
