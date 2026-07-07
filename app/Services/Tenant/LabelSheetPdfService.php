@@ -13,7 +13,7 @@ class LabelSheetPdfService
     ) {
     }
 
-    public function build(array $products, LabelTemplate $template, int $copiesPerProduct = 1): Response
+    public function build(iterable $products, LabelTemplate $template, int $copiesPerProduct = 1): Response
     {
         $grid = [
             'columns' => $template->columns,
