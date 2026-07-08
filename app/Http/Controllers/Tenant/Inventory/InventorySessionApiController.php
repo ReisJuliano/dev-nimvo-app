@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\InventorySessionItem;
 use App\Services\Tenant\Inventory\InventoryAdjustmentService;
+use App\Services\Tenant\Inventory\InventoryCycleCountService;
 use App\Services\Tenant\Inventory\InventorySessionService;
 use App\Services\Tenant\SupervisorAuthorizationService;
 use App\Services\Tenant\TenantSettingsService;
@@ -49,6 +50,7 @@ class InventorySessionApiController extends Controller
             'type' => ['required', Rule::in(['general', 'partial'])],
             'mode' => ['required', Rule::in(['snapshot', 'frozen'])],
             'count_resolution' => ['required', Rule::in(['last_count_wins', 'two_matching_counts', 'manual_review'])],
+            'blind_count' => ['nullable', 'boolean'],
             'filters' => ['nullable', 'array'],
             'filters.category_ids' => ['nullable', 'array'],
             'filters.supplier_ids' => ['nullable', 'array'],
@@ -69,9 +71,49 @@ class InventorySessionApiController extends Controller
         $this->authorizeManage();
 
         $data = $this->serializeSession($inventorySession);
-        $data['divergence_summary'] = $service->divergenceSummary($inventorySession);
+        $data['progress_summary'] = $service->progressSummary($inventorySession);
+        $data['divergence_summary'] = $this->isBlindCounting($inventorySession)
+            ? null
+            : $service->divergenceSummary($inventorySession);
 
         return response()->json(['session' => $data]);
+    }
+
+    public function progress(InventorySession $inventorySession, InventorySessionService $service): JsonResponse
+    {
+        $this->authorizeManage();
+
+        return response()->json([
+            'category_progress' => $service->categoryProgress($inventorySession),
+            'movement_breakdown' => $this->isBlindCounting($inventorySession) ? [] : $service->movementBreakdown($inventorySession),
+        ]);
+    }
+
+    public function accuracyHistory(Request $request, InventorySessionService $service): JsonResponse
+    {
+        $this->authorizeManage();
+
+        return response()->json([
+            'history' => $service->accuracyHistory((int) $request->integer('limit', 6) ?: 6),
+        ]);
+    }
+
+    public function cycleCountSuggestion(Request $request, InventoryCycleCountService $service): JsonResponse
+    {
+        $this->authorizeManage();
+
+        $validated = $request->validate(['class' => ['required', Rule::in(['A', 'B', 'C'])]]);
+
+        return response()->json($service->suggestForCycle($validated['class']));
+    }
+
+    public function itemReconciliation(InventorySession $inventorySession, InventorySessionItem $item, InventoryAdjustmentService $service): JsonResponse
+    {
+        $this->authorizeManage();
+
+        abort_unless((int) $item->inventory_session_id === $inventorySession->id, 404);
+
+        return response()->json(['reconciliation' => $service->itemReconciliation($item)]);
     }
 
     public function start(InventorySession $inventorySession, InventorySessionService $service): JsonResponse
@@ -133,7 +175,7 @@ class InventorySessionApiController extends Controller
             }))
             ->orderBy('id')
             ->paginate($perPage)
-            ->through(fn (InventorySessionItem $item) => $this->serializeItem($item));
+            ->through(fn (InventorySessionItem $item) => $this->serializeItem($item, $this->isBlindCounting($inventorySession)));
 
         return response()->json([
             'items' => $paginator->items(),
@@ -171,7 +213,7 @@ class InventorySessionApiController extends Controller
 
         return response()->json([
             'message' => 'Contagem registrada.',
-            'item' => $this->serializeItem($item->fresh('product')),
+            'item' => $this->serializeItem($item->fresh('product'), $this->isBlindCounting($inventorySession)),
         ]);
     }
 
@@ -265,6 +307,7 @@ class InventorySessionApiController extends Controller
             'type' => $session->type,
             'mode' => $session->mode,
             'count_resolution' => $session->count_resolution,
+            'blind_count' => (bool) $session->blind_count,
             'status' => $session->status,
             'filters' => $session->filters,
             'notes' => $session->notes,
@@ -279,7 +322,7 @@ class InventorySessionApiController extends Controller
         ];
     }
 
-    protected function serializeItem(InventorySessionItem $item): array
+    protected function serializeItem(InventorySessionItem $item, bool $blind = false): array
     {
         return [
             'id' => $item->id,
@@ -289,20 +332,25 @@ class InventorySessionApiController extends Controller
             'product_barcode' => $item->product?->barcode,
             'category_name' => $item->product?->category?->name,
             'sold_by' => $item->product?->sold_by ?? 'unit',
-            'snapshot_quantity' => (float) $item->snapshot_quantity,
+            'snapshot_quantity' => $blind ? null : (float) $item->snapshot_quantity,
             'counted_quantity' => $item->counted_quantity !== null ? (float) $item->counted_quantity : null,
-            'interim_delta' => (float) $item->interim_delta,
+            'interim_delta' => $blind ? null : (float) $item->interim_delta,
             'final_delta' => $item->final_delta !== null ? (float) $item->final_delta : null,
             'unit_cost' => (float) $item->unit_cost,
-            'delta' => $item->delta(),
-            'delta_value' => $item->deltaValue(),
-            'divergence_percent' => (float) $item->snapshot_quantity !== 0.0
+            'delta' => $blind ? null : $item->delta(),
+            'delta_value' => $blind ? null : $item->deltaValue(),
+            'divergence_percent' => $blind ? null : ((float) $item->snapshot_quantity !== 0.0
                 ? round(($item->delta() / (float) $item->snapshot_quantity) * 100, 2)
-                : ($item->delta() != 0 ? 100.0 : 0.0),
+                : ($item->delta() != 0 ? 100.0 : 0.0)),
             'status' => $item->status,
             'resolution' => $item->resolution,
             'resolution_reason' => $item->resolution_reason,
         ];
+    }
+
+    protected function isBlindCounting(InventorySession $session): bool
+    {
+        return (bool) $session->blind_count && $session->status === 'counting';
     }
 
     protected function authorizeManage(): void

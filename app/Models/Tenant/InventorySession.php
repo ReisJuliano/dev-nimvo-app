@@ -16,6 +16,7 @@ class InventorySession extends Model
         'type',
         'mode',
         'count_resolution',
+        'blind_count',
         'status',
         'filters',
         'created_by',
@@ -29,6 +30,7 @@ class InventorySession extends Model
 
     protected $casts = [
         'filters' => 'array',
+        'blind_count' => 'boolean',
         'started_at' => 'datetime',
         'counting_finished_at' => 'datetime',
         'approved_at' => 'datetime',

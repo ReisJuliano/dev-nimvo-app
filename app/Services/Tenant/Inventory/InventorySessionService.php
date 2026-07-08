@@ -21,6 +21,7 @@ class InventorySessionService
             'type' => $data['type'],
             'mode' => $data['mode'],
             'count_resolution' => $data['count_resolution'],
+            'blind_count' => (bool) ($data['blind_count'] ?? false),
             'status' => 'draft',
             'filters' => $data['filters'] ?? null,
             'created_by' => $userId,
@@ -335,6 +336,96 @@ class InventorySessionService
             'net_value' => round($surplusValue - $shortageValue, 2),
             'max_abs_quantity_delta' => round($maxAbsQuantityDelta, 3),
             'accuracy_percent' => $countedTotal > 0 ? round(($matchingCount / $countedTotal) * 100, 2) : 100.0,
+        ];
+    }
+
+    /**
+     * Progresso de contagem por categoria (setor da loja) — sem valores
+     * monetários, seguro pra exibir mesmo em sessão de contagem cega.
+     */
+    public function categoryProgress(InventorySession $session): array
+    {
+        $rows = $session->items()
+            ->join('products', 'products.id', '=', 'inventory_session_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->selectRaw("
+                products.category_id as category_id,
+                COALESCE(categories.name, 'Sem categoria') as category_name,
+                COUNT(*) as total_items,
+                SUM(CASE WHEN inventory_session_items.status IN ('counted', 'divergent', 'resolved') THEN 1 ELSE 0 END) as counted_items,
+                SUM(CASE WHEN inventory_session_items.status = 'divergent' THEN 1 ELSE 0 END) as divergent_items
+            ")
+            ->groupBy('products.category_id', 'categories.name')
+            ->orderByDesc('total_items')
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'category_id' => $row->category_id,
+            'category_name' => $row->category_name,
+            'total_items' => (int) $row->total_items,
+            'counted_items' => (int) $row->counted_items,
+            'divergent_items' => (int) $row->divergent_items,
+            'progress_percent' => $row->total_items > 0
+                ? round(((int) $row->counted_items / (int) $row->total_items) * 100, 1)
+                : 0.0,
+        ])->all();
+    }
+
+    /**
+     * Soma dos movimentos de estoque ocorridos durante a sessão, agrupados por
+     * tipo (venda, entrada, perda...) — alimenta o card de reconciliação do
+     * hero sem precisar de uma query por item.
+     */
+    public function movementBreakdown(InventorySession $session): array
+    {
+        if (!$session->started_at) {
+            return [];
+        }
+
+        $rows = InventoryMovement::query()
+            ->whereIn('product_id', $session->items()->pluck('product_id'))
+            ->where('occurred_at', '>=', $session->started_at)
+            ->selectRaw('type, SUM(quantity_delta) as total')
+            ->groupBy('type')
+            ->pluck('total', 'type');
+
+        return $rows->map(fn ($value) => round((float) $value, 3))->all();
+    }
+
+    /**
+     * Últimas N sessões concluídas, com acuracidade e divergência líquida —
+     * alimenta a tira de evolução na tela de listagem.
+     */
+    public function accuracyHistory(int $limit = 6): array
+    {
+        $sessions = InventorySession::query()
+            ->where('status', 'completed')
+            ->latest('completed_at')
+            ->limit($limit)
+            ->get();
+
+        return $sessions->reverse()->values()->map(fn (InventorySession $session) => [
+            'id' => $session->id,
+            'code' => $session->code,
+            'completed_at' => $session->completed_at?->toIso8601String(),
+            ...$this->divergenceSummary($session),
+        ])->all();
+    }
+
+    /**
+     * Resumo de progresso sem valores monetários — usado enquanto a sessão
+     * está em contagem cega, pra não revelar divergência aos contadores.
+     */
+    public function progressSummary(InventorySession $session): array
+    {
+        $total = $session->items()->count();
+        $counted = $session->items()->whereNotNull('counted_quantity')->count();
+
+        return [
+            'total_items' => $total,
+            'counted_items' => $counted,
+            'pending_items' => $total - $counted,
+            'progress_percent' => $total > 0 ? round(($counted / $total) * 100, 1) : 0.0,
         ];
     }
 

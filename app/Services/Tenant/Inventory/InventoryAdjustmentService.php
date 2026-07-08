@@ -5,6 +5,7 @@ namespace App\Services\Tenant\Inventory;
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\InventorySession;
 use App\Models\Tenant\InventorySessionItem;
+use App\Models\Tenant\Product;
 use App\Services\Tenant\AuditLogService;
 use App\Services\Tenant\InventoryMovementService;
 use App\Support\Tenant\AuditActions;
@@ -52,6 +53,12 @@ class InventoryAdjustmentService
                     }
                 });
             });
+
+        $countedProductIds = $session->items()->whereNotNull('counted_quantity')->pluck('product_id');
+
+        if ($countedProductIds->isNotEmpty()) {
+            Product::query()->whereIn('id', $countedProductIds)->update(['last_counted_at' => now()]);
+        }
 
         $session->update([
             'status' => 'completed',
@@ -114,5 +121,35 @@ class InventoryAdjustmentService
     public function computeFinalDelta(float $countedQuantity, float $snapshotQuantity, float $interimDelta): float
     {
         return round($countedQuantity - ($snapshotQuantity + $interimDelta), 3);
+    }
+
+    /**
+     * Abertura do interim_delta de um item por tipo de movimento (venda,
+     * entrada, perda...) — alimenta o drawer de reconciliação da revisão.
+     */
+    public function itemReconciliation(InventorySessionItem $item): array
+    {
+        $session = $item->session;
+
+        $breakdown = $session->started_at
+            ? InventoryMovement::query()
+                ->where('product_id', $item->product_id)
+                ->where('occurred_at', '>=', $session->started_at)
+                ->selectRaw('type, SUM(quantity_delta) as total')
+                ->groupBy('type')
+                ->pluck('total', 'type')
+                ->map(fn ($value) => round((float) $value, 3))
+                ->all()
+            : [];
+
+        $expected = round((float) $item->snapshot_quantity + array_sum($breakdown), 3);
+
+        return [
+            'snapshot_quantity' => (float) $item->snapshot_quantity,
+            'movement_breakdown' => $breakdown,
+            'expected_quantity' => $expected,
+            'counted_quantity' => $item->counted_quantity !== null ? (float) $item->counted_quantity : null,
+            'delta' => $item->counted_quantity !== null ? round((float) $item->counted_quantity - $expected, 3) : null,
+        ];
     }
 }

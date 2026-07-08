@@ -1,81 +1,563 @@
-.inventory-tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
+/* ─── Ações no hero / navegação ─── */
 
-.inventory-session-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.inventory-session-header h2 {
-    margin: 0 0 0.25rem;
-}
-
-.inventory-session-actions {
+.ivs-hero-actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.inventory-summary-cards {
+.ivs-back {
+    margin-top: 1rem;
+}
+
+.ivs-list-filter-bar {
+    margin-top: 0.75rem;
+}
+
+/* ─── KPI grid ─── */
+
+.ivs-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-top: 0.875rem;
 }
 
-.inventory-summary-card {
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
+.ivs-kpi {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    box-shadow: var(--app-shadow-sm);
+    padding: 1rem 1.125rem;
+    position: relative;
+    overflow: hidden;
 }
 
-.inventory-summary-card span {
-    display: block;
-    font-size: 0.75rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+.ivs-kpi::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
 }
 
-.inventory-summary-card strong {
-    font-size: 1.25rem;
-}
+.ivs-kpi--indigo::before { background: #4f46e5; }
+.ivs-kpi--amber::before { background: #f59e0b; }
+.ivs-kpi--green::before { background: #10b981; }
+.ivs-kpi--rose::before { background: #f43f5e; }
+.ivs-kpi--movements::before { background: #06b6d4; }
 
-.inventory-scan-bar {
+.ivs-kpi-top {
     display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-    align-items: flex-end;
+    justify-content: flex-end;
 }
 
-.inventory-scan-bar label {
+.ivs-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.ivs-kpi-icon--indigo { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+.ivs-kpi-icon--amber { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+.ivs-kpi-icon--green { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.ivs-kpi-icon--rose { background: rgba(244, 63, 94, 0.1); color: #e11d48; }
+
+.ivs-kpi-label {
+    margin: 0.5rem 0 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--app-text-muted);
+}
+
+.ivs-kpi-value {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--app-text-primary);
+}
+
+.ivs-kpi-note {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.72rem;
+    color: var(--app-text-muted);
+}
+
+/* ─── Donut de acuracidade ─── */
+
+.ivs-kpi--donut {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ivs-donut-shell {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    flex-shrink: 0;
+}
+
+.ivs-donut-shell--empty {
     display: flex;
     flex-direction: column;
-    font-size: 0.8rem;
-    gap: 0.25rem;
-}
-
-.inventory-scan-bar input {
-    min-width: 220px;
-}
-
-.inventory-checkbox-cell {
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    color: var(--app-text-muted);
+    font-size: 0.65rem;
     text-align: center;
 }
 
-.inventory-bulk-actions {
+.ivs-donut-shell--empty i {
+    font-size: 1.25rem;
+    opacity: 0.5;
+}
+
+.ivs-donut-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.ivs-donut-overlay strong {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--app-text-primary);
+}
+
+.ivs-donut-overlay span {
+    font-size: 0.6rem;
+    color: var(--app-text-muted);
+}
+
+.ivs-kpi-donut-copy .ivs-kpi-label { margin-top: 0; }
+
+/* ─── Movimentação durante a contagem ─── */
+
+.ivs-movement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0.4rem 0 0.3rem;
+}
+
+.ivs-movement-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+}
+
+.ivs-text-positive { color: #059669; }
+.ivs-text-negative { color: #dc2626; }
+
+/* ─── Barra de progresso ─── */
+
+.ivs-progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--app-surface-muted);
+    overflow: hidden;
+    margin-top: 0.875rem;
+}
+
+.ivs-progress-track--sm {
+    height: 6px;
+    margin-top: 0.3rem;
+}
+
+.ivs-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #4f46e5;
+    transition: width 0.25s ease;
+}
+
+.ivs-progress-fill--warning {
+    background: #f59e0b;
+}
+
+/* ─── Progresso por categoria (setor) ─── */
+
+.ivs-category-card {
+    margin-top: 0.75rem;
+}
+
+.ivs-category-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
+}
+
+.ivs-category-header i {
+    color: #4f46e5;
+    font-size: 1.1rem;
+    margin-top: 0.15rem;
+}
+
+.ivs-category-header strong {
+    display: block;
+    font-size: 0.9rem;
+}
+
+.ivs-category-header span {
+    font-size: 0.78rem;
+    color: var(--app-text-muted);
+}
+
+.ivs-category-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem 1.25rem;
+}
+
+.ivs-category-row-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-bottom: 0.1rem;
+}
+
+/* ─── Tabs ─── */
+
+.ivs-tabs {
+    margin: 1rem 0;
+}
+
+/* ─── Console de contagem (coletor) ─── */
+
+.ivs-console {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    box-shadow: var(--app-shadow-sm);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.ivs-console-scan {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.ivs-console-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--app-text-muted);
+}
+
+.ivs-console-field--barcode {
+    flex: 1 1 260px;
+}
+
+.ivs-console-input {
+    font-size: 1.05rem;
+    padding: 0.75rem 0.9rem;
+}
+
+.ivs-console-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.ivs-console-stepper input {
+    width: 80px;
+    text-align: center;
+}
+
+.ivs-console-stepper button {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-muted);
+    cursor: pointer;
+}
+
+.ivs-console-submit {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+.ivs-blind-notice {
+    margin-top: 0.875rem;
+}
+
+.ivs-console-feed {
+    margin-top: 1.125rem;
+    border-top: 1px solid var(--app-border);
+    padding-top: 0.875rem;
+}
+
+.ivs-console-feed ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.ivs-console-feed-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    background: var(--app-surface-muted);
+    font-size: 0.82rem;
+}
+
+.ivs-console-feed-row strong {
+    display: block;
+}
+
+.ivs-console-feed-row small {
+    color: var(--app-text-muted);
+}
+
+.ivs-console-feed-meta {
+    text-align: right;
+}
+
+.ivs-console-feed-meta span {
+    display: block;
+    font-weight: 700;
+}
+
+.ivs-console-feed-meta small {
+    color: var(--app-text-muted);
+}
+
+.ivs-console-feed-empty {
+    color: var(--app-text-muted);
+    font-size: 0.82rem;
+}
+
+/* ─── Tabela de itens ─── */
+
+.ivs-product-cell strong {
+    display: block;
+}
+
+.ivs-product-cell small {
+    color: var(--app-text-muted);
+}
+
+.ivs-checkbox-cell {
+    text-align: center;
+    width: 36px;
+}
+
+.ivs-divergent-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+}
+
+.ivs-bulk-actions {
     display: flex;
     gap: 0.5rem;
     margin: 0.75rem 0;
     flex-wrap: wrap;
 }
+
+/* ─── Drawer de reconciliação ─── */
+
+.ivs-reconciliation {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ivs-reconciliation-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    background: var(--app-surface-muted);
+    font-size: 0.85rem;
+}
+
+.ivs-reconciliation-line--muted {
+    background: transparent;
+    border: 1px dashed var(--app-border);
+    color: var(--app-text-muted);
+}
+
+.ivs-reconciliation-line--total {
+    font-weight: 700;
+}
+
+.ivs-reconciliation-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: rgba(79, 70, 229, 0.06);
+    border: 1px solid rgba(79, 70, 229, 0.16);
+    margin-top: 0.4rem;
+}
+
+.ivs-reconciliation-result strong {
+    font-size: 1.05rem;
+}
+
+/* ─── Importar / exportar ─── */
+
+.ivs-import-export {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.ivs-layout-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ivs-import-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-top: 0.5rem;
+}
+
+.ivs-import-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+/* ─── Evolução de acuracidade (lista) ─── */
+
+.ivs-history-strip {
+    margin-top: 0.75rem;
+}
+
+.ivs-history-strip-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.ivs-history-strip-header i {
+    color: #4f46e5;
+    font-size: 1.1rem;
+    margin-top: 0.15rem;
+}
+
+.ivs-history-strip-header strong {
+    display: block;
+    font-size: 0.9rem;
+}
+
+.ivs-history-strip-header span {
+    font-size: 0.78rem;
+    color: var(--app-text-muted);
+}
+
+.ivs-history-chart {
+    height: 120px;
+}
+
+/* ─── Wizard de novo inventário ─── */
+
+.ivs-wizard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.ivs-wizard label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--app-text-secondary);
+}
+
+.ivs-wizard-checkbox {
+    flex-direction: row !important;
+    align-items: flex-start;
+    gap: 0.6rem !important;
+    padding: 0.75rem;
+    border-radius: 10px;
+    background: var(--app-surface-muted);
+}
+
+.ivs-wizard-checkbox input {
+    margin-top: 0.2rem;
+}
+
+.ivs-wizard-checkbox span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.ivs-wizard-checkbox small {
+    color: var(--app-text-muted);
+    font-weight: 400;
+}
+
+.ivs-wizard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.ivs-cycle-suggestion {
+    padding: 0.875rem;
+    border-radius: 10px;
+    border: 1px dashed rgba(79, 70, 229, 0.35);
+    background: rgba(79, 70, 229, 0.04);
+}
+
+.ivs-cycle-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+}
+
+.ivs-cycle-hint {
+    font-size: 0.78rem;
+    color: var(--app-text-muted);
+    margin: 0.5rem 0 0;
+}
+
+/* ─── Layouts de coletor (modal) ─── */
 
 .inventory-layout-fields {
     display: grid;
@@ -98,16 +580,8 @@
 
 .inventory-preview-table th,
 .inventory-preview-table td {
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    border: 1px solid var(--app-border);
     padding: 0.35rem 0.5rem;
     font-size: 0.85rem;
     text-align: left;
-}
-
-.inventory-divergence-positive {
-    color: #16a34a;
-}
-
-.inventory-divergence-negative {
-    color: #dc2626;
 }

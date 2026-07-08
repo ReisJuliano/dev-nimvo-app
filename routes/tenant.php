@@ -265,7 +265,10 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/inventory/sessions', [InventorySessionApiController::class, 'index'])->name('api.inventory.sessions.index');
             Route::post('/inventory/sessions', [InventorySessionApiController::class, 'store'])->name('api.inventory.sessions.store');
+            Route::get('/inventory/sessions-accuracy-history', [InventorySessionApiController::class, 'accuracyHistory'])->name('api.inventory.sessions.accuracy-history');
+            Route::get('/inventory/cycle-count/suggestion', [InventorySessionApiController::class, 'cycleCountSuggestion'])->name('api.inventory.cycle-count.suggestion');
             Route::get('/inventory/sessions/{inventorySession}', [InventorySessionApiController::class, 'show'])->name('api.inventory.sessions.show');
+            Route::get('/inventory/sessions/{inventorySession}/progress', [InventorySessionApiController::class, 'progress'])->name('api.inventory.sessions.progress');
             Route::post('/inventory/sessions/{inventorySession}/start', [InventorySessionApiController::class, 'start'])->name('api.inventory.sessions.start');
             Route::post('/inventory/sessions/{inventorySession}/cancel', [InventorySessionApiController::class, 'cancel'])->name('api.inventory.sessions.cancel');
             Route::post('/inventory/sessions/{inventorySession}/finish-counting', [InventorySessionApiController::class, 'finishCounting'])->name('api.inventory.sessions.finish-counting');
@@ -276,6 +279,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/inventory/sessions/{inventorySession}/items/mark-zero', [InventorySessionApiController::class, 'bulkMarkZero'])->name('api.inventory.sessions.items.mark-zero');
             Route::post('/inventory/sessions/{inventorySession}/items/mark-skipped', [InventorySessionApiController::class, 'bulkMarkSkipped'])->name('api.inventory.sessions.items.mark-skipped');
             Route::post('/inventory/sessions/{inventorySession}/items/{item}/resolve', [InventorySessionApiController::class, 'resolveItem'])->name('api.inventory.sessions.items.resolve');
+            Route::get('/inventory/sessions/{inventorySession}/items/{item}/reconciliation', [InventorySessionApiController::class, 'itemReconciliation'])->name('api.inventory.sessions.items.reconciliation');
 
             Route::get('/inventory/collector-layouts', [InventoryCollectorController::class, 'layouts'])->name('api.inventory.layouts.index');
             Route::post('/inventory/collector-layouts', [InventoryCollectorController::class, 'storeLayout'])->name('api.inventory.layouts.store');

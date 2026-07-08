@@ -49,6 +49,7 @@ class Product extends Model
         'label_printed_at',
         'track_expiry',
         'expiry_alert_days',
+        'last_counted_at',
     ];
 
     protected $casts = [
@@ -67,6 +68,7 @@ class Product extends Model
         'label_printed_at' => 'datetime',
         'track_expiry' => 'boolean',
         'expiry_alert_days' => 'integer',
+        'last_counted_at' => 'datetime',
     ];
 
     public function isWeighable(): bool
