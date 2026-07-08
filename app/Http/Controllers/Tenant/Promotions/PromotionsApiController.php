@@ -3,23 +3,27 @@
 namespace App\Http\Controllers\Tenant\Promotions;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant\Product;
 use App\Models\Tenant\Promotion;
+use App\Support\TextSearch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class PromotionsApiController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $this->authorizeManage();
 
         $promotions = Promotion::query()
             ->whereIn('type', Promotion::CORE_TYPES)
-            ->with(['product:id,name', 'category:id,name'])
+            ->with(['product:id,name,sale_price', 'category:id,name', 'campaign:id,name'])
+            ->when($request->has('campaign_id'), fn ($query) => $query->where('campaign_id', $request->input('campaign_id')))
+            ->when($request->boolean('standalone_only'), fn ($query) => $query->whereNull('campaign_id'))
             ->latest('id')
             ->get()
-            ->map(fn (Promotion $promotion) => $this->serialize($promotion));
+            ->map(fn (Promotion $promotion) => $promotion->toDisplayArray());
 
         return response()->json(['promotions' => $promotions]);
     }
@@ -32,7 +36,7 @@ class PromotionsApiController extends Controller
 
         return response()->json([
             'message' => 'Promoção criada com sucesso.',
-            'promotion' => $this->serialize($promotion->fresh(['product', 'category'])),
+            'promotion' => $promotion->fresh(['product', 'category', 'campaign'])->toDisplayArray(),
         ], 201);
     }
 
@@ -44,7 +48,7 @@ class PromotionsApiController extends Controller
 
         return response()->json([
             'message' => 'Promoção atualizada com sucesso.',
-            'promotion' => $this->serialize($promotion->fresh(['product', 'category'])),
+            'promotion' => $promotion->fresh(['product', 'category', 'campaign'])->toDisplayArray(),
         ]);
     }
 
@@ -68,13 +72,42 @@ class PromotionsApiController extends Controller
 
         return response()->json([
             'message' => 'Promoção duplicada com sucesso.',
-            'promotion' => $this->serialize($copy->fresh(['product', 'category'])),
+            'promotion' => $copy->fresh(['product', 'category', 'campaign'])->toDisplayArray(),
         ], 201);
+    }
+
+    public function searchProducts(Request $request): JsonResponse
+    {
+        $this->authorizeManage();
+
+        $term = TextSearch::normalize(trim((string) $request->query('q', '')));
+
+        if ($term === '') {
+            return response()->json(['products' => []]);
+        }
+
+        $likeTerm = TextSearch::likePattern($term);
+
+        $products = Product::query()
+            ->where('active', true)
+            ->where(function ($query) use ($term, $likeTerm) {
+                $query->where('barcode', $term)
+                    ->orWhere('code', $term)
+                    ->orWhere('barcode', 'like', $likeTerm)
+                    ->orWhere('code', 'like', $likeTerm)
+                    ->orWhere('name', 'like', $likeTerm);
+            })
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'code', 'barcode', 'sale_price', 'category_id']);
+
+        return response()->json(['products' => $products]);
     }
 
     protected function validated(Request $request, ?Promotion $promotion = null): array
     {
         $validated = $request->validate([
+            'campaign_id' => ['nullable', 'integer', 'exists:promotion_campaigns,id'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'type' => ['required', 'string', Rule::in(Promotion::CORE_TYPES)],
@@ -105,29 +138,6 @@ class PromotionsApiController extends Controller
         $validated['discount_value'] = $validated['discount_value'] ?? 0;
 
         return $validated;
-    }
-
-    protected function serialize(Promotion $promotion): array
-    {
-        return [
-            'id' => $promotion->id,
-            'name' => $promotion->name,
-            'description' => $promotion->description,
-            'type' => $promotion->type,
-            'scope' => $promotion->scope,
-            'product_id' => $promotion->product_id,
-            'product_name' => $promotion->product?->name,
-            'category_id' => $promotion->category_id,
-            'category_name' => $promotion->category?->name,
-            'discount_value' => (float) $promotion->discount_value,
-            'config' => $promotion->config,
-            'highlight_text' => $promotion->highlight_text,
-            'start_at' => $promotion->start_at?->format('Y-m-d\TH:i'),
-            'end_at' => $promotion->end_at?->format('Y-m-d\TH:i'),
-            'weekdays' => $promotion->weekdays,
-            'active' => $promotion->active,
-            'status' => $promotion->statusLabel(),
-        ];
     }
 
     protected function authorizeManage(): void

@@ -48,6 +48,7 @@ use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
+use App\Http\Controllers\Tenant\Promotions\PromotionCampaignsApiController;
 use App\Http\Controllers\Tenant\Promotions\PromotionsApiController;
 use App\Http\Controllers\Tenant\Promotions\PromotionsPageController;
 use App\Http\Controllers\Tenant\Purchases\IncomingNfeApiController;
@@ -208,9 +209,20 @@ Route::middleware('auth')->group(function () {
 
             Route::get('/promotions', [PromotionsApiController::class, 'index'])->name('api.promotions.index');
             Route::post('/promotions', [PromotionsApiController::class, 'store'])->name('api.promotions.store');
+            Route::get('/promotions/products/search', [PromotionsApiController::class, 'searchProducts'])->name('api.promotions.products.search');
             Route::put('/promotions/{promotion}', [PromotionsApiController::class, 'update'])->name('api.promotions.update');
             Route::delete('/promotions/{promotion}', [PromotionsApiController::class, 'destroy'])->name('api.promotions.destroy');
             Route::post('/promotions/{promotion}/duplicate', [PromotionsApiController::class, 'duplicate'])->name('api.promotions.duplicate');
+
+            Route::get('/promotion-campaigns', [PromotionCampaignsApiController::class, 'index'])->name('api.promotion-campaigns.index');
+            Route::post('/promotion-campaigns', [PromotionCampaignsApiController::class, 'store'])->name('api.promotion-campaigns.store');
+            Route::get('/promotion-campaigns/{campaign}', [PromotionCampaignsApiController::class, 'show'])->name('api.promotion-campaigns.show');
+            Route::put('/promotion-campaigns/{campaign}', [PromotionCampaignsApiController::class, 'update'])->name('api.promotion-campaigns.update');
+            Route::delete('/promotion-campaigns/{campaign}', [PromotionCampaignsApiController::class, 'destroy'])->name('api.promotion-campaigns.destroy');
+            Route::post('/promotion-campaigns/{campaign}/duplicate', [PromotionCampaignsApiController::class, 'duplicate'])->name('api.promotion-campaigns.duplicate');
+            Route::post('/promotion-campaigns/{campaign}/bulk-items', [PromotionCampaignsApiController::class, 'bulkAddItems'])->name('api.promotion-campaigns.bulk-items');
+            Route::get('/promotion-campaigns/{campaign}/performance', [PromotionCampaignsApiController::class, 'performance'])->name('api.promotion-campaigns.performance');
+            Route::get('/promotion-campaigns/{campaign}/pdf', [PromotionCampaignsApiController::class, 'pdf'])->name('api.promotion-campaigns.pdf');
 
             Route::get('/labels', [LabelsApiController::class, 'index'])->name('api.labels.index');
             Route::post('/labels/print', [LabelsApiController::class, 'print'])->name('api.labels.print');

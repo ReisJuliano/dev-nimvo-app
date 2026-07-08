@@ -784,6 +784,26 @@
     width: min(100%, 880px);
 }
 
+.compact-modal-card.size-full,
+.modal-form-card.size-full {
+    width: min(98vw, 1400px);
+    height: min(95dvh, 1000px);
+}
+
+@media (max-width: 900px) {
+    .compact-modal-backdrop:has(.size-full),
+    .modal-form-backdrop:has(.size-full) {
+        padding: 0;
+    }
+
+    .compact-modal-card.size-full,
+    .modal-form-card.size-full {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+    }
+}
+
 .compact-modal-header,
 .compact-modal-footer,
 .modal-form-header,

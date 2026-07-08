@@ -1,53 +1,340 @@
-.promotions-status-badge {
-    display: inline-flex;
+/* ─── Hero / ações ─── */
+
+.promo-hero-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.promo-page-tabs {
+    margin: 1rem 0;
+}
+
+/* ─── KPI grid ─── */
+
+.promo-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.875rem;
+}
+
+.promo-kpi {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    box-shadow: var(--app-shadow-sm);
+    padding: 1rem 1.125rem;
+    display: flex;
     align-items: center;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
+    gap: 0.875rem;
+}
+
+.promo-kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.promo-kpi-icon--indigo { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+.promo-kpi-icon--green { background: rgba(16, 185, 129, 0.1); color: #059669; }
+.promo-kpi-icon--amber { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+
+.promo-kpi-label {
+    margin: 0 0 0.15rem;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--app-text-muted);
+}
+
+.promo-kpi-value {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--app-text-primary);
+}
+
+.promo-kpi-note {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: var(--app-text-muted);
+}
+
+/* ─── Grid de tabloides ─── */
+
+.promo-campaign-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.875rem;
+}
+
+.promo-campaign-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.promo-campaign-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.promo-campaign-code {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--app-text-muted);
     letter-spacing: 0.03em;
 }
 
-.promotions-status-badge.ativa {
-    background: rgba(22, 163, 74, 0.15);
-    color: #16a34a;
+.promo-campaign-name {
+    font-size: 1rem;
+    color: var(--app-text-primary);
 }
 
-.promotions-status-badge.agendada {
-    background: rgba(37, 99, 235, 0.15);
-    color: #2563eb;
+.promo-campaign-vigencia {
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
 }
 
-.promotions-status-badge.expirada,
-.promotions-status-badge.inativa {
-    background: rgba(100, 116, 139, 0.15);
-    color: #64748b;
+.promo-campaign-stats {
+    font-size: 0.78rem;
+    color: var(--app-text-secondary);
+    margin-top: 0.25rem;
 }
 
-.promotions-tier-row {
+.promo-campaign-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--app-border);
+}
+
+/* ─── Formulários (promoção / tabloide) ─── */
+
+.promo-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.promo-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--app-text-secondary);
+}
+
+.promo-inline-checkbox {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.5rem !important;
+}
+
+.promo-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.promo-tier-row {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
     gap: 0.5rem;
     align-items: center;
-    margin-bottom: 0.4rem;
 }
 
-.promotions-weekday-row {
+.promo-weekday-row {
     display: flex;
     gap: 0.4rem;
     flex-wrap: wrap;
 }
 
-.promotions-weekday-chip {
+.promo-weekday-chip {
     padding: 0.3rem 0.6rem;
     border-radius: 8px;
-    border: 1px solid rgba(148, 163, 184, 0.4);
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-surface);
     cursor: pointer;
     font-size: 0.8rem;
 }
 
-.promotions-weekday-chip.active {
-    background: #2563eb;
+.promo-weekday-chip.active {
+    background: var(--app-primary);
     color: #fff;
-    border-color: #2563eb;
+    border-color: var(--app-primary);
+}
+
+/* ─── Detalhe do tabloide (modal full) ─── */
+
+.promo-campaign-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.promo-campaign-detail-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.promo-campaign-detail-top p {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--app-text-muted);
+}
+
+.promo-detail-tabs {
+    margin: 0;
+}
+
+/* ─── Busca + adição em massa ─── */
+
+.promo-bulk-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    background: var(--app-surface);
+}
+
+.promo-bulk-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.875rem;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 10px;
+}
+
+.promo-bulk-search i {
+    color: var(--app-text-muted);
+}
+
+.promo-bulk-search input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: 0.9rem;
+}
+
+.promo-bulk-results {
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.promo-bulk-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    background: var(--app-surface-muted);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.promo-bulk-result-row:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.promo-bulk-result-row strong {
+    display: block;
+    font-size: 0.85rem;
+}
+
+.promo-bulk-result-row small {
+    color: var(--app-text-muted);
+    font-size: 0.75rem;
+}
+
+.promo-bulk-added-tag {
+    font-size: 0.7rem;
+    color: var(--app-success);
+    font-weight: 700;
+}
+
+.promo-bulk-hint {
+    font-size: 0.8rem;
+    color: var(--app-text-muted);
+    margin: 0;
+}
+
+.promo-bulk-draft {
+    border-top: 1px solid var(--app-border);
+    padding-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ─── Desempenho ─── */
+
+.promo-performance {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.promo-performance-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.promo-performance-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+}
+
+.promo-performance-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.promo-performance-kpis article {
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+}
+
+.promo-performance-kpis span {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--app-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.promo-performance-kpis strong {
+    font-size: 1.15rem;
 }

@@ -1,82 +1,181 @@
 import { useEffect, useState } from 'react'
 import './promotions.css'
 import PageContainer from '@/Components/UI/PageContainer'
-import DenseTable from '@/Components/UI/DenseTable'
-import CompactModal from '@/Components/UI/CompactModal'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
-import { formatMoney } from '@/lib/format'
-
-const TYPE_LABELS = {
-    promo_price: 'Preço promocional',
-    buy_x_pay_y: 'Leve X pague Y',
-    quantity_discount: 'Desconto por quantidade',
-    category_discount: 'Desconto de categoria',
-}
-
-const WEEKDAYS = [
-    { value: 1, label: 'Seg' },
-    { value: 2, label: 'Ter' },
-    { value: 3, label: 'Qua' },
-    { value: 4, label: 'Qui' },
-    { value: 5, label: 'Sex' },
-    { value: 6, label: 'Sáb' },
-    { value: 7, label: 'Dom' },
-]
-
-function emptyForm() {
-    return {
-        id: null,
-        name: '',
-        description: '',
-        type: 'promo_price',
-        scope: 'product',
-        product_id: '',
-        category_id: '',
-        discount_value: '',
-        tiers: [{ min_quantity: '', unit_price: '' }],
-        buy_quantity: '',
-        pay_quantity: '',
-        highlight_text: '',
-        start_at: '',
-        end_at: '',
-        weekdays: [],
-        active: true,
-    }
-}
+import { confirmPopup } from '@/lib/errorPopup'
+import { emptyCampaignForm, emptyPromotionForm } from './constants'
+import PromotionsHero from './components/PromotionsHero'
+import CampaignsBoard from './components/CampaignsBoard'
+import CampaignFormModal from './components/CampaignFormModal'
+import CampaignDetailModal from './components/CampaignDetailModal'
+import StandalonePromotionsTable from './components/StandalonePromotionsTable'
+import PromotionFormModal from './components/PromotionFormModal'
 
 export default function PromotionsIndex({ categories = [], products = [] }) {
+    const [tab, setTab] = useState('campaigns')
+    const [campaigns, setCampaigns] = useState([])
     const [promotions, setPromotions] = useState([])
     const [loading, setLoading] = useState(false)
     const [feedback, setFeedback] = useState(null)
-    const [modalOpen, setModalOpen] = useState(false)
-    const [form, setForm] = useState(emptyForm())
-    const [saving, setSaving] = useState(false)
 
-    async function refresh() {
-        setLoading(true)
+    const [campaignFormOpen, setCampaignFormOpen] = useState(false)
+    const [campaignForm, setCampaignForm] = useState(emptyCampaignForm())
+    const [savingCampaign, setSavingCampaign] = useState(false)
+
+    const [activeCampaign, setActiveCampaign] = useState(null)
+
+    const [promotionFormOpen, setPromotionFormOpen] = useState(false)
+    const [promotionForm, setPromotionForm] = useState(emptyPromotionForm())
+    const [savingPromotion, setSavingPromotion] = useState(false)
+
+    function notify(type, text) {
+        setFeedback({ type, text })
+    }
+
+    async function refreshCampaigns() {
+        try {
+            const response = await apiRequest('/api/promotion-campaigns')
+            setCampaigns(response.campaigns || [])
+        } catch (error) {
+            notify('error', error.message)
+        }
+    }
+
+    async function refreshPromotions() {
         try {
             const response = await apiRequest('/api/promotions')
             setPromotions(response.promotions || [])
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        } finally {
-            setLoading(false)
+            notify('error', error.message)
         }
     }
 
-    useEffect(() => {
-        void refresh()
-    }, [])
-
-    function openCreate() {
-        setForm(emptyForm())
-        setModalOpen(true)
+    async function refreshAll() {
+        setLoading(true)
+        await Promise.all([refreshCampaigns(), refreshPromotions()])
+        setLoading(false)
     }
 
-    function openEdit(promotion) {
-        setForm({
+    useEffect(() => {
+        void refreshAll()
+    }, [])
+
+    async function openCampaignDetail(campaign) {
+        try {
+            const response = await apiRequest(`/api/promotion-campaigns/${campaign.id}`)
+            setActiveCampaign(response.campaign)
+        } catch (error) {
+            notify('error', error.message)
+        }
+    }
+
+    async function refreshActiveCampaign() {
+        if (!activeCampaign) return
+        await openCampaignDetail(activeCampaign)
+        await refreshCampaigns()
+        await refreshPromotions()
+    }
+
+    function openNewCampaign() {
+        setCampaignForm(emptyCampaignForm())
+        setCampaignFormOpen(true)
+    }
+
+    function openEditCampaign(campaign) {
+        setCampaignForm({
+            id: campaign.id,
+            name: campaign.name,
+            description: campaign.description || '',
+            cover_note: campaign.cover_note || '',
+            starts_at: campaign.starts_at ? campaign.starts_at.slice(0, 10) : '',
+            ends_at: campaign.ends_at ? campaign.ends_at.slice(0, 10) : '',
+            active: campaign.active,
+        })
+        setCampaignFormOpen(true)
+    }
+
+    async function submitCampaign(event) {
+        event.preventDefault()
+        setSavingCampaign(true)
+
+        try {
+            const payload = {
+                name: campaignForm.name,
+                description: campaignForm.description || null,
+                cover_note: campaignForm.cover_note || null,
+                starts_at: campaignForm.starts_at || null,
+                ends_at: campaignForm.ends_at || null,
+                active: Boolean(campaignForm.active),
+            }
+
+            const response = campaignForm.id
+                ? await apiRequest(`/api/promotion-campaigns/${campaignForm.id}`, { method: 'put', data: payload })
+                : await apiRequest('/api/promotion-campaigns', { method: 'post', data: payload })
+
+            notify('success', response.message)
+            setCampaignFormOpen(false)
+            await refreshCampaigns()
+
+            if (activeCampaign && campaignForm.id === activeCampaign.id) {
+                await refreshActiveCampaign()
+            }
+        } catch (error) {
+            notify('error', error.message)
+        } finally {
+            setSavingCampaign(false)
+        }
+    }
+
+    async function duplicateCampaign(campaign) {
+        try {
+            const response = await apiRequest(`/api/promotion-campaigns/${campaign.id}/duplicate`, { method: 'post' })
+            notify('success', response.message)
+            await refreshCampaigns()
+        } catch (error) {
+            notify('error', error.message)
+        }
+    }
+
+    async function deleteCampaign(campaign) {
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Excluir tabloide',
+            message: `Excluir "${campaign.name}"? As ofertas dele continuam ativas como promoções avulsas.`,
+            confirmLabel: 'Excluir',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
+
+        try {
+            const response = await apiRequest(`/api/promotion-campaigns/${campaign.id}`, { method: 'delete' })
+            notify('success', response.message)
+            setActiveCampaign(null)
+            await refreshAll()
+        } catch (error) {
+            notify('error', error.message)
+        }
+    }
+
+    function downloadCampaignPdf(campaign) {
+        window.open(`/api/promotion-campaigns/${campaign.id}/pdf`, '_blank', 'noopener,noreferrer')
+    }
+
+    function openNewPromotion() {
+        setPromotionForm(emptyPromotionForm())
+        setPromotionFormOpen(true)
+    }
+
+    function openNewPromotionInCampaign(campaign) {
+        setPromotionForm({ ...emptyPromotionForm(), campaign_id: String(campaign.id) })
+        setPromotionFormOpen(true)
+    }
+
+    function openEditPromotion(promotion) {
+        setPromotionForm({
             id: promotion.id,
+            campaign_id: promotion.campaign_id ? String(promotion.campaign_id) : '',
             name: promotion.name,
             description: promotion.description || '',
             type: promotion.type,
@@ -93,104 +192,96 @@ export default function PromotionsIndex({ categories = [], products = [] }) {
             weekdays: promotion.weekdays || [],
             active: promotion.active,
         })
-        setModalOpen(true)
+        setPromotionFormOpen(true)
     }
 
-    function toggleWeekday(value) {
-        setForm((current) => ({
-            ...current,
-            weekdays: current.weekdays.includes(value)
-                ? current.weekdays.filter((day) => day !== value)
-                : [...current.weekdays, value],
-        }))
-    }
+    function buildPromotionPayload() {
+        const scope = promotionForm.type === 'category_discount' ? 'category' : 'product'
 
-    function updateTier(index, key, value) {
-        setForm((current) => ({
-            ...current,
-            tiers: current.tiers.map((tier, tierIndex) => (tierIndex === index ? { ...tier, [key]: value } : tier)),
-        }))
-    }
-
-    function addTier() {
-        setForm((current) => ({ ...current, tiers: [...current.tiers, { min_quantity: '', unit_price: '' }] }))
-    }
-
-    function removeTier(index) {
-        setForm((current) => ({ ...current, tiers: current.tiers.filter((_, tierIndex) => tierIndex !== index) }))
-    }
-
-    function buildPayload() {
-        const scope = form.type === 'category_discount' ? 'category' : 'product'
-
-        const config = form.type === 'buy_x_pay_y'
-            ? { buy_quantity: Number(form.buy_quantity), pay_quantity: Number(form.pay_quantity) }
-            : form.type === 'quantity_discount'
-                ? { tiers: form.tiers.filter((tier) => tier.min_quantity !== '' && tier.unit_price !== '').map((tier) => ({ min_quantity: Number(tier.min_quantity), unit_price: Number(tier.unit_price) })) }
+        const config = promotionForm.type === 'buy_x_pay_y'
+            ? { buy_quantity: Number(promotionForm.buy_quantity), pay_quantity: Number(promotionForm.pay_quantity) }
+            : promotionForm.type === 'quantity_discount'
+                ? { tiers: promotionForm.tiers.filter((tier) => tier.min_quantity !== '' && tier.unit_price !== '').map((tier) => ({ min_quantity: Number(tier.min_quantity), unit_price: Number(tier.unit_price) })) }
                 : null
 
         return {
-            name: form.name,
-            description: form.description || null,
-            type: form.type,
+            campaign_id: promotionForm.campaign_id || null,
+            name: promotionForm.name,
+            description: promotionForm.description || null,
+            type: promotionForm.type,
             scope,
-            product_id: scope === 'product' ? Number(form.product_id) || null : null,
-            category_id: scope === 'category' ? Number(form.category_id) || null : null,
-            discount_value: form.discount_value === '' ? 0 : Number(form.discount_value),
+            product_id: scope === 'product' ? Number(promotionForm.product_id) || null : null,
+            category_id: scope === 'category' ? Number(promotionForm.category_id) || null : null,
+            discount_value: promotionForm.discount_value === '' ? 0 : Number(promotionForm.discount_value),
             config,
-            highlight_text: form.highlight_text || null,
-            start_at: form.start_at || null,
-            end_at: form.end_at || null,
-            weekdays: form.weekdays.length ? form.weekdays : null,
-            active: Boolean(form.active),
+            highlight_text: promotionForm.highlight_text || null,
+            start_at: promotionForm.start_at || null,
+            end_at: promotionForm.end_at || null,
+            weekdays: promotionForm.weekdays.length ? promotionForm.weekdays : null,
+            active: Boolean(promotionForm.active),
         }
     }
 
-    async function submitForm(event) {
+    async function submitPromotion(event) {
         event.preventDefault()
-        setSaving(true)
+        setSavingPromotion(true)
 
         try {
-            const payload = buildPayload()
-            const response = form.id
-                ? await apiRequest(`/api/promotions/${form.id}`, { method: 'put', data: payload })
+            const payload = buildPromotionPayload()
+            const response = promotionForm.id
+                ? await apiRequest(`/api/promotions/${promotionForm.id}`, { method: 'put', data: payload })
                 : await apiRequest('/api/promotions', { method: 'post', data: payload })
 
-            setFeedback({ type: 'success', text: response.message })
-            setModalOpen(false)
-            await refresh()
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        } finally {
-            setSaving(false)
-        }
-    }
+            notify('success', response.message)
+            setPromotionFormOpen(false)
+            await refreshPromotions()
+            await refreshCampaigns()
 
-    async function removePromotion(promotion) {
-        try {
-            const response = await apiRequest(`/api/promotions/${promotion.id}`, { method: 'delete' })
-            setFeedback({ type: 'success', text: response.message })
-            await refresh()
+            if (activeCampaign && (payload.campaign_id === String(activeCampaign.id) || (promotionForm.id && activeCampaign.promotions?.some((p) => p.id === promotionForm.id)))) {
+                await refreshActiveCampaign()
+            }
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
+            notify('error', error.message)
+        } finally {
+            setSavingPromotion(false)
         }
     }
 
     async function duplicatePromotion(promotion) {
         try {
             const response = await apiRequest(`/api/promotions/${promotion.id}/duplicate`, { method: 'post' })
-            setFeedback({ type: 'success', text: response.message })
-            await refresh()
+            notify('success', response.message)
+            await refreshPromotions()
+            await refreshCampaigns()
+            if (activeCampaign) await refreshActiveCampaign()
         } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
+            notify('error', error.message)
         }
     }
 
-    const rows = promotions.map((promotion) => ({
-        ...promotion,
-        type_label: TYPE_LABELS[promotion.type] || promotion.type,
-        target_label: promotion.scope === 'product' ? (promotion.product_name || '-') : (promotion.category_name || '-'),
-    }))
+    async function deletePromotion(promotion) {
+        const confirmed = await confirmPopup({
+            type: 'warning',
+            title: 'Excluir promoção',
+            message: `Excluir "${promotion.name}"?`,
+            confirmLabel: 'Excluir',
+            cancelLabel: 'Cancelar',
+        })
+
+        if (!confirmed) return
+
+        try {
+            const response = await apiRequest(`/api/promotions/${promotion.id}`, { method: 'delete' })
+            notify('success', response.message)
+            await refreshPromotions()
+            await refreshCampaigns()
+            if (activeCampaign) await refreshActiveCampaign()
+        } catch (error) {
+            notify('error', error.message)
+        }
+    }
+
+    const standalonePromotions = promotions.filter((promotion) => !promotion.campaign_id)
 
     return (
         <AppLayout title="Promoções">
@@ -202,164 +293,78 @@ export default function PromotionsIndex({ categories = [], products = [] }) {
                     </div>
                 ) : null}
 
-                <div className="ui-filter-bar">
-                    <button type="button" className="ui-button" onClick={openCreate}>
-                        <i className="fa-solid fa-plus" /> Nova promoção
+                <PromotionsHero
+                    campaigns={campaigns}
+                    promotions={promotions}
+                    onNewCampaign={openNewCampaign}
+                    onNewPromotion={openNewPromotion}
+                />
+
+                <div className="ui-tabs promo-page-tabs">
+                    <button type="button" className={`ui-tab ${tab === 'campaigns' ? 'active' : ''}`} onClick={() => setTab('campaigns')}>
+                        Tabloides
+                    </button>
+                    <button type="button" className={`ui-tab ${tab === 'standalone' ? 'active' : ''}`} onClick={() => setTab('standalone')}>
+                        Promoções avulsas
                     </button>
                 </div>
 
-                <DenseTable
-                    columns={[
-                        { key: 'name', label: 'Nome' },
-                        { key: 'type_label', label: 'Tipo' },
-                        { key: 'target_label', label: 'Alvo' },
-                        { key: 'status', label: 'Status', render: (row) => <span className={`promotions-status-badge ${row.status}`}>{row.status}</span> },
-                        { key: 'active', label: 'Ativa', render: (row) => (row.active ? 'Sim' : 'Não') },
-                    ]}
-                    rows={rows}
-                    rowKey="id"
-                    onRowClick={(row) => openEdit(row)}
-                    emptyState={<p>{loading ? 'Carregando...' : 'Nenhuma promoção cadastrada.'}</p>}
-                    getRowActions={(row) => [
-                        { key: 'duplicate', icon: 'fa-copy', label: 'Duplicar', onClick: () => void duplicatePromotion(row) },
-                        { key: 'delete', icon: 'fa-trash', label: 'Excluir', onClick: () => void removePromotion(row) },
-                    ]}
-                />
+                {tab === 'campaigns' ? (
+                    <CampaignsBoard
+                        campaigns={campaigns}
+                        loading={loading}
+                        onOpen={openCampaignDetail}
+                        onDuplicate={duplicateCampaign}
+                        onDelete={deleteCampaign}
+                        onPdf={downloadCampaignPdf}
+                    />
+                ) : (
+                    <StandalonePromotionsTable
+                        promotions={standalonePromotions}
+                        loading={loading}
+                        onEdit={openEditPromotion}
+                        onDuplicate={duplicatePromotion}
+                        onDelete={deletePromotion}
+                    />
+                )}
             </PageContainer>
 
-            <CompactModal
-                open={modalOpen}
-                title={form.id ? 'Editar promoção' : 'Nova promoção'}
-                icon="fa-tags"
-                size="lg"
-                onClose={() => setModalOpen(false)}
-            >
-                <form onSubmit={submitForm}>
-                    <label>
-                        <span>Nome</span>
-                        <input className="ui-input" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required />
-                    </label>
+            <CampaignFormModal
+                open={campaignFormOpen}
+                form={campaignForm}
+                setForm={setCampaignForm}
+                saving={savingCampaign}
+                onSubmit={submitCampaign}
+                onClose={() => setCampaignFormOpen(false)}
+            />
 
-                    <label>
-                        <span>Descrição</span>
-                        <textarea className="ui-input" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
-                    </label>
+            {activeCampaign ? (
+                <CampaignDetailModal
+                    campaign={activeCampaign}
+                    onClose={() => setActiveCampaign(null)}
+                    onRefresh={refreshActiveCampaign}
+                    onEditCampaign={openEditCampaign}
+                    onDuplicateCampaign={duplicateCampaign}
+                    onDeleteCampaign={deleteCampaign}
+                    onDownloadPdf={downloadCampaignPdf}
+                    onNewPromotionInCampaign={openNewPromotionInCampaign}
+                    onEditPromotion={openEditPromotion}
+                    onDuplicatePromotion={duplicatePromotion}
+                    onDeletePromotion={deletePromotion}
+                />
+            ) : null}
 
-                    <label>
-                        <span>Tipo</span>
-                        <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
-                            {Object.entries(TYPE_LABELS).map(([value, label]) => (
-                                <option key={value} value={value}>{label}</option>
-                            ))}
-                        </select>
-                    </label>
-
-                    {form.type === 'category_discount' ? (
-                        <label>
-                            <span>Categoria</span>
-                            <select value={form.category_id} onChange={(event) => setForm((current) => ({ ...current, category_id: event.target.value }))} required>
-                                <option value="">Selecione</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>{category.name}</option>
-                                ))}
-                            </select>
-                        </label>
-                    ) : (
-                        <label>
-                            <span>Produto</span>
-                            <select value={form.product_id} onChange={(event) => setForm((current) => ({ ...current, product_id: event.target.value }))} required>
-                                <option value="">Selecione</option>
-                                {products.map((product) => (
-                                    <option key={product.id} value={product.id}>{product.name} ({product.code})</option>
-                                ))}
-                            </select>
-                        </label>
-                    )}
-
-                    {form.type === 'promo_price' ? (
-                        <label>
-                            <span>Preço promocional (R$)</span>
-                            <input className="ui-input" type="number" step="0.01" min="0" value={form.discount_value} onChange={(event) => setForm((current) => ({ ...current, discount_value: event.target.value }))} required />
-                        </label>
-                    ) : null}
-
-                    {form.type === 'category_discount' ? (
-                        <label>
-                            <span>Desconto (%)</span>
-                            <input className="ui-input" type="number" step="0.1" min="0" max="99" value={form.discount_value} onChange={(event) => setForm((current) => ({ ...current, discount_value: event.target.value }))} required />
-                        </label>
-                    ) : null}
-
-                    {form.type === 'buy_x_pay_y' ? (
-                        <div className="promotions-tier-row">
-                            <label>
-                                <span>Leve (unidades)</span>
-                                <input className="ui-input" type="number" min="1" value={form.buy_quantity} onChange={(event) => setForm((current) => ({ ...current, buy_quantity: event.target.value }))} required />
-                            </label>
-                            <label>
-                                <span>Pague (unidades)</span>
-                                <input className="ui-input" type="number" min="0" value={form.pay_quantity} onChange={(event) => setForm((current) => ({ ...current, pay_quantity: event.target.value }))} required />
-                            </label>
-                        </div>
-                    ) : null}
-
-                    {form.type === 'quantity_discount' ? (
-                        <>
-                            <span>Faixas de quantidade</span>
-                            {form.tiers.map((tier, index) => (
-                                <div key={index} className="promotions-tier-row">
-                                    <input className="ui-input" type="number" min="1" placeholder="A partir de (un)" value={tier.min_quantity} onChange={(event) => updateTier(index, 'min_quantity', event.target.value)} />
-                                    <input className="ui-input" type="number" step="0.01" min="0" placeholder="Preço unitário" value={tier.unit_price} onChange={(event) => updateTier(index, 'unit_price', event.target.value)} />
-                                    <button type="button" className="ui-icon-button" onClick={() => removeTier(index)}><i className="fa-solid fa-xmark" /></button>
-                                </div>
-                            ))}
-                            <button type="button" className="ui-button-ghost" onClick={addTier}>+ Adicionar faixa</button>
-                        </>
-                    ) : null}
-
-                    <label>
-                        <span>Texto de destaque (opcional)</span>
-                        <input className="ui-input" value={form.highlight_text} onChange={(event) => setForm((current) => ({ ...current, highlight_text: event.target.value }))} />
-                    </label>
-
-                    <div className="promotions-tier-row">
-                        <label>
-                            <span>Início da vigência</span>
-                            <input className="ui-input" type="datetime-local" value={form.start_at} onChange={(event) => setForm((current) => ({ ...current, start_at: event.target.value }))} />
-                        </label>
-                        <label>
-                            <span>Fim da vigência</span>
-                            <input className="ui-input" type="datetime-local" value={form.end_at} onChange={(event) => setForm((current) => ({ ...current, end_at: event.target.value }))} />
-                        </label>
-                        <span />
-                    </div>
-
-                    <span>Dias da semana (deixe vazio para todos os dias)</span>
-                    <div className="promotions-weekday-row">
-                        {WEEKDAYS.map((day) => (
-                            <button
-                                type="button"
-                                key={day.value}
-                                className={`promotions-weekday-chip ${form.weekdays.includes(day.value) ? 'active' : ''}`}
-                                onClick={() => toggleWeekday(day.value)}
-                            >
-                                {day.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <label>
-                        <input type="checkbox" checked={form.active} onChange={(event) => setForm((current) => ({ ...current, active: event.target.checked }))} />
-                        {' '}Ativa
-                    </label>
-
-                    <div className="promotions-tier-row">
-                        <button type="button" className="ui-button-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-                        <button type="submit" className="ui-button" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
-                        <span />
-                    </div>
-                </form>
-            </CompactModal>
+            <PromotionFormModal
+                open={promotionFormOpen}
+                form={promotionForm}
+                setForm={setPromotionForm}
+                categories={categories}
+                products={products}
+                campaigns={campaigns}
+                saving={savingPromotion}
+                onSubmit={submitPromotion}
+                onClose={() => setPromotionFormOpen(false)}
+            />
         </AppLayout>
     )
 }
