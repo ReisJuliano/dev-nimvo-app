@@ -25,7 +25,7 @@ function readCollapsedPreference(storageKey, initialCollapsed, persistCollapsed)
 export default function ActionSidebar({
     storageKey,
     actions = [],
-    title = 'A??es',
+    title = 'Ações',
     initialCollapsed = true,
     persistCollapsed = true,
     className = '',

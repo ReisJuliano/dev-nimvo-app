@@ -38,7 +38,7 @@ export default function DenseTable({
                                 {column.label}
                             </th>
                         ))}
-                        {hasActions ? <th className="dense-table-actions-head">A??es</th> : null}
+                        {hasActions ? <th className="dense-table-actions-head">Ações</th> : null}
                     </tr>
                 </thead>
                 <tbody>

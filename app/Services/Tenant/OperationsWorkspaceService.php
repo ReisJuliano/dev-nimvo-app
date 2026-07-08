@@ -32,7 +32,7 @@ class OperationsWorkspaceService
 {
     // Alçada de confirmação: valores que estourem N vezes a referência (custo dos itens
     // ou média histórica de lançamentos) exigem confirmação extra antes de salvar, evitando
-    // d?vidas fictícias por erro de digita??o (ex.: zero a mais, falta de separador decimal).
+    // dúvidas fictícias por erro de digitação (ex.: zero a mais, falta de separador decimal).
     protected const AMOUNT_CONFIRMATION_RATIO = 3.0;
 
     protected const AMOUNT_CONFIRMATION_MIN_DIFF = 200.0;
