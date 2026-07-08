@@ -43,6 +43,7 @@ export default function StockEntryIndex({ payload }) {
     // Painel de movimentação
     const [movements, setMovements] = useState([])
     const [movLoading, setMovLoading] = useState(false)
+    const [movSearched, setMovSearched] = useState(false)
     const [movFilter, setMovFilter] = useState('')
     const [movFrom, setMovFrom] = useState('')
     const [movTo, setMovTo] = useState('')
@@ -75,6 +76,7 @@ export default function StockEntryIndex({ payload }) {
 
     async function loadMovements(product, type = '', from = '', to = '') {
         setMovLoading(true)
+        setMovSearched(true)
         try {
             const params = {}
             if (type) params.type = type
@@ -92,16 +94,17 @@ export default function StockEntryIndex({ payload }) {
     function openProduct(product) {
         setSelectedProduct(product)
         setMovements([])
+        setMovSearched(false)
         setMovFilter('')
         setMovFrom('')
         setMovTo('')
         cancelAdjust()
-        loadMovements(product)
     }
 
     function closePanel() {
         setSelectedProduct(null)
         setMovements([])
+        setMovSearched(false)
         cancelAdjust()
     }
 
@@ -244,7 +247,7 @@ export default function StockEntryIndex({ payload }) {
 
     return (
         <AppLayout title="Estoque">
-            <div className={`se-page ${selectedProduct ? 'se-page--panel' : ''}`}>
+            <div className="se-page">
 
                 {/* ─── Header ─── */}
                 <div className="se-header">
@@ -398,9 +401,10 @@ export default function StockEntryIndex({ payload }) {
                         )}
                     </div>
 
-                    {/* ─── Painel lateral de movimentação ─── */}
+                    {/* ─── Painel de movimentação (tela cheia) ─── */}
                     {selectedProduct ? (
-                        <div className="se-mov-panel">
+                        <div className="se-mov-modal-backdrop" onClick={closePanel}>
+                        <div className="se-mov-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
                             <div className="se-mov-header">
                                 <div className="se-mov-product-info">
                                     <strong>{selectedProduct.name}</strong>
@@ -585,7 +589,12 @@ export default function StockEntryIndex({ payload }) {
 
                             {/* Lista de movimentações */}
                             <div className="se-mov-list">
-                                {movLoading ? (
+                                {!movSearched ? (
+                                    <div className="se-mov-empty">
+                                        <i className="fa-solid fa-magnifying-glass" />
+                                        <span>Filtre e pesquise para ver as movimentações</span>
+                                    </div>
+                                ) : movLoading ? (
                                     <div className="se-mov-loading">
                                         <i className="fa-solid fa-spinner fa-spin" />
                                         Carregando...
@@ -618,6 +627,7 @@ export default function StockEntryIndex({ payload }) {
                                     </div>
                                 )}
                             </div>
+                        </div>
                         </div>
                     ) : null}
                 </div>
