@@ -107,9 +107,17 @@ class TenantFiscalProfileService
             $profile = $this->resolveNfceProfile();
 
             if (! $profile) {
-                throw ValidationException::withMessages([
-                    'fiscal' => 'Cadastre o perfil fiscal antes de ativar a emissão de NFC-e.',
-                ]);
+                if ($active) {
+                    throw ValidationException::withMessages([
+                        'fiscal' => 'Cadastre o perfil fiscal antes de ativar a emissão de NFC-e.',
+                    ]);
+                }
+
+                return $this->blankSnapshot(
+                    status: 'missing_profile',
+                    label: 'Sem perfil',
+                    tone: 'is-muted',
+                );
             }
 
             $profile->forceFill(['active' => $active])->save();
