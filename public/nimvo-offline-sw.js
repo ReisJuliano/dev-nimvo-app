@@ -201,6 +201,14 @@ self.addEventListener('fetch', (event) => {
         return
     }
 
+    // Requisicoes do Inertia (visitas parciais/reload via XHR, ex.: router.reload())
+    // nao devem passar pelo cache do SW: sao respostas dinamicas por requisicao e o
+    // proprio Inertia ja trata retry/cancelamento. Interceptar aqui causava falha de
+    // rede silenciosa quando o app chamava router.reload() (ex.: resync do caixa).
+    if (request.headers.get('X-Inertia') === 'true') {
+        return
+    }
+
     if (url.pathname.startsWith('/build/')) {
         event.respondWith(networkFirstStatic(request))
         return
