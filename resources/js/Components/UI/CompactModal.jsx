@@ -18,7 +18,7 @@ export default function CompactModal({
     }
 
     return (
-        <div className="compact-modal-backdrop" onClick={onClose}>
+        <div className="compact-modal-backdrop">
             <section
                 aria-modal="true"
                 className={['compact-modal-card', `size-${size}`, className].filter(Boolean).join(' ')}

@@ -397,7 +397,7 @@ export default function StockEntryIndex({ payload }) {
 
                     {/* ─── Painel de movimentação (tela cheia) ─── */}
                     {selectedProduct ? (
-                        <div className="se-mov-modal-backdrop" onClick={closePanel}>
+                        <div className="se-mov-modal-backdrop">
                         <div className="se-mov-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
                             <div className="se-mov-header">
                                 <div className="se-mov-product-info">

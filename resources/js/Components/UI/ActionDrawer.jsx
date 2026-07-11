@@ -18,7 +18,7 @@ export default function ActionDrawer({
     }
 
     return (
-        <div className="action-drawer-backdrop" onClick={onClose}>
+        <div className="action-drawer-backdrop">
             <aside
                 aria-modal="true"
                 className={['action-drawer-card', `size-${size}`, className].filter(Boolean).join(' ')}

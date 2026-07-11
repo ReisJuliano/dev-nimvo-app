@@ -134,7 +134,7 @@ function CreditCustomerModal({ customer, sales, storeName, onClose, onReceived }
     }
 
     return (
-        <div className="credit-modal-backdrop" onClick={onClose} role="presentation">
+        <div className="credit-modal-backdrop" role="presentation">
             <section className="credit-modal" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="credit-modal-title">
                 <header className="credit-modal-header">
                     <div className="credit-modal-heading">

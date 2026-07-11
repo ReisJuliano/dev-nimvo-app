@@ -15,7 +15,7 @@ export default function OrdersModal({
     const modalFooterClassName = ['orders-modal-footer', footerClassName].filter(Boolean).join(' ')
 
     return (
-        <div className="orders-modal-backdrop" onClick={onClose}>
+        <div className="orders-modal-backdrop">
             <div className={modalClassName} onClick={(event) => event.stopPropagation()}>
                 <div className="orders-modal-header">
                     <div>

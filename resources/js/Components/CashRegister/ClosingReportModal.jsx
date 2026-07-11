@@ -37,7 +37,7 @@ export default function ClosingReportModal({ report, onClose }) {
     const paymentTransactions = report.payment_transactions || []
 
     return (
-        <div className="closing-report-modal-backdrop" onClick={onClose}>
+        <div className="closing-report-modal-backdrop">
             <div className="closing-report-modal-card" onClick={(event) => event.stopPropagation()}>
                 <div className="closing-report-modal-header">
                     <div>

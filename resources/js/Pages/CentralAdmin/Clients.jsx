@@ -277,7 +277,7 @@ function ConfirmModal({ open, tenant, busy, onClose, onConfirm }) {
     }
 
     return (
-        <div className="central-admin-modal-backdrop" onClick={onClose}>
+        <div className="central-admin-modal-backdrop">
             <div className="central-admin-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="central-admin-modal-header">
                     <div className="central-admin-modal-titlebox">
@@ -967,7 +967,7 @@ function TenantManagePanel({
     const showFooterSave = Boolean(activeSubmit)
 
     return (
-        <div className="central-admin-modal-backdrop" onClick={onClose}>
+        <div className="central-admin-modal-backdrop">
             <div className="central-admin-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="central-admin-modal-header">
                     <div className="central-admin-modal-titlebox">

@@ -5272,7 +5272,7 @@ function PosWorkspace({
                     </button>
 
                     {mobileCashPanelOpen ? (
-                        <div className="pos-turn-sheet-backdrop" onClick={onCloseMobileCashPanel}>
+                        <div className="pos-turn-sheet-backdrop">
                             <PosCashTurnPanel
                                 mobile
                                 cashRegisterState={cashRegisterState}

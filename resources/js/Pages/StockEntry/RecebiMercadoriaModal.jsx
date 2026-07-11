@@ -106,12 +106,7 @@ export default function RecebiMercadoriaModal({
     }
 
     return (
-        <div
-            className="stock-modal-backdrop"
-            onClick={(event) => {
-                if (event.target === event.currentTarget && !saving) onClose?.()
-            }}
-        >
+        <div className="stock-modal-backdrop">
             <div className="stock-receive-modal" role="dialog" aria-modal="true" aria-labelledby="stock-receive-title">
                 <header className="stock-modal-header">
                     <div>

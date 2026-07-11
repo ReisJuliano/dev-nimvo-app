@@ -344,12 +344,7 @@ export default function ProductFormModal({
     }
 
     return (
-        <div
-            className="products-modal-backdrop"
-            onClick={(event) => {
-                if (event.target === event.currentTarget) requestClose()
-            }}
-        >
+        <div className="products-modal-backdrop">
             <div className="products-modal products-editor-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
                 <header className="products-modal-header products-editor-header">
                     <div>
