@@ -99,6 +99,14 @@ class PermissionRegistry
                 ],
             ],
             [
+                'key' => 'fiscal',
+                'label' => 'NFe/NFCe',
+                'items' => [
+                    ['key' => 'fiscal.reimprimir', 'label' => 'Ver e reimprimir notas', 'description' => 'Consulta notas fiscais já emitidas e reimprime DANFE/DANFCE.'],
+                    ['key' => 'fiscal.emitir_manual', 'label' => 'Emitir NF-e manual ou a partir de venda', 'description' => 'Permite converter uma venda em NF-e e emitir nota fiscal avulsa com dados digitados na mão.'],
+                ],
+            ],
+            [
                 'key' => 'relatorios',
                 'label' => 'Relatórios',
                 'items' => [

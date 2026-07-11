@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Tenant\Fiscal;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\Fiscal\ConvertSaleToNfeRequest;
+use App\Http\Requests\Tenant\Fiscal\StoreManualFiscalDocumentRequest;
 use App\Models\Tenant\FiscalDocument;
+use App\Models\Tenant\Sale;
 use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\Fiscal\FiscalDocumentXmlStorage;
+use App\Services\Tenant\Fiscal\ManualFiscalDocumentService;
 use App\Support\DanfePdfRenderer;
 use App\Support\DanfcePdfRenderer;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +18,87 @@ use Illuminate\Http\Response;
 
 class FiscalDocumentsApiController extends Controller
 {
+    /**
+     * Busca uma venda pelo número (ex.: VND-20260711-0001) para a aba
+     * "Emitir a partir de venda" — devolve o destinatário atual (se já
+     * identificado) e os documentos fiscais já emitidos para essa venda.
+     */
+    public function lookupSale(Request $request): JsonResponse
+    {
+        $saleNumber = trim((string) $request->query('sale_number'));
+
+        abort_if($saleNumber === '', 422, 'Informe o número da venda.');
+
+        $sale = Sale::query()
+            ->with(['customer:id,name,document,email,phone,state_registration,street,number,complement,district,city_name,city_code,state,zip_code', 'fiscalDocuments'])
+            ->where('sale_number', $saleNumber)
+            ->first();
+
+        abort_unless($sale, 404, 'Venda não encontrada.');
+
+        return response()->json([
+            'sale' => [
+                'id' => $sale->id,
+                'sale_number' => $sale->sale_number,
+                'total' => (float) $sale->total,
+                'created_at' => optional($sale->created_at)?->toIso8601String(),
+                'requested_document_model' => $sale->requested_document_model,
+                'customer' => $sale->customer ? [
+                    'id' => $sale->customer->id,
+                    'name' => $sale->customer->name,
+                    'document' => $sale->customer->document,
+                    'email' => $sale->customer->email,
+                    'phone' => $sale->customer->phone,
+                    'state_registration' => $sale->customer->state_registration,
+                    'street' => $sale->customer->street,
+                    'number' => $sale->customer->number,
+                    'complement' => $sale->customer->complement,
+                    'district' => $sale->customer->district,
+                    'city_name' => $sale->customer->city_name,
+                    'city_code' => $sale->customer->city_code,
+                    'state' => $sale->customer->state,
+                    'zip_code' => $sale->customer->zip_code,
+                ] : null,
+                'has_nfe' => $sale->fiscalDocuments->contains(fn (FiscalDocument $document) => $document->type === 'nfe'),
+            ],
+        ]);
+    }
+
+    /**
+     * Converte uma venda (NFC-e ou ainda sem documento fiscal) em NF-e modelo
+     * 55, com ou sem consumidor já identificado na venda original.
+     */
+    public function convertToNfe(ConvertSaleToNfeRequest $request, Sale $sale, FiscalDocumentService $service): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasPermission('fiscal.emitir_manual'), 403);
+
+        $validated = $request->validated();
+
+        $document = $service->prepareNfeFromSale($sale->id, $validated['recipient']);
+
+        return response()->json([
+            'message' => 'NF-e enviada para processamento.',
+            'document' => $this->serialize($document),
+        ], 202);
+    }
+
+    /**
+     * Emite uma NF-e avulsa (nota manual, sem venda de PDV por trás) a partir
+     * de itens digitados na tela. Cria uma Sale sintética (origin=manual_fiscal)
+     * só para reaproveitar o motor fiscal já validado em `issueFromSale()`.
+     */
+    public function storeManual(StoreManualFiscalDocumentRequest $request, ManualFiscalDocumentService $service): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasPermission('fiscal.emitir_manual'), 403);
+
+        $document = $service->create($request->validated(), (int) auth()->id());
+
+        return response()->json([
+            'message' => 'Nota fiscal avulsa enviada para processamento.',
+            'document' => $this->serialize($document),
+        ], 202);
+    }
+
     public function store(Request $request, FiscalDocumentService $service): JsonResponse
     {
         $validated = $request->validate([

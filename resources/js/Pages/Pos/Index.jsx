@@ -10,6 +10,7 @@ import ActionDrawer from '@/Components/UI/ActionDrawer'
 import CompactModal from '@/Components/UI/CompactModal'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import AppLayout from '@/Layouts/AppLayout'
+import { goBackOrFallback } from '@/Components/Layout/AppTopbar'
 import { showPopup, useErrorFeedbackPopup } from '@/lib/errorPopup'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import useModules from '@/hooks/useModules'
@@ -4986,10 +4987,30 @@ function PosWorkspace({
                 <section className="pos-main-column">
                     <header className="pos-topbar">
                         <div className="pos-terminal-line">
+                            <button
+                                type="button"
+                                className="pos-back-button ui-tooltip"
+                                data-tooltip="Voltar"
+                                onClick={() => goBackOrFallback()}
+                            >
+                                <i className="fa-solid fa-arrow-left" aria-hidden="true" />
+                            </button>
                             <strong>{tenantName || 'Loja principal'} | {cashRegisterState ? 'Caixa principal' : 'Caixa fechado'}</strong>
                         </div>
 
                         <div className="pos-topbar-actions">
+                            <div className="pos-quick-links" role="navigation" aria-label="Acessos rapidos">
+                                <a className="pos-quick-link ui-tooltip" data-tooltip="NFe/NFCe" title="NFe/NFCe" href="/fiscal/notas" target="_blank" rel="noreferrer">
+                                    <i className="fa-solid fa-file-invoice" aria-hidden="true" />
+                                </a>
+                                <a className="pos-quick-link ui-tooltip" data-tooltip="Estoque" title="Estoque" href="/estoque" target="_blank" rel="noreferrer">
+                                    <i className="fa-solid fa-warehouse" aria-hidden="true" />
+                                </a>
+                                <a className="pos-quick-link ui-tooltip" data-tooltip="Relatorios" title="Relatorios" href="/relatorios" target="_blank" rel="noreferrer">
+                                    <i className="fa-solid fa-chart-bar" aria-hidden="true" />
+                                </a>
+                            </div>
+
                             <span className={`pos-agent-chip ${localAgentStatus.tone}`} role="status">
                                 <i className="fa-solid fa-print" aria-hidden="true" />
                                 <span>{localAgentStatus.label}</span>

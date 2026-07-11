@@ -116,6 +116,14 @@ class TenantNavigationService
                         'request_patterns' => ['venda-condicional*'],
                     ],
                     [
+                        'href' => '/fiscal/notas',
+                        'label' => 'NFe/NFCe',
+                        'icon' => 'fa-file-invoice',
+                        'access_key' => 'fiscal_avancado',
+                        'required_permission' => 'fiscal.reimprimir',
+                        'request_patterns' => ['fiscal/notas*', 'api/fiscal/notas*'],
+                    ],
+                    [
                         'href' => '/consultas-cancelamentos',
                         'label' => 'Suporte fiscal',
                         'icon' => 'fa-magnifying-glass-dollar',

@@ -1,0 +1,273 @@
+/* ─── NFe/NFCe ────────────────────────────── */
+
+.nfe-page {
+    display: grid;
+    gap: 1rem;
+    padding-top: 1rem;
+    width: 100%;
+    max-width: none;
+}
+
+.nfe-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    box-shadow: var(--app-shadow-sm);
+}
+
+.nfe-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--app-text-secondary);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--app-transition);
+}
+
+.nfe-tab:hover { background: var(--app-surface-muted); }
+
+.nfe-tab.active {
+    background: var(--app-primary);
+    color: white;
+}
+
+.nfe-panel {
+    display: grid;
+    gap: 1rem;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: var(--app-shadow-sm);
+}
+
+.nfe-status-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.nfe-status-filter {
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    color: var(--app-text-secondary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: var(--app-transition);
+}
+
+.nfe-status-filter:hover { border-color: rgba(37,99,235,0.35); }
+.nfe-status-filter.active { background: var(--app-primary); border-color: var(--app-primary); color: white; }
+
+.nfe-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--app-text-muted);
+}
+
+.nfe-pagination-buttons { display: flex; gap: 0.5rem; }
+.nfe-pagination-buttons button {
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface);
+    cursor: pointer;
+    font-family: inherit;
+}
+.nfe-pagination-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.nfe-sale-search {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+}
+
+.nfe-sale-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1;
+    max-width: 320px;
+}
+
+.nfe-sale-search input,
+.nfe-form input,
+.nfe-form select,
+.nfe-form textarea {
+    border: 1px solid var(--app-border-strong);
+    border-radius: 8px;
+    padding: 0.55rem 0.7rem;
+    background: var(--app-surface);
+    color: var(--app-text-primary);
+    font: inherit;
+    font-size: 0.875rem;
+}
+
+.nfe-sale-summary {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.85rem 1rem;
+    background: var(--app-surface-muted);
+    border-radius: 10px;
+}
+
+.nfe-sale-summary div { display: flex; flex-direction: column; gap: 0.15rem; }
+.nfe-sale-summary span { font-size: 0.68rem; text-transform: uppercase; color: var(--app-text-muted); font-weight: 700; }
+
+.nfe-form { display: grid; gap: 1.25rem; }
+
+.nfe-form-section {
+    display: grid;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--app-border);
+}
+
+.nfe-form-section:first-child { border-top: none; padding-top: 0; }
+.nfe-form-section h3 { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--app-text-primary); }
+
+.nfe-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.nfe-form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--app-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.nfe-field--full { grid-column: span 3; }
+
+.nfe-checkbox-field {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.5rem !important;
+}
+
+.nfe-product-search, .nfe-customer-search {
+    position: relative;
+}
+
+.nfe-product-search input, .nfe-customer-search input {
+    width: 100%;
+}
+
+.nfe-product-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    box-shadow: var(--app-shadow);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.nfe-product-dropdown button {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: none;
+    border-top: 1px solid var(--app-border);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+
+.nfe-product-dropdown button:first-child { border-top: none; }
+.nfe-product-dropdown button:hover { background: rgba(37,99,235,0.06); }
+
+.nfe-items-table { width: 100%; border-collapse: collapse; }
+.nfe-items-table th, .nfe-items-table td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--app-border);
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.nfe-items-table input { width: 90px; }
+.nfe-items-table button {
+    border: none;
+    background: transparent;
+    color: var(--app-text-muted);
+    cursor: pointer;
+}
+
+.nfe-total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0.85rem;
+    background: var(--app-surface-muted);
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.nfe-hint {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--app-text-muted);
+}
+
+.nfe-feedback {
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.nfe-feedback--success { background: rgba(16,185,129,0.1); color: #059669; }
+.nfe-feedback--error { background: rgba(239,68,68,0.08); color: #dc2626; }
+
+.nfe-primary-button {
+    justify-self: start;
+    padding: 0.7rem 1.5rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--app-primary);
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.nfe-primary-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+    .nfe-form-grid { grid-template-columns: 1fr 1fr; }
+    .nfe-field--full { grid-column: span 2; }
+}
+
+@media (max-width: 620px) {
+    .nfe-form-grid { grid-template-columns: 1fr; }
+    .nfe-field--full { grid-column: span 1; }
+    .nfe-tabs { flex-direction: column; }
+}

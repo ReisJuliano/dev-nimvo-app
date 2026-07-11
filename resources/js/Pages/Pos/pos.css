@@ -66,11 +66,34 @@
 
 .pos-terminal-line {
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     font-size: 13px;
     letter-spacing: 0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.pos-back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    background: var(--pos-surface-soft);
+    color: var(--pos-text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pos-back-button:hover {
+    background: rgba(24, 95, 165, 0.1);
+    color: var(--pos-blue);
 }
 
 .pos-topbar-actions {
@@ -79,6 +102,32 @@
     align-items: center;
     justify-content: flex-end;
     gap: 0.5rem;
+}
+
+.pos-quick-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-right: 0.35rem;
+    border-right: 1px solid var(--pos-border);
+}
+
+.pos-quick-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--pos-surface-soft);
+    color: var(--pos-text-muted);
+    flex-shrink: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pos-quick-link:hover {
+    background: rgba(24, 95, 165, 0.1);
+    color: var(--pos-blue);
 }
 
 .pos-agent-chip {

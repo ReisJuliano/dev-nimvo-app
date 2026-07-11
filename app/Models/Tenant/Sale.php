@@ -18,6 +18,7 @@ class Sale extends Model
         'company_id',
         'user_id',
         'cash_register_id',
+        'origin',
         'subtotal',
         'discount',
         'total',

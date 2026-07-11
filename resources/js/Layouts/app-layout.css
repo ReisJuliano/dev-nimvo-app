@@ -201,6 +201,28 @@
     border-color: rgba(79, 70, 229, 0.2);
 }
 
+.app-back-button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-surface);
+    color: var(--app-text-secondary);
+    box-shadow: var(--app-shadow-sm);
+    cursor: pointer;
+    transition: var(--app-transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.app-back-button:hover {
+    color: var(--app-primary);
+    background: var(--app-primary-soft);
+    border-color: rgba(79, 70, 229, 0.2);
+}
+
 .app-sidebar-toggle {
     width: 30px;
     height: 30px;

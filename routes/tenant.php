@@ -19,6 +19,7 @@ use App\Http\Controllers\Tenant\Fashion\FashionModulePageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalContingencyRetryController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsApiController;
+use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalNumberInutilizationController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleContingencyController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
@@ -122,6 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/pedidos', OrdersPageController::class)->name('orders.index');
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
         Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
+        Route::get('/fiscal/notas', FiscalDocumentsPageController::class)->name('fiscal.notas.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', PurchasesPageController::class)->name('purchases.index');
         Route::get('/contas-a-pagar', PayablesPageController::class)->name('payables.index');
@@ -244,6 +246,9 @@ Route::middleware('auth')->group(function () {
             Route::get('/pdv/local-agent/commands/{command}', [PosApiController::class, 'localAgentCommand'])->name('api.pos.local-agent.commands.show');
             Route::post('/pdv/local-agent/commands/{command}/retry', [PosApiController::class, 'retryLocalAgentCommand'])->name('api.pos.local-agent.commands.retry');
             Route::post('/fiscal/documents', [FiscalDocumentsApiController::class, 'store'])->name('api.fiscal.documents.store');
+            Route::post('/fiscal/sales/{sale}/convert-to-nfe', [FiscalDocumentsApiController::class, 'convertToNfe'])->name('api.fiscal.documents.convert-to-nfe');
+            Route::post('/fiscal/notas/manual', [FiscalDocumentsApiController::class, 'storeManual'])->name('api.fiscal.notas.manual');
+            Route::get('/fiscal/notas/sales/lookup', [FiscalDocumentsApiController::class, 'lookupSale'])->name('api.fiscal.notas.sales.lookup');
             Route::get('/fiscal/documents/{fiscalDocument}', [FiscalDocumentsApiController::class, 'show'])->name('api.fiscal.documents.show');
             Route::post('/fiscal/documents/{fiscalDocument}/retry', [FiscalDocumentsApiController::class, 'retry'])->name('api.fiscal.documents.retry');
             Route::get('/fiscal/documents/{fiscalDocument}/preview', [FiscalDocumentsApiController::class, 'preview'])->name('api.fiscal.documents.preview');

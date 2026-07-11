@@ -5,6 +5,42 @@ Notas pra sessoes futuras do Claude Code neste repo. Leia primeiro
 atualizada por data) — este arquivo so complementa com o que e especifico
 de trabalhar aqui via Claude Code.
 
+## O que e o Nimvo
+
+SaaS multi-tenant de gestao comercial pra papelaria, mercado/mercearia e
+varejo de pequeno/medio porte no Brasil. Meta: substituir o combo
+"caderno + planilha + PDV solto" por um sistema unico cobrindo a rotina real
+da loja de ponta a ponta — nao so vender, mas operar.
+
+Modulos principais (todos dentro do contexto tenant):
+
+- **PDV**: venda no balcao, atalhos de teclado, sangria/suprimento, sugestao
+  de combo, emissao de NFC-e/cupom fiscal.
+- **Estoque**: cadastro de produto, entrada de mercadoria vinculada a
+  fornecedor/boleto/contas a pagar, ajuste com motivo e trilha, controle de
+  validade e venda por peso (balanca), inventario com contagem cega e curva ABC.
+- **Financeiro**: caixa (abertura/fechamento com conferencia por forma de
+  pagamento), contas a pagar, fiado/condicional/entregas ("A receber"), DRE
+  simplificado, fluxo de caixa projetado.
+- **Promocoes**: ofertas avulsas e tabloides (campanhas com varias ofertas e
+  periodo de validade), aplicadas automaticamente no PDV.
+- **Gestao**: usuarios/permissoes por grupo (Dono/Gerente/Operador), auditoria,
+  etiquetas (com deteccao de preco desatualizado), relatorios gerenciais
+  (faturamento, ticket medio, margem, quebra, giro, dias de estoque).
+- **Fiscal**: emissao NFC-e/NF-e, contingencia, cancelamento, inutilizacao de
+  numeracao — via agente local (certificado A1) integrado ao Laravel central.
+- **Central (admin Nimvo)**: cadastro de tenants, licencas, perfil fiscal por
+  cliente, deploy e monitoramento do agente local de cada loja.
+
+Publico-alvo real: dono de loja pequena, pouca familiaridade tecnica, caixa
+que precisa ser rapido com fila de cliente esperando. Isso pesa nas decisoes
+de UX (ex.: por que atalho de teclado sem modificador quebra digitacao —
+achado 4.1 do relatorio de 2026-07-11) e de confiabilidade (um bug que trava
+"registrar entrada" ou "finalizar venda" para a operacao real de uma loja em
+poucos dias — nao e so um detalhe cosmetico).
+
+Detalhes completos de stack/arquitetura: ver `README.md`.
+
 ## Stack, remotos, deploy
 
 Ver `AGENTS.md` e `docs/VPS-GIT-DEPLOY.md` pros detalhes completos. Resumo:
