@@ -8,6 +8,7 @@ use App\Models\Tenant\OrderDraft;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
 use App\Services\Tenant\Inventory\InventorySessionService;
+use App\Support\Tenant\AuditActions;
 use App\Support\Tenant\PaymentMethod;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,7 @@ class PosService
         protected PromotionEngine $promotionEngine,
         protected ExpiryService $expiryService,
         protected SupervisorAuthorizationService $supervisorAuthorizationService,
+        protected AuditLogService $auditLogService,
     ) {
     }
 
@@ -453,6 +455,13 @@ class PosService
             }
 
             $this->pendingSaleService->discard($userId);
+
+            $this->auditLogService->record(AuditActions::SALE_FINALIZED, $sale, after: [
+                'sale_number' => $sale->sale_number,
+                'total' => $sale->total,
+                'discount' => $sale->discount,
+                'items_count' => $items->count(),
+            ], userId: $userId);
 
             return [
                 'type' => 'sale',

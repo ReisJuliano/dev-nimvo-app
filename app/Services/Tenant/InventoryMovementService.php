@@ -4,12 +4,18 @@ namespace App\Services\Tenant;
 
 use App\Models\Tenant\InventoryMovement;
 use App\Models\Tenant\Product;
+use App\Support\Tenant\AuditActions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class InventoryMovementService
 {
+    public function __construct(
+        protected AuditLogService $auditLogService,
+    ) {
+    }
+
     public function apply(
         Product $product,
         float $quantityDelta,
@@ -44,6 +50,20 @@ class InventoryMovementService
             'notes' => $context['notes'] ?? null,
             'occurred_at' => $this->resolveOccurredAt($context['occurred_at'] ?? null),
         ]);
+
+        if ($type === 'manual_adjustment') {
+            $this->auditLogService->record(
+                AuditActions::STOCK_MANUAL_ADJUSTMENT,
+                $product,
+                before: ['stock_quantity' => $before],
+                after: ['stock_quantity' => $after],
+                metadata: [
+                    'reason' => $context['reason'] ?? null,
+                    'notes' => $context['notes'] ?? null,
+                ],
+                userId: $context['user_id'] ?? null,
+            );
+        }
 
         return $product->fresh();
     }

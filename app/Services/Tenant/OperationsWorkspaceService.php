@@ -135,9 +135,9 @@ class OperationsWorkspaceService
     public function store(string $module, array $input, int $userId): array
     {
         return match ($module) {
-            'clientes' => ['message' => 'Cliente cadastrado com sucesso.', 'record' => $this->serializeCustomer($this->saveCustomer(null, $input))],
-            'fornecedores' => ['message' => 'Fornecedor cadastrado com sucesso.', 'record' => $this->serializeSupplier($this->saveSupplier(null, $input))],
-            'categorias' => ['message' => 'Categoria cadastrada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory(null, $input))],
+            'clientes' => ['message' => 'Cliente cadastrado com sucesso.', 'record' => $this->serializeCustomer($this->auditCreated($this->saveCustomer(null, $input)))],
+            'fornecedores' => ['message' => 'Fornecedor cadastrado com sucesso.', 'record' => $this->serializeSupplier($this->auditCreated($this->saveSupplier(null, $input)))],
+            'categorias' => ['message' => 'Categoria cadastrada com sucesso.', 'record' => $this->serializeCategory($this->auditCreated($this->saveCategory(null, $input)))],
             'delivery' => ['message' => 'Entrega salva com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder(null, $input))],
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar salva com sucesso.', 'record' => $this->serializePayable($this->savePayable(null, $input, $userId))],
@@ -185,9 +185,9 @@ class OperationsWorkspaceService
     public function update(string $module, int $recordId, array $input, int $userId): array
     {
         return match ($module) {
-            'clientes' => ['message' => 'Cliente atualizado com sucesso.', 'record' => $this->serializeCustomer($this->saveCustomer($this->findRecord(Customer::class, $recordId), $input))],
-            'fornecedores' => ['message' => 'Fornecedor atualizado com sucesso.', 'record' => $this->serializeSupplier($this->saveSupplier($this->findRecord(Supplier::class, $recordId), $input))],
-            'categorias' => ['message' => 'Categoria atualizada com sucesso.', 'record' => $this->serializeCategory($this->saveCategory($this->findRecord(Category::class, $recordId), $input))],
+            'clientes' => ['message' => 'Cliente atualizado com sucesso.', 'record' => $this->serializeCustomer($this->auditUpdated($this->findRecord(Customer::class, $recordId), fn ($record) => $this->saveCustomer($record, $input)))],
+            'fornecedores' => ['message' => 'Fornecedor atualizado com sucesso.', 'record' => $this->serializeSupplier($this->auditUpdated($this->findRecord(Supplier::class, $recordId), fn ($record) => $this->saveSupplier($record, $input)))],
+            'categorias' => ['message' => 'Categoria atualizada com sucesso.', 'record' => $this->serializeCategory($this->auditUpdated($this->findRecord(Category::class, $recordId), fn ($record) => $this->saveCategory($record, $input)))],
             'delivery' => ['message' => 'Entrega atualizada com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder($this->findRecord(DeliveryOrder::class, $recordId), $input))],
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar atualizada com sucesso.', 'record' => $this->serializePayable($this->savePayable($this->findRecord(Payable::class, $recordId), $input, $userId))],
@@ -226,6 +226,23 @@ class OperationsWorkspaceService
         $this->auditLogService->record(AuditActions::RECORD_DELETED, $model, before: $before);
 
         return $message;
+    }
+
+    protected function auditCreated(Model $model): Model
+    {
+        $this->auditLogService->record(AuditActions::RECORD_CREATED, $model, after: $model->attributesToArray());
+
+        return $model;
+    }
+
+    protected function auditUpdated(Model $model, \Closure $save): Model
+    {
+        $before = $model->attributesToArray();
+        $updated = $save($model);
+
+        $this->auditLogService->record(AuditActions::RECORD_UPDATED, $updated, before: $before, after: $updated->attributesToArray());
+
+        return $updated;
     }
 
     protected function deleteStockSensitiveRecord(Model $model, string $message): string
@@ -1190,7 +1207,7 @@ class OperationsWorkspaceService
             'payment_method' => ['nullable', 'string', 'max:40'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'amount_paid' => ['nullable', 'numeric', 'gte:0'],
-            'due_date' => ['nullable', 'date'],
+            'due_date' => ['nullable', 'date', 'before_or_equal:'.now()->addYears(10)->toDateString()],
             'paid_at' => ['nullable', 'date'],
             'bank_name' => ['nullable', 'string', 'max:120'],
             'barcode' => ['nullable', 'string', 'max:255'],
@@ -1292,11 +1309,11 @@ class OperationsWorkspaceService
             'invoice_access_key' => ['nullable', 'string', 'max:80'],
             'billing_barcode' => ['nullable', 'string', 'max:255'],
             'billing_amount' => ['nullable', 'numeric', 'gte:0'],
-            'billing_due_date' => ['nullable', 'date'],
+            'billing_due_date' => ['nullable', 'date', 'before_or_equal:'.now()->addYears(10)->toDateString()],
             'payables' => ['nullable', 'array'],
             'payables.*.description' => ['nullable', 'string', 'max:255'],
             'payables.*.amount' => ['required_with:payables', 'numeric', 'gt:0'],
-            'payables.*.due_date' => ['nullable', 'date'],
+            'payables.*.due_date' => ['nullable', 'date', 'before_or_equal:'.now()->addYears(10)->toDateString()],
             'payables.*.payment_method' => ['nullable', 'string', 'max:40'],
             'payables.*.bank_name' => ['nullable', 'string', 'max:120'],
             'payables.*.barcode' => ['nullable', 'string', 'max:255'],

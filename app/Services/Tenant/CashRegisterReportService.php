@@ -77,7 +77,7 @@ class CashRegisterReportService
         $totalSupplies = (float) $cashRegister->movements->where('type', 'supply')->sum('amount');
         $cashSales = (float) $payments->where('payment_method', PaymentMethod::CASH)->sum('total');
         $expectedCash = (float) $cashRegister->opening_amount + $totalSupplies + $cashSales - $totalWithdrawals;
-        $difference = (float) ($cashRegister->closing_amount ?? 0) - $expectedCash;
+        $difference = round((float) ($cashRegister->closing_amount ?? 0) - $expectedCash, 2) + 0.0;
         $paymentTotals = $payments->pluck('total', 'payment_method')->map(fn ($value) => (float) $value)->all();
 
         $closingBreakdown = $this->buildClosingBreakdown($paymentTotals, $expectedCash, [], $cashRegister->closed_at);

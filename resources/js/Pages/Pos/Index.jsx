@@ -1115,7 +1115,7 @@ export default function PosIndex({
         return recommendationProductIds.at(-1) ?? null
     }, [selectedCartItemId, recommendationProductIds])
 
-    const pricing = useMemo(() => resolvePricing(cart, discountConfig, selectedCartItem), [cart, discountConfig, selectedCartItem])
+    const pricing = useMemo(() => resolvePricing(cart, discountConfig, selectedCartItem, promotionInfo), [cart, discountConfig, selectedCartItem, promotionInfo])
 
     useEffect(() => {
         if (!cart.length) {
@@ -1143,8 +1143,8 @@ export default function PosIndex({
 
     const discountPreview = useMemo(() => {
         const previewConfig = buildPreviewConfigFromDraft(discountDraft, pricing.subtotal)
-        return resolvePricing(cart, previewConfig, selectedCartItem)
-    }, [cart, discountDraft, pricing.subtotal, selectedCartItem])
+        return resolvePricing(cart, previewConfig, selectedCartItem, promotionInfo)
+    }, [cart, discountDraft, pricing.subtotal, selectedCartItem, promotionInfo])
 
     const totals = useMemo(
         () => ({
@@ -3742,7 +3742,9 @@ export default function PosIndex({
                 || mobileCashPanelOpen,
             )
             const hasBlockingModal = false
-            const shortcutAction = event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey
+            const focusedTag = event.target?.tagName
+            const isTypingInField = focusedTag === 'INPUT' || focusedTag === 'TEXTAREA' || focusedTag === 'SELECT' || event.target?.isContentEditable
+            const shortcutAction = event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && !isTypingInField
                 ? shortcutActionByCode[event.code]
                 : null
 
@@ -5092,11 +5094,13 @@ function PosWorkspace({
                                 >
                                     <span className="pos-item-index">{index + 1}</span>
                                     <span className="pos-item-name" title={item.name}>{item.name}</span>
-                                    {promotionInfo[item.id] ? (
-                                        <span className="pos-item-promotion-badge" title={`Promoção: ${promotionInfo[item.id].promotion_name}`}>
-                                            <i className="fa-solid fa-tag" />
-                                        </span>
-                                    ) : null}
+                                    <span className="pos-item-promotion-badge-cell">
+                                        {promotionInfo[item.id] ? (
+                                            <span className="pos-item-promotion-badge" title={`Promoção: ${promotionInfo[item.id].promotion_name}`}>
+                                                <i className="fa-solid fa-tag" />
+                                            </span>
+                                        ) : null}
+                                    </span>
                                     <span className="pos-item-divider" aria-hidden="true" />
                                     <div className="pos-item-qty-controls">
                                         <button
@@ -5305,6 +5309,7 @@ function PosWorkspace({
                                 step="0.01"
                                 value={cashReceived}
                                 onChange={(event) => onCashReceivedChange(event.target.value)}
+                                onFocus={(event) => event.target.select()}
                                 placeholder="0,00"
                             />
                         </label>

@@ -11,7 +11,7 @@ class InventoryAdjustmentServiceTest extends TestCase
 {
     protected function service(): InventoryAdjustmentService
     {
-        return new InventoryAdjustmentService(new InventoryMovementService(), new AuditLogService());
+        return new InventoryAdjustmentService(new InventoryMovementService(new AuditLogService()), new AuditLogService());
     }
 
     public function test_final_delta_is_zero_when_counted_matches_snapshot_plus_interim_movements(): void

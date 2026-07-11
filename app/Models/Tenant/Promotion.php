@@ -62,6 +62,14 @@ class Promotion extends Model
 
         $now = now();
 
+        if ($this->campaign && !$this->campaign->active) {
+            return 'inativa';
+        }
+
+        if ($this->campaign?->ends_at?->isPast()) {
+            return 'expirada';
+        }
+
         if ($this->start_at && $this->start_at->isFuture()) {
             return 'agendada';
         }

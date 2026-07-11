@@ -3,11 +3,17 @@
 namespace App\Services\Tenant;
 
 use App\Models\Tenant\Product;
+use App\Support\Tenant\AuditActions;
 use Illuminate\Support\Facades\Schema;
 
 class ProductService
 {
     protected array $productColumnCache = [];
+
+    public function __construct(
+        protected AuditLogService $auditLogService,
+    ) {
+    }
 
     public function nextCode(): string
     {
@@ -51,6 +57,8 @@ class ProductService
 
     public function save(Product $product, array $data): Product
     {
+        $isCreate = ! $product->exists;
+
         if (blank($data['code'] ?? null)) {
             $data['code'] = $product->exists ? $product->code : $this->nextCode();
         }
@@ -64,6 +72,7 @@ class ProductService
             : (strtoupper((string) ($data['unit'] ?? $product->unit ?? 'UN')) ?: 'UN');
 
         $previousSalePrice = $product->exists ? (float) $product->sale_price : null;
+        $previousCostPrice = $product->exists ? (float) $product->cost_price : null;
 
         $product->fill([
             'code' => $data['code'],
@@ -189,6 +198,20 @@ class ProductService
         }
 
         $product->save();
+
+        if ($isCreate) {
+            $this->auditLogService->record(AuditActions::RECORD_CREATED, $product, after: $product->attributesToArray());
+        } else {
+            $this->auditLogService->record(AuditActions::RECORD_UPDATED, $product, after: $product->attributesToArray());
+
+            if (abs($previousSalePrice - (float) $product->sale_price) > 0.001) {
+                $this->auditLogService->record(AuditActions::PRODUCT_PRICE_CHANGED, $product, before: ['sale_price' => $previousSalePrice], after: ['sale_price' => (float) $product->sale_price]);
+            }
+
+            if (abs($previousCostPrice - (float) $product->cost_price) > 0.001) {
+                $this->auditLogService->record(AuditActions::PRODUCT_COST_CHANGED, $product, before: ['cost_price' => $previousCostPrice], after: ['cost_price' => (float) $product->cost_price]);
+            }
+        }
 
         return $product->fresh(['category:id,name', 'supplier:id,name']);
     }

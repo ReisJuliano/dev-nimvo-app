@@ -429,7 +429,7 @@ export default function ProductFormModal({
                                 <span>Preço de venda *</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-receipt" />
-                                    <input type="number" step="0.01" min="0" value={form.sale_price ?? ''} onChange={(event) => updateField('sale_price', event.target.value)} required />
+                                    <input type="number" step="0.01" min="0" value={form.sale_price ?? ''} onChange={(event) => updateField('sale_price', event.target.value)} onFocus={(event) => event.target.select()} required />
                                 </div>
                                 {renderFieldError('sale_price')}
                             </label>
@@ -439,7 +439,7 @@ export default function ProductFormModal({
                                     <span>Custo</span>
                                     <div className="products-editor-input-wrap">
                                         <i className="fa-solid fa-coins" />
-                                        <input type="number" step="0.01" min="0" value={form.cost_price ?? ''} onChange={(event) => updateField('cost_price', event.target.value)} placeholder="Opcional" />
+                                        <input type="number" step="0.01" min="0" value={form.cost_price ?? ''} onChange={(event) => updateField('cost_price', event.target.value)} onFocus={(event) => event.target.select()} placeholder="Opcional" />
                                     </div>
                                     <small className="products-field-help">Usado para calcular seu lucro.</small>
                                     {renderFieldError('cost_price')}
@@ -461,7 +461,7 @@ export default function ProductFormModal({
                                     <span>Estoque inicial</span>
                                     <div className="products-editor-input-wrap">
                                         <i className="fa-solid fa-boxes-stacked" />
-                                        <input type="number" step="0.001" min="0" value={form.stock_quantity ?? ''} onChange={(event) => updateField('stock_quantity', event.target.value)} placeholder="Opcional" />
+                                        <input type="number" step="0.001" min="0" value={form.stock_quantity ?? ''} onChange={(event) => updateField('stock_quantity', event.target.value)} onFocus={(event) => event.target.select()} placeholder="Opcional" />
                                     </div>
                                     {renderFieldError('stock_quantity')}
                                 </label>
@@ -471,7 +471,7 @@ export default function ProductFormModal({
                                 <span>Estoque mínimo</span>
                                 <div className="products-editor-input-wrap">
                                     <i className="fa-solid fa-triangle-exclamation" />
-                                    <input type="number" step="0.001" min="0" value={form.min_stock ?? ''} onChange={(event) => updateField('min_stock', event.target.value)} placeholder="Opcional" />
+                                    <input type="number" step="0.001" min="0" value={form.min_stock ?? ''} onChange={(event) => updateField('min_stock', event.target.value)} onFocus={(event) => event.target.select()} placeholder="Opcional" />
                                 </div>
                                 <small className="products-field-help">Avisa quando estiver acabando.</small>
                                 {renderFieldError('min_stock')}
@@ -553,6 +553,7 @@ export default function ProductFormModal({
                                                     min="1"
                                                     value={form.scale_code ?? ''}
                                                     onChange={(event) => updateField('scale_code', event.target.value)}
+                                                    onFocus={(event) => event.target.select()}
                                                     placeholder="Ex.: 123"
                                                 />
                                             </div>
@@ -581,6 +582,7 @@ export default function ProductFormModal({
                                                     min="1"
                                                     value={form.expiry_alert_days ?? ''}
                                                     onChange={(event) => updateField('expiry_alert_days', event.target.value)}
+                                                    onFocus={(event) => event.target.select()}
                                                     placeholder="Padrão da loja"
                                                 />
                                             </div>

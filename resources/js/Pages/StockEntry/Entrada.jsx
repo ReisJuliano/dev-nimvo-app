@@ -18,6 +18,13 @@ function todayValue() {
     return `${year}-${month}-${day}`
 }
 
+function maxDueDateValue() {
+    const limit = new Date()
+    limit.setFullYear(limit.getFullYear() + 10)
+
+    return toInputDate(limit)
+}
+
 function findByBarcode(products, raw) {
     const v = String(raw || '').trim()
     if (!v) return null
@@ -682,6 +689,7 @@ export default function StockEntradaPage({ payload }) {
                                 <input
                                     className="ui-input"
                                     type="date"
+                                    max={maxDueDateValue()}
                                     value={boletos[0]?.due || ''}
                                     onChange={(e) => updateBoleto(0, 'due', e.target.value)}
                                 />
@@ -740,6 +748,7 @@ export default function StockEntradaPage({ payload }) {
                                             <input
                                                 className="ui-input"
                                                 type="date"
+                                                max={maxDueDateValue()}
                                                 value={boleto.due}
                                                 onChange={(e) => updateBoleto(boletoIndex, 'due', e.target.value)}
                                             />
@@ -887,7 +896,7 @@ export default function StockEntradaPage({ payload }) {
                             <button
                                 type="button"
                                 className="ent-confirm-btn"
-                                onClick={handleConfirm}
+                                onClick={() => handleConfirm()}
                                 disabled={saving}
                             >
                                 {saving ? (

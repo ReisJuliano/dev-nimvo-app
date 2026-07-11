@@ -14,7 +14,7 @@ class ProductsPageController extends Controller
 {
     public function __invoke(Request $request, ProductService $productService): Response
     {
-        $applied = $request->boolean('applied');
+        $applied = $request->has('applied') ? $request->boolean('applied') : true;
         $search = trim((string) $request->query('search', ''));
 
         $canViewCost = (bool) auth()->user()?->hasPermission('produtos.ver_custo');

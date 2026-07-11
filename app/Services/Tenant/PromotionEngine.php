@@ -86,6 +86,11 @@ class PromotionEngine
             ->whereIn('type', Promotion::CORE_TYPES)
             ->where(fn ($query) => $query->whereNull('start_at')->orWhere('start_at', '<=', $now))
             ->where(fn ($query) => $query->whereNull('end_at')->orWhere('end_at', '>=', $now))
+            ->where(fn ($query) => $query->whereNull('campaign_id')->orWhereHas('campaign', function ($campaignQuery) use ($now) {
+                $campaignQuery->where('active', true)
+                    ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now))
+                    ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now));
+            }))
             ->get();
     }
 

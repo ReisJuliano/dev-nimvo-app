@@ -205,3 +205,24 @@ Visual Studio, que so afetam builds Web/Windows desktop.
   busca mobile devem omitir `cost_price` para usuarios sem essa permissao; em
   updates, `ProductService` preserva o custo existente quando o campo nao vem no
   payload.
+- 2026-07-11: Corrigidos os achados de um relatorio de QA (ver `CLAUDE.md` para
+  detalhes de cada padrao de bug). Resumo tecnico:
+  - `resources/js/Pages/Orders/orderUtils.js` `resolvePricing()` ganhou 4o
+    parametro `promotionInfo`; sem ele, o desconto de promocao nunca entrava no
+    total do carrinho do PDV e QUALQUER produto com promocao ativa quebrava o
+    checkout com "O desconto total nao confere" (nao so tabloide vencido).
+  - `PromotionCampaignService::update()` agora cascateia `starts_at`/`ends_at`
+    para `$campaign->promotions()`; antes, editar o periodo do tabloide depois
+    de criar as ofertas deixava `Promotion.end_at` desatualizado.
+  - `AuditActions::PRODUCT_PRICE_CHANGED`, `PRODUCT_COST_CHANGED` e
+    `STOCK_MANUAL_ADJUSTMENT` existiam sem nenhuma chamada real; agora
+    `ProductService::save()` e `InventoryMovementService::apply()` registram.
+    Novas constantes `RECORD_CREATED`/`RECORD_UPDATED`/`SALE_FINALIZED` cobrem
+    criacao de cliente/fornecedor/categoria (`OperationsWorkspaceService`) e
+    venda finalizada (`PosService::finalize`).
+  - `ProductsPageController` e `StockEntry/Index.jsx` agora carregam a lista
+    por padrao ao abrir (antes exigiam clicar em "Filtrar"); Contas a Pagar
+    continua com o comportamento antigo de proposito (ver entrada 2026-07-01).
+  - Atalhos de teclado do PDV (`Pos/Index.jsx`) agora ignoram `Shift+Letra`
+    quando o foco esta num campo editavel — digitar nome com maiuscula
+    (ex.: "Caderno") disparava o atalho global de Cliente.

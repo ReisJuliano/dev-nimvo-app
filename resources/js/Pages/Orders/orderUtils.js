@@ -122,12 +122,13 @@ export function distributeDiscountAcrossItems(items, totalDiscount) {
     })
 }
 
-export function resolvePricing(items, config, selectedItem) {
+export function resolvePricing(items, config, selectedItem, promotionInfo = {}) {
     const baseItems = items.map((item) => ({
         ...item,
         qty: Number(item.qty),
         lineSubtotal: roundCurrency(Number(item.sale_price) * Number(item.qty)),
         lineDiscount: 0,
+        promotionDiscount: roundCurrency(promotionInfo[item.id]?.promotion_discount || 0),
     }))
 
     const subtotal = roundCurrency(baseItems.reduce((accumulator, item) => accumulator + item.lineSubtotal, 0))
@@ -190,7 +191,9 @@ export function resolvePricing(items, config, selectedItem) {
     }
 
     const pricedItems = discountedItems.map((item) => {
-        const lineDiscount = roundCurrency(item.lineDiscount || 0)
+        const manualDiscount = roundCurrency(item.lineDiscount || 0)
+        const promotionDiscount = roundCurrency(item.promotionDiscount || 0)
+        const lineDiscount = Math.max(manualDiscount, promotionDiscount)
         const lineTotal = roundCurrency(Math.max(0, item.lineSubtotal - lineDiscount))
 
         return {

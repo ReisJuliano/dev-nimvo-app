@@ -35,6 +35,15 @@ class PromotionCampaignService
             'active' => $data['active'] ?? $campaign->active,
         ])->save();
 
+        // As ofertas do tabloide herdam a janela do tabloide na criacao
+        // (bulkAddProducts); sem esta cascata, editar o periodo do tabloide
+        // deixa as ofertas ja criadas com start_at/end_at desatualizados e
+        // uma oferta pode continuar "ativa" apos o tabloide ser encerrado.
+        $campaign->promotions()->update([
+            'start_at' => $campaign->starts_at,
+            'end_at' => $campaign->ends_at,
+        ]);
+
         return $campaign->fresh();
     }
 

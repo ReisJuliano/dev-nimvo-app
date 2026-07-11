@@ -70,7 +70,7 @@ export default function StockEntryIndex({ payload }) {
 
     const filteredProducts = useMemo(() => {
         const q = normalizeTextSearch(query)
-        if (!q) return []
+        if (!q) return products
         return products.filter((p) => matchesTextSearchAny([p.name, p.code, p.barcode], q))
     }, [products, query])
 
@@ -331,12 +331,6 @@ export default function StockEntryIndex({ payload }) {
                                 <p>Cadastre produtos primeiro.</p>
                                 <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
                             </div>
-                        ) : !query ? (
-                            <div className="se-empty-state se-empty-state--prompt">
-                                <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
-                                <strong>Pesquise um produto acima</strong>
-                                <p>Digite o nome, código ou código de barras.</p>
-                            </div>
                         ) : filteredProducts.length ? (
                             <div className="se-table-card">
                                 <table className="se-table">
@@ -449,6 +443,7 @@ export default function StockEntryIndex({ payload }) {
                                             step="0.001"
                                             value={adjustQty}
                                             onChange={(e) => setAdjustQty(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
                                             placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
                                             autoFocus
                                             required
@@ -520,6 +515,7 @@ export default function StockEntryIndex({ payload }) {
                                             step="0.001"
                                             value={lossQty}
                                             onChange={(e) => setLossQty(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
                                             placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
                                             autoFocus
                                             required

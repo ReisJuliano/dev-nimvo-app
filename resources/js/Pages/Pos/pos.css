@@ -645,7 +645,7 @@
 .pos-item-row {
     width: 100%;
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) 1px 120px 1px 104px 1px 112px 34px;
+    grid-template-columns: 28px minmax(0, 1fr) 20px 1px 120px 1px 104px 1px 112px 34px;
     align-items: center;
     gap: 0.65rem;
     border: 0;
@@ -674,6 +674,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.pos-item-promotion-badge-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pos-item-promotion-badge {
@@ -2665,7 +2671,7 @@
     }
 
     .pos-item-row {
-        grid-template-columns: 24px minmax(0, 1fr) 1px 102px 1px 88px 1px 96px 30px;
+        grid-template-columns: 24px minmax(0, 1fr) 18px 1px 102px 1px 88px 1px 96px 30px;
         gap: 0.45rem;
         padding-inline: 12px;
     }

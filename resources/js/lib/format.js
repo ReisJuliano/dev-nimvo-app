@@ -1,8 +1,11 @@
 export function formatMoney(value) {
+    const cents = Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100
+    const normalized = cents === 0 ? 0 : cents // evita "-R$ 0,00": -0 e residuos de ponto flutuante (-0.0000001) arredondam pra 0 mas o Intl.NumberFormat preserva o sinal negativo
+
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL',
-    }).format(Number(value || 0))
+    }).format(normalized)
 }
 
 export function formatNumber(value, options = {}) {
