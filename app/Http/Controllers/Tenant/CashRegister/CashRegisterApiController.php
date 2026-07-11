@@ -24,12 +24,17 @@ class CashRegisterApiController extends Controller
         $till = $tillService->resolveForOpening($request->validated('till_id'));
 
         $existing = CashRegister::query()
+            ->with('user:id,name')
             ->where('till_id', $till->id)
             ->where('status', 'open')
-            ->exists();
+            ->first();
 
         if ($existing) {
-            return response()->json(['message' => 'Este caixa já está aberto.'], 422);
+            $message = $existing->user_id === $userId
+                ? "Você já tem um turno aberto no caixa \"{$till->name}\". Recarregue a tela para continuar de onde parou."
+                : "O caixa \"{$till->name}\" já está aberto por {$existing->user?->name} desde " . $existing->opened_at->format('d/m H:i') . '.';
+
+            return response()->json(['message' => $message], 422);
         }
 
         $cashRegister = CashRegister::query()->create([

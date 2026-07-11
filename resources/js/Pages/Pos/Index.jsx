@@ -2419,6 +2419,13 @@ export default function PosIndex({
                 syncCashRegisterPanelFromOffline(getOfflineWorkspaceSnapshot(tenantId).cashRegister)
                 setOpenCashRegisterModal(null)
                 showFeedback('warning', 'Caixa aberto no modo offline. A sincronização será feita quando a internet voltar.')
+            } else if (/já (está|tem) .*abert/i.test(error.message || '')) {
+                // A tela pode estar com o estado do caixa desatualizado (ex.: aberto em
+                // outra aba/turno). Reconsulta o servidor em vez de deixar o usuario
+                // preso entre "abra o caixa" e "esse caixa ja esta aberto".
+                setOpenCashRegisterModal(null)
+                showFeedback('warning', 'Esse caixa já está aberto. Sincronizando com o turno atual...')
+                router.reload({ only: ['cashRegister', 'openRegister', 'cashRegisterHistory'] })
             } else {
                 showFeedback('error', error.message)
             }

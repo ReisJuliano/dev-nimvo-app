@@ -159,7 +159,7 @@ export default function GlobalErrorPopup() {
             : 'Revise a mensagem antes de continuar'
 
     return (
-        <div className={`app-error-popup-backdrop is-${currentPopup.type}`} onClick={closeCurrentPopup}>
+        <div className={`app-error-popup-backdrop is-${currentPopup.type}`}>
             <div
                 className={`app-error-popup is-${currentPopup.type}`}
                 role={currentPopup.mode === 'confirm' ? 'alertdialog' : 'dialog'}
