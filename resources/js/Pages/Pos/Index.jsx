@@ -5006,18 +5006,6 @@ function PosWorkspace({
                         </div>
 
                         <div className="pos-topbar-actions">
-                            <div className="pos-quick-links" role="navigation" aria-label="Acessos rapidos">
-                                <a className="pos-quick-link ui-tooltip" data-tooltip="NFe/NFCe" title="NFe/NFCe" href="/fiscal/notas" target="_blank" rel="noreferrer">
-                                    <i className="fa-solid fa-file-invoice" aria-hidden="true" />
-                                </a>
-                                <a className="pos-quick-link ui-tooltip" data-tooltip="Estoque" title="Estoque" href="/estoque" target="_blank" rel="noreferrer">
-                                    <i className="fa-solid fa-warehouse" aria-hidden="true" />
-                                </a>
-                                <a className="pos-quick-link ui-tooltip" data-tooltip="Relatorios" title="Relatorios" href="/relatorios" target="_blank" rel="noreferrer">
-                                    <i className="fa-solid fa-chart-bar" aria-hidden="true" />
-                                </a>
-                            </div>
-
                             <span className={`pos-agent-chip ${localAgentStatus.tone}`} role="status">
                                 <i className="fa-solid fa-print" aria-hidden="true" />
                                 <span>{localAgentStatus.label}</span>
@@ -5761,6 +5749,26 @@ function PosCashTurnPanel({
     onCloseMobilePanel = null,
 }) {
     const [cashOptionsOpen, setCashOptionsOpen] = useState(false)
+    const quickLinkActions = [
+        {
+            key: 'quick-fiscal-notas',
+            label: 'NFe/NFCe',
+            icon: 'fa-file-invoice',
+            onClick: () => window.open('/fiscal/notas', '_blank', 'noopener'),
+        },
+        {
+            key: 'quick-estoque',
+            label: 'Estoque',
+            icon: 'fa-warehouse',
+            onClick: () => window.open('/estoque', '_blank', 'noopener'),
+        },
+        {
+            key: 'quick-relatorios',
+            label: 'Relatorios',
+            icon: 'fa-chart-bar',
+            onClick: () => window.open('/relatorios', '_blank', 'noopener'),
+        },
+    ]
     const cashOptionActions = cashRegisterState
         ? [
             {
@@ -5798,6 +5806,7 @@ function PosCashTurnPanel({
                 disabled: loadingClosePreview || closingCashRegister,
                 onClick: onOpenCloseCashRegister,
             },
+            ...quickLinkActions,
         ].filter((action) => action.key !== 'pending-nfce' || pendingNfceCount > 0)
         : [
             {
@@ -5821,6 +5830,7 @@ function PosCashTurnPanel({
                 tone: 'info',
                 onClick: onOpenPendingNfces,
             },
+            ...quickLinkActions,
         ].filter((action) => action.key !== 'pending-nfce' || pendingNfceCount > 0)
     const handleCashOptionClick = (action) => {
         action.onClick?.()
