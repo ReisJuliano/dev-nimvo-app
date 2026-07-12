@@ -25,7 +25,7 @@ export default function AppTopbar({ title, collapsed, onToggleSidebar, onToggleM
                     <i className="fas fa-bars" />
                 </button>
                 <button
-                    className="app-desktop-toggle ui-tooltip"
+                    className="app-desktop-toggle ui-tooltip ui-tooltip-below"
                     data-tooltip={collapsed ? 'Expandir menu' : 'Recolher menu'}
                     onClick={onToggleSidebar}
                     type="button"
@@ -33,7 +33,7 @@ export default function AppTopbar({ title, collapsed, onToggleSidebar, onToggleM
                     <i className={`fas ${collapsed ? 'fa-sidebar' : 'fa-bars-staggered'}`} />
                 </button>
                 <button
-                    className="app-back-button ui-tooltip"
+                    className="app-back-button ui-tooltip ui-tooltip-below"
                     data-tooltip="Voltar"
                     onClick={() => goBackOrFallback()}
                     type="button"

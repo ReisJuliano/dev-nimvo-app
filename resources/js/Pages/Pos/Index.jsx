@@ -4996,7 +4996,7 @@ function PosWorkspace({
                         <div className="pos-terminal-line">
                             <button
                                 type="button"
-                                className="pos-back-button ui-tooltip"
+                                className="pos-back-button ui-tooltip ui-tooltip-below"
                                 data-tooltip="Voltar"
                                 onClick={() => goBackOrFallback()}
                             >

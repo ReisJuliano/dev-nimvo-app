@@ -610,6 +610,18 @@
     transform: translateX(-50%) translateY(0);
 }
 
+/* Variante pra elementos colados no topo da tela, onde o tooltip padrao
+   (acima do elemento) fica cortado pela borda da viewport. */
+.ui-tooltip-below::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform: translateX(-50%) translateY(-4px);
+}
+
+.ui-tooltip-below:hover::after {
+    transform: translateX(-50%) translateY(0);
+}
+
 /* ─── Botão ícone ─── */
 
 .ui-icon-button {
