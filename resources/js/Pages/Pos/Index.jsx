@@ -5069,6 +5069,9 @@ function PosWorkspace({
                                             <strong>{product.name}</strong>
                                             <small>{product.barcode || product.code || 'Sem código'}</small>
                                         </span>
+                                        <span className={`pos-suggestion-stock ${Number(product.stock_quantity ?? 0) <= 0 ? 'zero' : ''}`}>
+                                            {formatNumber(product.stock_quantity ?? 0)} {product.unit || 'UN'}
+                                        </span>
                                         <span className="pos-suggestion-price">{formatMoney(product.sale_price)}</span>
                                     </button>
                                 ))
@@ -5121,7 +5124,12 @@ function PosWorkspace({
                                     }}
                                 >
                                     <span className="pos-item-index">{index + 1}</span>
-                                    <span className="pos-item-name" title={item.name}>{item.name}</span>
+                                    <span className="pos-item-name-cell" title={item.name}>
+                                        <span className="pos-item-name">{item.name}</span>
+                                        <small className={`pos-item-stock ${Number(item.stock_quantity ?? 0) <= 0 ? 'zero' : ''}`}>
+                                            Estoque: {formatNumber(item.stock_quantity ?? 0)} {item.unit || 'UN'}
+                                        </small>
+                                    </span>
                                     <span className="pos-item-promotion-badge-cell">
                                         {promotionInfo[item.id] ? (
                                             <span className="pos-item-promotion-badge" title={`Promoção: ${promotionInfo[item.id].promotion_name}`}>
