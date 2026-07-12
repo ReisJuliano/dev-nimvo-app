@@ -41,7 +41,7 @@ export default function DiscountModal({
     }
 
     return (
-        <div className="pos-quick-customer" onClick={onClose}>
+        <div className="pos-quick-customer">
             <form className="pos-quick-customer-card pos-discount-modal-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>

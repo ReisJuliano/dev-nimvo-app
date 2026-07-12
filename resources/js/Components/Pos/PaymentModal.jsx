@@ -39,7 +39,7 @@ export default function PaymentModal({
     const paymentLabels = Object.fromEntries(paymentOptions.map((option) => [option.value, option.label]))
 
     return (
-        <div className="pos-quick-customer" onClick={onClose}>
+        <div className="pos-quick-customer">
             <div className="pos-quick-customer-card pos-payment-modal-card" onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>

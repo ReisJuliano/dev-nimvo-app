@@ -6,7 +6,7 @@ export default function FiscalDecisionModal({ open, onClose, onCloseSale, onEmit
     }
 
     return (
-        <div className="pos-quick-customer" onClick={onClose}>
+        <div className="pos-quick-customer">
             <div className="pos-quick-customer-card pos-fiscal-decision-card" onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>

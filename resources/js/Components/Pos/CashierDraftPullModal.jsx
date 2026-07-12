@@ -31,7 +31,7 @@ export default function CashierDraftPullModal({
     }
 
     return (
-        <div className="pos-overlay" onClick={onClose}>
+        <div className="pos-overlay">
             <div className="pos-modal-card pos-cashier-drafts-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="pos-cashier-drafts-header">
                     <strong>Comandas</strong>

@@ -4076,7 +4076,7 @@ export default function PosIndex({
             />
 
             {openCashRegisterModal ? (
-                <div className="pos-quick-customer" onClick={closeOpenCashRegisterModal}>
+                <div className="pos-quick-customer">
                     <form className="pos-quick-customer-card" onSubmit={handleOpenCashRegister} onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header">
                             <div>
@@ -4137,7 +4137,7 @@ export default function PosIndex({
             <ClosingReportModal report={cashReportModal} onClose={closeCashReportModal} />
 
             {customerPickerOpen ? (
-                <div className="pos-quick-customer" onClick={closeCustomerPicker}>
+                <div className="pos-quick-customer">
                     <div className="pos-quick-customer-card pos-customer-picker-card" onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header pos-customer-picker-header">
                             <div>
@@ -4199,7 +4199,7 @@ export default function PosIndex({
             ) : null}
 
             {quickCustomerOpen ? (
-                <div className="pos-quick-customer" onClick={() => setQuickCustomerOpen(false)}>
+                <div className="pos-quick-customer">
                     <form className="pos-quick-customer-card" onSubmit={handleQuickCustomerSubmit} onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header">
                             <div>
@@ -4530,7 +4530,7 @@ export default function PosIndex({
             />
 
             {openCashRegisterModal ? (
-                <div className="pos-quick-customer" onClick={closeOpenCashRegisterModal}>
+                <div className="pos-quick-customer">
                     <form className="pos-quick-customer-card" onSubmit={handleOpenCashRegister} onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header">
                             <div>
@@ -4574,7 +4574,7 @@ export default function PosIndex({
             ) : null}
 
             {closeCashRegisterModal ? (
-                <div className="pos-quick-customer" onClick={closeCloseCashRegisterModal}>
+                <div className="pos-quick-customer">
                     <form className="pos-quick-customer-card pos-cash-close-card" onSubmit={handleConfirmCloseCashRegister} onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header">
                             <div>
@@ -4624,7 +4624,7 @@ export default function PosIndex({
             <ClosingReportModal report={cashReportModal} onClose={closeCashReportModal} />
 
             {customerPickerOpen ? (
-                <div className="pos-quick-customer" onClick={closeCustomerPicker}>
+                <div className="pos-quick-customer">
                     <div className="pos-quick-customer-card pos-customer-picker-card" onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header pos-customer-picker-header">
                             <div>
@@ -4686,7 +4686,7 @@ export default function PosIndex({
             ) : null}
 
             {quickCustomerOpen ? (
-                <div className="pos-quick-customer" onClick={() => setQuickCustomerOpen(false)}>
+                <div className="pos-quick-customer">
                     <form className="pos-quick-customer-card" onSubmit={handleQuickCustomerSubmit} onClick={(event) => event.stopPropagation()}>
                         <div className="pos-quick-customer-header">
                             <div>
@@ -4787,7 +4787,7 @@ function QuickProductModal({ open, form, saving, onChange, onSubmit, onClose }) 
     }
 
     return (
-        <div className="pos-quick-customer" onClick={onClose}>
+        <div className="pos-quick-customer">
             <form className="pos-quick-customer-card" onSubmit={onSubmit} onClick={(event) => event.stopPropagation()}>
                 <div className="pos-quick-customer-header">
                     <div>
@@ -6086,7 +6086,7 @@ function PosCashCloseModal({
     }
 
     return (
-        <div className="pos-quick-customer" onClick={onClose}>
+        <div className="pos-quick-customer">
             <div className="pos-quick-customer-card pos-cash-close-card" onClick={(event) => event.stopPropagation()}>
                 <div className="pos-cash-close-header">
                     <div>
@@ -6212,7 +6212,7 @@ function PosCashCloseModal({
                 </div>
 
                 {closeModal.supervisorPromptOpen ? (
-                    <div className="pos-cash-close-prompt" onClick={onCloseSupervisorPrompt}>
+                    <div className="pos-cash-close-prompt">
                         <div className="pos-cash-close-prompt-card" onClick={(event) => event.stopPropagation()}>
                             <div className="pos-cash-close-prompt-title">Senha de supervisor</div>
                             <div className="pos-cash-close-prompt-subtitle">
@@ -6278,7 +6278,7 @@ function PosModal({ open, title, onClose, children, tone = 'default' }) {
     }
 
     return (
-        <div className="pos-overlay" onClick={onClose}>
+        <div className="pos-overlay">
             <div className={`pos-modal-card ${tone}`} onClick={(event) => event.stopPropagation()}>
                 <div className={`pos-modal-header ${tone}`}>
                     <h2>{title}</h2>
