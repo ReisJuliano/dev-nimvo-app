@@ -23,6 +23,8 @@ class ReportPageController extends Controller
         $filters = $this->requestFilters($request);
 
         if (in_array($request->query('export'), ['pdf', 'excel'], true)) {
+            abort_unless(auth()->user()?->hasPermission('relatorios.exportar'), 403);
+
             return $reportExport->download($report, $filters, (string) $request->query('export'));
         }
 

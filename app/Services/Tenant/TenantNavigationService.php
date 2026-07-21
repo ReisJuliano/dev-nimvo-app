@@ -27,6 +27,14 @@ class TenantNavigationService
                         'request_patterns' => ['pdv', 'api/pdv*'],
                     ],
                     [
+                        'href' => '/caixa/painel',
+                        'label' => 'Painel de caixas',
+                        'icon' => 'fa-vault',
+                        'access_key' => 'caixa',
+                        'required_permission' => 'caixa.ver_painel_todos_caixas',
+                        'request_patterns' => ['caixa/painel', 'api/cash-registers/panel*'],
+                    ],
+                    [
                         'href' => '/caixa',
                         'label' => 'Caixa',
                         'icon' => 'fa-vault',
@@ -87,7 +95,15 @@ class TenantNavigationService
                         'label' => 'A receber',
                         'icon' => 'fa-handshake',
                         'access_key' => 'prazo',
-                        'request_patterns' => ['a-prazo', 'fiado', 'a-receber', 'api/receivables*'],
+                        'required_permission' => 'a_receber.visualizar',
+                        'request_patterns' => ['a-receber', 'api/receivables*'],
+                    ],
+                    [
+                        'href' => '/a-prazo',
+                        'label' => 'A receber',
+                        'icon' => 'fa-handshake',
+                        'access_key' => 'prazo',
+                        'request_patterns' => ['a-prazo', 'fiado'],
                     ],
                     [
                         'href' => '/clientes',
@@ -125,8 +141,8 @@ class TenantNavigationService
                     ],
                     [
                         'href' => '/consultas-cancelamentos',
-                        'label' => 'Suporte fiscal',
-                        'icon' => 'fa-magnifying-glass-dollar',
+                        'label' => 'Vendas e cancelamentos',
+                        'icon' => 'fa-receipt',
                         'access_key' => 'consultas_fiscais',
                         'allowed_roles' => ['admin', 'operator'],
                         'module_bypass' => true,
@@ -144,6 +160,7 @@ class TenantNavigationService
                         'label' => 'Compras',
                         'icon' => 'fa-cart-shopping',
                         'access_key' => 'compras',
+                        'required_permission' => 'compras.visualizar',
                         'request_patterns' => ['compras', 'api/operations/compras*'],
                     ],
                     [
@@ -151,6 +168,7 @@ class TenantNavigationService
                         'label' => 'Contas a pagar',
                         'icon' => 'fa-file-invoice-dollar',
                         'access_key' => 'compras',
+                        'required_permission' => 'contas_a_pagar.visualizar',
                         'request_patterns' => ['contas-a-pagar', 'api/operations/contas-a-pagar*'],
                     ],
                     [
@@ -172,6 +190,7 @@ class TenantNavigationService
                         'label' => 'Relatorios avancados',
                         'icon' => 'fa-chart-bar',
                         'access_key' => 'relatorios_avancados',
+                        'required_permission' => 'relatorios.visualizar',
                         'request_patterns' => ['relatorios*', 'vendas', 'demanda', 'faltas'],
                     ],
                     [

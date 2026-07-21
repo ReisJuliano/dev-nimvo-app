@@ -40,6 +40,8 @@ class ReceivablesApiController extends Controller
 
     public function receive(Request $request, ReceivablesOverviewService $service): JsonResponse
     {
+        abort_unless(auth()->user()?->hasPermission('a_receber.receber'), 403);
+
         $validated = $request->validate([
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -70,6 +72,8 @@ class ReceivablesApiController extends Controller
 
     public function collectDelivery(Request $request, DeliveryOrder $deliveryOrder, ReceivablesOverviewService $service): JsonResponse
     {
+        abort_unless(auth()->user()?->hasPermission('a_receber.receber'), 403);
+
         $validated = $request->validate([
             'payment_method' => ['required', 'string', Rule::in(PaymentMethod::settlementMethods())],
             'cash_register_id' => ['required', 'integer', 'exists:cash_registers,id'],

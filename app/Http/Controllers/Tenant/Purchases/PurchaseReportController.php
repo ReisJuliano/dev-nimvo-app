@@ -12,6 +12,8 @@ class PurchaseReportController extends Controller
 {
     public function __invoke(PurchaseReportPdfService $reportService, int $purchase): Response
     {
+        abort_unless(auth()->user()?->hasPermission('compras.visualizar'), 403);
+
         return $reportService->download($purchase);
     }
 }

@@ -134,6 +134,8 @@ class OperationsWorkspaceService
 
     public function store(string $module, array $input, int $userId): array
     {
+        $this->ensureModulePermission($module, 'adicionar', $userId);
+
         return match ($module) {
             'clientes' => ['message' => 'Cliente cadastrado com sucesso.', 'record' => $this->serializeCustomer($this->auditCreated($this->saveCustomer(null, $input)))],
             'fornecedores' => ['message' => 'Fornecedor cadastrado com sucesso.', 'record' => $this->serializeSupplier($this->auditCreated($this->saveSupplier(null, $input)))],
@@ -184,6 +186,8 @@ class OperationsWorkspaceService
 
     public function update(string $module, int $recordId, array $input, int $userId): array
     {
+        $this->ensureModulePermission($module, 'editar', $userId);
+
         return match ($module) {
             'clientes' => ['message' => 'Cliente atualizado com sucesso.', 'record' => $this->serializeCustomer($this->auditUpdated($this->findRecord(Customer::class, $recordId), fn ($record) => $this->saveCustomer($record, $input)))],
             'fornecedores' => ['message' => 'Fornecedor atualizado com sucesso.', 'record' => $this->serializeSupplier($this->auditUpdated($this->findRecord(Supplier::class, $recordId), fn ($record) => $this->saveSupplier($record, $input)))],
@@ -200,8 +204,10 @@ class OperationsWorkspaceService
         };
     }
 
-    public function destroy(string $module, int $recordId): string
+    public function destroy(string $module, int $recordId, int $userId): string
     {
+        $this->ensureModulePermission($module, 'excluir', $userId);
+
         return match ($module) {
             'clientes' => $this->auditDelete($this->findRecord(Customer::class, $recordId), 'Cliente removido com sucesso.'),
             'fornecedores' => $this->auditDelete($this->findRecord(Supplier::class, $recordId), 'Fornecedor removido com sucesso.'),
@@ -216,6 +222,30 @@ class OperationsWorkspaceService
             ]),
             default => abort(404),
         };
+    }
+
+    /**
+     * Checagem fina por ação (além do gate de módulo já aplicado via nav/EnsureModuleIsEnabled),
+     * pros módulos cujo PermissionRegistry distingue visualizar de adicionar/editar/excluir.
+     */
+    protected function ensureModulePermission(string $module, string $action, int $userId): void
+    {
+        $permissionKey = match ([$module, $action]) {
+            ['compras', 'adicionar'], ['compras', 'editar'] => 'compras.adicionar',
+            ['compras', 'excluir'] => 'compras.excluir',
+            ['contas-a-pagar', 'adicionar'] => 'contas_a_pagar.adicionar',
+            ['contas-a-pagar', 'editar'] => 'contas_a_pagar.editar',
+            ['contas-a-pagar', 'excluir'] => 'contas_a_pagar.excluir',
+            default => null,
+        };
+
+        if ($permissionKey === null) {
+            return;
+        }
+
+        $user = User::query()->find($userId);
+
+        abort_unless($user?->hasPermission($permissionKey), 403);
     }
 
     protected function auditDelete(Model $model, string $message): string
@@ -2049,6 +2079,9 @@ class OperationsWorkspaceService
                 ? (bool) $customer->getAttribute('consumer_final')
                 : true,
             'credit_limit' => (float) $customer->credit_limit,
+            'cashback_balance' => $this->hasColumn('customers', 'cashback_balance')
+                ? (float) $customer->getAttribute('cashback_balance')
+                : 0.0,
             'sales_count' => (int) ($customer->sales_count ?? 0),
             'active' => (bool) $customer->active,
             'created_at' => $customer->created_at?->toIso8601String(),

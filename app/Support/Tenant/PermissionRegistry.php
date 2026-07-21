@@ -99,6 +99,14 @@ class PermissionRegistry
                 ],
             ],
             [
+                'key' => 'a_receber',
+                'label' => 'A receber',
+                'items' => [
+                    ['key' => 'a_receber.visualizar', 'label' => 'Visualizar a receber', 'description' => 'Consulta o consolidado de fiado, condicional e entregas a receber.'],
+                    ['key' => 'a_receber.receber', 'label' => 'Registrar recebimento', 'description' => 'Permite dar baixa em fiado e entregas a receber, lançando o valor no caixa.'],
+                ],
+            ],
+            [
                 'key' => 'fiscal',
                 'label' => 'NFe/NFCe',
                 'items' => [

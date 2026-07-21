@@ -13,6 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class IncomingNfeApiController extends Controller
 {
+    public function __construct()
+    {
+        abort_unless(auth()->user()?->hasPermission('estoque.entrada_mercadoria'), 403);
+    }
+
     public function sync(Request $request, IncomingNfeService $service): JsonResponse
     {
         return response()->json($service->sync($request->only(['access_key'])));

@@ -11,7 +11,7 @@ class CashRegisterPanelPageController extends Controller
 {
     public function __invoke(TillService $tillService): Response
     {
-        abort_unless(in_array(auth()->user()?->role, ['admin', 'manager'], true), 403);
+        abort_unless(auth()->user()?->hasPermission('caixa.ver_painel_todos_caixas'), 403);
 
         $tills = $tillService->activeTills()->map(fn ($till) => [
             'id' => $till->id,

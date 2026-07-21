@@ -11,6 +11,7 @@ use App\Http\Controllers\Tenant\CashRegister\CashRegisterPageController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPanelApiController;
 use App\Http\Controllers\Tenant\CashRegister\CashRegisterPanelPageController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesController;
+use App\Http\Controllers\Tenant\Customers\CustomerCashbackController;
 use App\Http\Controllers\Tenant\ConditionalSales\ConditionalSalesPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\Tenant\Labels\LabelTemplatesPageController;
 use App\Http\Controllers\Tenant\Payables\PayablesPageController;
 use App\Http\Controllers\Tenant\Pos\PosApiController;
 use App\Http\Controllers\Tenant\Pos\PosPageController;
+use App\Http\Controllers\Tenant\Products\ProductImportController;
 use App\Http\Controllers\Tenant\Products\ProductsApiController;
 use App\Http\Controllers\Tenant\Products\ProductsPageController;
 use App\Http\Controllers\Tenant\Promotions\PromotionCampaignsApiController;
@@ -81,7 +83,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('/shop', ShopPageController::class)->name('shop.index');
-Route::post('/shop/api/checkout', [ShopApiController::class, 'checkout'])->name('shop.checkout');
+Route::post('/shop/api/checkout', [ShopApiController::class, 'checkout'])
+    ->middleware('throttle:10,1')
+    ->name('shop.checkout');
 
 Route::prefix('mobile-api/v1')->group(function () {
     Route::post('/auth/login', [MobileAuthController::class, 'login'])
@@ -311,6 +315,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/products/{product}', [ProductsApiController::class, 'show'])->name('api.products.show');
             Route::put('/products/{product}', [ProductsApiController::class, 'update'])->name('api.products.update');
             Route::delete('/products/{product}', [ProductsApiController::class, 'destroy'])->name('api.products.destroy');
+            Route::post('/products/import/preview', [ProductImportController::class, 'preview'])->name('api.products.import.preview');
+            Route::post('/products/import/commit', [ProductImportController::class, 'commit'])->name('api.products.import.commit');
             Route::get('/orders', [OrdersApiController::class, 'index'])->name('api.orders.index');
             Route::get('/orders/pending-checkout', [OrdersApiController::class, 'pendingCheckout'])->name('api.orders.pending-checkout');
             Route::post('/orders', [OrdersApiController::class, 'store'])->name('api.orders.store');
@@ -366,6 +372,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/operations/{module}/records', [OperationsApiController::class, 'store'])->name('api.operations.store');
             Route::put('/operations/{module}/records/{record}', [OperationsApiController::class, 'update'])->whereNumber('record')->name('api.operations.update');
             Route::delete('/operations/{module}/records/{record}', [OperationsApiController::class, 'destroy'])->whereNumber('record')->name('api.operations.destroy');
+            Route::get('/customers/{customer}/cashback/history', [CustomerCashbackController::class, 'history'])->name('api.customers.cashback.history');
+            Route::post('/customers/{customer}/cashback/redeem', [CustomerCashbackController::class, 'redeem'])->name('api.customers.cashback.redeem');
         });
     });
 });

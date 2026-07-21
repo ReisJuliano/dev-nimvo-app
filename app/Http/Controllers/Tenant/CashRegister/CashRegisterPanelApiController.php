@@ -90,6 +90,6 @@ class CashRegisterPanelApiController extends Controller
 
     protected function authorizeManager(): void
     {
-        abort_unless(in_array(auth()->user()?->role, ['admin', 'manager'], true), 403);
+        abort_unless(auth()->user()?->hasPermission('caixa.ver_painel_todos_caixas'), 403);
     }
 }

@@ -57,7 +57,7 @@ class OperationsApiController extends Controller
         abort_unless($workspaceService->isWorkspaceModule($module), 404);
 
         return response()->json([
-            'message' => $workspaceService->destroy($module, $record),
+            'message' => $workspaceService->destroy($module, $record, (int) auth()->id()),
         ]);
     }
 

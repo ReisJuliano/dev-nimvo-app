@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Tenant\Reports\ReportPageController;
+use App\Models\Tenant\User;
 use App\Services\Tenant\Reports\ReportBrowserService;
 use App\Services\Tenant\Reports\ReportExportService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Response as InertiaResponse;
 use Mockery;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,6 +15,13 @@ use Tests\TestCase;
 
 class ReportPageControllerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Auth::setUser(new User(['role' => 'admin']));
+    }
+
     public function test_controller_allows_inertia_report_response(): void
     {
         $controller = new ReportPageController();
