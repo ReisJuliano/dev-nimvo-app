@@ -11,6 +11,8 @@ import DataTable from '@/Components/UI/DataTable'
 import ModalForm from '@/Components/UI/ModalForm'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
+import CustomerImportModal from '@/Components/Customers/CustomerImportModal'
+import SupplierImportModal from '@/Components/Suppliers/SupplierImportModal'
 import {
     Badge,
     buildRecordsUrl,
@@ -586,6 +588,7 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
     const [hasLoadedRecords, setHasLoadedRecords] = useState((payload.records || []).length > 0)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [importModalOpen, setImportModalOpen] = useState(false)
 
     useEffect(() => {
         if (!hasLoadedRecords) {
@@ -757,6 +760,9 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                                 <ActionButton icon="fa-plus" onClick={handleCreate}>
                                     Novo fornecedor
                                 </ActionButton>
+                                <ActionButton icon="fa-file-import" tone="secondary" onClick={() => setImportModalOpen(true)}>
+                                    Importar
+                                </ActionButton>
                                 <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => openRecordModal(selectedRecord)}>
                                     Editar
                                 </ActionButton>
@@ -910,6 +916,12 @@ export function SuppliersWorkspace({ moduleKey, payload }) {
                     </label>
                 </form>
             </ModalForm>
+
+            <SupplierImportModal
+                open={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImported={() => { setImportModalOpen(false); void handleApplyFilters() }}
+            />
         </>
     )
 }
@@ -932,6 +944,7 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         zip_code: '',
         consumer_final: true,
         credit_limit: '0',
+        cashback_balance: 0,
         active: true,
     }
     const [records, setRecords] = useState(payload.records || [])
@@ -944,6 +957,12 @@ export function CustomersWorkspace({ moduleKey, payload }) {
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [feedback, setFeedback] = useState(null)
+    const [cashbackHistory, setCashbackHistory] = useState(null)
+    const [cashbackHistoryLoading, setCashbackHistoryLoading] = useState(false)
+    const [redeemAmount, setRedeemAmount] = useState('')
+    const [redeemNotes, setRedeemNotes] = useState('')
+    const [redeemSaving, setRedeemSaving] = useState(false)
+    const [importModalOpen, setImportModalOpen] = useState(false)
     const requestIdRef = useRef(0)
     const hasAutoLoadedRef = useRef(false)
     const normalizedSearch = useMemo(() => normalizeCustomerSearch(searchControl.value), [searchControl.value])
@@ -1058,6 +1077,57 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         setForm(buildCustomerForm(record))
         setActiveModalTab('registration')
         setModalOpen(true)
+        setCashbackHistory(null)
+        setRedeemAmount('')
+        setRedeemNotes('')
+    }
+
+    async function loadCashbackHistory() {
+        if (!form.id) return
+
+        setCashbackHistoryLoading(true)
+
+        try {
+            const response = await apiRequest(`/api/customers/${form.id}/cashback/history`)
+            setCashbackHistory(response)
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setCashbackHistoryLoading(false)
+        }
+    }
+
+    async function handleRedeemCashback() {
+        if (!form.id) return
+
+        const amount = Number(redeemAmount)
+
+        if (!(amount > 0)) {
+            setFeedback({ type: 'warning', text: 'Informe um valor de resgate maior que zero.' })
+            return
+        }
+
+        setRedeemSaving(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/api/customers/${form.id}/cashback/redeem`, {
+                method: 'post',
+                data: { amount, notes: redeemNotes || null },
+            })
+            setForm((current) => ({ ...current, cashback_balance: response.balance }))
+            setRecords((current) => current.map((record) => (
+                record.id === form.id ? { ...record, cashback_balance: response.balance } : record
+            )))
+            setRedeemAmount('')
+            setRedeemNotes('')
+            setFeedback({ type: 'success', text: response.message })
+            void loadCashbackHistory()
+        } catch (error) {
+            setFeedback({ type: 'error', text: error.message })
+        } finally {
+            setRedeemSaving(false)
+        }
     }
 
     function handleCreate() {
@@ -1187,6 +1257,9 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                             <>
                                 <ActionButton icon="fa-plus" onClick={handleCreate}>
                                     Novo cliente
+                                </ActionButton>
+                                <ActionButton icon="fa-file-import" tone="secondary" onClick={() => setImportModalOpen(true)}>
+                                    Importar
                                 </ActionButton>
                                 <ActionButton icon="fa-pen" tone="secondary" disabled={!selectedRecord} onClick={() => selectedRecord && handleSelectRecord(selectedRecord)}>
                                     Editar
@@ -1381,10 +1454,74 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 <FieldLabel icon="fa-wallet" text="Limite de crédito" />
                                 <input type="number" min="0" step="0.01" value={form.credit_limit} onChange={(event) => setForm((current) => ({ ...current, credit_limit: event.target.value }))} />
                             </label>
+
+                            {form.id ? (
+                                <div className="span-2 ops-cashback-card">
+                                    <div className="ops-cashback-balance">
+                                        <FieldLabel icon="fa-gift" text="Saldo de cashback" />
+                                        <strong>{formatMoney(form.cashback_balance || 0)}</strong>
+                                    </div>
+
+                                    <div className="ops-cashback-redeem">
+                                        <input
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            placeholder="Valor a resgatar"
+                                            value={redeemAmount}
+                                            onChange={(event) => setRedeemAmount(event.target.value)}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Observação (opcional)"
+                                            value={redeemNotes}
+                                            onChange={(event) => setRedeemNotes(event.target.value)}
+                                        />
+                                        <button type="button" className="ui-button-ghost" disabled={redeemSaving} onClick={() => void handleRedeemCashback()}>
+                                            {redeemSaving ? 'Resgatando...' : 'Resgatar'}
+                                        </button>
+                                    </div>
+
+                                    <button type="button" className="ops-cashback-history-toggle" onClick={() => void loadCashbackHistory()}>
+                                        {cashbackHistoryLoading ? 'Carregando...' : 'Ver histórico de cashback'}
+                                    </button>
+
+                                    {cashbackHistory ? (
+                                        <div className="ops-cashback-history">
+                                            {cashbackHistory.transactions.length ? cashbackHistory.transactions.map((transaction) => (
+                                                <div key={transaction.id} className="ops-cashback-history-row">
+                                                    <span>{transaction.sale_number || transaction.notes || transaction.type}</span>
+                                                    <strong className={transaction.amount < 0 ? 'negative' : 'positive'}>
+                                                        {transaction.amount < 0 ? '-' : '+'}{formatMoney(Math.abs(transaction.amount))}
+                                                    </strong>
+                                                </div>
+                                            )) : (
+                                                <p>Nenhuma movimentação de cashback ainda.</p>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
                         </div>
                     ) : null}
                 </form>
             </ModalForm>
+
+            <CustomerImportModal
+                open={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImported={async () => {
+                    setImportModalOpen(false)
+                    try {
+                        const response = await apiRequest(buildRecordsUrl(moduleKey), {
+                            params: { search: hasSearch ? normalizedSearch : '%' },
+                        })
+                        setRecords(sortCustomers(response.records || []))
+                    } catch (error) {
+                        setFeedback({ type: 'error', text: error.message })
+                    }
+                }}
+            />
         </>
     )
 }
