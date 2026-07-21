@@ -440,6 +440,9 @@ class FiscalDocumentService
                 'dh_contingency' => $offlineContingency ? $issuedAt : null,
                 'contingency_reason' => $resolvedContingencyReason,
                 'consumer_final' => $consumerFinal ? 1 : 0,
+                'operation_type' => (int) ($this->saleValue($sale, 'fiscal_operation_type') ?? 1),
+                'finalidade' => (int) ($this->saleValue($sale, 'fiscal_finalidade') ?: 1),
+                'referencias' => (array) ($this->saleValue($sale, 'fiscal_reference_access_keys') ?: []),
             ],
             'items' => $sale->items->map(function (SaleItem $item) {
                 /** @var Product|null $product */

@@ -28,7 +28,13 @@ class Sale extends Model
         'cash_received',
         'change_amount',
         'requested_document_model',
+        'fiscal_operation_type',
+        'fiscal_finalidade',
+        'fiscal_reference_access_keys',
         'status',
+        'cancelled_at',
+        'cancelled_by',
+        'cancellation_reason',
         'fiscal_decision',
         'notes',
         'recipient_payload',
@@ -45,6 +51,8 @@ class Sale extends Model
         'cash_received' => 'decimal:2',
         'change_amount' => 'decimal:2',
         'recipient_payload' => 'array',
+        'fiscal_reference_access_keys' => 'array',
+        'cancelled_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -67,6 +75,11 @@ class Sale extends Model
     public function cashRegister(): BelongsTo
     {
         return $this->belongsTo(CashRegister::class);
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     public function items(): HasMany

@@ -41,19 +41,31 @@ class NfceLayoutBuilder
             'dhEmi' => $sale['issued_at'],
             'dhCont' => (int) ($sale['emission_type'] ?? 1) === 9 ? ($sale['dh_contingency'] ?? $sale['issued_at']) : null,
             'xJust' => (int) ($sale['emission_type'] ?? 1) === 9 ? ($sale['contingency_reason'] ?? null) : null,
-            'tpNF' => 1,
+            'tpNF' => (int) ($sale['operation_type'] ?? 1),
             'idDest' => (int) ($sale['id_destination'] ?? 1),
             'cMunFG' => $profile['city_code'],
             'tpImp' => (int) ($sale['print_type'] ?? ($documentModel === '65' ? 4 : 1)),
             'tpEmis' => (int) ($sale['emission_type'] ?? 1),
             'cDV' => 0,
             'tpAmb' => (int) $profile['environment'],
-            'finNFe' => 1,
+            'finNFe' => (int) ($sale['finalidade'] ?? 1),
             'indFinal' => (int) ($sale['consumer_final'] ?? 1),
             'indPres' => (int) ($sale['presence_indicator'] ?? 1),
             'procEmi' => 0,
             'verProc' => config('app.name', 'nimvo').'-fiscal',
         ]));
+
+        foreach ((array) ($sale['referencias'] ?? []) as $referencedAccessKey) {
+            $referencedAccessKey = trim((string) $referencedAccessKey);
+
+            if ($referencedAccessKey === '') {
+                continue;
+            }
+
+            $make->tagrefNFe($this->std([
+                'refNFe' => $referencedAccessKey,
+            ]));
+        }
 
         $make->tagemit($this->std([
             'xNome' => $profile['company_name'],
