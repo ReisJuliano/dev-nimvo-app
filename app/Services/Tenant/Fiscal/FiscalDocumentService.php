@@ -10,6 +10,7 @@ use App\Models\Tenant\Product;
 use App\Models\Tenant\PurchaseReturn;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\SaleItem;
+use App\Models\Tenant\SaleReturn;
 use App\Models\Tenant\Supplier;
 use App\Support\Fiscal\NfcePaymentMapper;
 use Illuminate\Support\Facades\DB;
@@ -360,6 +361,195 @@ class FiscalDocumentService
                 'zip_code' => $supplier->zip_code,
             ],
             'additional_info' => "Devolucao referente a compra {$purchaseReturn->purchase->code}. Motivo: {$purchaseReturn->reason}",
+            'flags' => [
+                'local_test' => false,
+                'mode' => 'sefaz',
+                'document_model' => '55',
+                'offline_contingency' => false,
+            ],
+        ];
+    }
+
+    public function issueReturnForSale(SaleReturn $saleReturn, int $userId): FiscalDocument
+    {
+        $document = DB::transaction(function () use ($saleReturn) {
+            $saleReturn->loadMissing(['items.product', 'sale']);
+
+            $idempotencyKey = sprintf('sale_return:%d', $saleReturn->id);
+
+            $existing = FiscalDocument::query()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $sale = $saleReturn->sale;
+
+            $originalDocument = FiscalDocument::query()
+                ->where('sale_id', $sale->id)
+                ->whereIn('status', ['authorized', 'printed'])
+                ->latest('id')
+                ->first();
+
+            if (! $originalDocument || blank($originalDocument->access_key)) {
+                throw ValidationException::withMessages([
+                    'sale' => 'Só é possível emitir devolução fiscal para uma venda com documento fiscal autorizado.',
+                ]);
+            }
+
+            $recipient = $this->resolveConsumerPayload($sale);
+
+            if (blank($recipient['document'] ?? null) || blank($recipient['name'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'sale' => 'A devolução fiscal exige um cliente identificado (nome e CPF/CNPJ) na venda original.',
+                ]);
+            }
+
+            $profile = $this->resolveProfileForDocument('55');
+
+            if (! $profile) {
+                throw ValidationException::withMessages([
+                    'fiscal_profile' => 'Configure um perfil fiscal ativo especifico para NF-e modelo 55 antes de emitir a devolução.',
+                ]);
+            }
+
+            $this->validateProfileForDocument($profile, '55', requireTransmission: true);
+
+            $number = (int) $profile->next_number;
+            $profile->forceFill(['next_number' => $number + 1])->save();
+
+            return FiscalDocument::createCompatible([
+                'sale_id' => null,
+                'related_sale_id' => $sale->id,
+                'origin_document_id' => $originalDocument->id,
+                'profile_id' => $profile->id,
+                'type' => 'nfe_return_sale',
+                'status' => 'queued',
+                'idempotency_key' => $idempotencyKey,
+                'environment' => (int) $profile->environment,
+                'series' => (int) $profile->series,
+                'number' => $number,
+                'payload' => $this->buildSaleReturnPayload($saleReturn, $profile, $number, $recipient, $originalDocument->access_key),
+                'queued_at' => now(),
+            ]);
+        });
+
+        if ($document->wasRecentlyCreated) {
+            $document->events()->create([
+                'status' => 'queued',
+                'source' => 'backend',
+                'message' => 'NF-e de devolução de venda reservada e enviada para a fila de emissão.',
+            ]);
+
+            $this->dispatchService->dispatch((string) tenant()->getTenantKey(), $document->id);
+        }
+
+        return $document->fresh(['events']);
+    }
+
+    protected function buildSaleReturnPayload(
+        SaleReturn $saleReturn,
+        FiscalProfile $profile,
+        int $number,
+        array $recipient,
+        string $referencedAccessKey,
+    ): array {
+        $issuedAt = now()->format('Y-m-d\TH:i:sP');
+        $randomCode = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
+
+        $items = $saleReturn->items->map(function ($item) {
+            /** @var Product|null $product */
+            $product = $item->product;
+            $quantity = round((float) $item->quantity, 3);
+            $lineTotal = round((float) $item->total, 2);
+
+            return [
+                'code' => $product?->code ?: (string) $item->product_id,
+                'barcode' => $product?->barcode,
+                'name' => $product?->name ?: 'Item sem nome',
+                'ncm' => $product?->ncm,
+                'cfop' => $item->cfop,
+                'cest' => $product?->cest,
+                'origin_code' => $product?->origin_code ?: '0',
+                'icms_csosn' => $product?->icms_csosn ?: '102',
+                'pis_cst' => $product?->pis_cst ?: '49',
+                'pis_base' => $lineTotal,
+                'pis_amount' => 0.0,
+                'pis_rate' => 0.0,
+                'cofins_cst' => $product?->cofins_cst ?: '49',
+                'cofins_base' => $lineTotal,
+                'cofins_amount' => 0.0,
+                'cofins_rate' => 0.0,
+                'ipi_amount' => 0.0,
+                'unit' => $product?->unit ?: 'UN',
+                'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
+                'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
+                'quantity' => $quantity,
+                'unit_price' => $quantity > 0 ? round($lineTotal / $quantity, 10) : 0.0,
+                'line_subtotal' => $lineTotal,
+                'discount_amount' => 0.0,
+                'total' => $lineTotal,
+                'tax_total' => 0.0,
+            ];
+        })->values()->all();
+
+        $total = round($saleReturn->items->sum('total'), 2);
+
+        return [
+            'profile' => [
+                'environment' => (int) $profile->environment,
+                'invoice_model' => (string) $profile->invoice_model,
+                'company_name' => $profile->company_name,
+                'trade_name' => $profile->trade_name,
+                'cnpj' => $profile->cnpj,
+                'ie' => $profile->ie,
+                'im' => $profile->im,
+                'cnae' => $profile->cnae,
+                'crt' => $profile->crt,
+                'phone' => $profile->phone,
+                'street' => $profile->street,
+                'number' => $profile->number,
+                'complement' => $profile->complement,
+                'district' => $profile->district,
+                'city_code' => $profile->city_code,
+                'city_name' => $profile->city_name,
+                'state' => $profile->state,
+                'zip_code' => $profile->zip_code,
+                'operation_nature' => 'DEVOLUCAO DE VENDA',
+                'csc_id' => $profile->csc_id,
+                'csc_token' => $profile->csc_token,
+                'technical_contact_name' => $profile->technical_contact_name,
+                'technical_contact_email' => $profile->technical_contact_email,
+                'technical_contact_phone' => $profile->technical_contact_phone,
+                'technical_contact_cnpj' => $profile->technical_contact_cnpj,
+            ],
+            'sale' => [
+                'number' => $number,
+                'series' => (int) $profile->series,
+                'random_code' => $randomCode,
+                'issued_at' => $issuedAt,
+                'total' => $total,
+                'id_destination' => 1,
+                'presence_indicator' => 9,
+                'print_type' => 1,
+                'emission_type' => 1,
+                'consumer_final' => 1,
+                'operation_type' => 0,
+                'finalidade' => 4,
+                'referencias' => [$referencedAccessKey],
+            ],
+            'items' => $items,
+            'payments' => [[
+                'tPag' => '90',
+                'xPag' => 'Sem pagamento',
+                'indPag' => 0,
+                'amount' => 0.0,
+                'xml_amount' => 0.0,
+            ]],
+            'consumer' => $recipient,
+            'additional_info' => "Devolucao referente a venda {$saleReturn->sale->sale_number}. Motivo: {$saleReturn->reason}",
             'flags' => [
                 'local_test' => false,
                 'mode' => 'sefaz',
