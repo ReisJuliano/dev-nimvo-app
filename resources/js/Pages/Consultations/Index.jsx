@@ -212,6 +212,9 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
     const [detailsOpen, setDetailsOpen] = useState(false)
     const [busyAction, setBusyAction] = useState(null)
     const [feedback, setFeedback] = useState(null)
+    const [cancelPrompt, setCancelPrompt] = useState(null)
+    const [cancelReason, setCancelReason] = useState('')
+    const CANCEL_REASON_MIN_LENGTH = 15
     const normalizedSearch = normalizeTextSearch(searchControl.value)
     const visibleRecords = useMemo(
         () => (hasAppliedFilters ? (records || []) : []),
@@ -262,6 +265,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                 record.details?.address,
                 record.details?.access_key,
                 record.details?.number,
+                ...(record.details?.items || []).map((item) => item.name),
             ], normalizedSearch)
         })
     ), [activeType, appliedRange, normalizedSearch, visibleRecords])
@@ -296,20 +300,29 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
         }
     }
 
-    async function handleCancel(url, label) {
+    function openCancelPrompt(url, label) {
         if (!url) {
             return
         }
 
-        const confirmed = await confirmPopup({
-            type: 'warning',
-            title: `Cancelar ${label}`,
-            message: `Deseja cancelar ${label}?`,
-            confirmLabel: 'Cancelar',
-            cancelLabel: 'Voltar',
-        })
+        setCancelReason('')
+        setCancelPrompt({ url, label })
+    }
 
-        if (!confirmed) {
+    function closeCancelPrompt() {
+        setCancelPrompt(null)
+        setCancelReason('')
+    }
+
+    async function confirmCancelPrompt() {
+        if (!cancelPrompt) {
+            return
+        }
+
+        const { url, label } = cancelPrompt
+        const trimmedReason = cancelReason.trim()
+
+        if (trimmedReason.length < CANCEL_REASON_MIN_LENGTH) {
             return
         }
 
@@ -317,10 +330,11 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
         setFeedback(null)
 
         try {
-            await apiRequest(url, { method: 'post', data: { reason: 'Cancelado pela central de consultas.' } })
+            await apiRequest(url, { method: 'post', data: { reason: trimmedReason } })
             setFeedback({ type: 'success', text: `${label} cancelado com sucesso.` })
             setSelectedUid(null)
             setDetailsOpen(false)
+            closeCancelPrompt()
         } catch (error) {
             setFeedback({ type: 'error', text: error.message })
         } finally {
@@ -411,11 +425,11 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
     }
 
     return (
-        <AppLayout title="Consultas">
+        <AppLayout title="Vendas e cancelamentos">
             <div className="ui-list-page-shell">
                 <div className="ui-list-page-main">
                     <PageHeader
-                        title="Consultas"
+                        title="Vendas e cancelamentos"
                         search={{
                             placeholder: 'Buscar por número ou valor',
                             value: searchControl.draftValue,
@@ -548,7 +562,7 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                                     return
                                 }
 
-                                void handleCancel(selectedRecord.actions?.cancel_url, selectedRecord.title)
+                                openCancelPrompt(selectedRecord.actions?.cancel_url, selectedRecord.title)
                             },
                         },
                     ]}
@@ -675,6 +689,50 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                         ) : null}
                     </div>
                 ) : null}
+            </CompactModal>
+
+            <CompactModal
+                open={Boolean(cancelPrompt)}
+                title={cancelPrompt ? `Cancelar ${cancelPrompt.label}` : 'Cancelar'}
+                description="O estoque dos itens é estornado automaticamente."
+                icon="fa-xmark"
+                size="sm"
+                onClose={closeCancelPrompt}
+            >
+                <div className="proc-ui-modal-stack">
+                    <div className="proc-ui-field full">
+                        <label>
+                            <span>Motivo do cancelamento</span>
+                            <textarea
+                                className="ui-textarea"
+                                rows="3"
+                                placeholder={`Descreva o motivo (mínimo ${CANCEL_REASON_MIN_LENGTH} caracteres)`}
+                                value={cancelReason}
+                                onChange={(event) => setCancelReason(event.target.value)}
+                                autoFocus
+                            />
+                        </label>
+                        {cancelReason.trim().length > 0 && cancelReason.trim().length < CANCEL_REASON_MIN_LENGTH ? (
+                            <small className="proc-ui-field-hint">
+                                Faltam {CANCEL_REASON_MIN_LENGTH - cancelReason.trim().length} caractere(s).
+                            </small>
+                        ) : null}
+                    </div>
+
+                    <div className="proc-ui-modal-footer">
+                        <button type="button" className="ui-button-ghost" onClick={closeCancelPrompt}>
+                            Voltar
+                        </button>
+                        <button
+                            type="button"
+                            className="ui-button-danger"
+                            disabled={cancelReason.trim().length < CANCEL_REASON_MIN_LENGTH || busyAction === cancelPrompt?.url}
+                            onClick={() => void confirmCancelPrompt()}
+                        >
+                            {busyAction === cancelPrompt?.url ? 'Cancelando...' : 'Confirmar cancelamento'}
+                        </button>
+                    </div>
+                </div>
             </CompactModal>
         </AppLayout>
     )

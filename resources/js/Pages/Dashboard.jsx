@@ -82,7 +82,7 @@ export default function Dashboard({ summary = {}, lowStockItems = [], expiringSo
         {
             title: 'Lucro estimado',
             value: formatMoney(summary.today_profit || 0),
-            note: `${formatNumber(profitMargin)}% de margem`,
+            note: `${formatNumber(profitMargin, { maximumFractionDigits: 1 })}% de margem`,
             badge: 'Estimado',
             badgeTone: 'neutral',
             icon: 'fa-chart-pie',

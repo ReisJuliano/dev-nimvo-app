@@ -1498,6 +1498,17 @@
     gap: 8px;
 }
 
+.pos-turn-drawer-footer {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 0.5px solid var(--pos-border);
+}
+
+.pos-turn-drawer-footer .ui-button-ghost {
+    width: 100%;
+    justify-content: center;
+}
+
 .pos-turn-drawer-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;

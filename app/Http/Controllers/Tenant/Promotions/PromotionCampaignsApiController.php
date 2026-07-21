@@ -18,8 +18,7 @@ class PromotionCampaignsApiController extends Controller
 
         $campaigns = PromotionCampaign::query()
             ->withCount('promotions')
-            ->withCount(['promotions as active_promotions_count' => fn ($query) => $query->where('active', true)])
-            ->with('createdBy:id,name')
+            ->with(['createdBy:id,name', 'promotions:id,campaign_id,active,start_at,end_at'])
             ->latest('id')
             ->get()
             ->map(fn (PromotionCampaign $campaign) => $this->serialize($campaign));
@@ -156,10 +155,32 @@ class PromotionCampaignsApiController extends Controller
             'active' => $campaign->active,
             'status' => $campaign->statusLabel(),
             'promotions_count' => $campaign->promotions_count ?? $campaign->promotions()->count(),
-            'active_promotions_count' => $campaign->active_promotions_count ?? $campaign->promotions()->where('active', true)->count(),
+            'active_promotions_count' => $this->countActivePromotions($campaign),
             'created_by_name' => $campaign->createdBy?->name,
             'created_at' => $campaign->created_at?->toIso8601String(),
         ];
+    }
+
+    protected function countActivePromotions(PromotionCampaign $campaign): int
+    {
+        if (!$campaign->active || $campaign->ends_at?->isPast()) {
+            return 0;
+        }
+
+        if ($campaign->relationLoaded('promotions')) {
+            return $campaign->promotions
+                ->each(fn ($promotion) => $promotion->setRelation('campaign', $campaign))
+                ->filter(fn ($promotion) => $promotion->statusLabel() === 'ativa')
+                ->count();
+        }
+
+        $now = now();
+
+        return $campaign->promotions()
+            ->where('active', true)
+            ->where(fn ($query) => $query->whereNull('start_at')->orWhere('start_at', '<=', $now))
+            ->where(fn ($query) => $query->whereNull('end_at')->orWhere('end_at', '>=', $now))
+            ->count();
     }
 
     protected function authorizeManage(): void

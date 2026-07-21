@@ -28,6 +28,7 @@ export const MODULE_DEFAULTS = {
     pedidos_online: false,
     whatsapp_pedidos: false,
     moda: false,
+    fidelidade: false,
 }
 
 export const PRESET_LABELS = {
@@ -101,6 +102,7 @@ export function deriveCapabilities(inputModules = {}) {
         pedidos_online: modules.pedidos_online,
         whatsapp_pedidos: modules.whatsapp_pedidos,
         moda: modules.moda,
+        fidelidade: modules.fidelidade,
     }
 }
 

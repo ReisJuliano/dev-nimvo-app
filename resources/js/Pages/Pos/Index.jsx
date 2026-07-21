@@ -3865,6 +3865,7 @@ export default function PosIndex({
 
     const workspaceProps = {
         tenantName: tenant?.name,
+        fiscalAvancadoEnabled: moduleState.isCapabilityEnabled('fiscal_avancado'),
         cashRegisterState,
         cashRegisterReport,
         cashRegisterHistory,
@@ -4823,6 +4824,7 @@ function totalsKey(cart, selectedCustomer, notes, discountConfig) {
 
 function PosWorkspace({
     tenantName,
+    fiscalAvancadoEnabled,
     cashRegisterState,
     cashRegisterReport,
     cashRegisterHistory,
@@ -5256,6 +5258,7 @@ function PosWorkspace({
                         onOpenCloseCashRegister={onOpenCloseCashRegister}
                         onOpenPendingNfces={onOpenPendingNfces}
                         pendingNfceCount={pendingNfceCount}
+                        fiscalAvancadoEnabled={fiscalAvancadoEnabled}
                     />
                 ) : null}
             </div>
@@ -5286,6 +5289,7 @@ function PosWorkspace({
                                 onOpenCloseCashRegister={onOpenCloseCashRegister}
                                 onOpenPendingNfces={onOpenPendingNfces}
                                 pendingNfceCount={pendingNfceCount}
+                                fiscalAvancadoEnabled={fiscalAvancadoEnabled}
                                 onCloseMobilePanel={onCloseMobileCashPanel}
                             />
                         </div>
@@ -5746,16 +5750,17 @@ function PosCashTurnPanel({
     onOpenCloseCashRegister,
     onOpenPendingNfces,
     pendingNfceCount = 0,
+    fiscalAvancadoEnabled = false,
     onCloseMobilePanel = null,
 }) {
     const [cashOptionsOpen, setCashOptionsOpen] = useState(false)
     const quickLinkActions = [
-        {
+        ...(fiscalAvancadoEnabled ? [{
             key: 'quick-fiscal-notas',
             label: 'NFe/NFCe',
             icon: 'fa-file-invoice',
             onClick: () => window.open('/fiscal/notas', '_blank', 'noopener'),
-        },
+        }] : []),
         {
             key: 'quick-estoque',
             label: 'Estoque',
@@ -6030,6 +6035,17 @@ function PosCashActivityDrawer({
                     )}
                 </div>
             )}
+
+            <div className="pos-turn-drawer-footer">
+                <button
+                    type="button"
+                    className="ui-button-ghost"
+                    onClick={() => window.open('/consultas-cancelamentos', '_blank', 'noopener')}
+                >
+                    <i className="fa-solid fa-arrow-up-right-from-square" />
+                    <span>Ver histórico completo de vendas e cancelar vendas</span>
+                </button>
+            </div>
         </ActionDrawer>
     )
 }

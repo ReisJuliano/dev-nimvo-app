@@ -608,6 +608,11 @@ export default function PurchasesIndex({ moduleTitle = 'Compras', payload }) {
         return () => window.cancelAnimationFrame(frameId)
     }, [nameEditing])
 
+    useEffect(() => {
+        void refreshRecords()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     function resetActiveDraftState(options = {}) {
         setActiveDraftRecordId(null)
         setForm(createEmptyForm())
