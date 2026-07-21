@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { router } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
+import CompactModal from '@/Components/UI/CompactModal'
 import DataTable from '@/Components/UI/DataTable'
 import PageHeader from '@/Components/UI/PageHeader'
 import StatusBadge from '@/Components/UI/StatusBadge'
@@ -67,7 +68,7 @@ function recipientFromCustomer(customer) {
     }
 }
 
-export default function NfeNfce({ filters, documents, customers = [], canEmitManual = false }) {
+export default function NfeNfce({ filters, documents, customers = [], canEmitManual = false, canRequestCorrection = false }) {
     const [tab, setTab] = useState('issued')
 
     return (
@@ -90,7 +91,9 @@ export default function NfeNfce({ filters, documents, customers = [], canEmitMan
                     ))}
                 </div>
 
-                {tab === 'issued' ? <IssuedTab filters={filters} documents={documents} /> : null}
+                {tab === 'issued' ? (
+                    <IssuedTab filters={filters} documents={documents} canRequestCorrection={canRequestCorrection} />
+                ) : null}
                 {tab === 'from-sale' && canEmitManual ? <FromSaleTab /> : null}
                 {tab === 'manual' && canEmitManual ? <ManualTab customers={customers} /> : null}
             </div>
@@ -98,11 +101,12 @@ export default function NfeNfce({ filters, documents, customers = [], canEmitMan
     )
 }
 
-function IssuedTab({ filters, documents }) {
+function IssuedTab({ filters, documents, canRequestCorrection }) {
     const [search, setSearch] = useState(filters.search || '')
     const [dateRange, setDateRange] = useState({ from: filters.from, to: filters.to })
     const [documentModel, setDocumentModel] = useState(filters.document_model || 'all')
     const [status, setStatus] = useState(filters.status || 'all')
+    const [correctionDocumentId, setCorrectionDocumentId] = useState(null)
 
     function applyFilters(overrides = {}) {
         router.get('/fiscal/notas', {
@@ -169,6 +173,13 @@ function IssuedTab({ filters, documents }) {
                         target: '_blank',
                         selectRow: false,
                     } : null,
+                    (row.can_correct && canRequestCorrection) ? {
+                        key: 'correct',
+                        label: 'Carta de correção',
+                        icon: 'fa-file-pen',
+                        onClick: () => setCorrectionDocumentId(row.id),
+                        selectRow: false,
+                    } : null,
                 ]}
             />
 
@@ -181,8 +192,152 @@ function IssuedTab({ filters, documents }) {
                     </div>
                 </div>
             ) : null}
+
+            {correctionDocumentId ? (
+                <CorrectionLetterModal
+                    documentId={correctionDocumentId}
+                    onClose={() => setCorrectionDocumentId(null)}
+                />
+            ) : null}
         </div>
     )
+}
+
+function CorrectionLetterModal({ documentId, onClose }) {
+    const MIN_LENGTH = 15
+    const MAX_LENGTH = 1000
+
+    const [loading, setLoading] = useState(true)
+    const [events, setEvents] = useState([])
+    const [text, setText] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+    const [feedback, setFeedback] = useState(null)
+
+    async function loadDocument() {
+        setLoading(true)
+        try {
+            const response = await apiRequest(`/api/fiscal/documents/${documentId}`)
+            setEvents((response.document?.events || []).filter((event) => String(event.status).startsWith('correction_')))
+        } catch (error) {
+            showErrorPopup(error.message || 'Não foi possível carregar as cartas de correção deste documento.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => { loadDocument() }, [documentId])
+
+    const hasPendingLetter = events.some((event) => ['correction_queued', 'correction_processing'].includes(event.status))
+    const trimmedLength = text.trim().length
+    const canSubmit = !submitting && !hasPendingLetter && trimmedLength >= MIN_LENGTH && trimmedLength <= MAX_LENGTH
+
+    async function handleSubmit(event) {
+        event.preventDefault()
+        if (!canSubmit) return
+
+        setSubmitting(true)
+        setFeedback(null)
+
+        try {
+            const response = await apiRequest(`/api/fiscal/documents/${documentId}/correction`, {
+                method: 'post',
+                data: { text },
+            })
+            setFeedback({ type: 'success', text: response.message || 'Carta de correção enviada para processamento.' })
+            setText('')
+            await loadDocument()
+        } catch (error) {
+            showErrorPopup(error.message || 'Não foi possível enviar a carta de correção.')
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    return (
+        <CompactModal
+            open
+            title="Carta de correção"
+            description="Corrige dados que não alteram valor, tributo ou destinatário da nota."
+            icon="fa-file-pen"
+            onClose={onClose}
+        >
+            <div className="nfe-correction-modal">
+                {loading ? (
+                    <p className="nfe-hint">Carregando histórico...</p>
+                ) : (
+                    <>
+                        {events.length > 0 ? (
+                            <ul className="nfe-correction-history">
+                                {events.slice().reverse().map((event, index) => (
+                                    <li key={index}>
+                                        <div className="nfe-correction-history-header">
+                                            <StatusBadge compact label={correctionStatusLabel(event.status)} tone={correctionStatusTone(event.status)} />
+                                            <span>{event.created_at ? formatDateTime(event.created_at) : ''}</span>
+                                        </div>
+                                        {event.payload?.text ? <p>{event.payload.text}</p> : null}
+                                        {event.status === 'correction_registered' && event.payload?.sequence ? (
+                                            <div className="nfe-correction-history-links">
+                                                <a href={`/api/fiscal/documents/${documentId}/correction/${event.payload.sequence}/request-xml`} target="_blank" rel="noreferrer">XML enviado</a>
+                                                <a href={`/api/fiscal/documents/${documentId}/correction/${event.payload.sequence}/response-xml`} target="_blank" rel="noreferrer">XML de retorno</a>
+                                            </div>
+                                        ) : null}
+                                        {event.status === 'correction_failed' && event.message ? (
+                                            <p className="nfe-correction-history-error">{event.message}</p>
+                                        ) : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="nfe-hint">Nenhuma carta de correção registrada ainda para este documento.</p>
+                        )}
+
+                        <form className="nfe-form" onSubmit={handleSubmit}>
+                            <label>
+                                <span>Texto da correção</span>
+                                <textarea
+                                    value={text}
+                                    onChange={(event) => setText(event.target.value)}
+                                    rows={4}
+                                    maxLength={MAX_LENGTH}
+                                    disabled={hasPendingLetter}
+                                    placeholder="Descreva a correção (mín. 15 caracteres). Não pode alterar valor, tributo, data ou destinatário."
+                                />
+                                <span className="nfe-correction-counter">{trimmedLength}/{MAX_LENGTH}</span>
+                            </label>
+
+                            {hasPendingLetter ? (
+                                <p className="nfe-hint">Já existe uma carta em processamento. Aguarde a conclusão antes de enviar outra.</p>
+                            ) : null}
+
+                            {feedback ? <div className={`nfe-feedback nfe-feedback--${feedback.type}`}>{feedback.text}</div> : null}
+
+                            <button type="submit" className="nfe-primary-button" disabled={!canSubmit}>
+                                {submitting ? 'Enviando...' : 'Enviar carta de correção'}
+                            </button>
+                        </form>
+                    </>
+                )}
+            </div>
+        </CompactModal>
+    )
+}
+
+function correctionStatusLabel(status) {
+    return {
+        correction_queued: 'Enviada ao agente',
+        correction_processing: 'Processando',
+        correction_registered: 'Registrada na SEFAZ',
+        correction_failed: 'Falhou',
+    }[status] || status
+}
+
+function correctionStatusTone(status) {
+    return {
+        correction_queued: 'info',
+        correction_processing: 'info',
+        correction_registered: 'success',
+        correction_failed: 'danger',
+    }[status] || 'neutral'
 }
 
 function FromSaleTab() {

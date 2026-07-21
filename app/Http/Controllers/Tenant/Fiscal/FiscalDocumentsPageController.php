@@ -20,6 +20,7 @@ class FiscalDocumentsPageController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'document', 'phone']),
             'canEmitManual' => (bool) $request->user()?->hasPermission('fiscal.emitir_manual'),
+            'canRequestCorrection' => (bool) $request->user()?->hasPermission('fiscal.eventos'),
         ]);
     }
 }

@@ -127,6 +127,7 @@ class FiscalDocumentBrowserService
             'created_at' => optional($document->created_at)?->toIso8601String(),
             'authorized_at' => optional($document->authorized_at)?->toIso8601String(),
             'can_reprint' => filled($document->authorized_xml) || filled($document->cancelled_xml),
+            'can_correct' => $documentModel === '55' && in_array($document->status, ['authorized', 'printed'], true),
             'preview_url' => route('api.fiscal.documents.preview', $document),
         ];
     }
