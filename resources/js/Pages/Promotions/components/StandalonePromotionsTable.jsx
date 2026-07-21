@@ -1,4 +1,4 @@
-import DenseTable from '@/Components/UI/DenseTable'
+import DataTable from '@/Components/UI/DataTable'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { promotionStatusTone, typeLabel } from '../constants'
 
@@ -10,7 +10,7 @@ export default function StandalonePromotionsTable({ promotions, loading, onEdit,
     }))
 
     return (
-        <DenseTable
+        <DataTable
             columns={[
                 { key: 'name', label: 'Nome' },
                 { key: 'target_label', label: 'Alvo' },
@@ -21,8 +21,9 @@ export default function StandalonePromotionsTable({ promotions, loading, onEdit,
             rows={rows}
             rowKey="id"
             onRowClick={(row) => onEdit(row)}
-            emptyState={<p>{loading ? 'Carregando...' : 'Nenhuma promoção avulsa cadastrada.'}</p>}
-            getRowActions={(row) => [
+            emptyMessage={loading ? 'Carregando...' : 'Nenhuma promoção avulsa cadastrada.'}
+            emptyIcon="fa-tag"
+            actions={(row) => [
                 { key: 'duplicate', icon: 'fa-copy', label: 'Duplicar', onClick: () => onDuplicate(row) },
                 { key: 'delete', icon: 'fa-trash', label: 'Excluir', tone: 'danger', onClick: () => onDelete(row) },
             ]}

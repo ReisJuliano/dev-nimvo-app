@@ -1,4 +1,4 @@
-import DenseTable from '@/Components/UI/DenseTable'
+import DataTable from '@/Components/UI/DataTable'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { promotionStatusTone, typeLabel } from '../constants'
 
@@ -10,7 +10,7 @@ export default function CampaignPromotionsTable({ promotions, loading, onEdit, o
     }))
 
     return (
-        <DenseTable
+        <DataTable
             columns={[
                 { key: 'target_label', label: 'Produto/Categoria' },
                 { key: 'type_label', label: 'Tipo' },
@@ -20,8 +20,9 @@ export default function CampaignPromotionsTable({ promotions, loading, onEdit, o
             rows={rows}
             rowKey="id"
             onRowClick={(row) => onEdit(row)}
-            emptyState={<p>{loading ? 'Carregando...' : 'Nenhuma oferta neste tabloide ainda. Use a busca acima pra adicionar produtos.'}</p>}
-            getRowActions={(row) => [
+            emptyMessage={loading ? 'Carregando...' : 'Nenhuma oferta neste tabloide ainda. Use a busca acima pra adicionar produtos.'}
+            emptyIcon="fa-tag"
+            actions={(row) => [
                 { key: 'duplicate', icon: 'fa-copy', label: 'Duplicar', onClick: () => onDuplicate(row) },
                 { key: 'delete', icon: 'fa-trash', label: 'Excluir', tone: 'danger', onClick: () => onDelete(row) },
             ]}
