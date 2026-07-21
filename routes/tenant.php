@@ -26,6 +26,8 @@ use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalNumberInutilizationController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleContingencyController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalSaleCancellationController;
+use App\Http\Controllers\Tenant\Fiscal\TaxRulesApiController;
+use App\Http\Controllers\Tenant\Fiscal\TaxRulesPageController;
 use App\Http\Controllers\Tenant\Mobile\MobileAuthController;
 use App\Http\Controllers\Tenant\Mobile\MobileCashRegisterController;
 use App\Http\Controllers\Tenant\Mobile\MobileDashboardController;
@@ -136,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/venda-condicional', ConditionalSalesPageController::class)->name('conditional-sales.index');
         Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
         Route::get('/fiscal/notas', FiscalDocumentsPageController::class)->name('fiscal.notas.index');
+        Route::get('/fiscal/matriz-tributaria', TaxRulesPageController::class)->name('fiscal.tax-rules.index');
         Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', PurchasesPageController::class)->name('purchases.index');
         Route::get('/compras/devolucoes', PurchaseReturnPageController::class)->name('purchases.returns.index');
@@ -276,6 +279,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/fiscal/documents/{fiscalDocument}/correction/{sequence}/request-xml', [FiscalDocumentsApiController::class, 'correctionRequestXml'])->whereNumber('sequence')->name('api.fiscal.documents.correction.request-xml');
             Route::get('/fiscal/documents/{fiscalDocument}/correction/{sequence}/response-xml', [FiscalDocumentsApiController::class, 'correctionResponseXml'])->whereNumber('sequence')->name('api.fiscal.documents.correction.response-xml');
             Route::get('/fiscal/accountant-export', [AccountantExportController::class, 'download'])->name('api.fiscal.accountant-export.download');
+            Route::get('/fiscal/tax-rules', [TaxRulesApiController::class, 'index'])->name('api.fiscal.tax-rules.index');
+            Route::post('/fiscal/tax-rules', [TaxRulesApiController::class, 'store'])->name('api.fiscal.tax-rules.store');
+            Route::put('/fiscal/tax-rules/{taxRule}', [TaxRulesApiController::class, 'update'])->name('api.fiscal.tax-rules.update');
+            Route::delete('/fiscal/tax-rules/{taxRule}', [TaxRulesApiController::class, 'destroy'])->name('api.fiscal.tax-rules.destroy');
 
             Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');

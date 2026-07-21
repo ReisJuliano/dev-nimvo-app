@@ -147,6 +147,13 @@ class TenantNavigationService
                         'request_patterns' => ['api/fiscal/accountant-export*'],
                     ],
                     [
+                        'href' => '/fiscal/matriz-tributaria',
+                        'label' => 'Matriz tributária',
+                        'icon' => 'fa-scale-balanced',
+                        'required_permission' => 'fiscal.matriz_tributaria',
+                        'request_patterns' => ['fiscal/matriz-tributaria*', 'api/fiscal/tax-rules*'],
+                    ],
+                    [
                         'href' => '/consultas-cancelamentos',
                         'label' => 'Vendas e cancelamentos',
                         'icon' => 'fa-receipt',

@@ -1,0 +1,37 @@
+.ui-page-header-hint {
+    margin: 0 0 0.75rem;
+    color: var(--app-text-secondary, #64748b);
+    font-size: 0.85rem;
+}
+
+.ui-form-section-title {
+    display: block;
+    margin: 1rem 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--app-text-secondary, #64748b);
+}
+
+.ui-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.tax-rules-form-error {
+    display: block;
+    margin-top: 0.5rem;
+    color: #dc2626;
+    font-size: 0.85rem;
+}
+
+.tax-rules-actions-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1rem 0 0;
+    flex-wrap: wrap;
+}

@@ -115,6 +115,7 @@ class PermissionRegistry
                     ['key' => 'fiscal.emitir_manual', 'label' => 'Emitir NF-e manual ou a partir de venda', 'description' => 'Permite converter uma venda em NF-e e emitir nota fiscal avulsa com dados digitados na mão.'],
                     ['key' => 'fiscal.eventos', 'label' => 'Emitir eventos fiscais (carta de correção)', 'description' => 'Permite registrar carta de correção eletrônica em uma NF-e já autorizada.'],
                     ['key' => 'fiscal.emitir_devolucao', 'label' => 'Emitir NF-e de devolução', 'description' => 'Permite emitir NF-e de devolução de venda ou de compra, referenciando o documento original.'],
+                    ['key' => 'fiscal.matriz_tributaria', 'label' => 'Gerenciar matriz tributária', 'description' => 'Permite cadastrar e editar regras de tributação por NCM/CFOP/UF usadas como padrão na emissão fiscal.'],
                 ],
             ],
             [
