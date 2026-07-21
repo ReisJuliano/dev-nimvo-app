@@ -1,3 +1,25 @@
+.audit-select-filters {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.audit-select-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--app-text-secondary, #64748b);
+}
+
+.audit-pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
 .audit-detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

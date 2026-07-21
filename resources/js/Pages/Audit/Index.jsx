@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import './audit.css'
-import PageContainer from '@/Components/UI/PageContainer'
-import DenseTable from '@/Components/UI/DenseTable'
+import ActionButton from '@/Components/UI/ActionButton'
 import CompactModal from '@/Components/UI/CompactModal'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 import { formatDateTime } from '@/lib/format'
@@ -76,78 +77,114 @@ export default function AuditIndex({ actions = [], users = [] }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, actionFilter, userFilter, dateRange.from, dateRange.to])
 
+    function handleSearchApply(value) {
+        setPage(1)
+        setSearch(value)
+    }
+
+    function handleDateRangeChange(nextRange) {
+        setPage(1)
+        setDateRange(nextRange)
+    }
+
+    function handleReset() {
+        setPage(1)
+        setSearch('')
+        setActionFilter('')
+        setUserFilter('')
+        setDateRange(defaultDateRange())
+    }
+
     const rows = buildRows(logs)
 
     return (
         <AppLayout title="Auditoria">
-            <PageContainer>
-                {feedback ? (
-                    <div className={`ui-alert ${feedback.type}`}>
-                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
-                        <p>{feedback.text}</p>
-                    </div>
-                ) : null}
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Auditoria"
+                        search={{
+                            placeholder: 'ID do registro afetado',
+                            value: search,
+                            onChange: setSearch,
+                            onApply: handleSearchApply,
+                        }}
+                        dateRange={{
+                            from: dateRange.from,
+                            to: dateRange.to,
+                            onChange: handleDateRangeChange,
+                        }}
+                        onApply={() => { setPage(1); void refresh() }}
+                        onReset={handleReset}
+                    />
 
-                <div className="ui-filter-bar">
-                    <label>
-                        <span>De</span>
-                        <input type="date" value={dateRange.from} onChange={(event) => { setPage(1); setDateRange((current) => ({ ...current, from: event.target.value })) }} />
-                    </label>
-                    <label>
-                        <span>Até</span>
-                        <input type="date" value={dateRange.to} onChange={(event) => { setPage(1); setDateRange((current) => ({ ...current, to: event.target.value })) }} />
-                    </label>
-                    <label>
-                        <span>Ação</span>
-                        <select value={actionFilter} onChange={(event) => { setPage(1); setActionFilter(event.target.value) }}>
-                            <option value="">Todas</option>
-                            {actions.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Usuário</span>
-                        <select value={userFilter} onChange={(event) => { setPage(1); setUserFilter(event.target.value) }}>
-                            <option value="">Todos</option>
-                            {users.map((option) => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Buscar registro</span>
-                        <input
-                            placeholder="ID do registro afetado"
-                            type="text"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => { if (event.key === 'Enter') { setPage(1); void refresh() } }}
+                    {feedback ? (
+                        <div className={`ui-alert ${feedback.type}`}>
+                            <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
+                            <p>{feedback.text}</p>
+                        </div>
+                    ) : null}
+
+                    <div className="audit-select-filters">
+                        <label>
+                            <span>Ação</span>
+                            <select className="ui-select" value={actionFilter} onChange={(event) => { setPage(1); setActionFilter(event.target.value) }}>
+                                <option value="">Todas</option>
+                                {actions.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Usuário</span>
+                            <select className="ui-select" value={userFilter} onChange={(event) => { setPage(1); setUserFilter(event.target.value) }}>
+                                <option value="">Todos</option>
+                                {users.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                { key: 'occurred_at', label: 'Quando' },
+                                { key: 'action_label', label: 'Ação' },
+                                { key: 'user_name', label: 'Usuário' },
+                                { key: 'auditable', label: 'Registro afetado' },
+                            ]}
+                            rows={rows}
+                            rowKey="id"
+                            onRowClick={(row) => void openDetail(row)}
+                            emptyMessage={loading ? 'Carregando...' : 'Nenhum registro de auditoria no período selecionado.'}
+                            emptyIcon="fa-clipboard-check"
                         />
-                    </label>
+                    </section>
+
+                    {meta.last_page > 1 ? (
+                        <div className="audit-pagination">
+                            <ActionButton
+                                icon="fa-chevron-left"
+                                tone="secondary"
+                                disabled={meta.current_page <= 1}
+                                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            >
+                                Anterior
+                            </ActionButton>
+                            <span>{meta.current_page} de {meta.last_page}</span>
+                            <ActionButton
+                                icon="fa-chevron-right"
+                                tone="secondary"
+                                disabled={meta.current_page >= meta.last_page}
+                                onClick={() => setPage((current) => current + 1)}
+                            >
+                                Próxima
+                            </ActionButton>
+                        </div>
+                    ) : null}
                 </div>
-
-                <DenseTable
-                    columns={[
-                        { key: 'occurred_at', label: 'Quando' },
-                        { key: 'action_label', label: 'Ação' },
-                        { key: 'user_name', label: 'Usuário' },
-                        { key: 'auditable', label: 'Registro afetado' },
-                    ]}
-                    rows={rows}
-                    rowKey="id"
-                    emptyState={<p>{loading ? 'Carregando...' : 'Nenhum registro de auditoria no período selecionado.'}</p>}
-                    onRowClick={(row) => void openDetail(row)}
-                />
-
-                {meta.last_page > 1 ? (
-                    <div className="ui-pagination">
-                        <button type="button" disabled={meta.current_page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</button>
-                        <span>{meta.current_page} de {meta.last_page}</span>
-                        <button type="button" disabled={meta.current_page >= meta.last_page} onClick={() => setPage((current) => current + 1)}>Próxima</button>
-                    </div>
-                ) : null}
-            </PageContainer>
+            </div>
 
             <CompactModal
                 open={Boolean(detail)}
