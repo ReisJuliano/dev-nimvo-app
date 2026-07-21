@@ -471,6 +471,79 @@ export default function SettingsIndex({ settings, businessPresets, generalOption
                         </div>
                     </div>
 
+                    {moduleState.modules?.fidelidade ? (
+                        <div className="cfg-section">
+                            <div className="cfg-section-title">
+                                <i className="fa-solid fa-gift" />
+                                Fidelidade / Cashback
+                                <p>Percentual do total da venda que o cliente acumula como cashback quando um cliente é vinculado à venda.</p>
+                            </div>
+                            <div className="cfg-options-list">
+                                <div className="cfg-option">
+                                    <div className="cfg-option-info">
+                                        <strong>Percentual de cashback</strong>
+                                        <p>Ex.: 2 significa que uma venda de R$ 100,00 gera R$ 2,00 de cashback para o cliente.</p>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        className="ui-input"
+                                        style={{ maxWidth: '9rem' }}
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                        value={form.loyalty?.cashback_percent ?? 0}
+                                        onChange={(event) => setForm((current) => setValueByPath(current, 'loyalty.cashback_percent', Number(event.target.value)))}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    <div className="cfg-section">
+                        <div className="cfg-section-title">
+                            <i className="fa-solid fa-file-invoice-dollar" />
+                            Contador
+                            <p>Envio automático do pacote mensal (XMLs + resumo + fechamento) todo dia 1º.</p>
+                        </div>
+                        <div className="cfg-options-list">
+                            <div className="cfg-option">
+                                <div className="cfg-option-info">
+                                    <strong>Nome do escritório/contador</strong>
+                                </div>
+                                <input
+                                    type="text"
+                                    className="ui-input"
+                                    value={form.accountant?.name ?? ''}
+                                    onChange={(event) => setForm((current) => setValueByPath(current, 'accountant.name', event.target.value))}
+                                />
+                            </div>
+                            <div className="cfg-option">
+                                <div className="cfg-option-info">
+                                    <strong>E-mail do contador</strong>
+                                    <p>Pra onde o pacote mensal é enviado, se o envio automático estiver ligado.</p>
+                                </div>
+                                <input
+                                    type="email"
+                                    className="ui-input"
+                                    value={form.accountant?.email ?? ''}
+                                    onChange={(event) => setForm((current) => setValueByPath(current, 'accountant.email', event.target.value))}
+                                />
+                            </div>
+                            <div className="cfg-option">
+                                <div className="cfg-option-info">
+                                    <strong>Enviar automaticamente todo dia 1º</strong>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={`cfg-toggle ${form.accountant?.auto_send_enabled ? 'active' : ''}`}
+                                    onClick={() => handleToggle('accountant.auto_send_enabled')}
+                                >
+                                    <span className="cfg-toggle-knob" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* ─── Seção: Cadastro de Caixas ─── */}
                     <div className="cfg-section">
                         <div className="cfg-section-title">

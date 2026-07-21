@@ -41,6 +41,14 @@ class TenantSettingsService
             'expiry' => [
                 'default_alert_days' => 30,
             ],
+            'loyalty' => [
+                'cashback_percent' => 0.0,
+            ],
+            'accountant' => [
+                'name' => null,
+                'email' => null,
+                'auto_send_enabled' => false,
+            ],
             'modules' => $this->defaultModules(),
         ];
     }
@@ -73,6 +81,7 @@ class TenantSettingsService
             'pedidos_online' => false,
             'whatsapp_pedidos' => false,
             'moda' => false,
+            'fidelidade' => false,
         ];
     }
 
@@ -150,6 +159,7 @@ class TenantSettingsService
                     ['key' => 'whatsapp_pedidos', 'label' => 'WhatsApp pedidos', 'description' => 'Pedido via WhatsApp a partir do catalogo.'],
                     ['key' => 'moda', 'label' => 'Moda', 'description' => 'Grade, catalogo de moda e vendas condicionais.'],
                     ['key' => 'impressao_automatica', 'label' => 'Impressao automatica', 'description' => 'Automatiza impressoes operacionais.'],
+                    ['key' => 'fidelidade', 'label' => 'Fidelidade / Cashback', 'description' => 'Cliente acumula cashback nas compras e resgata depois.'],
                 ],
             ],
         ];
@@ -252,6 +262,7 @@ class TenantSettingsService
             'pedidos_online' => $modules['pedidos_online'],
             'whatsapp_pedidos' => $modules['whatsapp_pedidos'],
             'moda' => $modules['moda'],
+            'fidelidade' => $modules['fidelidade'],
         ];
     }
 
@@ -293,7 +304,7 @@ class TenantSettingsService
     {
         $settings = $this->normalizeIncomingSettings($settings);
         $defaults = $this->defaults();
-        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'modules']));
+        $merged = array_replace_recursive($defaults, Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'loyalty', 'accountant', 'modules']));
 
         $merged['business']['preset'] = $this->normalizePreset(data_get($merged, 'business.preset'));
         $merged['cash_closing']['require_conference'] = (bool) data_get(
@@ -315,6 +326,10 @@ class TenantSettingsService
         $merged['inventory']['supervisor_threshold_value'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_value', 200));
         $merged['inventory']['supervisor_threshold_quantity'] = max(0, (float) data_get($merged, 'inventory.supervisor_threshold_quantity', 20));
         $merged['expiry']['default_alert_days'] = max(1, (int) data_get($merged, 'expiry.default_alert_days', 30));
+        $merged['loyalty']['cashback_percent'] = max(0, min(100, (float) data_get($merged, 'loyalty.cashback_percent', 0)));
+        $merged['accountant']['name'] = filled(data_get($merged, 'accountant.name')) ? trim((string) data_get($merged, 'accountant.name')) : null;
+        $merged['accountant']['email'] = filled(data_get($merged, 'accountant.email')) ? trim((string) data_get($merged, 'accountant.email')) : null;
+        $merged['accountant']['auto_send_enabled'] = (bool) data_get($merged, 'accountant.auto_send_enabled', false);
         $merged['modules'] = $this->normalizeModules($merged['modules'] ?? []);
 
         return $merged;
@@ -465,6 +480,7 @@ class TenantSettingsService
             'pedidos_online' => false,
             'whatsapp_pedidos' => false,
             'moda' => false,
+            'fidelidade' => false,
         ];
 
         return match ($this->normalizePreset($preset)) {
@@ -533,7 +549,7 @@ class TenantSettingsService
 
     protected function payloadForStorage(array $settings): array
     {
-        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'modules']);
+        return Arr::only($settings, ['business', 'cash_closing', 'scale_barcode', 'inventory', 'expiry', 'loyalty', 'accountant', 'modules']);
     }
 
     protected function appSettingsTableExists(): bool

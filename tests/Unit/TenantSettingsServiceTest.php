@@ -132,6 +132,49 @@ class TenantSettingsServiceTest extends TestCase
         $this->assertFalse($merged['modules']['entrada_estoque_avancado']);
     }
 
+    public function test_payload_for_storage_persists_loyalty_and_accountant_settings(): void
+    {
+        $service = new TenantSettingsService();
+        $mergeWithDefaults = \Closure::bind(
+            fn (array $settings) => $this->mergeWithDefaults($settings),
+            $service,
+            TenantSettingsService::class,
+        );
+        $payloadForStorage = \Closure::bind(
+            fn (array $settings) => $this->payloadForStorage($settings),
+            $service,
+            TenantSettingsService::class,
+        );
+
+        $merged = $mergeWithDefaults([
+            'loyalty' => ['cashback_percent' => 5],
+            'accountant' => ['name' => 'Escritorio Teste', 'email' => 'contador@example.test', 'auto_send_enabled' => true],
+        ]);
+
+        $stored = $payloadForStorage($merged);
+
+        $this->assertSame(5.0, $stored['loyalty']['cashback_percent']);
+        $this->assertSame('Escritorio Teste', $stored['accountant']['name']);
+        $this->assertSame('contador@example.test', $stored['accountant']['email']);
+        $this->assertTrue($stored['accountant']['auto_send_enabled']);
+    }
+
+    public function test_accountant_settings_default_to_null_and_disabled(): void
+    {
+        $service = new TenantSettingsService();
+        $mergeWithDefaults = \Closure::bind(
+            fn (array $settings) => $this->mergeWithDefaults($settings),
+            $service,
+            TenantSettingsService::class,
+        );
+
+        $merged = $mergeWithDefaults([]);
+
+        $this->assertNull($merged['accountant']['name']);
+        $this->assertNull($merged['accountant']['email']);
+        $this->assertFalse($merged['accountant']['auto_send_enabled']);
+    }
+
     public function test_normalize_preset_maps_legacy_keys(): void
     {
         $service = new TenantSettingsService();

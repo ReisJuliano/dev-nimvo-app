@@ -46,6 +46,13 @@ class UpdateSettingsRequest extends FormRequest
             'modules.pedidos_online' => ['required', 'boolean'],
             'modules.whatsapp_pedidos' => ['required', 'boolean'],
             'modules.moda' => ['required', 'boolean'],
+            'modules.fidelidade' => ['required', 'boolean'],
+            'loyalty' => ['nullable', 'array'],
+            'loyalty.cashback_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'accountant' => ['nullable', 'array'],
+            'accountant.name' => ['nullable', 'string', 'max:255'],
+            'accountant.email' => ['nullable', 'email', 'max:255'],
+            'accountant.auto_send_enabled' => ['nullable', 'boolean'],
         ];
     }
 }
