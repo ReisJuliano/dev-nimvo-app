@@ -8,6 +8,7 @@ class AuditActions
     public const FISCAL_DOCUMENT_CANCELLED = 'fiscal.documento_cancelado';
     public const FISCAL_CONTINGENCY_EMITTED = 'fiscal.emitido_em_contingencia';
     public const FISCAL_NUMBERING_VOIDED = 'fiscal.numeracao_inutilizada';
+    public const FISCAL_CORRECTION_LETTER_REQUESTED = 'fiscal.carta_correcao_solicitada';
     public const DISCOUNT_AUTHORIZED = 'venda.desconto_autorizado';
     public const SUPERVISOR_AUTHORIZED = 'supervisor.autorizado';
     public const STOCK_MANUAL_ADJUSTMENT = 'estoque.ajuste_manual';
@@ -39,6 +40,7 @@ class AuditActions
             self::FISCAL_DOCUMENT_CANCELLED => 'Documento fiscal cancelado',
             self::FISCAL_CONTINGENCY_EMITTED => 'Emissao em contingencia',
             self::FISCAL_NUMBERING_VOIDED => 'Inutilizacao de numeracao',
+            self::FISCAL_CORRECTION_LETTER_REQUESTED => 'Carta de correcao solicitada',
             self::DISCOUNT_AUTHORIZED => 'Desconto autorizado',
             self::SUPERVISOR_AUTHORIZED => 'Autorizacao de supervisor',
             self::STOCK_MANUAL_ADJUSTMENT => 'Ajuste manual de estoque',

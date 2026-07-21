@@ -47,6 +47,55 @@ class FiscalDocumentXmlStorage
         return $paths;
     }
 
+    public function persistCorrection(string $tenantId, FiscalDocument $document, int $sequence, array $payload): array
+    {
+        $directory = $this->directory($tenantId, $document);
+        $paths = [];
+
+        foreach ($this->correctionFileMap($sequence) as $payloadKey => $filename) {
+            $contents = $payload[$payloadKey] ?? null;
+
+            if (!filled($contents)) {
+                continue;
+            }
+
+            $relativePath = $directory.'/'.$filename;
+            Storage::disk('local')->put($relativePath, (string) $contents);
+
+            $paths[$payloadKey] = $relativePath;
+            $paths['absolute_'.$payloadKey] = $this->absolutePath($relativePath);
+        }
+
+        return $paths;
+    }
+
+    public function pathsForCorrection(string $tenantId, FiscalDocument $document, int $sequence): array
+    {
+        $directory = $this->directory($tenantId, $document);
+        $paths = [];
+
+        foreach ($this->correctionFileMap($sequence) as $payloadKey => $filename) {
+            $relativePath = $directory.'/'.$filename;
+
+            if (!Storage::disk('local')->exists($relativePath)) {
+                continue;
+            }
+
+            $paths[$payloadKey] = $relativePath;
+            $paths['absolute_'.$payloadKey] = $this->absolutePath($relativePath);
+        }
+
+        return $paths;
+    }
+
+    protected function correctionFileMap(int $sequence): array
+    {
+        return [
+            'correction_request_xml' => "correction-{$sequence}-request.xml",
+            'correction_response_xml' => "correction-{$sequence}-response.xml",
+        ];
+    }
+
     public function pathsFor(string $tenantId, FiscalDocument $document): array
     {
         $directory = $this->directory($tenantId, $document);

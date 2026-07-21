@@ -5,7 +5,10 @@ namespace App\Services\Tenant\Fiscal;
 use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\AuditLogService;
+use App\Services\Tenant\CashbackService;
 use App\Services\Tenant\InventoryMovementService;
+use App\Support\Tenant\AuditActions;
 use App\Support\Tenant\TenantContext;
 
 class FiscalDocumentResultService
@@ -14,6 +17,8 @@ class FiscalDocumentResultService
         protected TenantContext $tenantContext,
         protected FiscalDocumentXmlStorage $xmlStorage,
         protected InventoryMovementService $inventoryMovementService,
+        protected AuditLogService $auditLogService,
+        protected CashbackService $cashbackService,
     ) {
     }
 
@@ -51,6 +56,66 @@ class FiscalDocumentResultService
                 'status' => 'cancellation_processing',
                 'source' => 'agent',
                 'message' => 'Agente local assumiu o cancelamento fiscal.',
+            ]);
+        });
+    }
+
+    public function markCorrectionProcessing(string $tenantId, int $documentId, string $agentKey): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($documentId, $agentKey) {
+            $document = FiscalDocument::query()->findOrFail($documentId);
+
+            $document->events()->create([
+                'status' => 'correction_processing',
+                'source' => 'agent',
+                'message' => 'Agente local assumiu o registro da carta de correção.',
+                'payload' => ['agent_key' => $agentKey],
+            ]);
+        });
+    }
+
+    public function markCorrectionRegistered(string $tenantId, int $documentId, array $payload): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($tenantId, $documentId, $payload) {
+            $document = FiscalDocument::query()->findOrFail($documentId);
+            $sequence = (int) ($payload['correction_sequence'] ?? 0);
+
+            $xmlFiles = $sequence > 0
+                ? $this->xmlStorage->persistCorrection($tenantId, $document, $sequence, $payload)
+                : [];
+
+            $document->events()->create([
+                'status' => 'correction_registered',
+                'source' => 'agent',
+                'message' => 'Carta de correção registrada na SEFAZ.',
+                'payload' => [
+                    'sequence' => $sequence,
+                    'text' => $payload['correction_text'] ?? null,
+                    'protocol' => $payload['correction_protocol'] ?? null,
+                    'sefaz_status_code' => $payload['sefaz_status_code'] ?? null,
+                    'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? null,
+                    'xml_files' => $xmlFiles,
+                ],
+            ]);
+        });
+    }
+
+    public function markCorrectionFailed(string $tenantId, int $documentId, array $payload): void
+    {
+        $this->tenantContext->run($tenantId, function () use ($documentId, $payload) {
+            $document = FiscalDocument::query()->findOrFail($documentId);
+            $message = $payload['message'] ?? $payload['error'] ?? 'Falha ao registrar carta de correção.';
+
+            $document->events()->create([
+                'status' => 'correction_failed',
+                'source' => 'agent',
+                'message' => $message,
+                'payload' => [
+                    'sequence' => $payload['correction_sequence'] ?? null,
+                    'text' => $payload['correction_text'] ?? null,
+                    'sefaz_status_code' => $payload['sefaz_status_code'] ?? null,
+                    'sefaz_status_reason' => $payload['sefaz_status_reason'] ?? null,
+                ],
             ]);
         });
     }
@@ -252,8 +317,25 @@ class FiscalDocumentResultService
             $xmlFiles = $this->xmlStorage->persist($tenantId, $document, $payload);
 
             if ($document->sale && $document->sale->status !== 'cancelled') {
-                $document->sale->forceFill(['status' => 'cancelled'])->save();
-                $this->restoreSaleStock($document->sale, (string) ($payload['cancellation_reason'] ?? $document->cancellation_reason ?? 'Cancelamento fiscal'));
+                $reason = (string) ($payload['cancellation_reason'] ?? $document->cancellation_reason ?? 'Cancelamento fiscal');
+
+                $document->sale->forceFill([
+                    'status' => 'cancelled',
+                    'cancelled_at' => $cancelledAt,
+                    'cancellation_reason' => $reason,
+                ])->save();
+
+                $this->restoreSaleStock($document->sale, $reason);
+
+                $this->auditLogService->record(
+                    AuditActions::SALE_CANCELLED,
+                    $document->sale,
+                    before: ['status' => 'finalized'],
+                    after: ['status' => 'cancelled'],
+                    metadata: ['reason' => $reason, 'source' => 'fiscal_agent'],
+                );
+
+                $this->cashbackService->reverseForSale($document->sale);
             }
 
             $document->events()->create([
@@ -271,13 +353,32 @@ class FiscalDocumentResultService
 
     protected function restoreSaleStock(Sale $sale, string $reason): void
     {
-        $sale->loadMissing('items.product');
+        $sale->loadMissing('items.product.kitItems.component');
 
         foreach ($sale->items as $item) {
             /** @var Product|null $product */
             $product = $item->product;
 
             if (! $product) {
+                continue;
+            }
+
+            if ($product->is_kit && $product->kitItems->isNotEmpty()) {
+                foreach ($product->kitItems as $kitItem) {
+                    if (! $kitItem->component) {
+                        continue;
+                    }
+
+                    $this->inventoryMovementService->apply($kitItem->component, (float) $kitItem->quantity * (float) $item->quantity, 'sale_cancelled', [
+                        'user_id' => $sale->user_id,
+                        'reference' => $sale,
+                        'unit_cost' => $kitItem->component->cost_price,
+                        'notes' => sprintf('Estorno do kit %s na venda %s. Motivo: %s', $product->name, $sale->sale_number, $reason),
+                        'occurred_at' => now(),
+                        'allow_negative' => true,
+                    ]);
+                }
+
                 continue;
             }
 

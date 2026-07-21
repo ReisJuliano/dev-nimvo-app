@@ -77,7 +77,7 @@ func executePolledCommand(config AgentConfig, command polledAgentCommand) (resul
 	}()
 
 	switch command.Type {
-	case "emit_nfce", "cancel_fiscal_document":
+	case "emit_nfce", "cancel_fiscal_document", "send_correction_letter":
 		return executeFiscalBridgeCommand(config, command)
 	case "print_test":
 		payload := printTestRequest{}

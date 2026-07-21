@@ -138,6 +138,8 @@ class LocalAgentApiController extends Controller
         if ($command->fiscal_document_id) {
             if ($command->type === 'cancel_fiscal_document') {
                 $resultService->markCancellationProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
+            } elseif ($command->type === 'send_correction_letter') {
+                $resultService->markCorrectionProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
             } else {
                 $resultService->markProcessing($agent->tenant_id, (int) $command->fiscal_document_id, $agent->agent_key);
             }
@@ -187,6 +189,12 @@ class LocalAgentApiController extends Controller
             'protocol' => ['nullable', 'string'],
             'cancellation_protocol' => ['nullable', 'string'],
             'cancellation_reason' => ['nullable', 'string'],
+            'correction_request_xml' => ['nullable', 'string'],
+            'correction_response_xml' => ['nullable', 'string'],
+            'correction_protocol' => ['nullable', 'string'],
+            'correction_sequence' => ['nullable', 'integer'],
+            'correction_text' => ['nullable', 'string'],
+            'corrected_at' => ['nullable', 'date'],
             'sefaz_status_code' => ['nullable', 'string'],
             'sefaz_status_reason' => ['nullable', 'string'],
             'printed_at' => ['nullable', 'date'],
@@ -202,6 +210,12 @@ class LocalAgentApiController extends Controller
                     $resultService->markCancelled($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
                 } else {
                     $resultService->markCancellationFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                }
+            } elseif ($command->type === 'send_correction_letter') {
+                if ($validated['successful']) {
+                    $resultService->markCorrectionRegistered($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
+                } else {
+                    $resultService->markCorrectionFailed($agent->tenant_id, (int) $command->fiscal_document_id, $validated);
                 }
             } else {
                 if ($validated['successful']) {

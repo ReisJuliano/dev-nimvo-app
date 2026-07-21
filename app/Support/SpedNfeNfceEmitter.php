@@ -217,6 +217,74 @@ class SpedNfeNfceEmitter
         ];
     }
 
+    public function correct(array $payload, array $agentConfig): array
+    {
+        $documentModel = $this->documentModel($payload);
+        $tools = $this->makeTools($payload, $agentConfig, $documentModel === '65');
+        $tools->model($documentModel);
+
+        $accessKey = (string) data_get($payload, 'correction.access_key', '');
+        $text = trim((string) data_get($payload, 'correction.text', ''));
+        $sequence = (int) data_get($payload, 'correction.sequence', 1);
+
+        if ($accessKey === '' || $text === '' || $sequence < 1) {
+            throw new RuntimeException('Os dados da carta de correção estão incompletos no comando enviado ao agente.');
+        }
+
+        $responseXml = $tools->sefazCCe($accessKey, $text, $sequence);
+        $requestXml = $tools->lastRequest;
+        $response = (new Standardize($responseXml))->toStd();
+        $batchStatus = (string) ($response->cStat ?? '');
+        $batchReason = (string) ($response->xMotivo ?? '');
+        $eventInfo = data_get($response, 'retEvento.infEvento');
+        $eventStatus = (string) data_get($eventInfo, 'cStat', '');
+        $eventReason = (string) data_get($eventInfo, 'xMotivo', $batchReason);
+        $eventProtocol = (string) data_get($eventInfo, 'nProt', '');
+
+        if ($batchStatus !== '128') {
+            return [
+                'status' => 'failed',
+                'correction_request_xml' => $requestXml,
+                'correction_response_xml' => $responseXml,
+                'access_key' => $accessKey,
+                'correction_sequence' => $sequence,
+                'correction_text' => $text,
+                'correction_protocol' => $eventProtocol,
+                'sefaz_status_code' => $batchStatus,
+                'sefaz_status_reason' => $batchReason,
+                'message' => "Retorno de carta de correção inesperado [{$batchStatus}] {$batchReason}",
+            ];
+        }
+
+        if (! in_array($eventStatus, ['135', '136'], true)) {
+            return [
+                'status' => 'rejected',
+                'correction_request_xml' => $requestXml,
+                'correction_response_xml' => $responseXml,
+                'access_key' => $accessKey,
+                'correction_sequence' => $sequence,
+                'correction_text' => $text,
+                'correction_protocol' => $eventProtocol,
+                'sefaz_status_code' => $eventStatus,
+                'sefaz_status_reason' => $eventReason,
+                'message' => "Carta de correção rejeitada [{$eventStatus}] {$eventReason}",
+            ];
+        }
+
+        return [
+            'status' => 'registered',
+            'correction_request_xml' => $requestXml,
+            'correction_response_xml' => $responseXml,
+            'access_key' => $accessKey,
+            'correction_sequence' => $sequence,
+            'correction_text' => $text,
+            'correction_protocol' => $eventProtocol,
+            'sefaz_status_code' => $eventStatus,
+            'sefaz_status_reason' => $eventReason,
+            'corrected_at' => Carbon::now()->toIso8601String(),
+        ];
+    }
+
     public function invalidateRange(array $payload, array $agentConfig): array
     {
         $documentModel = (string) data_get($payload, 'inutilization.document_model', '65');

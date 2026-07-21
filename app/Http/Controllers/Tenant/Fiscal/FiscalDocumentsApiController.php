@@ -15,6 +15,7 @@ use App\Support\DanfcePdfRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 
 class FiscalDocumentsApiController extends Controller
 {
@@ -218,6 +219,30 @@ class FiscalDocumentsApiController extends Controller
         ]);
     }
 
+    public function correctionRequestXml(FiscalDocument $fiscalDocument, int $sequence, FiscalDocumentXmlStorage $storage): Response
+    {
+        $path = $storage->pathsForCorrection((string) tenant('id'), $fiscalDocument, $sequence)['correction_request_xml'] ?? null;
+
+        abort_unless($path && Storage::disk('local')->exists($path), 422, 'Esta carta de correção ainda não possui XML de pedido disponível.');
+
+        return response(Storage::disk('local')->get($path), 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="correction-request-%s-%d.xml"', $fiscalDocument->number, $sequence),
+        ]);
+    }
+
+    public function correctionResponseXml(FiscalDocument $fiscalDocument, int $sequence, FiscalDocumentXmlStorage $storage): Response
+    {
+        $path = $storage->pathsForCorrection((string) tenant('id'), $fiscalDocument, $sequence)['correction_response_xml'] ?? null;
+
+        abort_unless($path && Storage::disk('local')->exists($path), 422, 'Esta carta de correção ainda não possui XML de retorno disponível.');
+
+        return response(Storage::disk('local')->get($path), 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => sprintf('attachment; filename="correction-response-%s-%d.xml"', $fiscalDocument->number, $sequence),
+        ]);
+    }
+
     public function cancelledXml(FiscalDocument $fiscalDocument): Response
     {
         abort_unless(filled($fiscalDocument->cancelled_xml), 422, 'O documento fiscal ainda não possui XML cancelado.');
@@ -270,6 +295,9 @@ class FiscalDocumentsApiController extends Controller
                     'status' => $event->status,
                     'source' => $event->source,
                     'message' => $event->message,
+                    'payload' => in_array($event->status, [
+                        'correction_queued', 'correction_processing', 'correction_registered', 'correction_failed',
+                    ], true) ? $event->payload : null,
                     'created_at' => optional($event->created_at)?->toIso8601String(),
                 ])->values()->all()
                 : [],

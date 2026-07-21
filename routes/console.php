@@ -183,6 +183,7 @@ Artisan::command('fiscal:agent:execute-command {config} {type} {payloadFile}', f
                 default => app(SpedNfeNfceEmitter::class)->emit($payload, $agentConfig),
             },
             'cancel_fiscal_document' => app(SpedNfeNfceEmitter::class)->cancel($payload, $agentConfig),
+            'send_correction_letter' => app(SpedNfeNfceEmitter::class)->correct($payload, $agentConfig),
             'invalidate_fiscal_range' => app(SpedNfeNfceEmitter::class)->invalidateRange($payload, $agentConfig),
             'print_payment_receipt' => tap([
                 'status' => 'printed',

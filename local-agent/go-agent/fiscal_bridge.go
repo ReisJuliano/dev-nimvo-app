@@ -24,6 +24,7 @@ var printerCommandTypes = []string{
 var fiscalBridgeCommandTypes = []string{
 	"emit_nfce",
 	"cancel_fiscal_document",
+	"send_correction_letter",
 	"invalidate_fiscal_range",
 }
 

@@ -68,6 +68,31 @@ class LocalAgentCommandService
         ]);
     }
 
+    public function queueCorrectionLetter(LocalAgent $agent, FiscalDocument $document, string $tenantId, array $payload): LocalAgentCommand
+    {
+        $existing = LocalAgentCommand::query()
+            ->where('tenant_id', $tenantId)
+            ->where('fiscal_document_id', $document->id)
+            ->where('type', 'send_correction_letter')
+            ->whereIn('status', ['pending', 'processing'])
+            ->latest('created_at')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return LocalAgentCommand::query()->create([
+            'local_agent_id' => $agent->id,
+            'tenant_id' => $tenantId,
+            'fiscal_document_id' => $document->id,
+            'type' => 'send_correction_letter',
+            'status' => 'pending',
+            'payload' => $payload,
+            'available_at' => now(),
+        ]);
+    }
+
     public function queueInutilization(
         LocalAgent $agent,
         FiscalNumberInutilization $inutilization,

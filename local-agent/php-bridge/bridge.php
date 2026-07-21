@@ -64,6 +64,7 @@ function bridgeExecuteFiscalCommand(array $arguments): array
             default => $emitter->emit($payload, $agentConfig),
         },
         'cancel_fiscal_document' => $emitter->cancel($payload, $agentConfig),
+        'send_correction_letter' => $emitter->correct($payload, $agentConfig),
         'invalidate_fiscal_range' => $emitter->invalidateRange($payload, $agentConfig),
         default => throw new RuntimeException("Tipo de comando nao suportado pelo bridge fiscal local: {$type}"),
     };
