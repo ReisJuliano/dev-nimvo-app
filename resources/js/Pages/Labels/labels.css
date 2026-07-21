@@ -28,6 +28,44 @@
     flex-wrap: wrap;
 }
 
+.labels-select-filters {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.labels-select-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--app-text-secondary, #64748b);
+}
+
+.labels-checkbox-filter {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.4rem !important;
+}
+
+.labels-print-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.labels-print-bar label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    color: var(--app-text-secondary, #64748b);
+}
+
 .layout-editor-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;

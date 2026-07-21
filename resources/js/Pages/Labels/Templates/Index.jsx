@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from '@inertiajs/react'
 import '../labels.css'
-import PageContainer from '@/Components/UI/PageContainer'
-import DenseTable from '@/Components/UI/DenseTable'
+import ActionButton from '@/Components/UI/ActionButton'
+import DataTable from '@/Components/UI/DataTable'
 import CompactModal from '@/Components/UI/CompactModal'
+import PageHeader from '@/Components/UI/PageHeader'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
 
@@ -141,41 +141,51 @@ export default function LabelTemplatesIndex() {
 
     return (
         <AppLayout title="Padrões de etiqueta">
-            <PageContainer>
-                {feedback ? (
-                    <div className={`ui-alert ${feedback.type}`}>
-                        <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
-                        <p>{feedback.text}</p>
-                    </div>
-                ) : null}
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Padrões de etiqueta"
+                        actions={(
+                            <>
+                                <ActionButton icon="fa-arrow-left" tone="secondary" href="/etiquetas">
+                                    Voltar para etiquetas
+                                </ActionButton>
+                                <ActionButton icon="fa-plus" onClick={openCreate}>
+                                    Novo padrão
+                                </ActionButton>
+                            </>
+                        )}
+                    />
 
-                <div className="ui-filter-bar">
-                    <Link href="/etiquetas" className="ui-button-ghost">
-                        <i className="fa-solid fa-arrow-left" /> Voltar para etiquetas
-                    </Link>
-                    <button type="button" className="ui-button" onClick={openCreate}>
-                        <i className="fa-solid fa-plus" /> Novo padrão
-                    </button>
+                    {feedback ? (
+                        <div className={`ui-alert ${feedback.type}`}>
+                            <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
+                            <p>{feedback.text}</p>
+                        </div>
+                    ) : null}
+
+                    <section className="ui-list-page-table-card">
+                        <DataTable
+                            columns={[
+                                { key: 'name', label: 'Nome' },
+                                { key: 'grid_label', label: 'Folha / etiqueta' },
+                                { key: 'barcode_label', label: 'Código de barras' },
+                                { key: 'show_promo', label: 'Promoção (De/Por)', render: (row) => (row.show_promo ? 'Sim' : 'Não') },
+                                { key: 'is_default', label: 'Padrão', render: (row) => (row.is_default ? 'Sim' : 'Não') },
+                            ]}
+                            rows={rows}
+                            rowKey="id"
+                            onRowClick={(row) => openEdit(row)}
+                            emptyMessage={loading ? 'Carregando...' : 'Nenhum padrão de etiqueta cadastrado.'}
+                            emptyIcon="fa-barcode"
+                            actions={(row) => [
+                                { key: 'layout', icon: 'fa-object-group', label: 'Editar layout', href: `/etiquetas/padroes/${row.id}/layout` },
+                                { key: 'delete', icon: 'fa-trash', label: 'Excluir', tone: 'danger', onClick: () => void removeTemplate(row) },
+                            ]}
+                        />
+                    </section>
                 </div>
-
-                <DenseTable
-                    columns={[
-                        { key: 'name', label: 'Nome' },
-                        { key: 'grid_label', label: 'Folha / etiqueta' },
-                        { key: 'barcode_label', label: 'Código de barras' },
-                        { key: 'show_promo', label: 'Promoção (De/Por)', render: (row) => (row.show_promo ? 'Sim' : 'Não') },
-                        { key: 'is_default', label: 'Padrão', render: (row) => (row.is_default ? 'Sim' : 'Não') },
-                    ]}
-                    rows={rows}
-                    rowKey="id"
-                    onRowClick={(row) => openEdit(row)}
-                    emptyState={<p>{loading ? 'Carregando...' : 'Nenhum padrão de etiqueta cadastrado.'}</p>}
-                    getRowActions={(row) => [
-                        { key: 'layout', icon: 'fa-object-group', label: 'Editar layout', href: `/etiquetas/padroes/${row.id}/layout` },
-                        { key: 'delete', icon: 'fa-trash', label: 'Excluir', onClick: () => void removeTemplate(row) },
-                    ]}
-                />
-            </PageContainer>
+            </div>
 
             <CompactModal
                 open={modalOpen}
