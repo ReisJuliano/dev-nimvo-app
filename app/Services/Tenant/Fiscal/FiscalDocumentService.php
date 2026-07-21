@@ -7,8 +7,10 @@ use App\Models\Tenant\Customer;
 use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\FiscalProfile;
 use App\Models\Tenant\Product;
+use App\Models\Tenant\PurchaseReturn;
 use App\Models\Tenant\Sale;
 use App\Models\Tenant\SaleItem;
+use App\Models\Tenant\Supplier;
 use App\Support\Fiscal\NfcePaymentMapper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -140,6 +142,231 @@ class FiscalDocumentService
                 null,
             );
         });
+    }
+
+    public function issueReturnForPurchase(PurchaseReturn $purchaseReturn, int $userId): FiscalDocument
+    {
+        $document = DB::transaction(function () use ($purchaseReturn) {
+            $purchaseReturn->loadMissing(['items.product', 'purchase.incomingNfeDocument', 'supplier']);
+
+            $idempotencyKey = sprintf('purchase_return:%d', $purchaseReturn->id);
+
+            $existing = FiscalDocument::query()
+                ->where('idempotency_key', $idempotencyKey)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $supplier = $purchaseReturn->supplier;
+            $incomingDocument = $purchaseReturn->purchase->incomingNfeDocument;
+
+            if (! $supplier) {
+                throw ValidationException::withMessages([
+                    'supplier' => 'Esta devolução não tem fornecedor vinculado para emitir a NF-e de devolução.',
+                ]);
+            }
+
+            if (! $incomingDocument || blank($incomingDocument->access_key)) {
+                throw ValidationException::withMessages([
+                    'purchase' => 'Não foi encontrada a chave de acesso da NF-e de entrada original para referenciar na devolução.',
+                ]);
+            }
+
+            $this->validateSupplierRecipient($supplier);
+
+            $profile = $this->resolveProfileForDocument('55');
+
+            if (! $profile) {
+                throw ValidationException::withMessages([
+                    'fiscal_profile' => 'Configure um perfil fiscal ativo especifico para NF-e modelo 55 antes de emitir a devolução.',
+                ]);
+            }
+
+            $this->validateProfileForDocument($profile, '55', requireTransmission: true);
+
+            $number = (int) $profile->next_number;
+            $profile->forceFill(['next_number' => $number + 1])->save();
+
+            return FiscalDocument::createCompatible([
+                'sale_id' => null,
+                'related_purchase_id' => $purchaseReturn->purchase_id,
+                'profile_id' => $profile->id,
+                'type' => 'nfe_return_purchase',
+                'status' => 'queued',
+                'idempotency_key' => $idempotencyKey,
+                'environment' => (int) $profile->environment,
+                'series' => (int) $profile->series,
+                'number' => $number,
+                'payload' => $this->buildPurchaseReturnPayload($purchaseReturn, $profile, $number, $supplier, $incomingDocument->access_key),
+                'queued_at' => now(),
+            ]);
+        });
+
+        if ($document->wasRecentlyCreated) {
+            $document->events()->create([
+                'status' => 'queued',
+                'source' => 'backend',
+                'message' => 'NF-e de devolução de compra reservada e enviada para a fila de emissão.',
+            ]);
+
+            $this->dispatchService->dispatch((string) tenant()->getTenantKey(), $document->id);
+        }
+
+        return $document->fresh(['events']);
+    }
+
+    protected function validateSupplierRecipient(Supplier $supplier): void
+    {
+        $missing = [];
+
+        foreach ([
+            'name' => 'nome/razão social',
+            'document' => 'CPF/CNPJ',
+            'street' => 'logradouro',
+            'number' => 'número',
+            'district' => 'bairro',
+            'city_code' => 'código do município',
+            'city_name' => 'município',
+            'state' => 'UF',
+            'zip_code' => 'CEP',
+        ] as $field => $label) {
+            if (blank($supplier->{$field})) {
+                $missing[] = "Configure {$label} no cadastro do fornecedor antes de emitir a devolução.";
+            }
+        }
+
+        if ($missing !== []) {
+            throw ValidationException::withMessages([
+                'supplier' => implode(' ', array_unique($missing)),
+            ]);
+        }
+    }
+
+    protected function buildPurchaseReturnPayload(
+        PurchaseReturn $purchaseReturn,
+        FiscalProfile $profile,
+        int $number,
+        Supplier $supplier,
+        string $referencedAccessKey,
+    ): array {
+        $issuedAt = now()->format('Y-m-d\TH:i:sP');
+        $randomCode = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
+
+        $items = $purchaseReturn->items->map(function ($item) {
+            /** @var Product|null $product */
+            $product = $item->product;
+            $quantity = round((float) $item->quantity, 3);
+            $lineTotal = round((float) $item->total, 2);
+
+            return [
+                'code' => $product?->code ?: (string) $item->product_id,
+                'barcode' => $product?->barcode,
+                'name' => $product?->name ?: 'Item sem nome',
+                'ncm' => $product?->ncm,
+                'cfop' => $item->cfop,
+                'cest' => $product?->cest,
+                'origin_code' => $product?->origin_code ?: '0',
+                'icms_csosn' => $product?->icms_csosn ?: '102',
+                'pis_cst' => $product?->pis_cst ?: '49',
+                'pis_base' => $lineTotal,
+                'pis_amount' => 0.0,
+                'pis_rate' => 0.0,
+                'cofins_cst' => $product?->cofins_cst ?: '49',
+                'cofins_base' => $lineTotal,
+                'cofins_amount' => 0.0,
+                'cofins_rate' => 0.0,
+                'ipi_amount' => 0.0,
+                'unit' => $product?->unit ?: 'UN',
+                'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
+                'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
+                'quantity' => $quantity,
+                'unit_price' => $quantity > 0 ? round($lineTotal / $quantity, 10) : 0.0,
+                'line_subtotal' => $lineTotal,
+                'discount_amount' => 0.0,
+                'total' => $lineTotal,
+                'tax_total' => 0.0,
+            ];
+        })->values()->all();
+
+        $total = round($purchaseReturn->items->sum('total'), 2);
+
+        return [
+            'profile' => [
+                'environment' => (int) $profile->environment,
+                'invoice_model' => (string) $profile->invoice_model,
+                'company_name' => $profile->company_name,
+                'trade_name' => $profile->trade_name,
+                'cnpj' => $profile->cnpj,
+                'ie' => $profile->ie,
+                'im' => $profile->im,
+                'cnae' => $profile->cnae,
+                'crt' => $profile->crt,
+                'phone' => $profile->phone,
+                'street' => $profile->street,
+                'number' => $profile->number,
+                'complement' => $profile->complement,
+                'district' => $profile->district,
+                'city_code' => $profile->city_code,
+                'city_name' => $profile->city_name,
+                'state' => $profile->state,
+                'zip_code' => $profile->zip_code,
+                'operation_nature' => 'DEVOLUCAO DE COMPRA',
+                'csc_id' => $profile->csc_id,
+                'csc_token' => $profile->csc_token,
+                'technical_contact_name' => $profile->technical_contact_name,
+                'technical_contact_email' => $profile->technical_contact_email,
+                'technical_contact_phone' => $profile->technical_contact_phone,
+                'technical_contact_cnpj' => $profile->technical_contact_cnpj,
+            ],
+            'sale' => [
+                'number' => $number,
+                'series' => (int) $profile->series,
+                'random_code' => $randomCode,
+                'issued_at' => $issuedAt,
+                'total' => $total,
+                'id_destination' => 2,
+                'presence_indicator' => 9,
+                'print_type' => 1,
+                'emission_type' => 1,
+                'consumer_final' => 0,
+                'operation_type' => 1,
+                'finalidade' => 4,
+                'referencias' => [$referencedAccessKey],
+            ],
+            'items' => $items,
+            'payments' => [[
+                'tPag' => '90',
+                'xPag' => 'Sem pagamento',
+                'indPag' => 0,
+                'amount' => 0.0,
+                'xml_amount' => 0.0,
+            ]],
+            'consumer' => [
+                'name' => $supplier->name,
+                'document' => preg_replace('/\D+/', '', (string) $supplier->document),
+                'ie_indicator' => filled($supplier->state_registration) ? 1 : 9,
+                'state_registration' => $supplier->state_registration,
+                'email' => $supplier->email,
+                'phone' => $supplier->phone,
+                'street' => $supplier->street,
+                'number' => $supplier->number,
+                'complement' => $supplier->complement,
+                'district' => $supplier->district,
+                'city_code' => $supplier->city_code,
+                'city_name' => $supplier->city_name,
+                'state' => $supplier->state,
+                'zip_code' => $supplier->zip_code,
+            ],
+            'additional_info' => "Devolucao referente a compra {$purchaseReturn->purchase->code}. Motivo: {$purchaseReturn->reason}",
+            'flags' => [
+                'local_test' => false,
+                'mode' => 'sefaz',
+                'document_model' => '55',
+                'offline_contingency' => false,
+            ],
+        ];
     }
 
     public function retry(FiscalDocument $document): FiscalDocument

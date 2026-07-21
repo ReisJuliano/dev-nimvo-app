@@ -2,11 +2,13 @@
 
 namespace App\Services\Tenant\Purchases;
 
+use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\Payable;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\PurchaseReturn;
 use App\Models\Tenant\PurchaseReturnItem;
 use App\Services\Tenant\AuditLogService;
+use App\Services\Tenant\Fiscal\FiscalDocumentService;
 use App\Services\Tenant\InventoryMovementService;
 use App\Support\CfopMirror;
 use App\Support\Tenant\AuditActions;
@@ -19,7 +21,19 @@ class PurchaseReturnService
         protected InventoryMovementService $inventoryMovementService,
         protected AuditLogService $auditLogService,
         protected CfopMirror $cfopMirror,
+        protected FiscalDocumentService $fiscalDocumentService,
     ) {
+    }
+
+    public function issueFiscal(int $purchaseReturnId, int $userId): FiscalDocument
+    {
+        $purchaseReturn = PurchaseReturn::query()->findOrFail($purchaseReturnId);
+
+        $document = $this->fiscalDocumentService->issueReturnForPurchase($purchaseReturn, $userId);
+
+        $purchaseReturn->forceFill(['fiscal_document_id' => $document->id])->save();
+
+        return $document;
     }
 
     /**
