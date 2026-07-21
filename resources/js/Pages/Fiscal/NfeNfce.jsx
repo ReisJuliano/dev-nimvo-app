@@ -68,7 +68,7 @@ function recipientFromCustomer(customer) {
     }
 }
 
-export default function NfeNfce({ filters, documents, customers = [], canEmitManual = false, canRequestCorrection = false }) {
+export default function NfeNfce({ filters, documents, customers = [], canEmitManual = false, canRequestCorrection = false, canExportAccountantPackage = false }) {
     const [tab, setTab] = useState('issued')
 
     return (
@@ -92,7 +92,12 @@ export default function NfeNfce({ filters, documents, customers = [], canEmitMan
                 </div>
 
                 {tab === 'issued' ? (
-                    <IssuedTab filters={filters} documents={documents} canRequestCorrection={canRequestCorrection} />
+                    <IssuedTab
+                        filters={filters}
+                        documents={documents}
+                        canRequestCorrection={canRequestCorrection}
+                        canExportAccountantPackage={canExportAccountantPackage}
+                    />
                 ) : null}
                 {tab === 'from-sale' && canEmitManual ? <FromSaleTab /> : null}
                 {tab === 'manual' && canEmitManual ? <ManualTab customers={customers} /> : null}
@@ -101,12 +106,18 @@ export default function NfeNfce({ filters, documents, customers = [], canEmitMan
     )
 }
 
-function IssuedTab({ filters, documents, canRequestCorrection }) {
+function IssuedTab({ filters, documents, canRequestCorrection, canExportAccountantPackage }) {
     const [search, setSearch] = useState(filters.search || '')
     const [dateRange, setDateRange] = useState({ from: filters.from, to: filters.to })
     const [documentModel, setDocumentModel] = useState(filters.document_model || 'all')
     const [status, setStatus] = useState(filters.status || 'all')
     const [correctionDocumentId, setCorrectionDocumentId] = useState(null)
+    const [exportMonth, setExportMonth] = useState(() => new Date().toISOString().slice(0, 7))
+
+    function handleExportAccountantPackage() {
+        const [year, month] = exportMonth.split('-')
+        window.location.href = `/api/fiscal/accountant-export?year=${year}&month=${Number(month)}`
+    }
 
     function applyFilters(overrides = {}) {
         router.get('/fiscal/notas', {
@@ -145,6 +156,18 @@ function IssuedTab({ filters, documents, canRequestCorrection }) {
                     router.get('/fiscal/notas', {}, { preserveScroll: true, replace: true })
                 }}
             />
+
+            {canExportAccountantPackage ? (
+                <div className="nfe-accountant-export">
+                    <label>
+                        <span>Pacote do contador</span>
+                        <input type="month" value={exportMonth} onChange={(event) => setExportMonth(event.target.value)} />
+                    </label>
+                    <button type="button" className="nfe-primary-button" onClick={handleExportAccountantPackage}>
+                        <i className="fa-solid fa-file-zipper" /> Exportar mês
+                    </button>
+                </div>
+            ) : null}
 
             <div className="nfe-status-filters">
                 {STATUS_FILTERS.map((item) => (

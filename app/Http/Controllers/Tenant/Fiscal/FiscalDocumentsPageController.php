@@ -21,6 +21,7 @@ class FiscalDocumentsPageController extends Controller
                 ->get(['id', 'name', 'document', 'phone']),
             'canEmitManual' => (bool) $request->user()?->hasPermission('fiscal.emitir_manual'),
             'canRequestCorrection' => (bool) $request->user()?->hasPermission('fiscal.eventos'),
+            'canExportAccountantPackage' => (bool) $request->user()?->hasPermission('relatorios.exportar'),
         ]);
     }
 }
