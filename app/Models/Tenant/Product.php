@@ -19,6 +19,8 @@ class Product extends Model
         'cest',
         'origin_code',
         'icms_csosn',
+        'ibs_cbs_cst',
+        'c_class_trib',
         'icms_rate',
         'pis_cst',
         'pis_rate',
@@ -40,6 +42,7 @@ class Product extends Model
         'commercial_unit',
         'taxable_unit',
         'sold_by',
+        'is_kit',
         'scale_code',
         'cost_price',
         'sale_price',
@@ -56,6 +59,7 @@ class Product extends Model
         'active' => 'boolean',
         'catalog_visible' => 'boolean',
         'fiscal_enabled' => 'boolean',
+        'is_kit' => 'boolean',
         'scale_code' => 'integer',
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
@@ -99,5 +103,10 @@ class Product extends Model
     public function expiries(): HasMany
     {
         return $this->hasMany(ProductExpiry::class);
+    }
+
+    public function kitItems(): HasMany
+    {
+        return $this->hasMany(ProductKitItem::class, 'kit_product_id');
     }
 }

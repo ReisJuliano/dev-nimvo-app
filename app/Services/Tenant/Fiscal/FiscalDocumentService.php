@@ -279,6 +279,8 @@ class FiscalDocumentService
                 'cofins_amount' => 0.0,
                 'cofins_rate' => 0.0,
                 'ipi_amount' => 0.0,
+                'ibs_cbs_cst' => $product?->ibs_cbs_cst,
+                'c_class_trib' => $product?->c_class_trib,
                 'unit' => $product?->unit ?: 'UN',
                 'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                 'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -366,6 +368,7 @@ class FiscalDocumentService
                 'mode' => 'sefaz',
                 'document_model' => '55',
                 'offline_contingency' => false,
+                'reforma_enabled' => (bool) $profile->reforma_enabled,
             ],
         ];
     }
@@ -483,6 +486,8 @@ class FiscalDocumentService
                 'cofins_amount' => 0.0,
                 'cofins_rate' => 0.0,
                 'ipi_amount' => 0.0,
+                'ibs_cbs_cst' => $product?->ibs_cbs_cst,
+                'c_class_trib' => $product?->c_class_trib,
                 'unit' => $product?->unit ?: 'UN',
                 'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                 'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -555,6 +560,7 @@ class FiscalDocumentService
                 'mode' => 'sefaz',
                 'document_model' => '55',
                 'offline_contingency' => false,
+                'reforma_enabled' => (bool) $profile->reforma_enabled,
             ],
         ];
     }
@@ -899,6 +905,8 @@ class FiscalDocumentService
                     'ipi_rate' => (float) ($product?->ipi_rate ?? 0),
                     'ipi_base' => 0.0,
                     'ipi_amount' => 0.0,
+                    'ibs_cbs_cst' => $product?->ibs_cbs_cst,
+                    'c_class_trib' => $product?->c_class_trib,
                     'unit' => $product?->unit ?: 'UN',
                     'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                     'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -932,6 +940,7 @@ class FiscalDocumentService
                 'document_model' => $documentModel,
                 'offline_contingency' => $offlineContingency,
                 'offline_contingency_stage' => $offlineContingency ? 'issue' : null,
+                'reforma_enabled' => (bool) $profile->reforma_enabled,
             ],
         ];
     }

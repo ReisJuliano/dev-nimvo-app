@@ -24,6 +24,7 @@ class FiscalProfile extends Model
         'im',
         'cnae',
         'crt',
+        'reforma_enabled',
         'phone',
         'street',
         'number',
@@ -47,6 +48,7 @@ class FiscalProfile extends Model
         'series' => 'integer',
         'next_number' => 'integer',
         'csc_token' => 'encrypted',
+        'reforma_enabled' => 'boolean',
     ];
 
     public function documents(): HasMany

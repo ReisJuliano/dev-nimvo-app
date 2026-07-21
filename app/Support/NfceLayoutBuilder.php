@@ -16,6 +16,7 @@ class NfceLayoutBuilder
         $payments = $payload['payments'] ?? [];
         $consumer = $payload['consumer'] ?? [];
         $documentModel = (string) ($payload['flags']['document_model'] ?? ($sale['requested_document_model'] ?? '65'));
+        $reformaEnabled = (bool) ($payload['flags']['reforma_enabled'] ?? false);
 
         if ($items === []) {
             throw new RuntimeException('Nao existem itens fiscais para montar o documento.');
@@ -25,7 +26,9 @@ class NfceLayoutBuilder
             throw new RuntimeException('Nao existem pagamentos fiscais para montar o documento.');
         }
 
-        $make = new Make();
+        // Sem isso o schema interno da lib fica em PL_009 (pre-reforma) e os grupos
+        // IBSCBS/gCompraGov nunca sao anexados ao XML, mesmo chamando tagIBSCBS().
+        $make = new Make($reformaEnabled ? 'PL_010' : null);
 
         $make->taginfNFe($this->std([
             'versao' => '4.00',
@@ -191,6 +194,24 @@ class NfceLayoutBuilder
                 'pCOFINS' => $this->decimal($item['cofins_rate'] ?? 0, 4),
                 'vCOFINS' => $this->decimal($cofinsAmount),
             ]));
+
+            // NT 2025.002 (IBS/CBS): so monta o grupo quando a reforma esta habilitada no
+            // perfil E o produto tem CST/cClassTrib configurados - sem isso, destaque
+            // informativo omitido (permitido ate 03/08/2026 pra regime normal). Base de
+            // calculo e aliquotas ainda NAO sao emitidas nesta versao: o split entre
+            // IBS estadual/municipal exige confirmacao contabil antes de virar numero
+            // no XML (ver docs/AGENT-KNOWLEDGE.md ou memoria do projeto).
+            if (
+                (bool) ($payload['flags']['reforma_enabled'] ?? false)
+                && filled($item['ibs_cbs_cst'] ?? null)
+                && filled($item['c_class_trib'] ?? null)
+            ) {
+                $make->tagIBSCBS($this->std([
+                    'item' => $line,
+                    'CST' => (string) $item['ibs_cbs_cst'],
+                    'cClassTrib' => (string) $item['c_class_trib'],
+                ]));
+            }
         }
 
         $make->tagICMSTot($this->std([
