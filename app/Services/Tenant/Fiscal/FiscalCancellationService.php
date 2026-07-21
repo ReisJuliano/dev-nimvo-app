@@ -6,8 +6,11 @@ use App\Models\Central\LocalAgent;
 use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\Product;
 use App\Models\Tenant\Sale;
+use App\Services\Tenant\AuditLogService;
+use App\Services\Tenant\CashbackService;
 use App\Services\Tenant\InventoryMovementService;
 use App\Services\Central\LocalAgentCommandService;
+use App\Support\Tenant\AuditActions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -17,12 +20,14 @@ class FiscalCancellationService
         protected LocalAgentCommandService $commandService,
         protected FiscalCancellationRules $rules,
         protected InventoryMovementService $inventoryMovementService,
+        protected AuditLogService $auditLogService,
+        protected CashbackService $cashbackService,
     ) {
     }
 
-    public function cancelSale(int $saleId, string $reason): array
+    public function cancelSale(int $saleId, string $reason, ?int $userId = null): array
     {
-        return DB::transaction(function () use ($saleId, $reason) {
+        return DB::transaction(function () use ($saleId, $reason, $userId) {
             $sale = Sale::query()
                 ->with(['latestFiscalDocument.events'])
                 ->lockForUpdate()
@@ -47,7 +52,7 @@ class FiscalCancellationService
             }
 
             if (! $document) {
-                $sale->forceFill(['status' => 'cancelled'])->save();
+                $this->markSaleCancelled($sale, $reason, $userId);
                 $this->restoreSaleStock($sale, $reason);
 
                 return [
@@ -65,7 +70,7 @@ class FiscalCancellationService
             }
 
             if (in_array($decision['mode'], ['commercial_cancelled', 'local_cancelled'], true)) {
-                $sale->forceFill(['status' => 'cancelled'])->save();
+                $this->markSaleCancelled($sale, $reason, $userId);
                 $this->restoreSaleStock($sale, $reason);
 
                 $document->forceFillCompatible([
@@ -171,15 +176,55 @@ class FiscalCancellationService
             });
     }
 
+    protected function markSaleCancelled(Sale $sale, string $reason, ?int $userId): void
+    {
+        $sale->forceFill([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => $userId,
+            'cancellation_reason' => $reason,
+        ])->save();
+
+        $this->auditLogService->record(
+            AuditActions::SALE_CANCELLED,
+            $sale,
+            before: ['status' => 'finalized'],
+            after: ['status' => 'cancelled'],
+            metadata: ['reason' => $reason],
+            userId: $userId,
+        );
+
+        $this->cashbackService->reverseForSale($sale);
+    }
+
     protected function restoreSaleStock(Sale $sale, string $reason): void
     {
-        $sale->loadMissing('items.product');
+        $sale->loadMissing('items.product.kitItems.component');
 
         foreach ($sale->items as $item) {
             /** @var Product|null $product */
             $product = $item->product;
 
             if (! $product) {
+                continue;
+            }
+
+            if ($product->is_kit && $product->kitItems->isNotEmpty()) {
+                foreach ($product->kitItems as $kitItem) {
+                    if (! $kitItem->component) {
+                        continue;
+                    }
+
+                    $this->inventoryMovementService->apply($kitItem->component, (float) $kitItem->quantity * (float) $item->quantity, 'sale_cancelled', [
+                        'user_id' => $sale->user_id,
+                        'reference' => $sale,
+                        'unit_cost' => $kitItem->component->cost_price,
+                        'notes' => sprintf('Estorno do kit %s na venda %s. Motivo: %s', $product->name, $sale->sale_number, $reason),
+                        'occurred_at' => now(),
+                        'allow_negative' => true,
+                    ]);
+                }
+
                 continue;
             }
 

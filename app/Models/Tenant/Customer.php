@@ -27,6 +27,7 @@ class Customer extends Model
         'zip_code',
         'consumer_final',
         'credit_limit',
+        'cashback_balance',
         'active',
     ];
 
@@ -34,6 +35,7 @@ class Customer extends Model
         'active' => 'boolean',
         'consumer_final' => 'boolean',
         'credit_limit' => 'decimal:2',
+        'cashback_balance' => 'decimal:2',
     ];
 
     public function sales(): HasMany
@@ -44,5 +46,10 @@ class Customer extends Model
     public function conditionalSales(): HasMany
     {
         return $this->hasMany(ConditionalSale::class);
+    }
+
+    public function cashbackTransactions(): HasMany
+    {
+        return $this->hasMany(CashbackTransaction::class);
     }
 }

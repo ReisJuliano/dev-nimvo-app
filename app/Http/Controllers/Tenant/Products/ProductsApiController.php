@@ -37,7 +37,7 @@ class ProductsApiController extends Controller
         ]);
     }
 
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Product $product, ProductService $productService): JsonResponse
     {
         $hasStock = (float) $product->stock_quantity > 0;
         $hasSaleHistory = $product->saleItems()->exists() || $product->conditionalSaleItems()->exists();
@@ -52,7 +52,7 @@ class ProductsApiController extends Controller
             ], 422);
         }
 
-        $product->delete();
+        $productService->delete($product);
 
         return response()->json(['message' => 'Produto apagado com sucesso.']);
     }

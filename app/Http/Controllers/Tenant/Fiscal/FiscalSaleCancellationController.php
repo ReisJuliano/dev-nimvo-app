@@ -22,7 +22,7 @@ class FiscalSaleCancellationController extends Controller
             'reason' => ['required', 'string', 'min:'.$rules->minReasonLength(), 'max:255'],
         ]);
 
-        $result = $service->cancelSale((int) $sale->id, (string) $validated['reason']);
+        $result = $service->cancelSale((int) $sale->id, (string) $validated['reason'], auth()->id());
         $flashType = $result['mode'] === 'fiscal_queued' ? 'info' : 'success';
 
         return back()->with($flashType, $result['message']);

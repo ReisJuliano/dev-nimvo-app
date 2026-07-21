@@ -107,6 +107,28 @@
 
 .prd-topbar-cta:hover { filter: brightness(0.9); transform: translateY(-1px); }
 
+.prd-topbar-cta--ghost {
+    background: transparent;
+    color: var(--app-primary);
+    border: 1px solid var(--app-primary);
+    box-shadow: none;
+}
+
+.prd-topbar-cta--ghost:hover { filter: none; background: rgba(79,70,229,0.08); }
+
+.prd-kit-tag {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 5px;
+    background: rgba(79,70,229,0.12);
+    color: var(--app-primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
 /* ─── Busca (largura total) ─── */
 
 .prd-search-row {

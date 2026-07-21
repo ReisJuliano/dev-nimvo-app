@@ -2,6 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import { router, usePage } from '@inertiajs/react'
 import AppLayout from '@/Layouts/AppLayout'
 import ProductFormModal from '@/Components/Products/ProductFormModal'
+import ProductImportModal from '@/Components/Products/ProductImportModal'
 import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import { confirmPopup, showErrorPopup, showPopup } from '@/lib/errorPopup'
 import { apiRequest, isNetworkApiError } from '@/lib/http'
@@ -98,6 +99,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
     const searchControl = useConfirmedSearch(filters?.search || '')
     const [activeFilter, setActiveFilter] = useState('all')
     const [modalOpen, setModalOpen] = useState(false)
+    const [importModalOpen, setImportModalOpen] = useState(false)
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [saving, setSaving] = useState(false)
     const [deleting, setDeleting] = useState(false)
@@ -537,6 +539,11 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                         </div>
                     </div>
 
+                    <button className="prd-topbar-cta prd-topbar-cta--ghost" onClick={() => setImportModalOpen(true)} type="button">
+                        <i className="fa-solid fa-file-import" />
+                        Importar
+                    </button>
+
                     <button className="prd-topbar-cta" onClick={handleCreate} type="button">
                         <i className="fa-solid fa-plus" />
                         Novo produto
@@ -597,7 +604,10 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                                             {initial}
                                         </div>
                                         <div className="prd-list-info">
-                                            <strong>{product.name}</strong>
+                                            <strong>
+                                                {product.name}
+                                                {product.is_kit ? <span className="prd-kit-tag">Kit</span> : null}
+                                            </strong>
                                             <small>
                                                 {[product.code, product.barcode, product.category_name || 'Sem categoria']
                                                     .filter(Boolean)
@@ -640,6 +650,7 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 product={selectedProduct}
                 categories={categoryOptions}
                 suppliers={supplierOptions}
+                products={collectionItems}
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmit}
                 loading={saving}
@@ -648,6 +659,12 @@ export default function ProductsIndex({ products, categories, suppliers, filters
                 onQuickCreateCategory={handleQuickCreateCategory}
                 onQuickCreateSupplier={handleQuickCreateSupplier}
                 canViewCost={canViewCost}
+            />
+
+            <ProductImportModal
+                open={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImported={() => router.reload({ only: ['products'] })}
             />
         </AppLayout>
     )

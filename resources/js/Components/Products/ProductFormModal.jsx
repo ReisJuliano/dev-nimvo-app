@@ -32,6 +32,8 @@ const emptyForm = {
     commercial_unit: 'UN',
     taxable_unit: 'UN',
     sold_by: 'unit',
+    is_kit: false,
+    kit_items: [],
     scale_code: '',
     track_expiry: false,
     expiry_alert_days: '',
@@ -83,6 +85,14 @@ function normalizeFormData(product) {
         commercial_unit: product.commercial_unit ?? product.unit ?? 'UN',
         taxable_unit: product.taxable_unit ?? product.unit ?? 'UN',
         sold_by: product.sold_by === 'weight' ? 'weight' : 'unit',
+        is_kit: product.is_kit === true,
+        kit_items: Array.isArray(product.kit_items)
+            ? product.kit_items.map((item) => ({
+                component_product_id: item.component_product_id,
+                component_name: item.component_name,
+                quantity: item.quantity,
+            }))
+            : [],
         scale_code: product.scale_code ?? '',
         track_expiry: product.track_expiry === true,
         expiry_alert_days: product.expiry_alert_days ?? '',
@@ -150,6 +160,7 @@ export default function ProductFormModal({
     product,
     categories = [],
     suppliers = [],
+    products = [],
     onClose,
     onSubmit,
     loading,
@@ -172,6 +183,7 @@ export default function ProductFormModal({
     const [quickSupplier, setQuickSupplier] = useState({ name: '', phone: '', email: '' })
     const [creatingCategory, setCreatingCategory] = useState(false)
     const [creatingSupplier, setCreatingSupplier] = useState(false)
+    const [kitSearchQuery, setKitSearchQuery] = useState('')
     const fiscalFieldsEnabled = Boolean(moduleState.modules?.fiscal_basico || moduleState.modules?.fiscal_avancado)
     const fashionFieldsEnabled = Boolean(moduleState.modules?.moda)
 
@@ -213,6 +225,41 @@ export default function ProductFormModal({
             return next
         })
     }
+
+    function addKitComponent(candidate) {
+        setKitSearchQuery('')
+        updateField('kit_items', [
+            ...(form.kit_items || []),
+            { component_product_id: candidate.id, component_name: candidate.name, quantity: 1 },
+        ])
+    }
+
+    function updateKitComponentQuantity(index, value) {
+        updateField('kit_items', (form.kit_items || []).map((item, itemIndex) => (
+            itemIndex === index ? { ...item, quantity: value } : item
+        )))
+    }
+
+    function removeKitComponent(index) {
+        updateField('kit_items', (form.kit_items || []).filter((_, itemIndex) => itemIndex !== index))
+    }
+
+    const kitCandidateProducts = useMemo(() => {
+        const query = kitSearchQuery.trim().toLowerCase()
+
+        if (!query) return []
+
+        const addedIds = new Set((form.kit_items || []).map((item) => String(item.component_product_id)))
+
+        return products
+            .filter((candidate) => (
+                !candidate.is_kit
+                && String(candidate.id) !== String(form.id)
+                && !addedIds.has(String(candidate.id))
+                && (candidate.name || '').toLowerCase().includes(query)
+            ))
+            .slice(0, 8)
+    }, [products, kitSearchQuery, form.kit_items, form.id])
 
     function renderFieldError(fieldName) {
         if (!errors[fieldName]) return null
@@ -615,6 +662,70 @@ export default function ProductFormModal({
                                             <button type="button" className={`products-editor-toggle ${form.active ? 'active' : ''}`} onClick={() => updateField('active', true)}>Ativo</button>
                                             <button type="button" className={`products-editor-toggle ${!form.active ? 'active' : ''}`} onClick={() => updateField('active', false)}>Inativo</button>
                                         </div>
+                                    </article>
+
+                                    <article className="products-editor-card span-2">
+                                        <h3>Produto composto (kit)</h3>
+                                        <p className="products-field-help">
+                                            Um kit é vendido como item único, mas baixa o estoque dos produtos que o compõem (ex.: cesta básica, combo).
+                                        </p>
+                                        <div className="products-editor-toggle-row">
+                                            <button type="button" className={`products-editor-toggle ${!form.is_kit ? 'active' : ''}`} onClick={() => updateField('is_kit', false)}>Produto normal</button>
+                                            <button type="button" className={`products-editor-toggle ${form.is_kit ? 'active' : ''}`} onClick={() => updateField('is_kit', true)}>É um kit</button>
+                                        </div>
+
+                                        {form.is_kit ? (
+                                            <div className="products-kit-editor">
+                                                <label className="products-editor-field">
+                                                    <span>Buscar produto para adicionar ao kit</span>
+                                                    <div className="products-editor-input-wrap">
+                                                        <i className="fa-solid fa-magnifying-glass" />
+                                                        <input
+                                                            value={kitSearchQuery}
+                                                            onChange={(event) => setKitSearchQuery(event.target.value)}
+                                                            placeholder="Nome do produto..."
+                                                        />
+                                                    </div>
+                                                </label>
+
+                                                {kitCandidateProducts.length ? (
+                                                    <div className="products-kit-results">
+                                                        {kitCandidateProducts.map((candidate) => (
+                                                            <button
+                                                                type="button"
+                                                                key={candidate.id}
+                                                                className="products-kit-result"
+                                                                onClick={() => addKitComponent(candidate)}
+                                                            >
+                                                                <span>{candidate.name}</span>
+                                                                <i className="fa-solid fa-plus" />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+
+                                                <div className="products-kit-items">
+                                                    {(form.kit_items || []).length ? (form.kit_items || []).map((item, index) => (
+                                                        <div key={`${item.component_product_id}-${index}`} className="products-kit-item-row">
+                                                            <span className="products-kit-item-name">{item.component_name || `Produto #${item.component_product_id}`}</span>
+                                                            <input
+                                                                type="number"
+                                                                step="0.001"
+                                                                min="0.001"
+                                                                value={item.quantity}
+                                                                onChange={(event) => updateKitComponentQuantity(index, event.target.value)}
+                                                                onFocus={(event) => event.target.select()}
+                                                            />
+                                                            <button type="button" className="products-kit-item-remove" onClick={() => removeKitComponent(index)}>
+                                                                <i className="fa-solid fa-xmark" />
+                                                            </button>
+                                                        </div>
+                                                    )) : (
+                                                        <p className="products-field-help">Nenhum componente adicionado ainda.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : null}
                                     </article>
 
                                     {fashionFieldsEnabled ? (

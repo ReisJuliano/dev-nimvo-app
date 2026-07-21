@@ -32,6 +32,7 @@ class PosService
         protected ExpiryService $expiryService,
         protected SupervisorAuthorizationService $supervisorAuthorizationService,
         protected AuditLogService $auditLogService,
+        protected CashbackService $cashbackService,
     ) {
     }
 
@@ -82,7 +83,39 @@ class PosService
                     ]);
                 }
 
-                if ((float) $product->stock_quantity < $quantity) {
+                $kitComponents = collect();
+                $unitCost = (float) $product->cost_price;
+
+                if ($this->hasColumn('products', 'is_kit') && $product->is_kit) {
+                    $unitCost = 0.0;
+
+                    $kitComponents = $product->kitItems()
+                        ->with('component')
+                        ->get()
+                        ->map(function ($kitItem) use ($quantity, $frozenProductIds, &$unitCost) {
+                            /** @var Product $component */
+                            $component = Product::query()->lockForUpdate()->findOrFail($kitItem->component_product_id);
+                            $perKitQuantity = (float) $kitItem->quantity;
+                            $requiredQuantity = round($perKitQuantity * $quantity, 3);
+                            $unitCost += $perKitQuantity * (float) $component->cost_price;
+
+                            if (in_array($component->id, $frozenProductIds, true)) {
+                                throw ValidationException::withMessages([
+                                    'items' => "O componente {$component->name} está bloqueado por contagem de estoque em andamento (sessão congelada).",
+                                ]);
+                            }
+
+                            if ((float) $component->stock_quantity < $requiredQuantity) {
+                                throw ValidationException::withMessages([
+                                    'items' => "Não tem quantidade suficiente em estoque de {$component->name} para montar o kit.",
+                                ]);
+                            }
+
+                            return ['product' => $component, 'quantity' => $requiredQuantity];
+                        });
+
+                    $unitCost = round($unitCost, 4);
+                } elseif ((float) $product->stock_quantity < $quantity) {
                     throw ValidationException::withMessages([
                         'items' => "Nao tem quantidade suficiente em estoque para {$product->name}.",
                     ]);
@@ -122,6 +155,8 @@ class PosService
                     'product' => $product,
                     'quantity' => $quantity,
                     'unitPrice' => $unitPrice,
+                    'unitCost' => $unitCost,
+                    'components' => $kitComponents,
                     'lineSubtotal' => $lineSubtotal,
                     'lineDiscount' => $lineDiscount,
                     'discountPercent' => $discountPercent,
@@ -132,7 +167,7 @@ class PosService
             });
 
             $subtotal = round($items->sum('lineSubtotal'), 2);
-            $costTotal = $items->sum(fn ($item) => (float) $item['product']->cost_price * $item['quantity']);
+            $costTotal = $items->sum(fn ($item) => $item['unitCost'] * $item['quantity']);
             $itemDiscountTotal = round($items->sum('lineDiscount'), 2);
             $discount = array_key_exists('discount', $payload)
                 ? round((float) ($payload['discount'] ?? 0), 2)
@@ -399,10 +434,10 @@ class PosService
                 $saleItemAttributes = [
                     'product_id' => $product->id,
                     'quantity' => $quantity,
-                    'unit_cost' => $product->cost_price,
+                    'unit_cost' => $entry['unitCost'],
                     'unit_price' => $unitPrice,
                     'total' => $lineTotal,
-                    'profit' => round($lineTotal - ((float) $product->cost_price * $quantity), 2),
+                    'profit' => round($lineTotal - ($entry['unitCost'] * $quantity), 2),
                 ];
 
                 if ($this->hasColumn('sale_items', 'discount_amount')) {
@@ -427,16 +462,35 @@ class PosService
 
                 $sale->items()->create($saleItemAttributes);
 
-                $this->inventoryMovementService->apply($product, -$quantity, 'sale', [
-                    'user_id' => $userId,
-                    'reference' => $sale,
-                    'unit_cost' => $product->cost_price,
-                    'notes' => "Saida pela venda {$sale->sale_number}",
-                    'occurred_at' => $sale->created_at,
-                ]);
+                if ($entry['components']->isNotEmpty()) {
+                    foreach ($entry['components'] as $componentEntry) {
+                        /** @var Product $component */
+                        $component = $componentEntry['product'];
 
-                if ($product->track_expiry) {
-                    $this->expiryService->consumeFefo($product, $quantity);
+                        $this->inventoryMovementService->apply($component, -$componentEntry['quantity'], 'sale', [
+                            'user_id' => $userId,
+                            'reference' => $sale,
+                            'unit_cost' => $component->cost_price,
+                            'notes' => "Saida pelo kit {$product->name} na venda {$sale->sale_number}",
+                            'occurred_at' => $sale->created_at,
+                        ]);
+
+                        if ($component->track_expiry) {
+                            $this->expiryService->consumeFefo($component, $componentEntry['quantity']);
+                        }
+                    }
+                } else {
+                    $this->inventoryMovementService->apply($product, -$quantity, 'sale', [
+                        'user_id' => $userId,
+                        'reference' => $sale,
+                        'unit_cost' => $product->cost_price,
+                        'notes' => "Saida pela venda {$sale->sale_number}",
+                        'occurred_at' => $sale->created_at,
+                    ]);
+
+                    if ($product->track_expiry) {
+                        $this->expiryService->consumeFefo($product, $quantity);
+                    }
                 }
             }
 
@@ -463,6 +517,8 @@ class PosService
                 'items_count' => $items->count(),
             ], userId: $userId);
 
+            $cashbackEarned = $this->cashbackService->earn($sale);
+
             return [
                 'type' => 'sale',
                 'sale_id' => $sale->id,
@@ -481,6 +537,7 @@ class PosService
                     ? $sale->fiscal_decision
                     : $fiscalDecision,
                 'payments' => $resolvedPayments->values()->all(),
+                'cashback_earned' => $cashbackEarned ? (float) $cashbackEarned->amount : 0.0,
             ];
         });
     }

@@ -15,6 +15,14 @@ class ProductService
     ) {
     }
 
+    public function delete(Product $product): void
+    {
+        $before = $product->attributesToArray();
+        $product->delete();
+
+        $this->auditLogService->record(AuditActions::RECORD_DELETED, $product, before: $before);
+    }
+
     public function nextCode(): string
     {
         $lastNumericCode = Product::query()
@@ -28,7 +36,7 @@ class ProductService
     public function activeCatalog(bool $includeCost = true): array
     {
         return Product::query()
-            ->with(['category:id,name', 'supplier:id,name'])
+            ->with(['category:id,name', 'supplier:id,name', 'kitItems.component:id,name'])
             ->where('active', true)
             ->orderBy('name')
             ->get($this->productSelectColumns())
@@ -40,7 +48,7 @@ class ProductService
     public function fullCatalog(bool $includeCost = true): array
     {
         return Product::query()
-            ->with(['category:id,name', 'supplier:id,name'])
+            ->with(['category:id,name', 'supplier:id,name', 'kitItems.component:id,name'])
             ->orderBy('name')
             ->get($this->productSelectColumns())
             ->map(fn (Product $product) => $this->mapCatalogProduct($product, $includeCost))
@@ -50,7 +58,7 @@ class ProductService
 
     public function serialize(Product $product, bool $includeCost = true): array
     {
-        $product->loadMissing(['category:id,name', 'supplier:id,name']);
+        $product->loadMissing(['category:id,name', 'supplier:id,name', 'kitItems.component:id,name']);
 
         return $this->mapCatalogProduct($product, $includeCost);
     }
@@ -179,6 +187,12 @@ class ProductService
             $product->sold_by = $soldBy;
         }
 
+        $isKit = $this->productColumnExists('is_kit') && (bool) ($data['is_kit'] ?? false);
+
+        if ($this->productColumnExists('is_kit')) {
+            $product->is_kit = $isKit;
+        }
+
         if ($this->productColumnExists('scale_code')) {
             $product->scale_code = $soldBy === 'weight' && filled($data['scale_code'] ?? null)
                 ? (int) $data['scale_code']
@@ -199,6 +213,10 @@ class ProductService
 
         $product->save();
 
+        if ($this->productColumnExists('is_kit')) {
+            $this->syncKitItems($product, $isKit ? ($data['kit_items'] ?? []) : []);
+        }
+
         if ($isCreate) {
             $this->auditLogService->record(AuditActions::RECORD_CREATED, $product, after: $product->attributesToArray());
         } else {
@@ -214,6 +232,35 @@ class ProductService
         }
 
         return $product->fresh(['category:id,name', 'supplier:id,name']);
+    }
+
+    protected function syncKitItems(Product $product, array $items): void
+    {
+        $normalized = collect($items)
+            ->filter(fn ($item) => filled($item['component_product_id'] ?? null) && (float) ($item['quantity'] ?? 0) > 0)
+            ->map(fn ($item) => [
+                'component_product_id' => (int) $item['component_product_id'],
+                'quantity' => round((float) $item['quantity'], 3),
+            ])
+            ->filter(fn ($item) => $item['component_product_id'] !== $product->id)
+            ->unique('component_product_id')
+            ->values();
+
+        $validComponentIds = Product::query()
+            ->whereIn('id', $normalized->pluck('component_product_id'))
+            ->where('is_kit', false)
+            ->pluck('id');
+
+        $normalized = $normalized->filter(fn ($item) => $validComponentIds->contains($item['component_product_id']))->values();
+
+        $product->kitItems()->whereNotIn('component_product_id', $normalized->pluck('component_product_id'))->delete();
+
+        foreach ($normalized as $item) {
+            $product->kitItems()->updateOrCreate(
+                ['component_product_id' => $item['component_product_id']],
+                ['quantity' => $item['quantity']],
+            );
+        }
     }
 
     protected function mapCatalogProduct(Product $product, bool $includeCost = true): array
@@ -243,6 +290,14 @@ class ProductService
             'commercial_unit' => $this->productColumnExists('commercial_unit') ? ($product->commercial_unit ?: $product->unit) : $product->unit,
             'taxable_unit' => $this->productColumnExists('taxable_unit') ? ($product->taxable_unit ?: $product->unit) : $product->unit,
             'sold_by' => $this->productColumnExists('sold_by') ? ($product->sold_by ?: 'unit') : 'unit',
+            'is_kit' => $this->productColumnExists('is_kit') ? (bool) $product->is_kit : false,
+            'kit_items' => $this->productColumnExists('is_kit') && $product->relationLoaded('kitItems')
+                ? $product->kitItems->map(fn (\App\Models\Tenant\ProductKitItem $item) => [
+                    'component_product_id' => $item->component_product_id,
+                    'component_name' => $item->component?->name,
+                    'quantity' => (float) $item->quantity,
+                ])->values()->all()
+                : [],
             'scale_code' => $this->productColumnExists('scale_code') ? $product->scale_code : null,
             'label_printed_at' => $this->productColumnExists('label_printed_at') ? optional($product->label_printed_at)?->toIso8601String() : null,
             'sale_price' => (float) $product->sale_price,
@@ -307,6 +362,7 @@ class ProductService
             'collection',
             'catalog_visible',
             'sold_by',
+            'is_kit',
             'scale_code',
             'track_expiry',
             'expiry_alert_days',

@@ -40,6 +40,10 @@ class UpsertProductRequest extends FormRequest
             'commercial_unit' => ['nullable', 'string', 'max:10'],
             'taxable_unit' => ['nullable', 'string', 'max:10'],
             'sold_by' => ['nullable', 'string', Rule::in(['unit', 'weight'])],
+            'is_kit' => ['nullable', 'boolean'],
+            'kit_items' => ['nullable', 'array'],
+            'kit_items.*.component_product_id' => ['required_with:kit_items', 'integer', 'exists:products,id'],
+            'kit_items.*.quantity' => ['required_with:kit_items', 'numeric', 'min:0.001'],
             'scale_code' => [
                 'nullable',
                 'integer',
