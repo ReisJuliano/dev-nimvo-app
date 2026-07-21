@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './inventory.css'
-import PageContainer from '@/Components/UI/PageContainer'
+import ActionButton from '@/Components/UI/ActionButton'
 import CompactModal from '@/Components/UI/CompactModal'
 import AppLayout from '@/Layouts/AppLayout'
 import { apiRequest } from '@/lib/http'
@@ -354,7 +354,8 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
 
     return (
         <AppLayout title="Inventário">
-            <PageContainer>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
                 {feedback ? (
                     <div className={`ui-alert ${feedback.type}`}>
                         <i className={`fa-solid ${feedback.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'}`} />
@@ -377,9 +378,9 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
 
                 {view === 'detail' && session ? (
                     <>
-                        <button type="button" className="ui-button-ghost ivs-back" onClick={() => setView('list')}>
-                            <i className="fa-solid fa-arrow-left" /> Voltar
-                        </button>
+                        <ActionButton icon="fa-arrow-left" tone="secondary" className="ivs-back" onClick={() => setView('list')}>
+                            Voltar
+                        </ActionButton>
 
                         <SessionHero
                             session={session}
@@ -387,16 +388,16 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
                             actions={(
                                 <>
                                     {session.status === 'draft' ? (
-                                        <button type="button" className="page-hero-cta" onClick={startSession}>Iniciar contagem</button>
+                                        <ActionButton onClick={startSession}>Iniciar contagem</ActionButton>
                                     ) : null}
                                     {['draft', 'counting', 'review'].includes(session.status) ? (
-                                        <button type="button" className="ui-button-ghost" onClick={cancelSession}>Cancelar sessão</button>
+                                        <ActionButton tone="secondary" onClick={cancelSession}>Cancelar sessão</ActionButton>
                                     ) : null}
                                     {session.status === 'counting' ? (
-                                        <button type="button" className="page-hero-cta" onClick={finishCounting}>Encerrar contagem</button>
+                                        <ActionButton onClick={finishCounting}>Encerrar contagem</ActionButton>
                                     ) : null}
                                     {session.status === 'review' && canApprove ? (
-                                        <button type="button" className="page-hero-cta" onClick={requestApproval}>Aprovar e ajustar</button>
+                                        <ActionButton onClick={requestApproval}>Aprovar e ajustar</ActionButton>
                                     ) : null}
                                 </>
                             )}
@@ -427,9 +428,9 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
 
                                 {itemsMeta.last_page > 1 ? (
                                     <div className="ui-pagination">
-                                        <button type="button" disabled={itemsMeta.current_page <= 1} onClick={() => setItemsPage((current) => Math.max(1, current - 1))}>Anterior</button>
+                                        <ActionButton icon="fa-chevron-left" tone="secondary" disabled={itemsMeta.current_page <= 1} onClick={() => setItemsPage((current) => Math.max(1, current - 1))}>Anterior</ActionButton>
                                         <span>{itemsMeta.current_page} de {itemsMeta.last_page}</span>
-                                        <button type="button" disabled={itemsMeta.current_page >= itemsMeta.last_page} onClick={() => setItemsPage((current) => current + 1)}>Próxima</button>
+                                        <ActionButton icon="fa-chevron-right" tone="secondary" disabled={itemsMeta.current_page >= itemsMeta.last_page} onClick={() => setItemsPage((current) => current + 1)}>Próxima</ActionButton>
                                     </div>
                                 ) : null}
                             </>
@@ -456,9 +457,9 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
                                 </label>
 
                                 <div className="ivs-bulk-actions">
-                                    <button type="button" className="ui-button-ghost" onClick={() => runBulkAction('recount', 'Enviado para recontagem.')}>Enviar para recontagem</button>
-                                    <button type="button" className="ui-button-ghost" onClick={() => runBulkAction('mark-zero', 'Marcado como contagem zero.')}>Tratar não contados como zero</button>
-                                    <button type="button" className="ui-button-ghost" onClick={() => runBulkAction('mark-skipped', 'Marcado como não contado.')}>Marcar como não contado (sem ajuste)</button>
+                                    <ActionButton tone="secondary" onClick={() => runBulkAction('recount', 'Enviado para recontagem.')}>Enviar para recontagem</ActionButton>
+                                    <ActionButton tone="secondary" onClick={() => runBulkAction('mark-zero', 'Marcado como contagem zero.')}>Tratar não contados como zero</ActionButton>
+                                    <ActionButton tone="secondary" onClick={() => runBulkAction('mark-skipped', 'Marcado como não contado.')}>Marcar como não contado (sem ajuste)</ActionButton>
                                 </div>
 
                                 <ItemsTable
@@ -476,16 +477,17 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
 
                                 {itemsMeta.last_page > 1 ? (
                                     <div className="ui-pagination">
-                                        <button type="button" disabled={itemsMeta.current_page <= 1} onClick={() => setItemsPage((current) => Math.max(1, current - 1))}>Anterior</button>
+                                        <ActionButton icon="fa-chevron-left" tone="secondary" disabled={itemsMeta.current_page <= 1} onClick={() => setItemsPage((current) => Math.max(1, current - 1))}>Anterior</ActionButton>
                                         <span>{itemsMeta.current_page} de {itemsMeta.last_page}</span>
-                                        <button type="button" disabled={itemsMeta.current_page >= itemsMeta.last_page} onClick={() => setItemsPage((current) => current + 1)}>Próxima</button>
+                                        <ActionButton icon="fa-chevron-right" tone="secondary" disabled={itemsMeta.current_page >= itemsMeta.last_page} onClick={() => setItemsPage((current) => current + 1)}>Próxima</ActionButton>
                                     </div>
                                 ) : null}
                             </>
                         ) : null}
                     </>
                 ) : null}
-            </PageContainer>
+                </div>
+            </div>
 
             <NewSessionWizard
                 open={wizardOpen}
@@ -522,8 +524,8 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
                             <textarea className="ui-input" value={resolveForm.resolution_reason} onChange={(event) => setResolveForm((current) => ({ ...current, resolution_reason: event.target.value }))} required />
                         </label>
                         <div className="ivs-bulk-actions">
-                            <button type="button" className="ui-button-ghost" onClick={() => setResolveTarget(null)}>Cancelar</button>
-                            <button type="submit" className="ui-button">Resolver</button>
+                            <ActionButton tone="secondary" type="button" onClick={() => setResolveTarget(null)}>Cancelar</ActionButton>
+                            <ActionButton type="submit">Resolver</ActionButton>
                         </div>
                     </form>
                 ) : null}
@@ -559,8 +561,8 @@ export default function InventoryIndex({ categories = [], suppliers = [], superv
                         <input className="ui-input" type="password" value={approveForm.supervisor_password} onChange={(event) => setApproveForm((current) => ({ ...current, supervisor_password: event.target.value }))} required />
                     </label>
                     <div className="ivs-bulk-actions">
-                        <button type="button" className="ui-button-ghost" onClick={() => setApproveModalOpen(false)}>Cancelar</button>
-                        <button type="submit" className="ui-button" disabled={approving}>{approving ? 'Aprovando...' : 'Autorizar e aplicar'}</button>
+                        <ActionButton tone="secondary" type="button" onClick={() => setApproveModalOpen(false)}>Cancelar</ActionButton>
+                        <ActionButton type="submit" disabled={approving}>{approving ? 'Aprovando...' : 'Autorizar e aplicar'}</ActionButton>
                     </div>
                 </form>
             </CompactModal>

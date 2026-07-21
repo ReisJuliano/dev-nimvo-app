@@ -1,4 +1,4 @@
-import DenseTable from '@/Components/UI/DenseTable'
+import DataTable from '@/Components/UI/DataTable'
 import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatMoney, formatNumber } from '@/lib/format'
 import { itemStatusLabel, itemStatusTone } from '../constants'
@@ -81,13 +81,14 @@ export default function ItemsTable({
     })
 
     return (
-        <DenseTable
+        <DataTable
             columns={columns}
             rows={items}
             rowKey="id"
             onRowClick={onRowClick}
-            getRowActions={getRowActions}
-            emptyState={<p>{loading ? 'Carregando...' : 'Nenhum item encontrado.'}</p>}
+            actions={getRowActions}
+            emptyMessage={loading ? 'Carregando...' : 'Nenhum item encontrado.'}
+            emptyIcon="fa-boxes-stacked"
         />
     )
 }

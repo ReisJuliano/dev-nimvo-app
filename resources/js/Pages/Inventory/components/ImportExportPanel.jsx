@@ -1,4 +1,4 @@
-import DenseTable from '@/Components/UI/DenseTable'
+import DataTable from '@/Components/UI/DataTable'
 import { formatNumber } from '@/lib/format'
 
 export default function ImportExportPanel({
@@ -60,7 +60,7 @@ export default function ImportExportPanel({
                 {importResult?.unmatched_payload?.length ? (
                     <>
                         <p className="nimvo-section-label">Pendências</p>
-                        <DenseTable
+                        <DataTable
                             columns={[
                                 { key: 'barcode', label: 'Código' },
                                 { key: 'quantity', label: 'Quantidade', render: (row) => formatNumber(row.quantity, { maximumFractionDigits: 3 }) },
@@ -68,7 +68,7 @@ export default function ImportExportPanel({
                             ]}
                             rows={importResult.unmatched_payload}
                             rowKey="barcode"
-                            emptyState={<p>Sem pendências.</p>}
+                            emptyMessage="Sem pendências."
                         />
                     </>
                 ) : null}

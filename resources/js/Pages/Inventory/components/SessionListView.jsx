@@ -1,5 +1,6 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import DenseTable from '@/Components/UI/DenseTable'
+import ActionButton from '@/Components/UI/ActionButton'
+import DataTable from '@/Components/UI/DataTable'
 import { formatDateTime, formatNumber } from '@/lib/format'
 import { statusLabel, STATUS_LABELS } from '../constants'
 
@@ -53,14 +54,12 @@ export default function SessionListView({ sessions, statusFilter, setStatusFilte
                     </div>
                 </div>
                 <div className="ivs-hero-actions">
-                    <button type="button" className="ui-button-ghost" onClick={onOpenLayouts}>
-                        <i className="fa-solid fa-sliders" />
+                    <ActionButton icon="fa-sliders" tone="secondary" onClick={onOpenLayouts}>
                         Layouts de coletor
-                    </button>
-                    <button type="button" className="page-hero-cta" onClick={onOpenWizard}>
-                        <i className="fa-solid fa-plus" />
+                    </ActionButton>
+                    <ActionButton icon="fa-plus" onClick={onOpenWizard}>
                         Novo inventário
-                    </button>
+                    </ActionButton>
                 </div>
             </div>
 
@@ -78,7 +77,7 @@ export default function SessionListView({ sessions, statusFilter, setStatusFilte
                 </label>
             </div>
 
-            <DenseTable
+            <DataTable
                 columns={[
                     { key: 'code', label: 'Código' },
                     { key: 'type', label: 'Tipo', render: (row) => (row.type === 'general' ? 'Geral' : 'Parcial') },
@@ -91,7 +90,8 @@ export default function SessionListView({ sessions, statusFilter, setStatusFilte
                 rows={rows}
                 rowKey="id"
                 onRowClick={(row) => onOpenSession(row.id)}
-                emptyState={<p>{loading ? 'Carregando...' : 'Nenhuma sessão de inventário encontrada.'}</p>}
+                emptyMessage={loading ? 'Carregando...' : 'Nenhuma sessão de inventário encontrada.'}
+                emptyIcon="fa-clipboard-list"
             />
         </>
     )

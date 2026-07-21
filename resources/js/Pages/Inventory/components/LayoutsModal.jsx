@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import CompactModal from '@/Components/UI/CompactModal'
-import DenseTable from '@/Components/UI/DenseTable'
+import DataTable from '@/Components/UI/DataTable'
 import { apiRequest } from '@/lib/http'
 
 function emptyLayoutForm() {
@@ -137,7 +137,7 @@ export default function LayoutsModal({ open, onClose }) {
                 </div>
             ) : null}
 
-            <DenseTable
+            <DataTable
                 columns={[
                     { key: 'name', label: 'Nome' },
                     { key: 'direction', label: 'Direção', render: (row) => (row.direction === 'import' ? 'Importação' : 'Exportação') },
@@ -146,10 +146,10 @@ export default function LayoutsModal({ open, onClose }) {
                 ]}
                 rows={layouts}
                 rowKey="id"
-                emptyState={<p>Nenhum layout cadastrado.</p>}
-                getRowActions={(row) => [
+                emptyMessage="Nenhum layout cadastrado."
+                actions={(row) => [
                     { key: 'edit', icon: 'fa-pen', label: 'Editar', onClick: () => void editLayout(row) },
-                    ...(row.is_default ? [] : [{ key: 'delete', icon: 'fa-trash', label: 'Excluir', onClick: () => void removeLayout(row) }]),
+                    ...(row.is_default ? [] : [{ key: 'delete', icon: 'fa-trash', label: 'Excluir', tone: 'danger', onClick: () => void removeLayout(row) }]),
                 ]}
             />
 
