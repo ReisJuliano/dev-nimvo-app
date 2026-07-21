@@ -14,6 +14,9 @@ class FiscalDocument extends Model
 
     protected $fillable = [
         'sale_id',
+        'related_sale_id',
+        'related_purchase_id',
+        'origin_document_id',
         'profile_id',
         'type',
         'status',
@@ -68,6 +71,21 @@ class FiscalDocument extends Model
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    public function relatedSale(): BelongsTo
+    {
+        return $this->belongsTo(Sale::class, 'related_sale_id');
+    }
+
+    public function relatedPurchase(): BelongsTo
+    {
+        return $this->belongsTo(Purchase::class, 'related_purchase_id');
+    }
+
+    public function originDocument(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'origin_document_id');
     }
 
     public function profile(): BelongsTo

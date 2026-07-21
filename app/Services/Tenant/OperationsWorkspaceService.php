@@ -1618,7 +1618,10 @@ class OperationsWorkspaceService
 
     protected function syncPurchasePayables(Purchase $purchase, array $schedule, int $userId): void
     {
-        Payable::query()->where('purchase_id', $purchase->id)->delete();
+        Payable::query()
+            ->where('purchase_id', $purchase->id)
+            ->where('category', '!=', 'purchase_return_credit')
+            ->delete();
 
         if ($schedule === []) {
             return;

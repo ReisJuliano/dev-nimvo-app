@@ -19,6 +19,12 @@ class Supplier extends Model
         'trade_name',
         'state_registration',
         'city_name',
+        'street',
+        'number',
+        'complement',
+        'district',
+        'city_code',
+        'zip_code',
         'state',
         'active',
     ];
