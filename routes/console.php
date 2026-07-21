@@ -22,6 +22,7 @@ Schedule::command('nimvo:prune-pending-sales --days=3')->daily();
 Schedule::command('nimvo:fail-stale-local-agent-commands')->everyMinute();
 Schedule::command('nimvo:export-audit-logs --months=12')->monthly();
 Schedule::command('nimvo:prune-expired-lots')->daily();
+Schedule::command('nimvo:send-accountant-packages')->monthly();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

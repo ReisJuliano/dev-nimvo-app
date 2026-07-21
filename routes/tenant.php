@@ -17,6 +17,7 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\Delivery\DeliveryApiController;
 use App\Http\Controllers\Tenant\Fashion\FashionModuleApiController;
 use App\Http\Controllers\Tenant\Fashion\FashionModulePageController;
+use App\Http\Controllers\Tenant\Fiscal\AccountantExportController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalConsultationsPageController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalDocumentCorrectionController;
 use App\Http\Controllers\Tenant\Fiscal\FiscalContingencyRetryController;
@@ -272,6 +273,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/fiscal/documents/{fiscalDocument}/correction', FiscalDocumentCorrectionController::class)->name('api.fiscal.documents.correction.store');
             Route::get('/fiscal/documents/{fiscalDocument}/correction/{sequence}/request-xml', [FiscalDocumentsApiController::class, 'correctionRequestXml'])->whereNumber('sequence')->name('api.fiscal.documents.correction.request-xml');
             Route::get('/fiscal/documents/{fiscalDocument}/correction/{sequence}/response-xml', [FiscalDocumentsApiController::class, 'correctionResponseXml'])->whereNumber('sequence')->name('api.fiscal.documents.correction.response-xml');
+            Route::get('/fiscal/accountant-export', [AccountantExportController::class, 'download'])->name('api.fiscal.accountant-export.download');
 
             Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');

@@ -140,6 +140,13 @@ class TenantNavigationService
                         'request_patterns' => ['fiscal/notas*', 'api/fiscal/notas*'],
                     ],
                     [
+                        'href' => '/fiscal/notas',
+                        'label' => 'Pacote do contador',
+                        'icon' => 'fa-file-zipper',
+                        'required_permission' => 'relatorios.exportar',
+                        'request_patterns' => ['api/fiscal/accountant-export*'],
+                    ],
+                    [
                         'href' => '/consultas-cancelamentos',
                         'label' => 'Vendas e cancelamentos',
                         'icon' => 'fa-receipt',
