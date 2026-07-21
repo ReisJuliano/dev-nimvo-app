@@ -101,4 +101,9 @@ class Sale extends Model
     {
         return $this->hasOne(FiscalDocument::class)->latestOfMany();
     }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
+    }
 }

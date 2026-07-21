@@ -16,6 +16,7 @@ class PermissionRegistry
                     ['key' => 'vendas.autorizar_desconto', 'label' => 'Autorizar desconto de outro operador', 'description' => 'Libera descontos que exigem autorização gerencial no PDV.'],
                     ['key' => 'vendas.excluir_item_pdv', 'label' => 'Excluir produto do carrinho no PDV', 'description' => 'Permite remover um item já lançado no carrinho antes de finalizar.'],
                     ['key' => 'vendas.venda_condicional', 'label' => 'Registrar venda condicional', 'description' => 'Permite retirar mercadoria como venda condicional (a confirmar depois).'],
+                    ['key' => 'vendas.registrar_devolucao', 'label' => 'Registrar devolução de venda', 'description' => 'Permite devolver itens de uma venda, com estorno de estoque e reembolso.'],
                 ],
             ],
             [
@@ -113,6 +114,7 @@ class PermissionRegistry
                     ['key' => 'fiscal.reimprimir', 'label' => 'Ver e reimprimir notas', 'description' => 'Consulta notas fiscais já emitidas e reimprime DANFE/DANFCE.'],
                     ['key' => 'fiscal.emitir_manual', 'label' => 'Emitir NF-e manual ou a partir de venda', 'description' => 'Permite converter uma venda em NF-e e emitir nota fiscal avulsa com dados digitados na mão.'],
                     ['key' => 'fiscal.eventos', 'label' => 'Emitir eventos fiscais (carta de correção)', 'description' => 'Permite registrar carta de correção eletrônica em uma NF-e já autorizada.'],
+                    ['key' => 'fiscal.emitir_devolucao', 'label' => 'Emitir NF-e de devolução', 'description' => 'Permite emitir NF-e de devolução de venda ou de compra, referenciando o documento original.'],
                 ],
             ],
             [
