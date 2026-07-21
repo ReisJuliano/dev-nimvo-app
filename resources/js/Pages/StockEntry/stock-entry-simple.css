@@ -933,6 +933,17 @@
 
 .se-mov-adjust-btn:hover { background: rgba(139,92,246,0.16); border-color: rgba(139,92,246,0.45); }
 
+.se-quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.se-expiring-card {
+    margin-bottom: 1rem;
+}
+
 .se-mov-adjust-form {
     display: grid;
     gap: 0.75rem;

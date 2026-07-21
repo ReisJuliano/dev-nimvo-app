@@ -1,6 +1,11 @@
 import { Link } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import AppLayout from '@/Layouts/AppLayout'
+import ActionButton from '@/Components/UI/ActionButton'
+import ActionDrawer from '@/Components/UI/ActionDrawer'
+import DataTable from '@/Components/UI/DataTable'
+import PageHeader from '@/Components/UI/PageHeader'
+import StatusBadge from '@/Components/UI/StatusBadge'
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { apiRequest } from '@/lib/http'
 import { confirmPopup } from '@/lib/errorPopup'
@@ -13,6 +18,18 @@ function getStockState(product) {
     if (stock <= 0) return 'zero'
     if (stock <= min) return 'low'
     return 'ok'
+}
+
+function stockStateTone(state) {
+    if (state === 'zero') return 'danger'
+    if (state === 'low') return 'warning'
+    return 'success'
+}
+
+function stockStateLabel(state) {
+    if (state === 'zero') return 'Sem estoque'
+    if (state === 'low') return 'Estoque baixo'
+    return 'Normal'
 }
 
 const TYPE_LABELS = {
@@ -243,391 +260,336 @@ export default function StockEntryIndex({ payload }) {
         return () => document.removeEventListener('keydown', onKey)
     }, [])
 
-    const movTypes = [...new Set(movements.map((m) => m.type))]
+    const productRows = filteredProducts.map((product) => ({
+        ...product,
+        _state: getStockState(product),
+    }))
 
     return (
         <AppLayout title="Estoque">
-            <div className="se-page">
-
-                {/* ─── Header ─── */}
-                <div className="se-header">
-                    <div className="se-header-left">
-                        <div className="se-header-icon">
-                            <i className="fa-solid fa-warehouse" />
-                        </div>
-                        <div>
-                            <h1 className="se-header-title">Estoque de produtos</h1>
-                            <p className="se-header-sub">Pesquise um produto para ver o estoque e a movimentação.</p>
-                        </div>
-                    </div>
-                    <button type="button" className="ui-button-ghost" onClick={toggleExpiring}>
-                        <i className="fa-solid fa-calendar-days" /> {showExpiring ? 'Ocultar vencendo' : 'Vencendo em breve'}
-                    </button>
-                </div>
-
-                {showExpiring ? (
-                    <div className="se-table-card" style={{ margin: '0 0 1rem' }}>
-                        {expiringLoading ? (
-                            <div className="se-mov-loading"><i className="fa-solid fa-spinner fa-spin" /> Carregando...</div>
-                        ) : expiringLots.length ? (
-                            <table className="se-table">
-                                <thead>
-                                    <tr>
-                                        <th>Produto</th>
-                                        <th>Categoria</th>
-                                        <th>Vence em</th>
-                                        <th>Quantidade</th>
-                                        <th>Custo em risco</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {expiringLots.map((lot) => (
-                                        <tr key={lot.id} className={lot.is_past ? 'se-row--zero' : 'se-row--low'}>
-                                            <td>{lot.product_name}</td>
-                                            <td>{lot.category_name || 'Sem categoria'}</td>
-                                            <td>{formatDateTime(lot.expires_at)}</td>
-                                            <td>{formatNumber(lot.quantity)}</td>
-                                            <td>{formatMoney(lot.cost_at_risk)}</td>
-                                            <td>
-                                                <button type="button" className="ui-button-ghost" disabled={lossSaving} onClick={(event) => submitLoss(event, lot)}>
-                                                    Registrar perda
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="se-empty-state"><strong>Nenhum lote vencendo no período configurado.</strong></div>
+            <div className="ui-list-page-shell">
+                <div className="ui-list-page-main">
+                    <PageHeader
+                        title="Estoque de produtos"
+                        search={{
+                            placeholder: 'Buscar por nome, código ou código de barras...',
+                            value: query,
+                            onChange: setQuery,
+                        }}
+                        actions={(
+                            <ActionButton icon="fa-calendar-days" tone="secondary" onClick={toggleExpiring}>
+                                {showExpiring ? 'Ocultar vencendo' : 'Vencendo em breve'}
+                            </ActionButton>
                         )}
-                    </div>
-                ) : null}
+                    />
 
-                <div className="se-split">
-                    {/* ─── Busca + tabela ─── */}
-                    <div className="se-list-col">
-                        <div className="se-search-bar">
-                            <label className="se-search-wrap" style={{ flex: 1 }}>
-                                <i className="fa-solid fa-magnifying-glass" />
-                                <input
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Buscar por nome, código ou código de barras..."
-                                    autoFocus
-                                />
-                                {query ? (
-                                    <button type="button" className="se-clear-search" onClick={() => setQuery('')}>
-                                        <i className="fa-solid fa-xmark" />
-                                    </button>
-                                ) : null}
-                            </label>
-                        </div>
-
-                        {!products.length ? (
-                            <div className="se-empty-state">
-                                <div className="se-empty-icon"><i className="fa-solid fa-box-open" /></div>
-                                <strong>Nenhum produto cadastrado</strong>
-                                <p>Cadastre produtos primeiro.</p>
-                                <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
-                            </div>
-                        ) : filteredProducts.length ? (
-                            <div className="se-table-card">
-                                <table className="se-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Produto</th>
-                                            <th>Em estoque</th>
-                                            <th>Mínimo</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredProducts.map((product) => {
-                                            const state = getStockState(product)
-                                            const isSelected = selectedProduct?.id === product.id
-                                            return (
-                                                <tr
-                                                    key={product.id}
-                                                    className={`se-row se-row--${state} se-row--clickable ${isSelected ? 'se-row--selected' : ''}`}
-                                                    onClick={() => isSelected ? closePanel() : openProduct(product)}
-                                                    title="Clique para ver movimentações"
-                                                >
-                                                    <td>
-                                                        <div className="se-product-cell">
-                                                            <div className={`se-product-dot se-product-dot--${state}`} />
-                                                            <div>
-                                                                <strong>{product.name}</strong>
-                                                                {product.code || product.barcode ? (
-                                                                    <small>{product.code || product.barcode}</small>
-                                                                ) : null}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span className={`se-stock-badge se-stock-badge--${state}`}>
-                                                            {formatNumber(product.stock_quantity || 0)} {product.unit || 'UN'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="se-min-col">
-                                                        {formatNumber(product.min_stock || 0)} {product.unit || 'UN'}
-                                                    </td>
-                                                    <td>
-                                                        {state === 'zero'
-                                                            ? <span className="se-status se-status--zero">Sem estoque</span>
-                                                            : state === 'low'
-                                                                ? <span className="se-status se-status--low">Estoque baixo</span>
-                                                                : <span className="se-status se-status--ok">Normal</span>
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="se-empty-state se-empty-state--prompt">
-                                <div className="se-empty-icon"><i className="fa-solid fa-magnifying-glass" /></div>
-                                <strong>Nenhum produto encontrado</strong>
-                                <p>Tente outro nome ou código.</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ─── Painel de movimentação (tela cheia) ─── */}
-                    {selectedProduct ? (
-                        <div className="se-mov-modal-backdrop">
-                        <div className="se-mov-panel" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-                            <div className="se-mov-header">
-                                <div className="se-mov-product-info">
-                                    <strong>{selectedProduct.name}</strong>
-                                    <div className="se-mov-stock-row">
-                                        <span className={`se-stock-badge se-stock-badge--${getStockState(selectedProduct)}`}>
-                                            {formatNumber(selectedProduct.stock_quantity || 0)} {selectedProduct.unit || 'UN'}
-                                        </span>
-                                        <span className="se-mov-label">em estoque</span>
-                                    </div>
-                                </div>
-                                {!adjusting && !registeringLoss ? (
-                                    <button type="button" className="se-mov-adjust-btn" onClick={startAdjust}>
-                                        <i className="fa-solid fa-scale-balanced" /> Ajustar
-                                    </button>
-                                ) : null}
-                                {!adjusting && !registeringLoss ? (
-                                    <button type="button" className="se-mov-adjust-btn" onClick={startLoss}>
-                                        <i className="fa-solid fa-triangle-exclamation" /> Registrar perda
-                                    </button>
-                                ) : null}
-                                <button type="button" className="se-mov-close" onClick={closePanel}>
-                                    <i className="fa-solid fa-xmark" />
-                                </button>
-                            </div>
-
-                            {adjustFeedback && !adjusting ? (
-                                <div className={`se-feedback se-feedback--${adjustFeedback.type} se-mov-adjust-feedback`}>
-                                    <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                    {adjustFeedback.text}
-                                </div>
-                            ) : null}
-
-                            {/* Ajuste de estoque inline */}
-                            {adjusting ? (
-                                <form className="se-mov-adjust-form" onSubmit={submitAdjust}>
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Novo estoque (total real) *</label>
-                                        <input
-                                            className="ui-input"
-                                            type="number"
-                                            min="0"
-                                            step="0.001"
-                                            value={adjustQty}
-                                            onChange={(e) => setAdjustQty(e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
-                                            autoFocus
-                                            required
-                                        />
-                                    </div>
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Motivo do ajuste</label>
-                                        <input
-                                            className="ui-input"
-                                            value={adjustReason}
-                                            onChange={(e) => setAdjustReason(e.target.value)}
-                                            placeholder="Ex: Inventário, quebra, furto..."
-                                        />
-                                    </div>
-
-                                    {adjustQty !== '' ? (
-                                        (() => {
-                                            const delta = Number(adjustQty) - Number(selectedProduct.stock_quantity || 0)
-                                            return (
-                                                <div className={`se-adjust-preview ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral'}`}>
-                                                    <i className={`fa-solid ${delta > 0 ? 'fa-arrow-trend-up' : delta < 0 ? 'fa-arrow-trend-down' : 'fa-equals'}`} />
-                                                    {delta === 0
-                                                        ? 'Sem alteração no estoque'
-                                                        : `Diferença: ${delta > 0 ? '+' : ''}${formatNumber(delta)} ${selectedProduct.unit || 'UN'}`
-                                                    }
-                                                </div>
-                                            )
-                                        })()
-                                    ) : null}
-
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Observação (opcional)</label>
-                                        <textarea
-                                            className="ui-textarea"
-                                            rows="2"
-                                            value={adjustNotes}
-                                            onChange={(e) => setAdjustNotes(e.target.value)}
-                                        />
-                                    </div>
-
-                                    {adjustFeedback ? (
-                                        <div className={`se-feedback se-feedback--${adjustFeedback.type}`}>
-                                            <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                            {adjustFeedback.text}
-                                        </div>
-                                    ) : null}
-
-                                    <div className="se-form-actions">
-                                        <button type="button" className="ui-button-ghost" onClick={cancelAdjust}>
-                                            <i className="fa-solid fa-rotate-left" /> Cancelar
-                                        </button>
-                                        <button type="submit" className="se-submit-btn se-submit-btn--violet" disabled={adjustSaving}>
-                                            <i className="fa-solid fa-check" />
-                                            {adjustSaving ? 'Salvando...' : 'Confirmar ajuste'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : null}
-
-                            {/* Registrar perda inline */}
-                            {registeringLoss ? (
-                                <form className="se-mov-adjust-form" onSubmit={(event) => submitLoss(event, null)}>
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Quantidade perdida *</label>
-                                        <input
-                                            className="ui-input"
-                                            type="number"
-                                            min="0.001"
-                                            step="0.001"
-                                            value={lossQty}
-                                            onChange={(e) => setLossQty(e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
-                                            autoFocus
-                                            required
-                                        />
-                                    </div>
-                                    <div className="se-form-section">
-                                        <label className="se-form-label">Motivo</label>
-                                        <select className="ui-input" value={lossReason} onChange={(e) => setLossReason(e.target.value)}>
-                                            <option value="vencido">Vencido</option>
-                                            <option value="avaria">Avaria</option>
-                                            <option value="quebra">Quebra</option>
-                                            <option value="outro">Outro</option>
-                                        </select>
-                                    </div>
-
-                                    {lossFeedback ? (
-                                        <div className={`se-feedback se-feedback--${lossFeedback.type}`}>
-                                            <i className={`fa-solid ${lossFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
-                                            {lossFeedback.text}
-                                        </div>
-                                    ) : null}
-
-                                    <div className="se-form-actions">
-                                        <button type="button" className="ui-button-ghost" onClick={cancelLoss}>
-                                            <i className="fa-solid fa-rotate-left" /> Cancelar
-                                        </button>
-                                        <button type="submit" className="se-submit-btn se-submit-btn--violet" disabled={lossSaving}>
-                                            <i className="fa-solid fa-check" />
-                                            {lossSaving ? 'Salvando...' : 'Confirmar perda'}
-                                        </button>
-                                    </div>
-                                </form>
-                            ) : null}
-
-                            {/* Filtros */}
-                            <div className="se-mov-filters">
-                                <select
-                                    className="se-mov-filter-select"
-                                    value={movFilter}
-                                    onChange={(e) => setMovFilter(e.target.value)}
-                                >
-                                    <option value="">Todas as operações</option>
-                                    <option value="manual_inbound">Entradas</option>
-                                    <option value="manual_adjustment">Ajustes</option>
-                                    <option value="sale">Saídas (venda)</option>
-                                    <option value="sale_cancellation">Cancelamentos</option>
-                                    <option value="loss">Perdas</option>
-                                </select>
-                                <input
-                                    type="date"
-                                    className="se-mov-filter-date"
-                                    value={movFrom}
-                                    onChange={(e) => setMovFrom(e.target.value)}
-                                    title="De"
-                                />
-                                <input
-                                    type="date"
-                                    className="se-mov-filter-date"
-                                    value={movTo}
-                                    onChange={(e) => setMovTo(e.target.value)}
-                                    title="Até"
-                                />
-                                <button type="button" className="se-mov-filter-btn" onClick={applyMovFilter}>
-                                    <i className="fa-solid fa-magnifying-glass" />
-                                </button>
-                            </div>
-
-                            {/* Lista de movimentações */}
-                            <div className="se-mov-list">
-                                {!movSearched ? (
-                                    <div className="se-mov-empty">
-                                        <i className="fa-solid fa-magnifying-glass" />
-                                        <span>Filtre e pesquise para ver as movimentações</span>
-                                    </div>
-                                ) : movLoading ? (
-                                    <div className="se-mov-loading">
-                                        <i className="fa-solid fa-spinner fa-spin" />
-                                        Carregando...
-                                    </div>
-                                ) : movements.length ? movements.map((mov) => {
-                                    const tone = TYPE_TONES[mov.type] || 'gray'
-                                    const isPositive = Number(mov.quantity_delta) >= 0
-                                    return (
-                                        <div key={mov.id} className="se-mov-row">
-                                            <div className={`se-mov-type-dot se-mov-type-dot--${tone}`} />
-                                            <div className="se-mov-info">
-                                                <strong>{TYPE_LABELS[mov.type] || mov.type_label || mov.type}</strong>
-                                                {mov.notes ? <small>{mov.notes}</small> : null}
-                                                <small className="se-mov-date">{mov.occurred_at ? formatDateTime(mov.occurred_at) : '—'}</small>
-                                            </div>
-                                            <div className="se-mov-delta-col">
-                                                <span className={`se-mov-delta ${isPositive ? 'positive' : 'negative'}`}>
-                                                    {isPositive ? '+' : ''}{formatNumber(mov.quantity_delta)}
-                                                </span>
-                                                <small className="se-mov-stock-after">
-                                                    → {formatNumber(mov.stock_after)}
-                                                </small>
-                                            </div>
-                                        </div>
-                                    )
-                                }) : (
-                                    <div className="se-mov-empty">
-                                        <i className="fa-solid fa-clock-rotate-left" />
-                                        <span>Nenhuma movimentação encontrada</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        </div>
+                    {showExpiring ? (
+                        <section className="ui-list-page-table-card se-expiring-card">
+                            <DataTable
+                                columns={[
+                                    { key: 'product_name', label: 'Produto' },
+                                    { key: 'category_name', label: 'Categoria', render: (lot) => lot.category_name || 'Sem categoria' },
+                                    { key: 'expires_at', label: 'Vence em', render: (lot) => formatDateTime(lot.expires_at) },
+                                    { key: 'quantity', label: 'Quantidade', render: (lot) => formatNumber(lot.quantity) },
+                                    { key: 'cost_at_risk', label: 'Custo em risco', render: (lot) => formatMoney(lot.cost_at_risk) },
+                                ]}
+                                rows={expiringLots}
+                                rowKey="id"
+                                emptyMessage={expiringLoading ? 'Carregando...' : 'Nenhum lote vencendo no período configurado.'}
+                                emptyIcon="fa-calendar-days"
+                                actions={(lot) => [
+                                    {
+                                        key: 'register-loss',
+                                        icon: 'fa-triangle-exclamation',
+                                        label: 'Registrar perda',
+                                        tone: 'danger',
+                                        disabled: lossSaving,
+                                        onClick: (row, event) => submitLoss(event, row),
+                                    },
+                                ]}
+                            />
+                        </section>
                     ) : null}
+
+                    {!products.length ? (
+                        <div className="se-empty-state">
+                            <div className="se-empty-icon"><i className="fa-solid fa-box-open" /></div>
+                            <strong>Nenhum produto cadastrado</strong>
+                            <p>Cadastre produtos primeiro.</p>
+                            <Link className="ui-button" href="/produtos">Cadastrar produto</Link>
+                        </div>
+                    ) : (
+                        <section className="ui-list-page-table-card">
+                            <DataTable
+                                columns={[
+                                    {
+                                        key: 'name',
+                                        label: 'Produto',
+                                        render: (product) => (
+                                            <div className="se-product-cell">
+                                                <div className={`se-product-dot se-product-dot--${product._state}`} />
+                                                <div>
+                                                    <strong>{product.name}</strong>
+                                                    {product.code || product.barcode ? (
+                                                        <small>{product.code || product.barcode}</small>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ),
+                                    },
+                                    {
+                                        key: 'stock_quantity',
+                                        label: 'Em estoque',
+                                        render: (product) => (
+                                            <StatusBadge
+                                                compact
+                                                tone={stockStateTone(product._state)}
+                                                label={`${formatNumber(product.stock_quantity || 0)} ${product.unit || 'UN'}`}
+                                            />
+                                        ),
+                                    },
+                                    {
+                                        key: 'min_stock',
+                                        label: 'Mínimo',
+                                        render: (product) => `${formatNumber(product.min_stock || 0)} ${product.unit || 'UN'}`,
+                                    },
+                                    {
+                                        key: 'status',
+                                        label: 'Status',
+                                        render: (product) => <StatusBadge compact tone={stockStateTone(product._state)} label={stockStateLabel(product._state)} />,
+                                    },
+                                ]}
+                                rows={productRows}
+                                rowKey="id"
+                                selectedRowKey={selectedProduct?.id ?? null}
+                                onRowClick={(product) => (selectedProduct?.id === product.id ? closePanel() : openProduct(product))}
+                                emptyMessage="Nenhum produto encontrado. Tente outro nome ou código."
+                                emptyIcon="fa-magnifying-glass"
+                            />
+                        </section>
+                    )}
                 </div>
             </div>
+
+            <ActionDrawer
+                open={Boolean(selectedProduct)}
+                title={selectedProduct?.name}
+                description={selectedProduct ? `${formatNumber(selectedProduct.stock_quantity || 0)} ${selectedProduct.unit || 'UN'} em estoque` : null}
+                icon="fa-warehouse"
+                size="lg"
+                onClose={closePanel}
+            >
+                {selectedProduct ? (
+                    <>
+                        {!adjusting && !registeringLoss ? (
+                            <div className="se-quick-actions">
+                                <ActionButton icon="fa-scale-balanced" tone="secondary" onClick={startAdjust}>
+                                    Ajustar
+                                </ActionButton>
+                                <ActionButton icon="fa-triangle-exclamation" tone="secondary" onClick={startLoss}>
+                                    Registrar perda
+                                </ActionButton>
+                            </div>
+                        ) : null}
+
+                        {adjustFeedback && !adjusting ? (
+                            <div className={`se-feedback se-feedback--${adjustFeedback.type}`}>
+                                <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                {adjustFeedback.text}
+                            </div>
+                        ) : null}
+
+                        {/* Ajuste de estoque inline */}
+                        {adjusting ? (
+                            <form className="se-mov-adjust-form" onSubmit={submitAdjust}>
+                                <div className="se-form-section">
+                                    <label className="se-form-label">Novo estoque (total real) *</label>
+                                    <input
+                                        className="ui-input"
+                                        type="number"
+                                        min="0"
+                                        step="0.001"
+                                        value={adjustQty}
+                                        onChange={(e) => setAdjustQty(e.target.value)}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
+                                        autoFocus
+                                        required
+                                    />
+                                </div>
+                                <div className="se-form-section">
+                                    <label className="se-form-label">Motivo do ajuste</label>
+                                    <input
+                                        className="ui-input"
+                                        value={adjustReason}
+                                        onChange={(e) => setAdjustReason(e.target.value)}
+                                        placeholder="Ex: Inventário, quebra, furto..."
+                                    />
+                                </div>
+
+                                {adjustQty !== '' ? (
+                                    (() => {
+                                        const delta = Number(adjustQty) - Number(selectedProduct.stock_quantity || 0)
+                                        return (
+                                            <div className={`se-adjust-preview ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral'}`}>
+                                                <i className={`fa-solid ${delta > 0 ? 'fa-arrow-trend-up' : delta < 0 ? 'fa-arrow-trend-down' : 'fa-equals'}`} />
+                                                {delta === 0
+                                                    ? 'Sem alteração no estoque'
+                                                    : `Diferença: ${delta > 0 ? '+' : ''}${formatNumber(delta)} ${selectedProduct.unit || 'UN'}`
+                                                }
+                                            </div>
+                                        )
+                                    })()
+                                ) : null}
+
+                                <div className="se-form-section">
+                                    <label className="se-form-label">Observação (opcional)</label>
+                                    <textarea
+                                        className="ui-textarea"
+                                        rows="2"
+                                        value={adjustNotes}
+                                        onChange={(e) => setAdjustNotes(e.target.value)}
+                                    />
+                                </div>
+
+                                {adjustFeedback ? (
+                                    <div className={`se-feedback se-feedback--${adjustFeedback.type}`}>
+                                        <i className={`fa-solid ${adjustFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                        {adjustFeedback.text}
+                                    </div>
+                                ) : null}
+
+                                <div className="se-form-actions">
+                                    <ActionButton icon="fa-rotate-left" tone="secondary" type="button" onClick={cancelAdjust}>
+                                        Cancelar
+                                    </ActionButton>
+                                    <ActionButton icon="fa-check" type="submit" disabled={adjustSaving}>
+                                        {adjustSaving ? 'Salvando...' : 'Confirmar ajuste'}
+                                    </ActionButton>
+                                </div>
+                            </form>
+                        ) : null}
+
+                        {/* Registrar perda inline */}
+                        {registeringLoss ? (
+                            <form className="se-mov-adjust-form" onSubmit={(event) => submitLoss(event, null)}>
+                                <div className="se-form-section">
+                                    <label className="se-form-label">Quantidade perdida *</label>
+                                    <input
+                                        className="ui-input"
+                                        type="number"
+                                        min="0.001"
+                                        step="0.001"
+                                        value={lossQty}
+                                        onChange={(e) => setLossQty(e.target.value)}
+                                        onFocus={(e) => e.target.select()}
+                                        placeholder={`Quantidade em ${selectedProduct.unit || 'UN'}`}
+                                        autoFocus
+                                        required
+                                    />
+                                </div>
+                                <div className="se-form-section">
+                                    <label className="se-form-label">Motivo</label>
+                                    <select className="ui-select" value={lossReason} onChange={(e) => setLossReason(e.target.value)}>
+                                        <option value="vencido">Vencido</option>
+                                        <option value="avaria">Avaria</option>
+                                        <option value="quebra">Quebra</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                </div>
+
+                                {lossFeedback ? (
+                                    <div className={`se-feedback se-feedback--${lossFeedback.type}`}>
+                                        <i className={`fa-solid ${lossFeedback.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`} />
+                                        {lossFeedback.text}
+                                    </div>
+                                ) : null}
+
+                                <div className="se-form-actions">
+                                    <ActionButton icon="fa-rotate-left" tone="secondary" type="button" onClick={cancelLoss}>
+                                        Cancelar
+                                    </ActionButton>
+                                    <ActionButton icon="fa-check" type="submit" disabled={lossSaving}>
+                                        {lossSaving ? 'Salvando...' : 'Confirmar perda'}
+                                    </ActionButton>
+                                </div>
+                            </form>
+                        ) : null}
+
+                        {/* Filtros */}
+                        <div className="se-mov-filters">
+                            <select
+                                className="ui-select se-mov-filter-select"
+                                value={movFilter}
+                                onChange={(e) => setMovFilter(e.target.value)}
+                            >
+                                <option value="">Todas as operações</option>
+                                <option value="manual_inbound">Entradas</option>
+                                <option value="manual_adjustment">Ajustes</option>
+                                <option value="sale">Saídas (venda)</option>
+                                <option value="sale_cancellation">Cancelamentos</option>
+                                <option value="loss">Perdas</option>
+                            </select>
+                            <input
+                                type="date"
+                                className="ui-input se-mov-filter-date"
+                                value={movFrom}
+                                onChange={(e) => setMovFrom(e.target.value)}
+                                title="De"
+                            />
+                            <input
+                                type="date"
+                                className="ui-input se-mov-filter-date"
+                                value={movTo}
+                                onChange={(e) => setMovTo(e.target.value)}
+                                title="Até"
+                            />
+                            <ActionButton icon="fa-magnifying-glass" iconOnly tone="secondary" onClick={applyMovFilter} />
+                        </div>
+
+                        {/* Lista de movimentações */}
+                        <div className="se-mov-list">
+                            {!movSearched ? (
+                                <div className="se-mov-empty">
+                                    <i className="fa-solid fa-magnifying-glass" />
+                                    <span>Filtre e pesquise para ver as movimentações</span>
+                                </div>
+                            ) : movLoading ? (
+                                <div className="se-mov-loading">
+                                    <i className="fa-solid fa-spinner fa-spin" />
+                                    Carregando...
+                                </div>
+                            ) : movements.length ? movements.map((mov) => {
+                                const tone = TYPE_TONES[mov.type] || 'gray'
+                                const isPositive = Number(mov.quantity_delta) >= 0
+                                return (
+                                    <div key={mov.id} className="se-mov-row">
+                                        <div className={`se-mov-type-dot se-mov-type-dot--${tone}`} />
+                                        <div className="se-mov-info">
+                                            <strong>{TYPE_LABELS[mov.type] || mov.type_label || mov.type}</strong>
+                                            {mov.notes ? <small>{mov.notes}</small> : null}
+                                            <small className="se-mov-date">{mov.occurred_at ? formatDateTime(mov.occurred_at) : '—'}</small>
+                                        </div>
+                                        <div className="se-mov-delta-col">
+                                            <span className={`se-mov-delta ${isPositive ? 'positive' : 'negative'}`}>
+                                                {isPositive ? '+' : ''}{formatNumber(mov.quantity_delta)}
+                                            </span>
+                                            <small className="se-mov-stock-after">
+                                                → {formatNumber(mov.stock_after)}
+                                            </small>
+                                        </div>
+                                    </div>
+                                )
+                            }) : (
+                                <div className="se-mov-empty">
+                                    <i className="fa-solid fa-clock-rotate-left" />
+                                    <span>Nenhuma movimentação encontrada</span>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                ) : null}
+            </ActionDrawer>
         </AppLayout>
     )
 }
