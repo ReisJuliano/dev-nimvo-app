@@ -12,6 +12,7 @@ use App\Models\Tenant\Sale;
 use App\Models\Tenant\SaleItem;
 use App\Models\Tenant\SaleReturn;
 use App\Models\Tenant\Supplier;
+use App\Models\Tenant\TaxRule;
 use App\Support\Fiscal\NfcePaymentMapper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -26,7 +27,28 @@ class FiscalDocumentService
     public function __construct(
         protected NfcePaymentMapper $paymentMapper,
         protected FiscalDocumentDispatchService $dispatchService,
+        protected TaxRuleResolver $taxRuleResolver,
     ) {
+    }
+
+    protected function resolveTaxRule(?Product $product, ?string $cfop, FiscalProfile $profile): ?TaxRule
+    {
+        return $this->taxRuleResolver->resolve(
+            $product?->ncm,
+            $cfop,
+            $profile->state,
+            $profile->state,
+            $this->regimeFromCrt($profile->crt),
+        );
+    }
+
+    protected function regimeFromCrt(mixed $crt): ?string
+    {
+        return match ((string) $crt) {
+            '1', '2' => 'simples',
+            '3' => 'normal',
+            default => null,
+        };
     }
 
     public function issueFromSale(
@@ -255,11 +277,12 @@ class FiscalDocumentService
         $issuedAt = now()->format('Y-m-d\TH:i:sP');
         $randomCode = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
 
-        $items = $purchaseReturn->items->map(function ($item) {
+        $items = $purchaseReturn->items->map(function ($item) use ($profile) {
             /** @var Product|null $product */
             $product = $item->product;
             $quantity = round((float) $item->quantity, 3);
             $lineTotal = round((float) $item->total, 2);
+            $taxRule = $this->resolveTaxRule($product, $item->cfop, $profile);
 
             return [
                 'code' => $product?->code ?: (string) $item->product_id,
@@ -268,19 +291,19 @@ class FiscalDocumentService
                 'ncm' => $product?->ncm,
                 'cfop' => $item->cfop,
                 'cest' => $product?->cest,
-                'origin_code' => $product?->origin_code ?: '0',
-                'icms_csosn' => $product?->icms_csosn ?: '102',
-                'pis_cst' => $product?->pis_cst ?: '49',
+                'origin_code' => $product?->origin_code ?: ($taxRule?->origin_code ?: '0'),
+                'icms_csosn' => $product?->icms_csosn ?: ($taxRule?->csosn ?: '102'),
+                'pis_cst' => $product?->pis_cst ?: ($taxRule?->pis_cst ?: '49'),
                 'pis_base' => $lineTotal,
                 'pis_amount' => 0.0,
                 'pis_rate' => 0.0,
-                'cofins_cst' => $product?->cofins_cst ?: '49',
+                'cofins_cst' => $product?->cofins_cst ?: ($taxRule?->cofins_cst ?: '49'),
                 'cofins_base' => $lineTotal,
                 'cofins_amount' => 0.0,
                 'cofins_rate' => 0.0,
                 'ipi_amount' => 0.0,
-                'ibs_cbs_cst' => $product?->ibs_cbs_cst,
-                'c_class_trib' => $product?->c_class_trib,
+                'ibs_cbs_cst' => $product?->ibs_cbs_cst ?: ($taxRule?->ibs_cbs_cst),
+                'c_class_trib' => $product?->c_class_trib ?: ($taxRule?->c_class_trib),
                 'unit' => $product?->unit ?: 'UN',
                 'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                 'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -462,11 +485,12 @@ class FiscalDocumentService
         $issuedAt = now()->format('Y-m-d\TH:i:sP');
         $randomCode = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
 
-        $items = $saleReturn->items->map(function ($item) {
+        $items = $saleReturn->items->map(function ($item) use ($profile) {
             /** @var Product|null $product */
             $product = $item->product;
             $quantity = round((float) $item->quantity, 3);
             $lineTotal = round((float) $item->total, 2);
+            $taxRule = $this->resolveTaxRule($product, $item->cfop, $profile);
 
             return [
                 'code' => $product?->code ?: (string) $item->product_id,
@@ -475,19 +499,19 @@ class FiscalDocumentService
                 'ncm' => $product?->ncm,
                 'cfop' => $item->cfop,
                 'cest' => $product?->cest,
-                'origin_code' => $product?->origin_code ?: '0',
-                'icms_csosn' => $product?->icms_csosn ?: '102',
-                'pis_cst' => $product?->pis_cst ?: '49',
+                'origin_code' => $product?->origin_code ?: ($taxRule?->origin_code ?: '0'),
+                'icms_csosn' => $product?->icms_csosn ?: ($taxRule?->csosn ?: '102'),
+                'pis_cst' => $product?->pis_cst ?: ($taxRule?->pis_cst ?: '49'),
                 'pis_base' => $lineTotal,
                 'pis_amount' => 0.0,
                 'pis_rate' => 0.0,
-                'cofins_cst' => $product?->cofins_cst ?: '49',
+                'cofins_cst' => $product?->cofins_cst ?: ($taxRule?->cofins_cst ?: '49'),
                 'cofins_base' => $lineTotal,
                 'cofins_amount' => 0.0,
                 'cofins_rate' => 0.0,
                 'ipi_amount' => 0.0,
-                'ibs_cbs_cst' => $product?->ibs_cbs_cst,
-                'c_class_trib' => $product?->c_class_trib,
+                'ibs_cbs_cst' => $product?->ibs_cbs_cst ?: ($taxRule?->ibs_cbs_cst),
+                'c_class_trib' => $product?->c_class_trib ?: ($taxRule?->c_class_trib),
                 'unit' => $product?->unit ?: 'UN',
                 'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                 'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -867,7 +891,7 @@ class FiscalDocumentService
                 'finalidade' => (int) ($this->saleValue($sale, 'fiscal_finalidade') ?: 1),
                 'referencias' => (array) ($this->saleValue($sale, 'fiscal_reference_access_keys') ?: []),
             ],
-            'items' => $sale->items->map(function (SaleItem $item) {
+            'items' => $sale->items->map(function (SaleItem $item) use ($profile) {
                 /** @var Product|null $product */
                 $product = $item->product;
                 $quantity = round((float) $item->quantity, 3);
@@ -875,11 +899,13 @@ class FiscalDocumentService
                 $lineTotal = round((float) $item->total, 2);
                 $lineSubtotal = round($lineTotal + $discountAmount, 2);
                 $grossUnitPrice = $quantity > 0 ? $lineSubtotal / $quantity : (float) $item->unit_price;
+                $taxRule = $this->resolveTaxRule($product, $product?->cfop, $profile);
                 $pisBase = $lineTotal;
-                $pisRate = (float) ($product?->pis_rate ?? 0);
-                $cofinsRate = (float) ($product?->cofins_rate ?? 0);
-                $pisCst = (string) ($product?->pis_cst ?: '49');
-                $cofinsCst = (string) ($product?->cofins_cst ?: '49');
+                $pisRate = $product?->pis_rate !== null ? (float) $product->pis_rate : (float) ($taxRule?->pis_rate ?? 0);
+                $cofinsRate = $product?->cofins_rate !== null ? (float) $product->cofins_rate : (float) ($taxRule?->cofins_rate ?? 0);
+                $icmsRate = $product?->icms_rate !== null ? (float) $product->icms_rate : (float) ($taxRule?->icms_rate ?? 0);
+                $pisCst = (string) ($product?->pis_cst ?: ($taxRule?->pis_cst ?: '49'));
+                $cofinsCst = (string) ($product?->cofins_cst ?: ($taxRule?->cofins_cst ?: '49'));
                 $pisAmount = $this->calculateContributionAmount($pisBase, $pisRate, $pisCst);
                 $cofinsAmount = $this->calculateContributionAmount($lineTotal, $cofinsRate, $cofinsCst);
 
@@ -891,9 +917,9 @@ class FiscalDocumentService
                     'ncm' => $product?->ncm,
                     'cfop' => $product?->cfop,
                     'cest' => $product?->cest,
-                    'origin_code' => $product?->origin_code ?: '0',
-                    'icms_csosn' => $product?->icms_csosn ?: '102',
-                    'icms_rate' => (float) ($product?->icms_rate ?? 0),
+                    'origin_code' => $product?->origin_code ?: ($taxRule?->origin_code ?: '0'),
+                    'icms_csosn' => $product?->icms_csosn ?: ($taxRule?->csosn ?: '102'),
+                    'icms_rate' => $icmsRate,
                     'pis_cst' => $pisCst,
                     'pis_rate' => $pisRate,
                     'pis_base' => $pisBase,
@@ -905,8 +931,8 @@ class FiscalDocumentService
                     'ipi_rate' => (float) ($product?->ipi_rate ?? 0),
                     'ipi_base' => 0.0,
                     'ipi_amount' => 0.0,
-                    'ibs_cbs_cst' => $product?->ibs_cbs_cst,
-                    'c_class_trib' => $product?->c_class_trib,
+                    'ibs_cbs_cst' => $product?->ibs_cbs_cst ?: ($taxRule?->ibs_cbs_cst),
+                    'c_class_trib' => $product?->c_class_trib ?: ($taxRule?->c_class_trib),
                     'unit' => $product?->unit ?: 'UN',
                     'commercial_unit' => $product?->commercial_unit ?: ($product?->unit ?: 'UN'),
                     'taxable_unit' => $product?->taxable_unit ?: ($product?->unit ?: 'UN'),
@@ -1097,7 +1123,11 @@ class FiscalDocumentService
                 $missing[] = "Produto {$product->name} precisa ter CFOP com 4 digitos.";
             }
 
-            if (blank($product->origin_code) || ! preg_match('/^[0-8]$/', (string) $product->origin_code)) {
+            $taxRule = $this->resolveTaxRule($product, $product->cfop, $profile);
+            $effectiveOriginCode = filled($product->origin_code) ? $product->origin_code : $taxRule?->origin_code;
+            $effectiveCsosn = filled($product->icms_csosn) ? $product->icms_csosn : $taxRule?->csosn;
+
+            if (blank($effectiveOriginCode) || ! preg_match('/^[0-8]$/', (string) $effectiveOriginCode)) {
                 $missing[] = "Produto {$product->name} precisa ter origem da mercadoria valida.";
             }
 
@@ -1109,7 +1139,7 @@ class FiscalDocumentService
                 $missing[] = "Produto {$product->name} precisa ter unidade tributavel configurada.";
             }
 
-            if (! in_array((string) $product->icms_csosn, $allowedCsosn, true)) {
+            if (! in_array((string) $effectiveCsosn, $allowedCsosn, true)) {
                 $missing[] = "Produto {$product->name} usa CSOSN não suportado pelo emissor atual.";
             }
         }
