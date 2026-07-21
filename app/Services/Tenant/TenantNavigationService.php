@@ -164,6 +164,20 @@ class TenantNavigationService
                         'request_patterns' => ['compras', 'api/operations/compras*'],
                     ],
                     [
+                        'href' => '/compras/devolucoes',
+                        'label' => 'Devolução de compra',
+                        'icon' => 'fa-rotate-left',
+                        'required_permission' => 'compras.adicionar',
+                        'request_patterns' => ['compras/devolucoes'],
+                    ],
+                    [
+                        'href' => '/vendas/devolucoes',
+                        'label' => 'Devolução de venda',
+                        'icon' => 'fa-rotate-left',
+                        'required_permission' => 'vendas.registrar_devolucao',
+                        'request_patterns' => ['vendas/devolucoes'],
+                    ],
+                    [
                         'href' => '/contas-a-pagar',
                         'label' => 'Contas a pagar',
                         'icon' => 'fa-file-invoice-dollar',

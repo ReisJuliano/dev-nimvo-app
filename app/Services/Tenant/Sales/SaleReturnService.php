@@ -25,6 +25,38 @@ class SaleReturnService
     ) {
     }
 
+    public function returnableItems(int $saleId): array
+    {
+        $sale = Sale::query()
+            ->with(['items.product:id,name,code,barcode,cfop'])
+            ->findOrFail($saleId);
+
+        $hasAuthorizedDocument = FiscalDocument::query()
+            ->where('sale_id', $sale->id)
+            ->whereIn('status', ['authorized', 'printed'])
+            ->exists();
+
+        return [
+            'sale_number' => $sale->sale_number,
+            'has_authorized_document' => $hasAuthorizedDocument,
+            'items' => $sale->items->map(function ($item) {
+                $alreadyReturned = (float) SaleReturnItem::query()
+                    ->where('sale_item_id', $item->id)
+                    ->sum('quantity');
+
+                return [
+                    'sale_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product?->name ?: 'Produto removido',
+                    'quantity' => (float) $item->quantity,
+                    'already_returned' => $alreadyReturned,
+                    'available_quantity' => round((float) $item->quantity - $alreadyReturned, 3),
+                    'unit_price' => (float) $item->unit_price,
+                ];
+            })->values()->all(),
+        ];
+    }
+
     /**
      * @param array<int, array{sale_item_id: int, quantity: float}> $items
      */

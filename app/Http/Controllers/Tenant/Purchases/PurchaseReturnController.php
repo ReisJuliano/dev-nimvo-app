@@ -11,11 +11,41 @@ use Illuminate\Http\Request;
 
 class PurchaseReturnController extends Controller
 {
+    public function lookup(Request $request): JsonResponse
+    {
+        $code = trim((string) $request->query('code'));
+
+        abort_if($code === '', 422, 'Informe o código da compra.');
+
+        $purchase = Purchase::query()
+            ->with('supplier:id,name')
+            ->where('code', $code)
+            ->first();
+
+        abort_unless($purchase, 404, 'Compra não encontrada.');
+
+        return response()->json([
+            'purchase' => [
+                'id' => $purchase->id,
+                'code' => $purchase->code,
+                'status' => $purchase->status,
+                'supplier_name' => $purchase->supplier?->name,
+                'total' => (float) $purchase->total,
+                'stock_applied' => filled($purchase->stock_applied_at),
+            ],
+        ]);
+    }
+
     public function index(Purchase $purchase): JsonResponse
     {
         return response()->json([
             'returns' => $purchase->returns()->with('items')->latest('id')->get(),
         ]);
+    }
+
+    public function returnableItems(Purchase $purchase, PurchaseReturnService $service): JsonResponse
+    {
+        return response()->json(['items' => $service->returnableItems($purchase->id)]);
     }
 
     public function store(Request $request, Purchase $purchase, PurchaseReturnService $service): JsonResponse

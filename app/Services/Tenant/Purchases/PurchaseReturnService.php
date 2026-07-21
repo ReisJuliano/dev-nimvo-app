@@ -36,6 +36,29 @@ class PurchaseReturnService
         return $document;
     }
 
+    public function returnableItems(int $purchaseId): array
+    {
+        $purchase = Purchase::query()
+            ->with(['items.incomingNfeItem', 'items.product:id,name,code,barcode'])
+            ->findOrFail($purchaseId);
+
+        return $purchase->items->map(function ($item) {
+            $alreadyReturned = $this->alreadyReturnedQuantity($item->id);
+            $incomingCfop = $item->incomingNfeItem?->cfop;
+
+            return [
+                'purchase_item_id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product?->name ?: $item->product_name,
+                'quantity' => (float) $item->quantity,
+                'already_returned' => $alreadyReturned,
+                'available_quantity' => round((float) $item->quantity - $alreadyReturned, 3),
+                'unit_cost' => (float) $item->unit_cost,
+                'eligible_for_fiscal_return' => filled($incomingCfop),
+            ];
+        })->values()->all();
+    }
+
     /**
      * @param array<int, array{purchase_item_id: int, quantity: float}> $items
      */

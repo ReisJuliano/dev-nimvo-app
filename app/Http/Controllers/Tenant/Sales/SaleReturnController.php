@@ -18,6 +18,11 @@ class SaleReturnController extends Controller
         ]);
     }
 
+    public function returnableItems(Sale $sale, SaleReturnService $service): JsonResponse
+    {
+        return response()->json($service->returnableItems($sale->id));
+    }
+
     public function store(Request $request, Sale $sale, SaleReturnService $service): JsonResponse
     {
         abort_unless(auth()->user()?->hasPermission('vendas.registrar_devolucao'), 403);
