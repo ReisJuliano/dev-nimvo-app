@@ -55,7 +55,6 @@ class OperationsWorkspaceService
             'clientes',
             'fornecedores',
             'categorias',
-            'delivery',
             'compras',
             'contas-a-pagar',
             'entrada-estoque',
@@ -91,12 +90,6 @@ class OperationsWorkspaceService
                 'moduleTitle' => 'Categorias',
                 'moduleDescription' => 'Estrutura do catálogo com descrição, status e acompanhamento de itens por categoria.',
                 'payload' => $this->categoriesPayload(false),
-            ],
-            'delivery' => [
-                'moduleKey' => 'delivery',
-                'moduleTitle' => 'Delivery',
-                'moduleDescription' => 'Fila de entrega e retirada com taxa, endereço, status e entregador.',
-                'payload' => $this->deliveryPayload(false),
             ],
             'compras' => [
                 'moduleKey' => 'compras',
@@ -140,7 +133,6 @@ class OperationsWorkspaceService
             'clientes' => ['message' => 'Cliente cadastrado com sucesso.', 'record' => $this->serializeCustomer($this->auditCreated($this->saveCustomer(null, $input)))],
             'fornecedores' => ['message' => 'Fornecedor cadastrado com sucesso.', 'record' => $this->serializeSupplier($this->auditCreated($this->saveSupplier(null, $input)))],
             'categorias' => ['message' => 'Categoria cadastrada com sucesso.', 'record' => $this->serializeCategory($this->auditCreated($this->saveCategory(null, $input)))],
-            'delivery' => ['message' => 'Entrega salva com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder(null, $input))],
             'compras' => ['message' => 'Compra salva com sucesso.', 'record' => $this->serializePurchase($this->savePurchase(null, $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar salva com sucesso.', 'record' => $this->serializePayable($this->savePayable(null, $input, $userId))],
             'entrada-estoque' => ['message' => 'Entrada de estoque registrada com sucesso.', 'record' => $this->serializePurchase($this->saveStockInbound($input, $userId))],
@@ -159,9 +151,6 @@ class OperationsWorkspaceService
             ],
             'categorias' => [
                 'records' => $this->categoryRecords($filters),
-            ],
-            'delivery' => [
-                'records' => $this->deliveryRecords($filters),
             ],
             'compras' => [
                 'records' => $this->purchaseRecords($filters),
@@ -192,7 +181,6 @@ class OperationsWorkspaceService
             'clientes' => ['message' => 'Cliente atualizado com sucesso.', 'record' => $this->serializeCustomer($this->auditUpdated($this->findRecord(Customer::class, $recordId), fn ($record) => $this->saveCustomer($record, $input)))],
             'fornecedores' => ['message' => 'Fornecedor atualizado com sucesso.', 'record' => $this->serializeSupplier($this->auditUpdated($this->findRecord(Supplier::class, $recordId), fn ($record) => $this->saveSupplier($record, $input)))],
             'categorias' => ['message' => 'Categoria atualizada com sucesso.', 'record' => $this->serializeCategory($this->auditUpdated($this->findRecord(Category::class, $recordId), fn ($record) => $this->saveCategory($record, $input)))],
-            'delivery' => ['message' => 'Entrega atualizada com sucesso.', 'record' => $this->serializeDeliveryOrder($this->saveDeliveryOrder($this->findRecord(DeliveryOrder::class, $recordId), $input))],
             'compras' => ['message' => 'Compra atualizada com sucesso.', 'record' => $this->serializePurchase($this->savePurchase($this->findRecord(Purchase::class, $recordId), $input, $userId))],
             'contas-a-pagar' => ['message' => 'Conta a pagar atualizada com sucesso.', 'record' => $this->serializePayable($this->savePayable($this->findRecord(Payable::class, $recordId), $input, $userId))],
             'entrada-estoque' => throw ValidationException::withMessages([
@@ -212,7 +200,6 @@ class OperationsWorkspaceService
             'clientes' => $this->auditDelete($this->findRecord(Customer::class, $recordId), 'Cliente removido com sucesso.'),
             'fornecedores' => $this->auditDelete($this->findRecord(Supplier::class, $recordId), 'Fornecedor removido com sucesso.'),
             'categorias' => $this->auditDelete($this->findRecord(Category::class, $recordId), 'Categoria removida com sucesso.'),
-            'delivery' => $this->auditDelete($this->findRecord(DeliveryOrder::class, $recordId), 'Entrega removida com sucesso.'),
             'compras' => $this->deleteStockSensitiveRecord($this->findRecord(Purchase::class, $recordId), 'Compra removida com sucesso.'),
             'contas-a-pagar' => $this->auditDelete($this->findRecord(Payable::class, $recordId), 'Conta a pagar removida com sucesso.'),
             'usuarios' => $this->auditDelete($this->findRecord(User::class, $recordId), 'Usuario removido com sucesso.'),
@@ -287,66 +274,6 @@ class OperationsWorkspaceService
         $model->delete();
 
         return $message;
-    }
-
-    protected function deliveryPayload(bool $includeRecords = true, array $filters = []): array
-    {
-        return [
-            'records' => $includeRecords ? $this->deliveryRecords($filters) : [],
-            'customers' => $this->customerOptions(),
-        ];
-    }
-
-    protected function deliveryRecords(array $filters = []): array
-    {
-        $validated = Validator::make($filters, [
-            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
-            'value' => ['nullable', 'numeric', 'gte:0'],
-            'date' => ['nullable', 'date'],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
-            'status' => ['nullable', Rule::in(['all', 'pending', 'dispatched', 'delivered'])],
-        ])->validate();
-
-        if (!$this->hasDeliverySearchFilters($validated)) {
-            return [];
-        }
-
-        if (filled($validated['from'] ?? null) && filled($validated['to'] ?? null) && $validated['from'] > $validated['to']) {
-            throw ValidationException::withMessages([
-                'filters' => 'O periodo final precisa ser maior ou igual ao periodo inicial.',
-            ]);
-        }
-
-        $referenceDateExpression = 'COALESCE(scheduled_for, created_at)';
-        $referenceDateOnlyExpression = "DATE({$referenceDateExpression})";
-        $targetValue = filled($validated['value'] ?? null) ? round((float) $validated['value'], 2) : null;
-
-        return DeliveryOrder::query()
-            ->with(['customer:id,name,phone'])
-            ->when(filled($validated['customer_id'] ?? null), fn ($query) => $query->where('customer_id', (int) $validated['customer_id']))
-            ->when(filled($validated['status'] ?? null) && $validated['status'] !== 'all', fn ($query) => $query->where('status', $validated['status']))
-            ->when(filled($validated['date'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} = ?", [$validated['date']]))
-            ->when(filled($validated['from'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} >= ?", [$validated['from']]))
-            ->when(filled($validated['to'] ?? null), fn ($query) => $query->whereRaw("{$referenceDateOnlyExpression} <= ?", [$validated['to']]))
-            ->orderByRaw("{$referenceDateExpression} desc")
-            ->orderByDesc('id')
-            ->get()
-            ->map(fn (DeliveryOrder $order) => $this->serializeDeliveryOrder($order))
-            ->filter(fn (array $record) => $targetValue === null
-                || round((float) $record['order_total'] + (float) $record['delivery_fee'], 2) === $targetValue)
-            ->values()
-            ->all();
-    }
-
-    protected function hasDeliverySearchFilters(array $filters): bool
-    {
-        return filled($filters['customer_id'] ?? null)
-            || filled($filters['value'] ?? null)
-            || filled($filters['date'] ?? null)
-            || filled($filters['from'] ?? null)
-            || filled($filters['to'] ?? null)
-            || (filled($filters['status'] ?? null) && $filters['status'] !== 'all');
     }
 
     protected function purchasesPayload(bool $includeRecords = true): array
@@ -1099,53 +1026,6 @@ class OperationsWorkspaceService
         ]);
 
         return $movement->fresh(['product:id,name,code,unit', 'user:id,name']);
-    }
-
-    protected function saveDeliveryOrder(?DeliveryOrder $order, array $input): DeliveryOrder
-    {
-        $validated = Validator::make($input, [
-            'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
-            'reference' => ['nullable', 'string', 'max:80'],
-            'status' => ['required', Rule::in(['pending', 'dispatched', 'delivered'])],
-            'channel' => ['required', Rule::in(['delivery', 'retirada'])],
-            'recipient_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:60'],
-            'courier_name' => ['nullable', 'string', 'max:255'],
-            'address' => ['required', 'string', 'max:255'],
-            'neighborhood' => ['nullable', 'string', 'max:255'],
-            'delivery_fee' => ['nullable', 'numeric', 'gte:0'],
-            'order_total' => ['nullable', 'numeric', 'gte:0'],
-            'scheduled_for' => ['nullable', 'date'],
-            'notes' => ['nullable', 'string'],
-        ])->validate();
-
-        $order ??= new DeliveryOrder;
-
-        [$dispatchedAt, $deliveredAt] = match ($validated['status']) {
-            'pending' => [null, null],
-            'dispatched' => [$order->dispatched_at ?: now(), null],
-            'delivered' => [$order->dispatched_at ?: now(), $order->delivered_at ?: now()],
-        };
-
-        $order->fill([
-            'customer_id' => $validated['customer_id'] ?? null,
-            'reference' => $validated['reference'] ?? null,
-            'status' => $validated['status'],
-            'channel' => $validated['channel'],
-            'recipient_name' => $validated['recipient_name'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'courier_name' => $validated['courier_name'] ?? null,
-            'address' => $validated['address'],
-            'neighborhood' => $validated['neighborhood'] ?? null,
-            'delivery_fee' => round((float) ($validated['delivery_fee'] ?? 0), 2),
-            'order_total' => round((float) ($validated['order_total'] ?? 0), 2),
-            'scheduled_for' => $validated['scheduled_for'] ?? null,
-            'dispatched_at' => $dispatchedAt,
-            'delivered_at' => $deliveredAt,
-            'notes' => $validated['notes'] ?? null,
-        ])->save();
-
-        return $order->fresh(['customer:id,name,phone']);
     }
 
     protected function requiresAmountConfirmation(float $amount, float $referenceAmount): bool
@@ -2240,19 +2120,6 @@ class OperationsWorkspaceService
             'notes' => $metadata['notes'] ?? null,
             'occurred_at' => $movement->occurred_at?->toIso8601String(),
             'created_by' => $movement->user?->name,
-        ];
-    }
-
-    public function listDeliveryOrders(): array
-    {
-        return [
-            'records' => DeliveryOrder::query()
-                ->with(['customer:id,name,phone'])
-                ->latest()
-                ->get()
-                ->map(fn (DeliveryOrder $order) => $this->serializeDeliveryOrder($order))
-                ->values()
-                ->all(),
         ];
     }
 

@@ -25,7 +25,6 @@ class ReceivablesApiController extends Controller
             'total' => round((float) $rows->sum('total'), 2),
             'credit_total' => round((float) $rows->sum('credit_balance'), 2),
             'conditional_total' => round((float) $rows->sum('conditional_balance'), 2),
-            'delivery_total' => round((float) $rows->sum('delivery_balance'), 2),
             'customers_count' => $rows->count(),
             'overdue_60_plus' => $rows->whereIn('aging_bucket', ['61_90', '90_mais'])->count(),
         ];

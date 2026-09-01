@@ -2,7 +2,6 @@
 
 namespace App\Services\Tenant;
 
-use App\Models\Tenant\DeliveryOrder;
 use App\Models\Tenant\FiscalDocument;
 use App\Models\Tenant\Purchase;
 use App\Models\Tenant\Sale;
@@ -39,14 +38,12 @@ class ConsultationsPageService
                     ['key' => 'all', 'label' => 'Todas'],
                     ['key' => 'sale', 'label' => 'Vendas'],
                     ['key' => 'entry', 'label' => 'Entradas'],
-                    ['key' => 'delivery', 'label' => 'Entregas'],
                     ['key' => 'credit', 'label' => 'Fiado'],
                     ['key' => 'fiscal', 'label' => 'NF-e Fiscais'],
                 ],
                 'summary' => [
                     ['key' => 'sales', 'label' => 'Vendas', 'value' => 0],
                     ['key' => 'entries', 'label' => 'Entradas', 'value' => 0],
-                    ['key' => 'deliveries', 'label' => 'Entregas', 'value' => 0],
                     ['key' => 'credit', 'label' => 'Fiado', 'value' => 0],
                     ['key' => 'fiscal', 'label' => 'NF-e', 'value' => 0],
                 ],
@@ -96,13 +93,6 @@ class ConsultationsPageService
             ->limit(80)
             ->get();
 
-        $deliveries = DeliveryOrder::query()
-            ->with(['customer:id,name,phone'])
-            ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
-            ->latest('created_at')
-            ->limit(80)
-            ->get();
-
         $creditSales = $sales
             ->filter(function (Sale $sale) {
                 if (PaymentMethod::normalize($sale->payment_method) === PaymentMethod::CREDIT) {
@@ -123,7 +113,6 @@ class ConsultationsPageService
         $records = collect()
             ->concat($sales->map(fn (Sale $sale) => $this->serializeSale($sale)))
             ->concat($entries->map(fn (Purchase $purchase) => $this->serializeEntry($purchase)))
-            ->concat($deliveries->map(fn (DeliveryOrder $delivery) => $this->serializeDelivery($delivery)))
             ->concat($creditSales->map(fn (Sale $sale) => $this->serializeCreditSale($sale)))
             ->concat($fiscalDocuments->map(fn (FiscalDocument $document) => $this->serializeFiscalDocument($document)))
             ->sortByDesc('date_sort')
@@ -147,14 +136,12 @@ class ConsultationsPageService
                 ['key' => 'all', 'label' => 'Todas'],
                 ['key' => 'sale', 'label' => 'Vendas'],
                 ['key' => 'entry', 'label' => 'Entradas'],
-                ['key' => 'delivery', 'label' => 'Entregas'],
                 ['key' => 'credit', 'label' => 'Fiado'],
                 ['key' => 'fiscal', 'label' => 'NF-e Fiscais'],
             ],
             'summary' => [
                 ['key' => 'sales', 'label' => 'Vendas', 'value' => $sales->count()],
                 ['key' => 'entries', 'label' => 'Entradas', 'value' => $entries->count()],
-                ['key' => 'deliveries', 'label' => 'Entregas', 'value' => $deliveries->count()],
                 ['key' => 'credit', 'label' => 'Fiado', 'value' => $creditSales->count()],
                 ['key' => 'fiscal', 'label' => 'NF-e', 'value' => $fiscalDocuments->count()],
             ],
@@ -257,52 +244,6 @@ class ConsultationsPageService
                     'unit_cost' => (float) $item->unit_cost,
                     'total' => (float) $item->total,
                 ])->values()->all(),
-            ],
-        ];
-    }
-
-    protected function serializeDelivery(DeliveryOrder $delivery): array
-    {
-        $statusLabel = match ((string) $delivery->status) {
-            'dispatched' => 'Em rota',
-            'delivered' => 'Entregue',
-            default => 'Pendente',
-        };
-
-        $statusTone = match ((string) $delivery->status) {
-            'delivered' => 'success',
-            'dispatched' => 'info',
-            default => 'warning',
-        };
-
-        return [
-            'uid' => sprintf('delivery-%d', $delivery->id),
-            'type' => 'delivery',
-            'entity_id' => $delivery->id,
-            'title' => $delivery->reference ?: sprintf('Entrega #%d', $delivery->id),
-            'subtitle' => $delivery->customer?->name ?: $delivery->recipient_name ?: 'Sem cliente',
-            'amount' => round((float) $delivery->order_total + (float) $delivery->delivery_fee, 2),
-            'date' => ($delivery->scheduled_for ?: $delivery->created_at)?->toIso8601String(),
-            'date_sort' => ($delivery->scheduled_for ?: $delivery->created_at)?->timestamp ?? 0,
-            'status_label' => $statusLabel,
-            'status_tone' => $statusTone,
-            'tags' => array_values(array_filter([
-                $delivery->channel === 'retirada' ? 'Retirada' : 'Delivery',
-                $delivery->courier_name,
-            ])),
-            'actions' => [
-                'mark_dispatched' => route('api.delivery.orders.status', $delivery, false),
-                'delete_url' => sprintf('/api/operations/delivery/records/%d', $delivery->id),
-            ],
-            'details' => [
-                'recipient' => $delivery->recipient_name ?: $delivery->customer?->name,
-                'phone' => $delivery->phone ?: $delivery->customer?->phone,
-                'address' => $delivery->address,
-                'neighborhood' => $delivery->neighborhood,
-                'courier' => $delivery->courier_name,
-                'delivery_fee' => (float) $delivery->delivery_fee,
-                'order_total' => (float) $delivery->order_total,
-                'notes' => $delivery->notes,
             ],
         ];
     }

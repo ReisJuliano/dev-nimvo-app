@@ -127,7 +127,6 @@ export default function ReceivablesIndex({ openCashRegisterId = null }) {
                     <div className="receivables-summary-card"><span>Total a receber</span><strong>{formatMoney(summary.total)}</strong></div>
                     <div className="receivables-summary-card"><span>Fiado</span><strong>{formatMoney(summary.credit_total)}</strong></div>
                     <div className="receivables-summary-card"><span>Condicional em aberto</span><strong>{formatMoney(summary.conditional_total)}</strong></div>
-                    <div className="receivables-summary-card"><span>Entregas não pagas</span><strong>{formatMoney(summary.delivery_total)}</strong></div>
                     <div className="receivables-summary-card"><span>+60 dias</span><strong>{summary.overdue_60_plus || 0} cliente(s)</strong></div>
                 </div>
 
@@ -153,7 +152,6 @@ export default function ReceivablesIndex({ openCashRegisterId = null }) {
                         { key: 'customer_name', label: 'Cliente' },
                         { key: 'credit_balance', label: 'Fiado', render: (row) => formatMoney(row.credit_balance) },
                         { key: 'conditional_balance', label: 'Condicional', render: (row) => formatMoney(row.conditional_balance) },
-                        { key: 'delivery_balance', label: 'Entrega', render: (row) => formatMoney(row.delivery_balance) },
                         { key: 'total', label: 'Total', render: (row) => formatMoney(row.total) },
                         { key: 'aging_bucket', label: 'Idade', render: (row) => BUCKET_LABELS[row.aging_bucket] || row.aging_bucket },
                     ]}

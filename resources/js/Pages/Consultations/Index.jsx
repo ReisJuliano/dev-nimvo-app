@@ -9,7 +9,6 @@ import StatusBadge from '@/Components/UI/StatusBadge'
 import useResetPageHistoryOnLeave from '@/hooks/useResetPageHistoryOnLeave'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
 import { apiRequest } from '@/lib/http'
-import { confirmPopup } from '@/lib/errorPopup'
 import { formatDate, formatDateTime, formatMoney, formatNumber } from '@/lib/format'
 import { replaceCurrentInertiaHistoryPage } from '@/lib/inertiaHistory'
 import { matchesTextSearchAny, normalizeTextSearch } from '@/lib/textSearch'
@@ -32,8 +31,6 @@ function summaryIcon(type) {
             return 'fa-receipt'
         case 'entry':
             return 'fa-box-open'
-        case 'delivery':
-            return 'fa-motorcycle'
         case 'credit':
             return 'fa-handshake'
         case 'fiscal':
@@ -60,7 +57,6 @@ function recordPaymentSummary(record) {
     return {
         sale: 'Sem pagamento informado',
         entry: 'Recebi mercadoria',
-        delivery: 'Delivery',
         credit: 'Fiado',
         fiscal: 'Cupom fiscal',
     }[record.type] || 'Não informado'
@@ -342,48 +338,6 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
         }
     }
 
-    async function handleDeliveryStatus(record, status) {
-        setBusyAction(`${record.uid}-${status}`)
-        setFeedback(null)
-
-        try {
-            await apiRequest(record.actions.mark_dispatched, { method: 'post', data: { status } })
-            setFeedback({ type: 'success', text: 'Status da entrega atualizado.' })
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        } finally {
-            setBusyAction(null)
-        }
-    }
-
-    async function handleDeliveryDelete(record) {
-        const confirmed = await confirmPopup({
-            type: 'warning',
-            title: 'Cancelar entrega',
-            message: `Deseja cancelar ${record.title}?`,
-            confirmLabel: 'Cancelar entrega',
-            cancelLabel: 'Voltar',
-        })
-
-        if (!confirmed) {
-            return
-        }
-
-        setBusyAction(record.actions.delete_url)
-        setFeedback(null)
-
-        try {
-            await apiRequest(record.actions.delete_url, { method: 'delete' })
-            setFeedback({ type: 'success', text: 'Entrega cancelada com sucesso.' })
-            setSelectedUid(null)
-            setDetailsOpen(false)
-        } catch (error) {
-            setFeedback({ type: 'error', text: error.message })
-        } finally {
-            setBusyAction(null)
-        }
-    }
-
     function handleApplyFilters() {
         const nextSearch = searchControl.apply()
         const params = { applied: 1 }
@@ -528,37 +482,15 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             },
                         },
                         {
-                            key: 'dispatch',
-                            icon: 'fa-route',
-                            label: 'Iniciar rota',
-                            visible: selectedRecord?.type === 'delivery',
-                            disabled: !selectedRecord || selectedRecord.status_label === 'Em rota' || selectedRecord.status_label === 'Entregue' || busyAction === `${selectedRecord.uid}-dispatched`,
-                            onClick: () => selectedRecord && handleDeliveryStatus(selectedRecord, 'dispatched'),
-                        },
-                        {
-                            key: 'deliver',
-                            icon: 'fa-circle-check',
-                            label: 'Marcar entregue',
-                            tone: 'success',
-                            visible: selectedRecord?.type === 'delivery',
-                            disabled: !selectedRecord || selectedRecord.status_label === 'Entregue' || busyAction === `${selectedRecord.uid}-delivered`,
-                            onClick: () => selectedRecord && handleDeliveryStatus(selectedRecord, 'delivered'),
-                        },
-                        {
                             key: 'cancel',
                             icon: 'fa-xmark',
                             label: 'Cancelar',
                             tone: 'danger',
                             dividerBefore: true,
-                            visible: Boolean(selectedRecord?.actions?.cancel_url || selectedRecord?.actions?.delete_url),
+                            visible: Boolean(selectedRecord?.actions?.cancel_url),
                             disabled: !selectedRecord,
                             onClick: () => {
                                 if (!selectedRecord) {
-                                    return
-                                }
-
-                                if (selectedRecord.type === 'delivery') {
-                                    void handleDeliveryDelete(selectedRecord)
                                     return
                                 }
 
@@ -627,22 +559,6 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             </>
                         ) : null}
 
-                        {selectedRecord.type === 'delivery' ? (
-                            <section className="proc-ui-modal-block">
-                                <h3>Detalhes da entrega</h3>
-                                <div className="proc-ui-summary-grid">
-                                    <article className="proc-ui-summary-card"><span>Destinatário</span><strong>{selectedRecord.details.recipient || '-'}</strong></article>
-                                    <article className="proc-ui-summary-card"><span>Telefone</span><strong>{selectedRecord.details.phone || '-'}</strong></article>
-                                    <article className="proc-ui-summary-card"><span>Entregador</span><strong>{selectedRecord.details.courier || '-'}</strong></article>
-                                    <article className="proc-ui-summary-card"><span>Taxa</span><strong>{formatMoney(selectedRecord.details.delivery_fee || 0)}</strong></article>
-                                </div>
-                                <div className="proc-ui-banner info">
-                                    <i className="fa-solid fa-location-dot" />
-                                    <div>{selectedRecord.details.address || 'Sem endereço'} {selectedRecord.details.neighborhood ? ` - ${selectedRecord.details.neighborhood}` : ''}</div>
-                                </div>
-                            </section>
-                        ) : null}
-
                         {selectedRecord.type === 'credit' ? (
                             <section className="proc-ui-modal-block">
                                 <h3>Fiado</h3>
@@ -677,16 +593,6 @@ export default function ConsultationsIndex({ recordTypes, records, filters = {} 
                             </section>
                         ) : null}
 
-                        {selectedRecord.type === 'delivery' ? (
-                            <div className="proc-ui-modal-footer">
-                                <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-dispatched`} onClick={() => handleDeliveryStatus(selectedRecord, 'dispatched')}>
-                                    Alterar para rota
-                                </button>
-                                <button type="button" className="ui-button-ghost" disabled={busyAction === `${selectedRecord.uid}-delivered`} onClick={() => handleDeliveryStatus(selectedRecord, 'delivered')}>
-                                    Marcar entregue
-                                </button>
-                            </div>
-                        ) : null}
                     </div>
                 ) : null}
             </CompactModal>

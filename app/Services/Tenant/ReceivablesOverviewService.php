@@ -24,12 +24,10 @@ class ReceivablesOverviewService
     {
         $credit = $this->creditByCustomer();
         $conditional = $this->conditionalByCustomer();
-        $delivery = $this->deliveryByCustomer();
 
         $customerIds = collect()
             ->merge($credit->keys())
             ->merge($conditional->keys())
-            ->merge($delivery->keys())
             ->unique()
             ->values();
 
@@ -40,20 +38,17 @@ class ReceivablesOverviewService
             ->groupBy('customer_id')
             ->pluck('last_received_at', 'customer_id');
 
-        $rows = $customerIds->map(function ($customerId) use ($credit, $conditional, $delivery, $customers, $lastPayments) {
+        $rows = $customerIds->map(function ($customerId) use ($credit, $conditional, $customers, $lastPayments) {
             $creditRow = $credit->get($customerId);
             $conditionalRow = $conditional->get($customerId);
-            $deliveryRow = $delivery->get($customerId);
 
             $creditBalance = round((float) ($creditRow['balance'] ?? 0), 2);
             $conditionalBalance = round((float) ($conditionalRow['balance'] ?? 0), 2);
-            $deliveryBalance = round((float) ($deliveryRow['balance'] ?? 0), 2);
-            $total = round($creditBalance + $conditionalBalance + $deliveryBalance, 2);
+            $total = round($creditBalance + $conditionalBalance, 2);
 
             $buckets = array_filter([
                 $creditRow['bucket'] ?? null,
                 $conditionalRow['bucket'] ?? null,
-                $deliveryRow['bucket'] ?? null,
             ]);
 
             $worstBucket = collect($buckets)->sortByDesc(fn ($bucket) => self::AGING_ORDER[$bucket] ?? 0)->first() ?? 'a_vencer';
@@ -65,7 +60,6 @@ class ReceivablesOverviewService
                 'credit_limit' => (float) ($customers->get($customerId)?->credit_limit ?? 0),
                 'credit_balance' => $creditBalance,
                 'conditional_balance' => $conditionalBalance,
-                'delivery_balance' => $deliveryBalance,
                 'total' => $total,
                 'aging_bucket' => $worstBucket,
                 'last_payment_at' => $lastPayments->get($customerId),
@@ -275,20 +269,6 @@ class ReceivablesOverviewService
             - (float) $item->quantity_damaged,
             3,
         );
-    }
-
-    protected function deliveryByCustomer(): Collection
-    {
-        return DeliveryOrder::query()
-            ->where('status', 'delivered')
-            ->whereNull('payment_collected_at')
-            ->whereNotNull('customer_id')
-            ->get()
-            ->groupBy('customer_id')
-            ->map(fn (Collection $orders) => [
-                'balance' => round((float) $orders->sum('order_total'), 2),
-                'bucket' => $this->bucketFromDate(Carbon::parse($orders->min('delivered_at') ?? now())),
-            ]);
     }
 
     protected function bucketFromDate(Carbon $referenceDate): string
