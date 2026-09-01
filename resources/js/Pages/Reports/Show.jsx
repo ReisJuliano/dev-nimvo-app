@@ -87,6 +87,11 @@ const FIELD_LABELS = {
     payment_method: 'Pagamento',
     operator_id: 'Operador',
     customer_id: 'Cliente',
+    product_id: 'Produto',
+    age_bucket: 'Faixa etaria',
+    gender: 'Genero',
+    delivery_status: 'Status entrega',
+    delivery_channel: 'Canal',
     category_id: 'Categoria',
     supplier_id: 'Fornecedor',
     stock_status: 'Status',
@@ -164,6 +169,11 @@ function buildFormState(filters = {}, schema = {}) {
         payment_method: filters.payment_method || '',
         operator_id: filters.operator_id || '',
         customer_id: filters.customer_id || '',
+        product_id: filters.product_id || '',
+        age_bucket: filters.age_bucket || '',
+        gender: filters.gender || '',
+        delivery_status: filters.delivery_status || '',
+        delivery_channel: filters.delivery_channel || '',
         category_id: filters.category_id || '',
         supplier_id: filters.supplier_id || '',
         stock_status: filters.stock_status || '',
@@ -210,6 +220,11 @@ function buildPayload(data, overrides = {}) {
             payment_method: payload.payment_method,
             operator_id: payload.operator_id,
             customer_id: payload.customer_id,
+            product_id: payload.product_id,
+            age_bucket: payload.age_bucket,
+            gender: payload.gender,
+            delivery_status: payload.delivery_status,
+            delivery_channel: payload.delivery_channel,
             category_id: payload.category_id,
             supplier_id: payload.supplier_id,
             stock_status: payload.stock_status,
@@ -299,7 +314,7 @@ function resolveStatusTone(value = '') {
 
 function countActiveAdvancedFilters(data, visibleFields) {
     return visibleFields.filter((field) =>
-        ['payment_method', 'operator_id', 'customer_id', 'category_id', 'supplier_id', 'stock_status', 'balance_status']
+        ['payment_method', 'operator_id', 'customer_id', 'product_id', 'age_bucket', 'gender', 'delivery_status', 'delivery_channel', 'category_id', 'supplier_id', 'stock_status', 'balance_status']
             .includes(field) && Boolean(data[field]),
     ).length
 }
@@ -380,7 +395,12 @@ function ReportChartCard({ chart }) {
                                 isAnimationActive={false}
                             >
                                 {chart.data.map((entry, index) => (
-                                    <Cell key={`${entry[nameKey]}-${index}`} fill={resolveDonutColor(entry[nameKey], index)} />
+                                    <Cell
+                                        key={`${entry[nameKey]}-${index}`}
+                                        fill={resolveDonutColor(entry[nameKey], index)}
+                                        cursor={entry.href ? 'pointer' : 'default'}
+                                        onClick={() => entry.href && router.visit(entry.href)}
+                                    />
                                 ))}
                             </Pie>
                         </PieChart>
@@ -470,6 +490,8 @@ function ReportChartCard({ chart }) {
                             fill={item.color}
                             radius={[10, 10, 0, 0]}
                             maxBarSize={28}
+                            cursor={chart.data.some((entry) => entry.href) ? 'pointer' : 'default'}
+                            onClick={(entry) => entry?.payload?.href && router.visit(entry.payload.href)}
                         />
                     ))}
                 </BarChart>
@@ -511,7 +533,12 @@ function ReportTable({ columns, rows }) {
                         <tr key={`${index}-${row[columns[0]?.key] ?? 'row'}`}>
                             {columns.map((column) => (
                                 <td key={column.key}>
-                                    {(column.key === 'status' || column.format === 'status') && row[column.key]
+                                    {column.href_key && row[column.href_key] ? (
+                                        <Link href={row[column.href_key]} className="report-table-link">
+                                            {renderValue(row[column.key], column.format)}
+                                            <i className="fa-solid fa-arrow-up-right-from-square" />
+                                        </Link>
+                                    ) : (column.key === 'status' || column.format === 'status') && row[column.key]
                                         ? <span className={`report-status-chip tone-${resolveStatusTone(row[column.key])}`}>{row[column.key]}</span>
                                         : renderValue(row[column.key], column.format)}
                                 </td>
@@ -570,7 +597,7 @@ export default function Show({
     const showPeriodFilters = visibleFields.includes('scope')
     const showSearch = visibleFields.includes('query')
     const hasAdvancedFilters = visibleFields.some((field) =>
-        ['payment_method', 'operator_id', 'customer_id', 'category_id', 'supplier_id', 'stock_status', 'balance_status', 'sort_by', 'sort_direction', 'per_page']
+        ['payment_method', 'operator_id', 'customer_id', 'product_id', 'age_bucket', 'gender', 'delivery_status', 'delivery_channel', 'category_id', 'supplier_id', 'stock_status', 'balance_status', 'sort_by', 'sort_direction', 'per_page']
             .includes(field),
     )
 
@@ -771,6 +798,11 @@ export default function Show({
             payment_method: filterOptions.payment_methods,
             operator_id: filterOptions.operators,
             customer_id: filterOptions.customers,
+            product_id: filterOptions.products,
+            age_bucket: filterOptions.age_buckets,
+            gender: filterOptions.genders,
+            delivery_status: filterOptions.delivery_statuses,
+            delivery_channel: filterOptions.delivery_channels,
             category_id: filterOptions.categories,
             supplier_id: filterOptions.suppliers,
             stock_status: filterOptions.stock_statuses,
@@ -937,6 +969,11 @@ export default function Show({
                                 {[
                                     'operator_id',
                                     'customer_id',
+                                    'product_id',
+                                    'age_bucket',
+                                    'gender',
+                                    'delivery_status',
+                                    'delivery_channel',
                                     'category_id',
                                     'supplier_id',
                                     'payment_method',

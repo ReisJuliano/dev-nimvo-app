@@ -743,6 +743,8 @@ class OperationsWorkspaceService
             'document' => ['nullable', 'string', 'max:30'],
             'phone' => ['nullable', 'string', 'max:60'],
             'email' => ['nullable', 'email', 'max:255'],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'gender' => ['nullable', Rule::in(['female', 'male', 'non_binary', 'other', 'prefer_not_to_say'])],
             'state_registration' => ['nullable', 'string', 'max:30'],
             'street' => ['nullable', 'string', 'max:255'],
             'number' => ['nullable', 'string', 'max:30'],
@@ -787,6 +789,14 @@ class OperationsWorkspaceService
 
         if ($this->hasColumn('customers', 'email')) {
             $payload['email'] = $validated['email'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'birth_date')) {
+            $payload['birth_date'] = $validated['birth_date'] ?? null;
+        }
+
+        if ($this->hasColumn('customers', 'gender')) {
+            $payload['gender'] = $validated['gender'] ?? null;
         }
 
         if ($this->hasColumn('customers', 'state_registration')) {
@@ -2050,6 +2060,12 @@ class OperationsWorkspaceService
             'phone' => $customer->phone,
             'email' => $this->hasColumn('customers', 'email')
                 ? $customer->getAttribute('email')
+                : null,
+            'birth_date' => $this->hasColumn('customers', 'birth_date')
+                ? $customer->birth_date?->toDateString()
+                : null,
+            'gender' => $this->hasColumn('customers', 'gender')
+                ? $customer->getAttribute('gender')
                 : null,
             'state_registration' => $this->hasColumn('customers', 'state_registration')
                 ? $customer->getAttribute('state_registration')

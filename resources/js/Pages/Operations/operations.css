@@ -35,6 +35,12 @@
     --report-cat-clientes-fg: #712B13;
     --report-cat-clientes-border: #D85A30;
 
+    /* Delivery */
+    --report-cat-delivery-bg: #E8F2F7;
+    --report-cat-delivery-bg-strong: #B9D8E8;
+    --report-cat-delivery-fg: #174D63;
+    --report-cat-delivery-border: #4285A0;
+
     /* Todos (neutro) */
     --report-cat-todos-bg: #F1EFE8;
     --report-cat-todos-bg-strong: #E3DFD2;

@@ -718,6 +718,23 @@
     background: var(--app-primary-soft);
 }
 
+.report-table-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--app-primary);
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.report-table-link:hover {
+    text-decoration: underline;
+}
+
+.report-table-link i {
+    font-size: 0.68rem;
+}
+
 .report-status-chip {
     display: inline-flex;
     align-items: center;

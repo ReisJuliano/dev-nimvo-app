@@ -118,6 +118,12 @@ class ReportBrowserService
                 'dre-simplified' => $this->dreSimplifiedReport($resolvedFilters),
                 'receivables-aging' => $this->receivablesAgingReport($resolvedFilters),
                 'receivables-delinquency' => $this->receivablesDelinquencyReport($resolvedFilters),
+                'deliveries-overview' => $this->deliveriesOverviewReport($resolvedFilters),
+                'deliveries-customers' => $this->deliveriesCustomersReport($resolvedFilters),
+                'customer-demographics' => $this->customerDemographicsReport($resolvedFilters),
+                'customer-segment-products' => $this->customerSegmentProductsReport($resolvedFilters),
+                'product-drilldown' => $this->productDrilldownReport($resolvedFilters),
+                'customer-drilldown' => $this->customerDrilldownReport($resolvedFilters),
                 'expiring-products' => $this->expiringProductsReport($resolvedFilters),
                 'losses-registered' => $this->lossesRegisteredReport($resolvedFilters),
                 'cashflow-daily' => $this->cashFlowDailyReport($resolvedFilters),
@@ -194,6 +200,12 @@ class ReportBrowserService
                 'label' => 'Clientes',
                 'icon' => 'fa-users',
                 'description' => 'Ranking por faturamento e frequência de compra.',
+            ],
+            [
+                'key' => 'deliveries',
+                'label' => 'Entregas',
+                'icon' => 'fa-motorcycle',
+                'description' => 'Volume, taxa, status, bairros, entregadores e clientes por entrega.',
             ],
             [
                 'key' => 'promotions',
@@ -391,6 +403,54 @@ class ReportBrowserService
                 'icon' => 'fa-ranking-star',
                 'tags' => ['Ranking', 'Ticket', 'Recorrência'],
             ],
+            [
+                'key' => 'customer-demographics',
+                'category' => 'customers',
+                'title' => 'Clientes por faixa etaria',
+                'description' => 'Agrupa receita, quantidade e ticket medio por faixa etaria e genero.',
+                'icon' => 'fa-chart-pie',
+                'tags' => ['Idade', 'Genero', 'Segmento'],
+            ],
+            [
+                'key' => 'customer-segment-products',
+                'category' => 'customers',
+                'title' => 'Produtos por perfil de cliente',
+                'description' => 'Mostra os itens mais comprados por faixa etaria e genero.',
+                'icon' => 'fa-basket-shopping',
+                'tags' => ['Produto', 'Faixa etaria', 'Genero'],
+            ],
+            [
+                'key' => 'customer-drilldown',
+                'category' => 'customers',
+                'title' => 'Drill-through de cliente',
+                'description' => 'Abre a jornada unitaria de um cliente com vendas, produtos e ticket.',
+                'icon' => 'fa-user-magnifying-glass',
+                'tags' => ['Cliente', 'Produtos', 'Historico'],
+            ],
+            [
+                'key' => 'product-drilldown',
+                'category' => 'products',
+                'title' => 'Drill-through de produto',
+                'description' => 'Analisa um produto unitario por dia, cliente, margem e quantidade.',
+                'icon' => 'fa-magnifying-glass-chart',
+                'tags' => ['Produto', 'Clientes', 'Detalhe'],
+            ],
+            [
+                'key' => 'deliveries-overview',
+                'category' => 'deliveries',
+                'title' => 'Entregas por periodo',
+                'description' => 'Quantidade por dia e mes com taxa, valor, status e tempo medio.',
+                'icon' => 'fa-route',
+                'tags' => ['Dia', 'Mes', 'Status'],
+            ],
+            [
+                'key' => 'deliveries-customers',
+                'category' => 'deliveries',
+                'title' => 'Clientes e bairros em entregas',
+                'description' => 'Ranking de clientes, bairros e entregadores por volume de entrega.',
+                'icon' => 'fa-map-location-dot',
+                'tags' => ['Cliente', 'Bairro', 'Entregador'],
+            ],
         ];
     }
 
@@ -475,6 +535,11 @@ class ReportBrowserService
             'payment_method' => $this->normalizeSelection($filters['payment_method'] ?? null, PaymentMethod::saleMethods()),
             'operator_id' => $this->normalizePositiveInt($filters['operator_id'] ?? null),
             'customer_id' => $this->normalizePositiveInt($filters['customer_id'] ?? null),
+            'product_id' => $this->normalizePositiveInt($filters['product_id'] ?? null),
+            'age_bucket' => $this->normalizeSelection($filters['age_bucket'] ?? null, array_keys($this->ageBucketDefinitions())),
+            'gender' => $this->normalizeSelection($filters['gender'] ?? null, array_keys($this->genderDefinitions())),
+            'delivery_status' => $this->normalizeSelection($filters['delivery_status'] ?? null, ['pending', 'dispatched', 'delivered']),
+            'delivery_channel' => $this->normalizeSelection($filters['delivery_channel'] ?? null, ['delivery', 'retirada']),
             'category_id' => $this->normalizePositiveInt($filters['category_id'] ?? null),
             'supplier_id' => $this->normalizePositiveInt($filters['supplier_id'] ?? null),
             'till_id' => $this->normalizePositiveInt($filters['till_id'] ?? null),
@@ -507,6 +572,11 @@ class ReportBrowserService
             'payment_method' => $filters['payment_method'] ?? '',
             'operator_id' => $filters['operator_id'] ? (string) $filters['operator_id'] : '',
             'customer_id' => $filters['customer_id'] ? (string) $filters['customer_id'] : '',
+            'product_id' => $filters['product_id'] ? (string) $filters['product_id'] : '',
+            'age_bucket' => $filters['age_bucket'] ?? '',
+            'gender' => $filters['gender'] ?? '',
+            'delivery_status' => $filters['delivery_status'] ?? '',
+            'delivery_channel' => $filters['delivery_channel'] ?? '',
             'category_id' => $filters['category_id'] ? (string) $filters['category_id'] : '',
             'supplier_id' => $filters['supplier_id'] ? (string) $filters['supplier_id'] : '',
             'till_id' => $filters['till_id'] ? (string) $filters['till_id'] : '',
@@ -567,6 +637,11 @@ class ReportBrowserService
             'payment_method',
             'operator_id',
             'customer_id',
+            'product_id',
+            'age_bucket',
+            'gender',
+            'delivery_status',
+            'delivery_channel',
             'category_id',
             'supplier_id',
             'till_id',
@@ -626,7 +701,7 @@ class ReportBrowserService
                 'default_sort' => ['by' => 'total', 'direction' => 'desc'],
             ],
             'sales-products', 'product-demand' => [
-                'fields' => ['scope', 'query', 'category_id', 'operator_id', 'customer_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'fields' => ['scope', 'query', 'product_id', 'category_id', 'operator_id', 'customer_id', 'age_bucket', 'gender', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
                     ['value' => 'quantity_sold', 'label' => 'Quantidade'],
                     ['value' => 'revenue', 'label' => 'Receita'],
@@ -649,7 +724,7 @@ class ReportBrowserService
                 'default_sort' => ['by' => 'total', 'direction' => 'desc'],
             ],
             'sales-customers', 'customer-ranking' => [
-                'fields' => ['scope', 'query', 'customer_id', 'operator_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'fields' => ['scope', 'query', 'customer_id', 'operator_id', 'product_id', 'age_bucket', 'gender', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
                 'sort_options' => [
                     ['value' => 'total', 'label' => 'Receita'],
                     ['value' => 'sales_count', 'label' => 'Vendas'],
@@ -659,6 +734,76 @@ class ReportBrowserService
                 ],
                 'default_sort' => ['by' => 'total', 'direction' => 'desc'],
                 'search_placeholder' => 'Cliente',
+            ],
+            'customer-demographics' => [
+                'fields' => ['scope', 'age_bucket', 'gender', 'product_id', 'category_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'revenue', 'label' => 'Receita'],
+                    ['value' => 'quantity_sold', 'label' => 'Quantidade'],
+                    ['value' => 'sales_count', 'label' => 'Vendas'],
+                    ['value' => 'avg_ticket', 'label' => 'Ticket'],
+                    ['value' => 'segment_label', 'label' => 'Segmento'],
+                ],
+                'default_sort' => ['by' => 'revenue', 'direction' => 'desc'],
+            ],
+            'customer-segment-products' => [
+                'fields' => ['scope', 'query', 'product_id', 'category_id', 'age_bucket', 'gender', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'quantity_sold', 'label' => 'Quantidade'],
+                    ['value' => 'revenue', 'label' => 'Receita'],
+                    ['value' => 'profit', 'label' => 'Lucro'],
+                    ['value' => 'segment_label', 'label' => 'Segmento'],
+                    ['value' => 'product_name', 'label' => 'Produto'],
+                ],
+                'default_sort' => ['by' => 'quantity_sold', 'direction' => 'desc'],
+                'search_placeholder' => 'Produto ou codigo',
+            ],
+            'product-drilldown' => [
+                'fields' => ['scope', 'query', 'product_id', 'customer_id', 'age_bucket', 'gender', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'reference_date', 'label' => 'Data'],
+                    ['value' => 'quantity_sold', 'label' => 'Quantidade'],
+                    ['value' => 'revenue', 'label' => 'Receita'],
+                    ['value' => 'profit', 'label' => 'Lucro'],
+                    ['value' => 'customer_name', 'label' => 'Cliente'],
+                ],
+                'default_sort' => ['by' => 'reference_date', 'direction' => 'desc'],
+                'search_placeholder' => 'Produto ou codigo',
+            ],
+            'customer-drilldown' => [
+                'fields' => ['scope', 'query', 'customer_id', 'product_id', 'category_id', 'payment_method', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'created_at', 'label' => 'Data'],
+                    ['value' => 'total', 'label' => 'Receita'],
+                    ['value' => 'quantity_sold', 'label' => 'Quantidade'],
+                    ['value' => 'product_name', 'label' => 'Produto'],
+                ],
+                'default_sort' => ['by' => 'created_at', 'direction' => 'desc'],
+                'search_placeholder' => 'Cliente ou produto',
+            ],
+            'deliveries-overview' => [
+                'fields' => ['scope', 'query', 'customer_id', 'delivery_status', 'delivery_channel', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'reference_date', 'label' => 'Data'],
+                    ['value' => 'orders_count', 'label' => 'Entregas'],
+                    ['value' => 'gross_total', 'label' => 'Total'],
+                    ['value' => 'delivery_fee_total', 'label' => 'Taxa'],
+                    ['value' => 'avg_delivery_minutes', 'label' => 'Tempo medio'],
+                ],
+                'default_sort' => ['by' => 'reference_date', 'direction' => 'desc'],
+                'search_placeholder' => 'Referencia, cliente, bairro ou entregador',
+            ],
+            'deliveries-customers' => [
+                'fields' => ['scope', 'query', 'customer_id', 'delivery_status', 'delivery_channel', 'sort_by', 'sort_direction', 'per_page'],
+                'sort_options' => [
+                    ['value' => 'orders_count', 'label' => 'Entregas'],
+                    ['value' => 'gross_total', 'label' => 'Total'],
+                    ['value' => 'delivery_fee_total', 'label' => 'Taxa'],
+                    ['value' => 'customer_name', 'label' => 'Cliente'],
+                    ['value' => 'neighborhood', 'label' => 'Bairro'],
+                ],
+                'default_sort' => ['by' => 'orders_count', 'direction' => 'desc'],
+                'search_placeholder' => 'Cliente, bairro ou entregador',
             ],
             'stock-position' => [
                 'fields' => ['scope', 'query', 'category_id', 'supplier_id', 'stock_status', 'sort_by', 'sort_direction', 'per_page'],
@@ -832,6 +977,11 @@ class ReportBrowserService
                 ->all(),
             'operators' => $this->operatorFilterOptions(),
             'customers' => $this->customerFilterOptions(),
+            'products' => $this->productFilterOptions(),
+            'age_buckets' => $this->ageBucketFilterOptions(),
+            'genders' => $this->genderFilterOptions(),
+            'delivery_statuses' => $this->deliveryStatusFilterOptions(),
+            'delivery_channels' => $this->deliveryChannelFilterOptions(),
             'categories' => $this->namedLookupFilterOptions('categories'),
             'suppliers' => $this->namedLookupFilterOptions('suppliers', 120),
             'tills' => $this->namedLookupFilterOptions('tills'),
@@ -895,6 +1045,76 @@ class ReportBrowserService
                     : $customer->name,
             ])
             ->all();
+    }
+
+    protected function productFilterOptions(): array
+    {
+        if (! $this->hasTableColumns('products', ['id', 'name'])) {
+            return [];
+        }
+
+        $columns = ['id', 'name'];
+
+        if ($this->hasTableColumn('products', 'code')) {
+            $columns[] = 'code';
+        }
+
+        $query = Product::query()
+            ->orderBy('name')
+            ->limit(160);
+
+        if ($this->hasTableColumn('products', 'active')) {
+            $query->where('active', true);
+        }
+
+        return $query
+            ->get($columns)
+            ->map(fn (Product $product) => [
+                'value' => (string) $product->getKey(),
+                'label' => $product->code
+                    ? "{$product->name} - {$product->code}"
+                    : $product->name,
+            ])
+            ->all();
+    }
+
+    protected function ageBucketFilterOptions(): array
+    {
+        return collect($this->ageBucketDefinitions())
+            ->map(fn (array $bucket, string $key) => [
+                'value' => $key,
+                'label' => $bucket['label'],
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function genderFilterOptions(): array
+    {
+        return collect($this->genderDefinitions())
+            ->map(fn (string $label, string $key) => [
+                'value' => $key,
+                'label' => $label,
+            ])
+            ->values()
+            ->all();
+    }
+
+    protected function deliveryStatusFilterOptions(): array
+    {
+        return [
+            ['value' => 'pending', 'label' => 'Pendente'],
+            ['value' => 'dispatched', 'label' => 'Em rota'],
+            ['value' => 'delivered', 'label' => 'Entregue'],
+        ];
+    }
+
+    protected function deliveryChannelFilterOptions(): array
+    {
+        return [
+            ['value' => 'delivery', 'label' => 'Delivery'],
+            ['value' => 'retirada', 'label' => 'Retirada'],
+        ];
     }
 
     protected function inventorySessionFilterOptions(): array
@@ -1188,23 +1408,26 @@ class ReportBrowserService
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->leftJoin('customers', 'customers.id', '=', 'sales.customer_id')
             ->where('sales.status', 'finalized')
             ->whereBetween('sales.created_at', [$filters['from'], $filters['to']]);
 
         $this->applySaleDimensionFilters($baseQuery, $filters);
         $this->applyProductDimensionFilters($baseQuery, $filters);
+        $this->applyCustomerProfileFilters($baseQuery, $filters);
 
         $summary = (clone $baseQuery)
             ->selectRaw('COUNT(DISTINCT products.id) as products_count, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit')
             ->first();
 
         $topProducts = (clone $baseQuery)
-            ->selectRaw("products.code, products.name, COALESCE(categories.name, 'Sem categoria') as category_name, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit")
+            ->selectRaw("products.id as product_id, products.code, products.name, COALESCE(categories.name, 'Sem categoria') as category_name, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit")
             ->groupBy('products.id', 'products.code', 'products.name', 'categories.name')
             ->orderByDesc('revenue')
             ->limit(8)
             ->get()
             ->map(fn ($row) => [
+                'product_id' => $row->product_id,
                 'code' => $row->code ?: '-',
                 'name' => $row->name,
                 'category_name' => $row->category_name,
@@ -1212,6 +1435,14 @@ class ReportBrowserService
                 'revenue' => (float) $row->revenue,
                 'profit' => (float) $row->profit,
                 'margin' => (float) $row->revenue > 0 ? ((float) $row->profit / (float) $row->revenue) * 100 : 0,
+                'drill_href' => route('reports.show', [
+                    'report' => 'product-drilldown',
+                    'product_id' => $row->product_id,
+                    'scope' => $filters['scope'],
+                    'from' => $filters['from']->toDateString(),
+                    'to' => $filters['to']->toDateString(),
+                    'applied' => 1,
+                ]),
             ])
             ->values();
 
@@ -1228,7 +1459,7 @@ class ReportBrowserService
             ->values();
 
         $query = (clone $baseQuery)
-            ->selectRaw("products.code, products.name, COALESCE(categories.name, 'Sem categoria') as category_name, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit")
+            ->selectRaw("products.id as product_id, products.code, products.name, COALESCE(categories.name, 'Sem categoria') as category_name, COALESCE(SUM(sale_items.quantity), 0) as quantity_sold, COALESCE(SUM(sale_items.total), 0) as revenue, COALESCE(SUM(sale_items.profit), 0) as profit")
             ->groupBy('products.id', 'products.code', 'products.name', 'categories.name');
 
         $this->applyOrderBy($query, [
@@ -1241,6 +1472,7 @@ class ReportBrowserService
 
         $paginator = $query->paginate($filters['per_page'], ['*'], 'page', $filters['page']);
         $rows = collect($paginator->items())->map(fn ($row) => [
+            'product_id' => $row->product_id,
             'code' => $row->code ?: '-',
             'name' => $row->name,
             'category_name' => $row->category_name,
@@ -1248,6 +1480,14 @@ class ReportBrowserService
             'revenue' => (float) $row->revenue,
             'profit' => (float) $row->profit,
             'margin' => (float) $row->revenue > 0 ? ((float) $row->profit / (float) $row->revenue) * 100 : 0,
+            'drill_href' => route('reports.show', [
+                'report' => 'product-drilldown',
+                'product_id' => $row->product_id,
+                'scope' => $filters['scope'],
+                'from' => $filters['from']->toDateString(),
+                'to' => $filters['to']->toDateString(),
+                'applied' => 1,
+            ]),
         ])->all();
         $leader = $topProducts->first();
         $bestMargin = $topProducts->sortByDesc('margin')->first();
@@ -1279,6 +1519,7 @@ class ReportBrowserService
                     'data' => $topProducts->map(fn (array $row) => [
                         'label' => mb_strimwidth($row['name'], 0, 18, '...'),
                         'revenue' => $row['revenue'],
+                        'href' => $row['drill_href'],
                     ])->all(),
                     'series' => [
                         ['key' => 'revenue', 'label' => 'Receita', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
@@ -1300,7 +1541,7 @@ class ReportBrowserService
             ],
             columns: [
                 ['key' => 'code', 'label' => 'Código'],
-                ['key' => 'name', 'label' => 'Produto'],
+                ['key' => 'name', 'label' => 'Produto', 'href_key' => 'drill_href'],
                 ['key' => 'category_name', 'label' => 'Categoria'],
                 ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
                 ['key' => 'revenue', 'label' => 'Receita', 'format' => 'money'],
@@ -1430,18 +1671,31 @@ class ReportBrowserService
         $customersBaseQuery = $this->baseSalesQuery($filters)
             ->leftJoin('customers', 'customers.id', '=', 'sales.customer_id')
             ->when($filters['query'], fn ($builder, $term) => $this->applyLikeFilter($builder, $term, ['customers.name']))
-            ->selectRaw("COALESCE(customers.name, 'Nao identificado') as customer_name, COUNT(*) as sales_count, COALESCE(SUM(sales.total), 0) as total, COALESCE(AVG(sales.total), 0) as avg_ticket, MAX(sales.created_at) as last_sale_at")
-            ->groupBy('sales.customer_id', 'customers.name');
+            ->selectRaw("sales.customer_id, COALESCE(customers.name, 'Nao identificado') as customer_name, customers.birth_date, customers.gender, COUNT(*) as sales_count, COALESCE(SUM(sales.total), 0) as total, COALESCE(AVG(sales.total), 0) as avg_ticket, MAX(sales.created_at) as last_sale_at")
+            ->groupBy('sales.customer_id', 'customers.name', 'customers.birth_date', 'customers.gender');
+        $this->applyCustomerProfileFilters($customersBaseQuery, $filters);
 
         $customerRows = (clone $customersBaseQuery)
             ->orderByDesc('total')
             ->get()
             ->map(fn ($row) => [
                 'customer_name' => $row->customer_name,
+                'customer_id' => $row->customer_id,
+                'age_bucket' => $this->ageBucketFor($row->birth_date),
+                'age_bucket_label' => $this->ageBucketLabel($this->ageBucketFor($row->birth_date)),
+                'gender_label' => $this->genderLabel($row->gender),
                 'sales_count' => (int) $row->sales_count,
                 'total' => (float) $row->total,
                 'avg_ticket' => (float) $row->avg_ticket,
                 'last_sale_at' => $row->last_sale_at,
+                'drill_href' => $row->customer_id ? route('reports.show', [
+                    'report' => 'customer-drilldown',
+                    'customer_id' => $row->customer_id,
+                    'scope' => $filters['scope'],
+                    'from' => $filters['from']->toDateString(),
+                    'to' => $filters['to']->toDateString(),
+                    'applied' => 1,
+                ]) : null,
             ])
             ->values();
 
@@ -1517,7 +1771,9 @@ class ReportBrowserService
                 ],
             ],
             columns: [
-                ['key' => 'customer_name', 'label' => 'Cliente'],
+                ['key' => 'customer_name', 'label' => 'Cliente', 'href_key' => 'drill_href'],
+                ['key' => 'age_bucket_label', 'label' => 'Faixa'],
+                ['key' => 'gender_label', 'label' => 'Genero'],
                 ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
                 ['key' => 'total', 'label' => 'Receita', 'format' => 'money'],
                 ['key' => 'avg_ticket', 'label' => 'Ticket', 'format' => 'money'],
@@ -2822,6 +3078,589 @@ class ReportBrowserService
         );
     }
 
+    protected function customerDemographicsReport(array $filters): array
+    {
+        $items = $this->customerSegmentItemRows($filters);
+        $rows = $items
+            ->groupBy(fn (array $row) => $row['age_bucket'].'|'.$row['gender'])
+            ->map(function (Collection $group) use ($filters) {
+                $first = $group->first();
+                $salesCount = $group->pluck('sale_id')->unique()->count();
+                $revenue = round((float) $group->sum('revenue'), 2);
+
+                return [
+                    'age_bucket' => $first['age_bucket'],
+                    'gender' => $first['gender'],
+                    'age_bucket_label' => $this->ageBucketLabel($first['age_bucket']),
+                    'gender_label' => $this->genderLabel($first['gender']),
+                    'segment_label' => $this->segmentLabel($first['age_bucket'], $first['gender']),
+                    'customers_count' => $group->pluck('customer_id')->filter()->unique()->count(),
+                    'sales_count' => $salesCount,
+                    'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                    'revenue' => $revenue,
+                    'avg_ticket' => $salesCount > 0 ? $revenue / $salesCount : 0,
+                ];
+            })
+            ->values();
+        $ageRows = $rows
+            ->groupBy('age_bucket_label')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'revenue' => round((float) $group->sum('revenue'), 2),
+                'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+            ])
+            ->sortByDesc('revenue')
+            ->values();
+        $genderRows = $rows
+            ->groupBy('gender_label')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => $label,
+                'total' => round((float) $group->sum('revenue'), 2),
+            ])
+            ->sortByDesc('total')
+            ->values();
+        $sorted = $this->sortCollection($rows, $filters, [
+            'segment_label' => 'segment_label',
+            'sales_count' => 'sales_count',
+            'quantity_sold' => 'quantity_sold',
+            'revenue' => 'revenue',
+            'avg_ticket' => 'avg_ticket',
+        ], 'revenue', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $leader = $rows->sortByDesc('revenue')->first();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Segmentos', $rows->count(), 'number', 'fa-chart-pie'),
+                $this->summaryCard('Clientes identificados', $items->pluck('customer_id')->filter()->unique()->count(), 'number', 'fa-users'),
+                $this->summaryCard('Receita', round((float) $items->sum('revenue'), 2), 'money', 'fa-wallet', $leader['segment_label'] ?? null),
+                $this->summaryCard('Quantidade', round((float) $items->sum('quantity_sold'), 3), 'decimal', 'fa-basket-shopping'),
+            ],
+            highlights: [
+                $leader ? $this->highlight('Segmento lider', $leader['revenue'], 'money', $leader['segment_label'], 'success') : null,
+                $leader ? $this->highlight('Ticket do segmento', $leader['avg_ticket'], 'money', $leader['segment_label'], 'primary') : null,
+                $this->highlight('Sem idade/genero', $rows->filter(fn (array $row) => $row['age_bucket'] === 'unknown' || $row['gender'] === 'unknown')->sum('sales_count'), 'number', 'Vendas com perfil incompleto', 'warning'),
+            ],
+            charts: [
+                [
+                    'key' => 'customer-demographics-age',
+                    'type' => 'bar',
+                    'title' => 'Receita por faixa etaria',
+                    'meta' => 'Segmentacao de clientes',
+                    'data' => $ageRows->all(),
+                    'series' => [
+                        ['key' => 'revenue', 'label' => 'Receita', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
+                        ['key' => 'quantity_sold', 'label' => 'Quantidade', 'color' => '#14b8a6', 'format' => 'decimal', 'variant' => 'bar'],
+                    ],
+                ],
+                [
+                    'key' => 'customer-demographics-gender',
+                    'type' => 'donut',
+                    'title' => 'Receita por genero',
+                    'meta' => 'Mix do periodo',
+                    'data' => $genderRows->all(),
+                    'value_key' => 'total',
+                    'name_key' => 'label',
+                    'format' => 'money',
+                ],
+            ],
+            columns: [
+                ['key' => 'segment_label', 'label' => 'Segmento'],
+                ['key' => 'customers_count', 'label' => 'Clientes', 'format' => 'number'],
+                ['key' => 'sales_count', 'label' => 'Vendas', 'format' => 'number'],
+                ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'revenue', 'label' => 'Receita', 'format' => 'money'],
+                ['key' => 'avg_ticket', 'label' => 'Ticket', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma venda com cliente encontrada no recorte selecionado.',
+            table: ['title' => 'Segmentos de clientes'],
+        );
+    }
+
+    protected function customerSegmentProductsReport(array $filters): array
+    {
+        $items = $this->customerSegmentItemRows($filters);
+        $rows = $items
+            ->groupBy(fn (array $row) => $row['age_bucket'].'|'.$row['gender'].'|'.$row['product_id'])
+            ->map(function (Collection $group) use ($filters) {
+                $first = $group->first();
+                $revenue = round((float) $group->sum('revenue'), 2);
+
+                return [
+                    'product_id' => $first['product_id'],
+                    'product_code' => $first['product_code'],
+                    'product_name' => $first['product_name'],
+                    'category_name' => $first['category_name'],
+                    'age_bucket_label' => $this->ageBucketLabel($first['age_bucket']),
+                    'gender_label' => $this->genderLabel($first['gender']),
+                    'segment_label' => $this->segmentLabel($first['age_bucket'], $first['gender']),
+                    'sales_count' => $group->pluck('sale_id')->unique()->count(),
+                    'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                    'revenue' => $revenue,
+                    'profit' => round((float) $group->sum('profit'), 2),
+                    'margin' => $revenue > 0 ? ((float) $group->sum('profit') / $revenue) * 100 : 0,
+                    'drill_href' => route('reports.show', [
+                        'report' => 'product-drilldown',
+                        'product_id' => $first['product_id'],
+                        'age_bucket' => $first['age_bucket'],
+                        'gender' => $first['gender'],
+                        'scope' => $filters['scope'],
+                        'from' => $filters['from']->toDateString(),
+                        'to' => $filters['to']->toDateString(),
+                        'applied' => 1,
+                    ]),
+                ];
+            })
+            ->values();
+        $topProducts = $rows->sortByDesc('quantity_sold')->take(10)->values();
+        $segmentRows = $rows
+            ->groupBy('segment_label')
+            ->map(fn (Collection $group, string $label) => [
+                'label' => mb_strimwidth($label, 0, 22, '...'),
+                'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                'revenue' => round((float) $group->sum('revenue'), 2),
+            ])
+            ->sortByDesc('quantity_sold')
+            ->take(8)
+            ->values();
+        $sorted = $this->sortCollection($rows, $filters, [
+            'segment_label' => 'segment_label',
+            'product_name' => 'product_name',
+            'quantity_sold' => 'quantity_sold',
+            'revenue' => 'revenue',
+            'profit' => 'profit',
+            'margin' => 'margin',
+        ], 'quantity_sold', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $leader = $topProducts->first();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Produtos', $rows->pluck('product_id')->unique()->count(), 'number', 'fa-boxes-stacked'),
+                $this->summaryCard('Quantidade', round((float) $rows->sum('quantity_sold'), 3), 'decimal', 'fa-basket-shopping', $leader['product_name'] ?? null),
+                $this->summaryCard('Receita', round((float) $rows->sum('revenue'), 2), 'money', 'fa-wallet'),
+                $this->summaryCard('Lucro', round((float) $rows->sum('profit'), 2), 'money', 'fa-sack-dollar'),
+            ],
+            highlights: [
+                $leader ? $this->highlight('Item lider', $leader['quantity_sold'], 'decimal', $leader['product_name'].' / '.$leader['segment_label'], 'success') : null,
+                $leader ? $this->highlight('Receita do lider', $leader['revenue'], 'money', $leader['segment_label'], 'primary') : null,
+            ],
+            charts: [
+                [
+                    'key' => 'segment-products-top',
+                    'type' => 'bar',
+                    'title' => 'Itens mais comprados',
+                    'meta' => 'Quantidade por produto',
+                    'data' => $topProducts->map(fn (array $row) => [
+                        'label' => mb_strimwidth($row['product_name'], 0, 18, '...'),
+                        'quantity_sold' => $row['quantity_sold'],
+                        'href' => $row['drill_href'],
+                    ])->all(),
+                    'series' => [
+                        ['key' => 'quantity_sold', 'label' => 'Quantidade', 'color' => '#2563eb', 'format' => 'decimal', 'variant' => 'bar'],
+                    ],
+                ],
+                [
+                    'key' => 'segment-products-segments',
+                    'type' => 'bar',
+                    'title' => 'Volume por segmento',
+                    'meta' => 'Faixa etaria e genero',
+                    'data' => $segmentRows->all(),
+                    'series' => [
+                        ['key' => 'quantity_sold', 'label' => 'Quantidade', 'color' => '#14b8a6', 'format' => 'decimal', 'variant' => 'bar'],
+                        ['key' => 'revenue', 'label' => 'Receita', 'color' => '#f59e0b', 'format' => 'money', 'variant' => 'bar'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'segment_label', 'label' => 'Segmento'],
+                ['key' => 'product_name', 'label' => 'Produto', 'href_key' => 'drill_href'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'revenue', 'label' => 'Receita', 'format' => 'money'],
+                ['key' => 'margin', 'label' => 'Margem', 'format' => 'percent'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhum produto vendido para esse perfil no recorte.',
+            table: ['title' => 'Produtos por segmento'],
+        );
+    }
+
+    protected function productDrilldownReport(array $filters): array
+    {
+        $items = $this->customerSegmentItemRows($filters);
+        $dailyRows = $items
+            ->groupBy('reference_date')
+            ->map(fn (Collection $group, string $date) => [
+                'reference_date' => $date,
+                'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                'revenue' => round((float) $group->sum('revenue'), 2),
+                'profit' => round((float) $group->sum('profit'), 2),
+            ])
+            ->sortBy('reference_date')
+            ->values();
+        $customerRows = $items
+            ->groupBy(fn (array $row) => ($row['customer_id'] ?: 'anon').'|'.$row['customer_name'])
+            ->map(function (Collection $group) use ($filters) {
+                $first = $group->first();
+                $revenue = round((float) $group->sum('revenue'), 2);
+
+                return [
+                    'reference_date' => $group->max('created_at'),
+                    'customer_id' => $first['customer_id'],
+                    'customer_name' => $first['customer_name'],
+                    'segment_label' => $this->segmentLabel($first['age_bucket'], $first['gender']),
+                    'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                    'revenue' => $revenue,
+                    'profit' => round((float) $group->sum('profit'), 2),
+                    'margin' => $revenue > 0 ? ((float) $group->sum('profit') / $revenue) * 100 : 0,
+                    'drill_href' => $first['customer_id'] ? route('reports.show', [
+                        'report' => 'customer-drilldown',
+                        'customer_id' => $first['customer_id'],
+                        'scope' => $filters['scope'],
+                        'from' => $filters['from']->toDateString(),
+                        'to' => $filters['to']->toDateString(),
+                        'applied' => 1,
+                    ]) : null,
+                ];
+            })
+            ->values();
+        $sorted = $this->sortCollection($customerRows, $filters, [
+            'reference_date' => 'reference_date',
+            'customer_name' => 'customer_name',
+            'quantity_sold' => 'quantity_sold',
+            'revenue' => 'revenue',
+            'profit' => 'profit',
+        ], 'revenue', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $productName = $items->first()['product_name'] ?? 'Produtos filtrados';
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Produto', $productName, 'text', 'fa-box-open'),
+                $this->summaryCard('Quantidade', round((float) $items->sum('quantity_sold'), 3), 'decimal', 'fa-arrow-trend-up'),
+                $this->summaryCard('Receita', round((float) $items->sum('revenue'), 2), 'money', 'fa-wallet'),
+                $this->summaryCard('Clientes', $items->pluck('customer_id')->filter()->unique()->count(), 'number', 'fa-users'),
+            ],
+            charts: [
+                [
+                    'key' => 'product-drilldown-daily',
+                    'type' => 'area',
+                    'title' => 'Evolucao diaria',
+                    'meta' => 'Quantidade e receita',
+                    'data' => $dailyRows->map(fn (array $row) => [
+                        'label' => Carbon::parse($row['reference_date'])->format('d/m'),
+                        'quantity_sold' => $row['quantity_sold'],
+                        'revenue' => $row['revenue'],
+                    ])->all(),
+                    'series' => [
+                        ['key' => 'revenue', 'label' => 'Receita', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'area'],
+                        ['key' => 'quantity_sold', 'label' => 'Quantidade', 'color' => '#14b8a6', 'format' => 'decimal', 'variant' => 'line'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'customer_name', 'label' => 'Cliente', 'href_key' => 'drill_href'],
+                ['key' => 'segment_label', 'label' => 'Segmento'],
+                ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'revenue', 'label' => 'Receita', 'format' => 'money'],
+                ['key' => 'margin', 'label' => 'Margem', 'format' => 'percent'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma venda encontrada para o produto selecionado.',
+            table: ['title' => 'Clientes do produto'],
+        );
+    }
+
+    protected function customerDrilldownReport(array $filters): array
+    {
+        $items = $this->customerSegmentItemRows($filters);
+        $rows = $items
+            ->map(fn (array $row) => [
+                'created_at' => $row['created_at'],
+                'sale_number' => $row['sale_number'],
+                'product_name' => $row['product_name'],
+                'category_name' => $row['category_name'],
+                'quantity_sold' => $row['quantity_sold'],
+                'total' => $row['revenue'],
+                'profit' => $row['profit'],
+                'product_drill_href' => route('reports.show', [
+                    'report' => 'product-drilldown',
+                    'product_id' => $row['product_id'],
+                    'customer_id' => $row['customer_id'],
+                    'scope' => $filters['scope'],
+                    'from' => $filters['from']->toDateString(),
+                    'to' => $filters['to']->toDateString(),
+                    'applied' => 1,
+                ]),
+            ]);
+        $productRows = $rows
+            ->groupBy('product_name')
+            ->map(fn (Collection $group, string $name) => [
+                'label' => mb_strimwidth($name, 0, 18, '...'),
+                'quantity_sold' => round((float) $group->sum('quantity_sold'), 3),
+                'total' => round((float) $group->sum('total'), 2),
+            ])
+            ->sortByDesc('total')
+            ->take(8)
+            ->values();
+        $sorted = $this->sortCollection($rows, $filters, [
+            'created_at' => 'created_at',
+            'product_name' => 'product_name',
+            'quantity_sold' => 'quantity_sold',
+            'total' => 'total',
+        ], 'created_at', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $customer = $items->first();
+        $salesCount = $items->pluck('sale_id')->unique()->count();
+        $total = round((float) $items->sum('revenue'), 2);
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Cliente', $customer['customer_name'] ?? 'Clientes filtrados', 'text', 'fa-user'),
+                $this->summaryCard('Vendas', $salesCount, 'number', 'fa-receipt'),
+                $this->summaryCard('Receita', $total, 'money', 'fa-wallet'),
+                $this->summaryCard('Ticket medio', $salesCount > 0 ? $total / $salesCount : 0, 'money', 'fa-chart-column'),
+            ],
+            charts: [
+                [
+                    'key' => 'customer-drilldown-products',
+                    'type' => 'bar',
+                    'title' => 'Produtos do cliente',
+                    'meta' => 'Receita por item',
+                    'data' => $productRows->all(),
+                    'series' => [
+                        ['key' => 'total', 'label' => 'Receita', 'color' => '#2563eb', 'format' => 'money', 'variant' => 'bar'],
+                        ['key' => 'quantity_sold', 'label' => 'Quantidade', 'color' => '#14b8a6', 'format' => 'decimal', 'variant' => 'bar'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'created_at', 'label' => 'Data', 'format' => 'datetime'],
+                ['key' => 'sale_number', 'label' => 'Venda'],
+                ['key' => 'product_name', 'label' => 'Produto', 'href_key' => 'product_drill_href'],
+                ['key' => 'category_name', 'label' => 'Categoria'],
+                ['key' => 'quantity_sold', 'label' => 'Quantidade', 'format' => 'decimal'],
+                ['key' => 'total', 'label' => 'Total', 'format' => 'money'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma venda encontrada para o cliente selecionado.',
+            table: ['title' => 'Historico do cliente'],
+        );
+    }
+
+    protected function deliveriesOverviewReport(array $filters): array
+    {
+        $orders = $this->deliveryReportRows($filters);
+        $dailyRows = $orders
+            ->groupBy('reference_date')
+            ->map(fn (Collection $group, string $date) => [
+                'reference_date' => $date,
+                'orders_count' => $group->count(),
+                'delivered_count' => $group->where('status', 'delivered')->count(),
+                'gross_total' => round((float) $group->sum('gross_total'), 2),
+                'delivery_fee_total' => round((float) $group->sum('delivery_fee'), 2),
+                'avg_delivery_minutes' => $this->averageMinutes($group),
+            ])
+            ->values();
+        $monthlyRows = $orders
+            ->groupBy('reference_month')
+            ->map(fn (Collection $group, string $month) => [
+                'label' => Carbon::parse($month.'-01')->format('m/Y'),
+                'orders_count' => $group->count(),
+                'gross_total' => round((float) $group->sum('gross_total'), 2),
+            ])
+            ->values();
+        $statusRows = $orders
+            ->groupBy('status')
+            ->map(fn (Collection $group, string $status) => [
+                'label' => $this->deliveryStatusLabel($status),
+                'total' => $group->count(),
+            ])
+            ->values();
+        $sorted = $this->sortCollection($dailyRows, $filters, [
+            'reference_date' => 'reference_date',
+            'orders_count' => 'orders_count',
+            'gross_total' => 'gross_total',
+            'delivery_fee_total' => 'delivery_fee_total',
+            'avg_delivery_minutes' => 'avg_delivery_minutes',
+        ], 'reference_date', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $bestDay = $dailyRows->sortByDesc('orders_count')->first();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Entregas', $orders->count(), 'number', 'fa-motorcycle', $bestDay ? $this->shortDate($bestDay['reference_date']) : null),
+                $this->summaryCard('Valor dos pedidos', round((float) $orders->sum('order_total'), 2), 'money', 'fa-bag-shopping'),
+                $this->summaryCard('Taxas', round((float) $orders->sum('delivery_fee'), 2), 'money', 'fa-coins'),
+                $this->summaryCard('Tempo medio', $this->averageMinutes($orders), 'number', 'fa-clock', 'minutos'),
+            ],
+            highlights: [
+                $bestDay ? $this->highlight('Dia com mais entregas', $bestDay['orders_count'], 'number', $this->shortDate($bestDay['reference_date']), 'success') : null,
+                $this->highlight('Entregues', $orders->where('status', 'delivered')->count(), 'number', 'Concluidas', 'primary'),
+                $this->highlight('Pendentes/em rota', $orders->whereIn('status', ['pending', 'dispatched'])->count(), 'number', 'Acompanhar', 'warning'),
+            ],
+            charts: [
+                [
+                    'key' => 'deliveries-daily',
+                    'type' => 'bar',
+                    'title' => 'Quantidade por dia',
+                    'meta' => 'Pedidos de entrega',
+                    'data' => $dailyRows->sortBy('reference_date')->map(fn (array $row) => [
+                        'label' => Carbon::parse($row['reference_date'])->format('d/m'),
+                        'orders_count' => $row['orders_count'],
+                    ])->values()->all(),
+                    'series' => [
+                        ['key' => 'orders_count', 'label' => 'Entregas', 'color' => '#2563eb', 'format' => 'number', 'variant' => 'bar'],
+                    ],
+                ],
+                [
+                    'key' => 'deliveries-monthly',
+                    'type' => 'bar',
+                    'title' => 'Quantidade por mes',
+                    'meta' => 'Volume mensal',
+                    'data' => $monthlyRows->all(),
+                    'series' => [
+                        ['key' => 'orders_count', 'label' => 'Entregas', 'color' => '#14b8a6', 'format' => 'number', 'variant' => 'bar'],
+                        ['key' => 'gross_total', 'label' => 'Total', 'color' => '#f59e0b', 'format' => 'money', 'variant' => 'bar'],
+                    ],
+                ],
+                [
+                    'key' => 'deliveries-status',
+                    'type' => 'donut',
+                    'title' => 'Status das entregas',
+                    'meta' => 'Distribuicao do periodo',
+                    'data' => $statusRows->all(),
+                    'value_key' => 'total',
+                    'name_key' => 'label',
+                    'format' => 'number',
+                ],
+            ],
+            columns: [
+                ['key' => 'reference_date', 'label' => 'Data', 'format' => 'date'],
+                ['key' => 'orders_count', 'label' => 'Entregas', 'format' => 'number'],
+                ['key' => 'delivered_count', 'label' => 'Entregues', 'format' => 'number'],
+                ['key' => 'gross_total', 'label' => 'Total', 'format' => 'money'],
+                ['key' => 'delivery_fee_total', 'label' => 'Taxas', 'format' => 'money'],
+                ['key' => 'avg_delivery_minutes', 'label' => 'Tempo medio', 'format' => 'number'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma entrega encontrada no recorte selecionado.',
+            table: ['title' => 'Dias de entrega'],
+        );
+    }
+
+    protected function deliveriesCustomersReport(array $filters): array
+    {
+        $orders = $this->deliveryReportRows($filters);
+        $rows = $orders
+            ->groupBy(fn (array $row) => ($row['customer_id'] ?: 'anon').'|'.$row['customer_name'].'|'.$row['neighborhood'].'|'.$row['courier_name'])
+            ->map(function (Collection $group) use ($filters) {
+                $first = $group->first();
+
+                return [
+                    'customer_id' => $first['customer_id'],
+                    'customer_name' => $first['customer_name'],
+                    'neighborhood' => $first['neighborhood'],
+                    'courier_name' => $first['courier_name'],
+                    'orders_count' => $group->count(),
+                    'gross_total' => round((float) $group->sum('gross_total'), 2),
+                    'delivery_fee_total' => round((float) $group->sum('delivery_fee'), 2),
+                    'last_delivery_at' => $group->max('reference_at'),
+                    'drill_href' => $first['customer_id'] ? route('reports.show', [
+                        'report' => 'customer-drilldown',
+                        'customer_id' => $first['customer_id'],
+                        'scope' => $filters['scope'],
+                        'from' => $filters['from']->toDateString(),
+                        'to' => $filters['to']->toDateString(),
+                        'applied' => 1,
+                    ]) : null,
+                ];
+            })
+            ->values();
+        $neighborhoodRows = $orders
+            ->groupBy('neighborhood')
+            ->map(fn (Collection $group, string $neighborhood) => [
+                'label' => mb_strimwidth($neighborhood, 0, 18, '...'),
+                'orders_count' => $group->count(),
+            ])
+            ->sortByDesc('orders_count')
+            ->take(8)
+            ->values();
+        $courierRows = $orders
+            ->groupBy('courier_name')
+            ->map(fn (Collection $group, string $courier) => [
+                'label' => mb_strimwidth($courier, 0, 18, '...'),
+                'orders_count' => $group->count(),
+            ])
+            ->sortByDesc('orders_count')
+            ->take(8)
+            ->values();
+        $sorted = $this->sortCollection($rows, $filters, [
+            'customer_name' => 'customer_name',
+            'neighborhood' => 'neighborhood',
+            'orders_count' => 'orders_count',
+            'gross_total' => 'gross_total',
+            'delivery_fee_total' => 'delivery_fee_total',
+        ], 'orders_count', 'desc');
+        $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
+        $leader = $rows->sortByDesc('orders_count')->first();
+
+        return $this->reportPayload(
+            summary: [
+                $this->summaryCard('Clientes/bairros', $rows->count(), 'number', 'fa-users'),
+                $this->summaryCard('Entregas', $orders->count(), 'number', 'fa-motorcycle', $leader['customer_name'] ?? null),
+                $this->summaryCard('Taxas', round((float) $orders->sum('delivery_fee'), 2), 'money', 'fa-coins'),
+                $this->summaryCard('Total', round((float) $orders->sum('gross_total'), 2), 'money', 'fa-wallet'),
+            ],
+            highlights: [
+                $leader ? $this->highlight('Cliente/bairro lider', $leader['orders_count'], 'number', $leader['customer_name'].' / '.$leader['neighborhood'], 'success') : null,
+                $this->highlight('Bairros atendidos', $orders->pluck('neighborhood')->unique()->count(), 'number', 'No periodo', 'primary'),
+                $this->highlight('Entregadores', $orders->pluck('courier_name')->unique()->count(), 'number', 'Com volume', 'warning'),
+            ],
+            charts: [
+                [
+                    'key' => 'deliveries-neighborhoods',
+                    'type' => 'bar',
+                    'title' => 'Bairros',
+                    'meta' => 'Volume por bairro',
+                    'data' => $neighborhoodRows->all(),
+                    'series' => [
+                        ['key' => 'orders_count', 'label' => 'Entregas', 'color' => '#2563eb', 'format' => 'number', 'variant' => 'bar'],
+                    ],
+                ],
+                [
+                    'key' => 'deliveries-couriers',
+                    'type' => 'bar',
+                    'title' => 'Entregadores',
+                    'meta' => 'Volume por entregador',
+                    'data' => $courierRows->all(),
+                    'series' => [
+                        ['key' => 'orders_count', 'label' => 'Entregas', 'color' => '#14b8a6', 'format' => 'number', 'variant' => 'bar'],
+                    ],
+                ],
+            ],
+            columns: [
+                ['key' => 'customer_name', 'label' => 'Cliente', 'href_key' => 'drill_href'],
+                ['key' => 'neighborhood', 'label' => 'Bairro'],
+                ['key' => 'courier_name', 'label' => 'Entregador'],
+                ['key' => 'orders_count', 'label' => 'Entregas', 'format' => 'number'],
+                ['key' => 'gross_total', 'label' => 'Total', 'format' => 'money'],
+                ['key' => 'last_delivery_at', 'label' => 'Ultima', 'format' => 'datetime'],
+            ],
+            rows: $paginator->items(),
+            paginator: $paginator,
+            emptyText: 'Nenhuma entrega encontrada para clientes ou bairros no recorte.',
+            table: ['title' => 'Clientes, bairros e entregadores'],
+        );
+    }
+
     protected function receivablesAgingReport(array $filters): array
     {
         $rows = $this->receivablesOverviewService->overview(['search' => $filters['query']]);
@@ -3082,6 +3921,15 @@ class ReportBrowserService
         return $query
             ->when($filters['operator_id'], fn ($builder, $operatorId) => $builder->where("{$saleTable}.user_id", $operatorId))
             ->when($filters['customer_id'], fn ($builder, $customerId) => $builder->where("{$saleTable}.customer_id", $customerId))
+            ->when($filters['product_id'], function ($builder, $productId) use ($saleTable) {
+                $builder->whereExists(function ($subquery) use ($saleTable, $productId) {
+                    $subquery
+                        ->selectRaw('1')
+                        ->from('sale_items')
+                        ->whereColumn('sale_items.sale_id', "{$saleTable}.id")
+                        ->where('sale_items.product_id', $productId);
+                });
+            })
             ->when($filters['payment_method'], function ($builder, $paymentMethod) use ($saleTable) {
                 $builder->whereExists(function ($subquery) use ($saleTable, $paymentMethod) {
                     $subquery
@@ -3096,6 +3944,7 @@ class ReportBrowserService
     protected function applyProductDimensionFilters($query, array $filters, string $productTable = 'products')
     {
         return $query
+            ->when($filters['product_id'], fn ($builder, $productId) => $builder->where("{$productTable}.id", $productId))
             ->when($filters['query'], function ($builder, $term) use ($productTable) {
                 $this->applyLikeFilter($builder, $term, [
                     "{$productTable}.code",
@@ -3114,6 +3963,112 @@ class ReportBrowserService
                     default => null,
                 };
             });
+    }
+
+    protected function applyCustomerProfileFilters($query, array $filters, string $customerTable = 'customers')
+    {
+        return $query
+            ->when($filters['gender'], function ($builder, string $gender) use ($customerTable) {
+                if ($gender === 'unknown') {
+                    $builder->where(function ($nested) use ($customerTable) {
+                        $nested
+                            ->whereNull("{$customerTable}.gender")
+                            ->orWhere("{$customerTable}.gender", '');
+                    });
+
+                    return;
+                }
+
+                $builder->where("{$customerTable}.gender", $gender);
+            })
+            ->when($filters['age_bucket'], function ($builder, string $ageBucket) use ($customerTable) {
+                $bucket = $this->ageBucketDefinitions()[$ageBucket] ?? null;
+
+                if ($bucket === null || $ageBucket === 'unknown') {
+                    $builder->whereNull("{$customerTable}.birth_date");
+                    return;
+                }
+
+                $today = Carbon::today();
+                $youngestDate = $bucket['min'] !== null
+                    ? $today->copy()->subYears($bucket['min'])->toDateString()
+                    : null;
+                $oldestDate = $bucket['max'] !== null
+                    ? $today->copy()->subYears($bucket['max'] + 1)->addDay()->toDateString()
+                    : null;
+
+                if ($oldestDate !== null) {
+                    $builder->where("{$customerTable}.birth_date", '>=', $oldestDate);
+                }
+
+                if ($youngestDate !== null) {
+                    $builder->where("{$customerTable}.birth_date", '<=', $youngestDate);
+                }
+            });
+    }
+
+    protected function ageBucketDefinitions(): array
+    {
+        return [
+            'under_18' => ['label' => 'Ate 17 anos', 'min' => null, 'max' => 17],
+            '18_24' => ['label' => '18 a 24 anos', 'min' => 18, 'max' => 24],
+            '25_34' => ['label' => '25 a 34 anos', 'min' => 25, 'max' => 34],
+            '35_44' => ['label' => '35 a 44 anos', 'min' => 35, 'max' => 44],
+            '45_54' => ['label' => '45 a 54 anos', 'min' => 45, 'max' => 54],
+            '55_plus' => ['label' => '55+ anos', 'min' => 55, 'max' => null],
+            'unknown' => ['label' => 'Sem idade', 'min' => null, 'max' => null],
+        ];
+    }
+
+    protected function genderDefinitions(): array
+    {
+        return [
+            'female' => 'Feminino',
+            'male' => 'Masculino',
+            'non_binary' => 'Nao binario',
+            'other' => 'Outro',
+            'prefer_not_to_say' => 'Prefere nao informar',
+            'unknown' => 'Sem genero',
+        ];
+    }
+
+    protected function ageBucketFor(?string $birthDate): string
+    {
+        if (! filled($birthDate)) {
+            return 'unknown';
+        }
+
+        $age = Carbon::parse($birthDate)->age;
+
+        foreach ($this->ageBucketDefinitions() as $key => $bucket) {
+            if ($key === 'unknown') {
+                continue;
+            }
+
+            $min = $bucket['min'];
+            $max = $bucket['max'];
+
+            if (($min === null || $age >= $min) && ($max === null || $age <= $max)) {
+                return $key;
+            }
+        }
+
+        return 'unknown';
+    }
+
+    protected function ageBucketLabel(?string $bucket): string
+    {
+        return $this->ageBucketDefinitions()[$bucket ?: 'unknown']['label'] ?? 'Sem idade';
+    }
+
+    protected function genderLabel(?string $gender): string
+    {
+        return $this->genderDefinitions()[$gender ?: 'unknown'] ?? 'Sem genero';
+    }
+
+    protected function segmentLabel(?string $ageBucket, ?string $gender): string
+    {
+        return $this->ageBucketLabel($ageBucket).' / '.$this->genderLabel($gender);
     }
 
     protected function applyOrderBy($query, array $allowedSorts, array $filters, string $defaultSort, string $defaultDirection = 'desc')
@@ -3147,6 +4102,150 @@ class ReportBrowserService
     protected function shortDate(?string $value): ?string
     {
         return $value ? Carbon::parse($value)->format('d/m/Y') : null;
+    }
+
+    protected function customerSegmentItemRows(array $filters): Collection
+    {
+        $query = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->join('products', 'products.id', '=', 'sale_items.product_id')
+            ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
+            ->leftJoin('customers', 'customers.id', '=', 'sales.customer_id')
+            ->where('sales.status', 'finalized')
+            ->whereBetween('sales.created_at', [$filters['from'], $filters['to']])
+            ->selectRaw("
+                sale_items.sale_id,
+                sales.sale_number,
+                sales.customer_id,
+                sales.created_at,
+                DATE(sales.created_at) as reference_date,
+                COALESCE(customers.name, 'Nao identificado') as customer_name,
+                customers.birth_date,
+                customers.gender,
+                products.id as product_id,
+                products.code as product_code,
+                products.name as product_name,
+                COALESCE(categories.name, 'Sem categoria') as category_name,
+                sale_items.quantity as quantity_sold,
+                sale_items.total as revenue,
+                sale_items.profit as profit
+            ");
+
+        $this->applySaleDimensionFilters($query, $filters);
+        $this->applyProductDimensionFilters($query, $filters);
+        $this->applyCustomerProfileFilters($query, $filters);
+
+        return $query
+            ->orderByDesc('sales.created_at')
+            ->get()
+            ->map(fn ($row) => [
+                'sale_id' => $row->sale_id,
+                'sale_number' => $row->sale_number,
+                'customer_id' => $row->customer_id,
+                'customer_name' => $row->customer_name,
+                'age_bucket' => $this->ageBucketFor($row->birth_date),
+                'gender' => $row->gender ?: 'unknown',
+                'created_at' => $row->created_at,
+                'reference_date' => $row->reference_date,
+                'product_id' => $row->product_id,
+                'product_code' => $row->product_code ?: '-',
+                'product_name' => $row->product_name,
+                'category_name' => $row->category_name,
+                'quantity_sold' => (float) $row->quantity_sold,
+                'revenue' => (float) $row->revenue,
+                'profit' => (float) $row->profit,
+            ])
+            ->values();
+    }
+
+    protected function deliveryReportRows(array $filters): Collection
+    {
+        $referenceExpression = 'COALESCE(delivery_orders.scheduled_for, delivery_orders.created_at)';
+        $query = DB::table('delivery_orders')
+            ->leftJoin('customers', 'customers.id', '=', 'delivery_orders.customer_id')
+            ->whereBetween(DB::raw($referenceExpression), [$filters['from'], $filters['to']])
+            ->when($filters['customer_id'], fn ($builder, $customerId) => $builder->where('delivery_orders.customer_id', $customerId))
+            ->when($filters['delivery_status'], fn ($builder, $status) => $builder->where('delivery_orders.status', $status))
+            ->when($filters['delivery_channel'], fn ($builder, $channel) => $builder->where('delivery_orders.channel', $channel))
+            ->when($filters['query'], function ($builder, $term) {
+                $this->applyLikeFilter($builder, $term, [
+                    'delivery_orders.reference',
+                    'delivery_orders.recipient_name',
+                    'delivery_orders.phone',
+                    'delivery_orders.courier_name',
+                    'delivery_orders.address',
+                    'delivery_orders.neighborhood',
+                    'customers.name',
+                ]);
+            })
+            ->selectRaw("
+                delivery_orders.id,
+                delivery_orders.customer_id,
+                COALESCE(customers.name, delivery_orders.recipient_name, 'Nao identificado') as customer_name,
+                delivery_orders.reference,
+                delivery_orders.status,
+                delivery_orders.channel,
+                delivery_orders.courier_name,
+                delivery_orders.neighborhood,
+                delivery_orders.delivery_fee,
+                delivery_orders.order_total,
+                {$referenceExpression} as reference_at,
+                DATE({$referenceExpression}) as reference_date,
+                delivery_orders.dispatched_at,
+                delivery_orders.delivered_at
+            ");
+
+        return $query
+            ->orderByDesc(DB::raw($referenceExpression))
+            ->get()
+            ->map(function ($row) {
+                $referenceAt = Carbon::parse($row->reference_at);
+                $deliveryMinutes = null;
+
+                if (filled($row->dispatched_at) && filled($row->delivered_at)) {
+                    $deliveryMinutes = Carbon::parse($row->dispatched_at)
+                        ->diffInMinutes(Carbon::parse($row->delivered_at));
+                }
+
+                return [
+                    'id' => $row->id,
+                    'customer_id' => $row->customer_id,
+                    'customer_name' => $row->customer_name,
+                    'reference' => $row->reference,
+                    'status' => $row->status,
+                    'status_label' => $this->deliveryStatusLabel((string) $row->status),
+                    'channel' => $row->channel,
+                    'channel_label' => $row->channel === 'retirada' ? 'Retirada' : 'Delivery',
+                    'courier_name' => $row->courier_name ?: 'Sem entregador',
+                    'neighborhood' => $row->channel === 'retirada' ? 'Retirada' : ($row->neighborhood ?: 'Sem bairro'),
+                    'delivery_fee' => (float) $row->delivery_fee,
+                    'order_total' => (float) $row->order_total,
+                    'gross_total' => (float) $row->delivery_fee + (float) $row->order_total,
+                    'reference_at' => $row->reference_at,
+                    'reference_date' => $referenceAt->toDateString(),
+                    'reference_month' => $referenceAt->format('Y-m'),
+                    'delivery_minutes' => $deliveryMinutes,
+                ];
+            })
+            ->values();
+    }
+
+    protected function averageMinutes(Collection $rows): int
+    {
+        $values = $rows
+            ->pluck('delivery_minutes')
+            ->filter(fn ($value) => $value !== null);
+
+        return $values->count() > 0 ? (int) round((float) $values->avg()) : 0;
+    }
+
+    protected function deliveryStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'dispatched' => 'Em rota',
+            'delivered' => 'Entregue',
+            default => 'Pendente',
+        };
     }
 
     protected function reportPayload(array $summary, array $columns, array $rows, ?LengthAwarePaginator $paginator, string $emptyText, array $charts = [], array $highlights = [], array $table = []): array
