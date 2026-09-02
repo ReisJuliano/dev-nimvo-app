@@ -12,7 +12,6 @@ const CATEGORY_COLOR_KEYS = {
     cashflow: 'fluxo',
     receivables: 'receber',
     customers: 'clientes',
-    deliveries: 'delivery',
 }
 
 function categoryColorKey(key) {

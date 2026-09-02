@@ -16,8 +16,6 @@ class Customer extends Model
         'document_type',
         'phone',
         'email',
-        'birth_date',
-        'gender',
         'state_registration',
         'street',
         'number',
@@ -38,7 +36,6 @@ class Customer extends Model
         'consumer_final' => 'boolean',
         'credit_limit' => 'decimal:2',
         'cashback_balance' => 'decimal:2',
-        'birth_date' => 'date',
     ];
 
     public function sales(): HasMany

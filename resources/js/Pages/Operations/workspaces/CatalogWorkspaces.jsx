@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { confirmPopup } from '@/lib/errorPopup'
 import { apiRequest } from '@/lib/http'
-import { formatDate, formatMoney, formatNumber } from '@/lib/format'
+import { formatMoney, formatNumber } from '@/lib/format'
 import { requiredMessage, validateEmail } from '@/lib/formValidation'
 import { maskDocument, maskPhone, validateCpfOrCnpj } from '@/lib/validation'
 import useConfirmedSearch from '@/hooks/useConfirmedSearch'
@@ -50,19 +50,9 @@ const SUPPLIER_PRODUCT_FILTERS = [
 
 const CUSTOMER_MODAL_TABS = [
     { key: 'registration', label: 'Cadastro', icon: 'fa-address-card' },
-    { key: 'profile', label: 'Perfil', icon: 'fa-chart-pie' },
     { key: 'fiscal', label: 'Fiscal', icon: 'fa-file-invoice' },
     { key: 'address', label: 'Endereço', icon: 'fa-map-location-dot' },
     { key: 'limits', label: 'Limites', icon: 'fa-wallet' },
-]
-
-const CUSTOMER_GENDER_OPTIONS = [
-    { value: '', label: 'Nao informado' },
-    { value: 'female', label: 'Feminino' },
-    { value: 'male', label: 'Masculino' },
-    { value: 'non_binary', label: 'Nao binario' },
-    { value: 'other', label: 'Outro' },
-    { value: 'prefer_not_to_say', label: 'Prefere nao informar' },
 ]
 
 function FieldLabel({ icon, text }) {
@@ -192,19 +182,6 @@ function customerLocationLabel(record) {
     const location = [record.city_name, record.state].filter(Boolean).join(' / ')
 
     return location || 'Sem endereço'
-}
-
-function customerGenderLabel(value) {
-    return CUSTOMER_GENDER_OPTIONS.find((option) => option.value === value)?.label || 'Nao informado'
-}
-
-function customerProfileLabel(record) {
-    const parts = [
-        record.birth_date ? formatDate(record.birth_date) : null,
-        record.gender ? customerGenderLabel(record.gender) : null,
-    ].filter(Boolean)
-
-    return parts.length ? parts.join(' / ') : 'Sem perfil'
 }
 
 function CategoryListCard({ record, active, onClick }) {
@@ -956,8 +933,6 @@ export function CustomersWorkspace({ moduleKey, payload }) {
         document: '',
         phone: '',
         email: '',
-        birth_date: '',
-        gender: '',
         state_registration: '',
         street: '',
         number: '',
@@ -1075,8 +1050,6 @@ export function CustomersWorkspace({ moduleKey, payload }) {
             document: String(record?.document || ''),
             phone: String(record?.phone || ''),
             email: String(record?.email || ''),
-            birth_date: String(record?.birth_date || ''),
-            gender: String(record?.gender || ''),
             state_registration: String(record?.state_registration || ''),
             street: String(record?.street || ''),
             number: String(record?.number || ''),
@@ -1331,11 +1304,6 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                     render: (record) => customerListDescription(record),
                                 },
                                 {
-                                    key: 'profile',
-                                    label: 'Perfil',
-                                    render: (record) => customerProfileLabel(record),
-                                },
-                                {
                                     key: 'location',
                                     label: 'Cidade / UF',
                                     render: (record) => customerLocationLabel(record),
@@ -1422,32 +1390,6 @@ export function CustomersWorkspace({ moduleKey, payload }) {
                                 <select value={form.active ? 'active' : 'inactive'} onChange={(event) => setForm((current) => ({ ...current, active: event.target.value === 'active' }))}>
                                     <option value="active">Ativo</option>
                                     <option value="inactive">Inativo</option>
-                                </select>
-                            </label>
-                        </div>
-                    ) : null}
-
-                    {activeModalTab === 'profile' ? (
-                        <div className="ops-workspace-form-grid">
-                            <label>
-                                <FieldLabel icon="fa-cake-candles" text="Nascimento" />
-                                <input
-                                    type="date"
-                                    value={form.birth_date || ''}
-                                    onChange={(event) => setForm((current) => ({ ...current, birth_date: event.target.value }))}
-                                />
-                            </label>
-                            <label>
-                                <FieldLabel icon="fa-venus-mars" text="Genero" />
-                                <select
-                                    value={form.gender || ''}
-                                    onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))}
-                                >
-                                    {CUSTOMER_GENDER_OPTIONS.map((option) => (
-                                        <option key={option.value || 'empty'} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
                                 </select>
                             </label>
                         </div>
