@@ -95,7 +95,7 @@ function PurchaseItemsEditor({ products, items, onChange }) {
     )
 }
 
-function LegacyDeliveryOperationsWorkspace({ moduleKey, payload }) {
+export function DeliveryWorkspace({ moduleKey, payload }) {
     const emptyForm = { id: null, customer_id: '', reference: '', status: 'pending', channel: 'delivery', recipient_name: '', phone: '', courier_name: '', address: '', neighborhood: '', delivery_fee: '0', order_total: '0', scheduled_for: '', notes: '' }
     const defaultRange = useMemo(() => currentMonthRange(), [])
     const [records, setRecords] = useState(payload.records || [])

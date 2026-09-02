@@ -43,6 +43,7 @@ import OrderDiscountModal from './OrderDiscountModal'
 import OrderCheckoutModal from './OrderCheckoutModal'
 import OrderPartialCheckoutModal from './OrderPartialCheckoutModal'
 import OrderDeliveryModal from './OrderDeliveryModal'
+import OrderDeliveriesModal from './OrderDeliveriesModal'
 import {
     buildDiscountDraft,
     buildDraftPayload,
@@ -198,6 +199,7 @@ export default function OrdersIndex({
     const [checkoutModalOpen, setCheckoutModalOpen] = useState(false)
     const [quantityModalOpen, setQuantityModalOpen] = useState(false)
     const [deliveryModalOpen, setDeliveryModalOpen] = useState(false)
+    const [deliveriesModalOpen, setDeliveriesModalOpen] = useState(false)
     const [creatingTransferCustomer, setCreatingTransferCustomer] = useState(false)
     const [newDraftForm, setNewDraftForm] = useState(getInitialNewDraftForm())
     const searchDraftControl = useConfirmedSearch('')
@@ -443,6 +445,7 @@ export default function OrdersIndex({
         checkoutModalOpen ||
         partialCheckoutModalOpen ||
         deliveryModalOpen ||
+        deliveriesModalOpen ||
         quantityModalOpen
 
     useEffect(() => {
@@ -525,6 +528,7 @@ export default function OrdersIndex({
                 return
             }
 
+            if (deliveriesModalOpen) return void setDeliveriesModalOpen(false)
             if (deliveryModalOpen) return void setDeliveryModalOpen(false)
             if (partialCheckoutModalOpen) return void setPartialCheckoutModalOpen(false)
             if (checkoutModalOpen) return void setCheckoutModalOpen(false)
@@ -549,6 +553,7 @@ export default function OrdersIndex({
         checkoutModalOpen,
         partialCheckoutModalOpen,
         deliveryModalOpen,
+        deliveriesModalOpen,
         quantityModalOpen,
     ])
 
@@ -1670,7 +1675,8 @@ export default function OrdersIndex({
             })
 
             setDeliveryModalOpen(false)
-            showFeedback('success', `${response.message} Acompanhe tudo em Relatorios > Entregas.`)
+            setDeliveriesModalOpen(true)
+            showFeedback('success', response.message)
         } catch (error) {
             showFeedback('error', error.message)
         } finally {
@@ -2067,6 +2073,9 @@ export default function OrdersIndex({
                     />
                 ) : null}
 
+                {deliveriesModalOpen ? (
+                    <OrderDeliveriesModal open={deliveriesModalOpen} onClose={() => setDeliveriesModalOpen(false)} />
+                ) : null}
             </div>
         </AppLayout>
     )

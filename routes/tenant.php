@@ -139,12 +139,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/consultas-cancelamentos', FiscalConsultationsPageController::class)->name('fiscal.consultations.index');
         Route::get('/fiscal/notas', FiscalDocumentsPageController::class)->name('fiscal.notas.index');
         Route::get('/fiscal/matriz-tributaria', TaxRulesPageController::class)->name('fiscal.tax-rules.index');
-        Route::get('/delivery', function () {
-            return redirect()->route('reports.show', [
-                'report' => 'deliveries-overview',
-                'applied' => 1,
-            ]);
-        })->name('delivery.index');
+        Route::get('/delivery', OperationsPageController::class)->defaults('module', 'delivery')->name('delivery.index');
         Route::get('/compras', PurchasesPageController::class)->name('purchases.index');
         Route::get('/compras/devolucoes', PurchaseReturnPageController::class)->name('purchases.returns.index');
         Route::get('/vendas/devolucoes', SaleReturnPageController::class)->name('sales.returns.index');
@@ -289,6 +284,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/fiscal/tax-rules/{taxRule}', [TaxRulesApiController::class, 'update'])->name('api.fiscal.tax-rules.update');
             Route::delete('/fiscal/tax-rules/{taxRule}', [TaxRulesApiController::class, 'destroy'])->name('api.fiscal.tax-rules.destroy');
 
+            Route::get('/delivery/orders', [DeliveryApiController::class, 'index'])->name('api.delivery.orders.index');
             Route::post('/delivery/orders/{orderDraft}/from-draft', [DeliveryApiController::class, 'storeFromDraft'])->name('api.delivery.orders.from-draft');
             Route::post('/delivery/orders/{deliveryOrder}/status', [DeliveryApiController::class, 'updateStatus'])->name('api.delivery.orders.status');
 

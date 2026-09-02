@@ -3492,7 +3492,6 @@ class ReportBrowserService
         ], 'reference_date', 'desc');
         $paginator = $this->paginateCollection($sorted, $filters['per_page'], $filters['page']);
         $bestDay = $dailyRows->sortByDesc('orders_count')->first();
-        $pendingPaymentOrders = $orders->where('payment_pending', true);
 
         return $this->reportPayload(
             summary: [
@@ -3500,13 +3499,11 @@ class ReportBrowserService
                 $this->summaryCard('Valor dos pedidos', round((float) $orders->sum('order_total'), 2), 'money', 'fa-bag-shopping'),
                 $this->summaryCard('Taxas', round((float) $orders->sum('delivery_fee'), 2), 'money', 'fa-coins'),
                 $this->summaryCard('Tempo medio', $this->averageMinutes($orders), 'number', 'fa-clock', 'minutos'),
-                $this->summaryCard('Pagamento pendente', round((float) $pendingPaymentOrders->sum('order_total'), 2), 'money', 'fa-hand-holding-dollar'),
             ],
             highlights: [
                 $bestDay ? $this->highlight('Dia com mais entregas', $bestDay['orders_count'], 'number', $this->shortDate($bestDay['reference_date']), 'success') : null,
                 $this->highlight('Entregues', $orders->where('status', 'delivered')->count(), 'number', 'Concluidas', 'primary'),
                 $this->highlight('Pendentes/em rota', $orders->whereIn('status', ['pending', 'dispatched'])->count(), 'number', 'Acompanhar', 'warning'),
-                $this->highlight('Entregues sem pagamento', $pendingPaymentOrders->count(), 'number', 'Aguardando recebimento', 'warning'),
             ],
             charts: [
                 [
@@ -3672,6 +3669,7 @@ class ReportBrowserService
             'total' => round((float) $rows->sum('total'), 2),
             'credit_total' => round((float) $rows->sum('credit_balance'), 2),
             'conditional_total' => round((float) $rows->sum('conditional_balance'), 2),
+            'delivery_total' => round((float) $rows->sum('delivery_balance'), 2),
         ];
 
         $bucketCounts = collect(['a_vencer', '1_30', '31_60', '61_90', '90_mais'])
@@ -3692,6 +3690,7 @@ class ReportBrowserService
                 $this->summaryCard('Total a receber', $summary['total'], 'money', 'fa-hand-holding-dollar'),
                 $this->summaryCard('Fiado', $summary['credit_total'], 'money', 'fa-handshake'),
                 $this->summaryCard('Condicional em aberto', $summary['conditional_total'], 'money', 'fa-shirt'),
+                $this->summaryCard('Entregas não pagas', $summary['delivery_total'], 'money', 'fa-motorcycle'),
             ],
             charts: [
                 [
@@ -3709,6 +3708,7 @@ class ReportBrowserService
                 ['key' => 'customer_name', 'label' => 'Cliente'],
                 ['key' => 'credit_balance', 'label' => 'Fiado', 'format' => 'money'],
                 ['key' => 'conditional_balance', 'label' => 'Condicional', 'format' => 'money'],
+                ['key' => 'delivery_balance', 'label' => 'Entrega', 'format' => 'money'],
                 ['key' => 'total', 'label' => 'Total', 'format' => 'money'],
                 ['key' => 'aging_bucket_label', 'label' => 'Idade'],
             ],
@@ -4192,8 +4192,7 @@ class ReportBrowserService
                 {$referenceExpression} as reference_at,
                 DATE({$referenceExpression}) as reference_date,
                 delivery_orders.dispatched_at,
-                delivery_orders.delivered_at,
-                delivery_orders.payment_collected_at
+                delivery_orders.delivered_at
             ");
 
         return $query
@@ -4226,7 +4225,6 @@ class ReportBrowserService
                     'reference_date' => $referenceAt->toDateString(),
                     'reference_month' => $referenceAt->format('Y-m'),
                     'delivery_minutes' => $deliveryMinutes,
-                    'payment_pending' => $row->status === 'delivered' && blank($row->payment_collected_at),
                 ];
             })
             ->values();

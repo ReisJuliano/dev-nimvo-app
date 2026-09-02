@@ -34,6 +34,20 @@ class OperationsOverviewService
             'demanda' => $this->sales->demand($filters),
             'faltas' => $this->inventory->shortages(),
             'usuarios' => $this->users->users($filters),
+            'delivery' => $this->moduleWorkspace(
+                'Delivery',
+                'Organize entrega e retirada sem misturar o atendimento externo com o fluxo direto.',
+                [
+                    ['label' => 'Fluxo do módulo', 'value' => 'Ativo na configuração', 'meta' => 'Aparece somente quando o tenant usa entrega.'],
+                    ['label' => 'Uso recomendado', 'value' => 'Pedidos externos e retirada', 'meta' => 'Separe atendimento presencial do fluxo de entrega.'],
+                    ['label' => 'Conexao com vendas', 'value' => 'Expande o atendimento', 'meta' => 'Permite crescer para canais extras sem duplicar o sistema.'],
+                ],
+                [
+                    ['item' => 'Cadastro de entregas', 'status' => 'Pronto para configurar', 'observacao' => 'Estruture taxas, bairros e janelas de entrega.'],
+                    ['item' => 'Fila de expedicao', 'status' => 'Pronto para configurar', 'observacao' => 'Acompanhe pedidos em preparo, prontos e em saida.'],
+                    ['item' => 'Integrações externas', 'status' => 'Em evolução', 'observacao' => 'Conecte canais parceiros quando fizer sentido.'],
+                ],
+            ),
             'compras' => $this->moduleWorkspace(
                 'Compras',
                 'Separe a reposicao do negocio em uma area propria para planejar entradas, cotacoes e abastecimento.',

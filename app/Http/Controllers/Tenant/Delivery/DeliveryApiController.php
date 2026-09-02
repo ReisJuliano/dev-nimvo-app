@@ -12,6 +12,11 @@ use Illuminate\Http\JsonResponse;
 
 class DeliveryApiController extends Controller
 {
+    public function index(OperationsWorkspaceService $workspaceService): JsonResponse
+    {
+        return response()->json($workspaceService->listDeliveryOrders());
+    }
+
     public function storeFromDraft(
         CreateDeliveryFromOrderDraftRequest $request,
         OrderDraft $orderDraft,
@@ -33,3 +38,4 @@ class DeliveryApiController extends Controller
         );
     }
 }
+

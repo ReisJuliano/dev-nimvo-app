@@ -163,12 +163,11 @@ class TenantNavigationService
                         'request_patterns' => ['consultas-cancelamentos*', 'api/fiscal*'],
                     ],
                     [
-                        'href' => '/relatorios/ver/deliveries-overview?applied=1',
+                        'href' => '/delivery',
                         'label' => 'Entregas',
                         'icon' => 'fa-motorcycle',
-                        'access_key' => 'relatorios_avancados',
-                        'required_permission' => 'relatorios.visualizar',
-                        'request_patterns' => ['relatorios/ver/deliveries-*'],
+                        'access_key' => 'delivery',
+                        'request_patterns' => ['delivery', 'api/delivery*'],
                     ],
                     [
                         'href' => '/compras',
